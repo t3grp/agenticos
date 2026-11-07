@@ -23,6 +23,7 @@ import * as invalidation from "@/lib/coalesced-invalidation";
 import {
   useAgentSelectionStore,
   useChatBandsStore,
+  useChatSidebarStore,
   useConversationStore,
   useWorkingStore,
   useOrgStore,
@@ -113,6 +114,7 @@ beforeEach(() => {
   window.history.replaceState({}, "", "/chat");
   useConversationStore.getState().reset();
   useWorkingStore.getState().reset();
+  useChatSidebarStore.getState().close();
   useChatBandsStore.setState({ folded: [], opened: [] });
   mockAgents = [{ id: "a-1", name: "Analyst", status: "published", can_run: true }];
   serve([conversation("c-1", "Quarterly numbers")]);
@@ -696,7 +698,7 @@ describe("the favourites band", () => {
     expect(within(list()).queryByRole("button", { name: "Favourite" })).toBeNull();
 
     await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(list()).getByRole("button", { name: "Favourite" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Favourite" }));
 
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith("/conversations/c-1/favourite", {}),
@@ -715,9 +717,10 @@ describe("the favourites band", () => {
       name: "Conversation actions",
     });
     await userEvent.click(inProject!);
-    expect(within(list()).queryByRole("button", { name: "Share" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Share" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(ownChat!);
-    expect(within(list()).getByRole("button", { name: "Share" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Share" })).toBeInTheDocument();
   });
 
   it("draws no star on a starred row, since the band it sits in says so", async () => {
@@ -736,7 +739,7 @@ describe("the favourites band", () => {
     await within(list()).findByText("Rota cover");
 
     await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(list()).getByRole("button", { name: /Remove from favourites/ }));
+    await userEvent.click(screen.getByRole("menuitem", { name: /Remove from favourites/ }));
 
     await waitFor(() =>
       expect(apiClient.delete).toHaveBeenCalledWith("/conversations/c-1/favourite"),
@@ -915,4 +918,138 @@ it("shows the coding harness kept by the list API after reopening the sidebar", 
   view.unmount();
   mount();
   expect(await screen.findByText(/AgenticOS · Claude Code/)).toBeVisible();
+});
+
+describe("conversation row keyboard access and actions", () => {
+  it.each(["{Enter}", " "])(
+    "opens a thread with %s and identifies the current row",
+    async (key) => {
+      mount();
+      const row = await within(list()).findByRole("button", { name: "Quarterly numbers" });
+      expect(row).not.toHaveAttribute("aria-current");
+
+      row.focus();
+      await userEvent.keyboard(key);
+
+      await waitFor(() =>
+        expect(useConversationStore.getState().currentConversationId).toBe("c-1"),
+      );
+      expect(row).toHaveAttribute("aria-current", "true");
+    },
+  );
+
+  it("opens its portalled actions by keyboard and returns focus on Escape without selecting the thread", async () => {
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+    const trigger = within(list()).getByRole("button", { name: "Conversation actions" });
+
+    trigger.focus();
+    await userEvent.keyboard("{ArrowDown}");
+
+    const menu = await screen.findByRole("menu");
+    expect(list()).not.toContainElement(menu);
+    await waitFor(() =>
+      expect(within(menu).getByRole("menuitem", { name: "Rename" })).toHaveFocus(),
+    );
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(trigger).toHaveFocus();
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+  });
+
+  it("keeps focus in Rename, saves once with Enter, and returns to the thread control", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({});
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const input = within(list()).getByRole("textbox", { name: "Rename" });
+    await waitFor(() => expect(input).toHaveFocus());
+    await userEvent.clear(input);
+    await userEvent.type(input, "Revised quarterly numbers");
+    await userEvent.keyboard("{Enter}");
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", {
+        title: "Revised quarterly numbers",
+      }),
+    );
+    expect(apiClient.patch).toHaveBeenCalledTimes(1);
+    expect(within(list()).getByRole("button", { name: "Quarterly numbers" })).toHaveFocus();
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+  });
+
+  it("cancels Rename with Escape and discards its draft before reopening", async () => {
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+    const trigger = within(list()).getByRole("button", { name: "Conversation actions" });
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const input = within(list()).getByRole("textbox", { name: "Rename" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Cancelled title");
+    await userEvent.keyboard("{Escape}");
+
+    expect(apiClient.patch).not.toHaveBeenCalled();
+    expect(within(list()).getByRole("button", { name: "Quarterly numbers" })).toHaveFocus();
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    expect(within(list()).getByRole("textbox", { name: "Rename" })).toHaveValue(
+      "Quarterly numbers",
+    );
+  });
+
+  it.each([
+    { action: "Archive", archived: false },
+    { action: "Restore", archived: true },
+  ])("preserves $action from the row menu", async ({ action, archived }) => {
+    if (archived) urlParams = new URLSearchParams("view=archived");
+    serve([{ ...conversation("c-1", "Quarterly numbers"), is_archived: archived }]);
+    vi.mocked(apiClient.patch).mockResolvedValue({});
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: action }));
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", {
+        is_archived: !archived,
+      }),
+    );
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+  });
+
+  it("deletes the selected thread through its menu and clears the open conversation", async () => {
+    vi.mocked(apiClient.delete).mockResolvedValue({});
+    mount();
+    await userEvent.click(await within(list()).findByRole("button", { name: "Quarterly numbers" }));
+    expect(useConversationStore.getState().currentConversationId).toBe("c-1");
+
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/conversations/c-1"));
+    await waitFor(() => expect(useConversationStore.getState().currentConversationId).toBeNull());
+  });
+});
+
+it("keeps the small-screen chat sheet available after collapsing the desktop sidebar", async () => {
+  mount();
+  await within(list()).findByText("Quarterly numbers");
+  await userEvent.click(
+    within(list()).getByRole("button", { name: "Collapse conversations sidebar" }),
+  );
+
+  act(() => useChatSidebarStore.getState().open());
+  const sheet = await screen.findByRole("dialog", { name: "Chats" });
+  await userEvent.click(within(sheet).getByRole("button", { name: "Quarterly numbers" }));
+
+  await waitFor(() => expect(useConversationStore.getState().currentConversationId).toBe("c-1"));
+  expect(useChatSidebarStore.getState().isOpen).toBe(false);
 });

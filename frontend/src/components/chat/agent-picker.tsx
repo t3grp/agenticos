@@ -151,14 +151,14 @@ export function AgentPicker() {
               <Bot className="h-3 w-3" />
             </span>
           )}
-          <span className="max-w-[160px] truncate text-sm font-medium">
+          <span className="max-w-[160px] min-w-0 flex-1 truncate text-sm font-medium">
             {isLoading && !selected && !selectedWorkflow ? (
               <Skeleton data-testid="agent-picker-loading-name" className="h-3.5 w-20 rounded" />
             ) : (
               (answererName ?? t("none"))
             )}
           </span>
-          <ChevronDown className="text-muted-foreground h-3 w-3" />
+          <ChevronDown className="text-muted-foreground h-3 w-3 shrink-0" />
         </button>
       </PopoverTrigger>
 
@@ -169,7 +169,7 @@ export function AgentPicker() {
           options.current?.focus();
         }}
         sideOffset={8}
-        className="border-border bg-popover w-[300px] rounded-xl border p-1.5 shadow-md"
+        className="border-border bg-popover max-h-[var(--radix-popover-content-available-height)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border p-2 shadow-md"
       >
         {/* One line, and the smallest type in the menu. It is a footnote about when the
             change takes effect; at twelve pixels over two lines it was the loudest

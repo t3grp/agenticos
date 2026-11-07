@@ -134,7 +134,12 @@ export function ComposerSheet({
         <DropdownMenuTrigger asChild>
           {trigger("hidden h-9 w-9 shrink-0 md:inline-flex")}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" sideOffset={8} className="w-80 p-1.5">
+        <DropdownMenuContent
+          align="start"
+          side="top"
+          sideOffset={8}
+          className="w-80 max-w-[calc(100vw-2rem)] p-2"
+        >
           {actions.map((action) => (
             <DropdownMenuItem
               key={action.key}
@@ -246,7 +251,7 @@ export function SheetRow({
     <div className="flex min-h-14 items-center gap-3 px-4">
       <Icon className="text-muted-foreground size-5 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate text-base">{label}</span>
-      <span className="flex shrink-0 items-center">{children}</span>
+      <span className="flex max-w-[60%] min-w-0 items-center">{children}</span>
     </div>
   );
 }
