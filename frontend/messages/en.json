@@ -1,41 +1,4 @@
 {
-  "nativeSubscriptions": {
-    "optionTitle": "Use a subscription",
-    "optionDescription": "Open a personal Claude Code session with your own Claude subscription.",
-    "title": "Subscriptions",
-    "description": "Use your own Claude account in a personal session.",
-    "sessionTitle": "Personal session",
-    "scopeHelp": "This opens Claude Code in a personal terminal. Regular AgenticOS agents continue to use their selected model profiles.",
-    "billingHelp": "To use your subscription, choose your Claude account during setup. Your plan's available models and usage limits apply. Claude Code also supports your own API key or supported provider credentials, billed separately to you.",
-    "signIn": "Sign in",
-    "openSession": "Open session",
-    "openSeparateBilling": "Open with separate billing",
-    "reconnect": "Reconnect",
-    "stop": "Stop session",
-    "refresh": "Refresh status",
-    "signOut": "Sign out of Claude",
-    "signedIn": "Signed in",
-    "signedOut": "Not signed in",
-    "plan": "Subscription: {plan}",
-    "accountBilling": "This sign-in uses separate API or provider billing. Usage is charged to your own account. Choose Sign in, then enter /login in the terminal to switch to your Claude subscription.",
-    "signInHelp": "Choose Sign in to open Claude Code's sign-in choices during first-time setup. Select your Claude account to use a subscription. For an existing sign-in, enter /login in the terminal to change accounts. Follow the prompts, then continue in that terminal.",
-    "openSessionHelp": "You're signed in with your Claude subscription. Choose Open session to begin.",
-    "openSeparateBillingHelp": "Choose Open with separate billing to continue with this account. Charges apply to your API or provider account.",
-    "reconnectHelp": "Choose Reconnect to continue your current Claude Code session.",
-    "sessionHelp": "Stop session closes the current session and keeps you signed in. Sign out removes the Claude sign-in saved here. Sessions close after inactivity or when your AgenticOS session ends.",
-    "signOutTitle": "Sign out of this personal session?",
-    "signOutHelp": "The running session will stop and Claude Code will sign out here. Your Claude subscription stays active.",
-    "ownAccountOnly": "Open this page as yourself to use your own subscription. Personal sessions are unavailable while impersonating another account.",
-    "loadFailed": "Could not load your personal session",
-    "unavailable": "Personal subscription sessions aren't available here.",
-    "terminalLabel": "Personal Claude Code terminal",
-    "connection": {
-      "connecting": "Connecting to your personal session…",
-      "open": "Connected — use the terminal below.",
-      "closed": "The terminal connection has closed. You can open or reconnect to a session above.",
-      "error": "The terminal connection could not continue. Refresh the status, then reconnect."
-    }
-  },
   "admin": {
     "actions": "Actions",
     "active": "Active",
@@ -3446,17 +3409,6 @@
     "loginFailed": "Login failed",
     "missingAuthorizationCode": "Missing authorization code",
     "missingTokens": "Missing tokens",
-    "nativeAccessDenied": "This personal session is not available to this account or organization.",
-    "nativeAuthRequired": "Sign in to AgenticOS again to open your personal session.",
-    "nativeHomeLimit": "Your personal session has reached its storage limit. Contact your administrator.",
-    "nativeInvalidRequest": "The personal session request was not valid. Refresh the page and try again.",
-    "nativeSessionEnded": "That personal session has ended. Open a new session to continue.",
-    "nativeSessionFailed": "The personal session could not complete that action. Refresh its status and try again.",
-    "nativeSessionInUse": "Your personal session is open in another tab. Close that terminal connection before reconnecting here.",
-    "nativeSessionLimit": "The available personal sessions are in use. Stop an unused session or try again shortly.",
-    "nativeSignInRequired": "Sign in to Claude Code before opening a session.",
-    "nativeTicketExpired": "The terminal connection expired. Reconnect to continue.",
-    "nativeUnavailable": "Personal subscription sessions are unavailable right now. Try again shortly.",
     "noRefreshToken": "No refresh token",
     "notAuthenticated": "Not authenticated",
     "registrationFailed": "Registration failed",
@@ -4479,10 +4431,6 @@
         "title": "Take a quick tour of chat?",
         "body": "See how to start a conversation, switch which agent answers, and change the model or thinking effort for a single chat. Want a quick guided run through it?"
       },
-      "explore-subscriptions": {
-        "title": "Set up your personal session?",
-        "body": "See where to sign in with your own Claude account and open a personal terminal."
-      },
       "create-project-tracker": {
         "title": "Set up a project tracker?",
         "body": "Review an editable published agent and its accounts, then explicitly publish a private tracker with a task table and scheduled checks."
@@ -4928,26 +4876,6 @@
       "sandboxes-connections": {
         "title": "Where agents run code",
         "body": "Agents that write and run code do it on these hosts. Watch the live sessions and set the ceilings from here."
-      },
-      "subscription-introduction": {
-        "title": "Use your own subscription",
-        "body": "This personal terminal runs Claude Code with your own account. It is separate from the model profiles used by AgenticOS agents."
-      },
-      "subscription-controls": {
-        "title": "Sign in and open a session",
-        "body": "Sign in through the terminal and continue there. Reconnect returns to an existing session. Stop keeps you signed in; Sign out removes the sign-in saved here."
-      },
-      "subscription-terminal": {
-        "title": "Your personal terminal",
-        "body": "Follow the sign-in prompts or work directly in Claude Code. Your account's plan, model choices and usage limits apply."
-      },
-      "flow-subscription-start": {
-        "title": "A personal Claude Code session",
-        "body": "Use your own subscription through Claude Code. The regular AgenticOS model profiles continue to control your platform agents."
-      },
-      "flow-subscription-signin": {
-        "title": "Complete your own sign-in",
-        "body": "Choose Sign in. During setup, select your Claude account to use your subscription. To change an existing sign-in, enter /login in the terminal. Continue in the terminal after sign-in. Your own API key or provider credentials remain available with separate billing."
       },
       "remote-agents-register": {
         "title": "Register one",

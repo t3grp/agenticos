@@ -4,7 +4,6 @@ import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Check, ChevronRight, KeyRound, Trash2 } from "lucide-react";
 
 import { AddModel } from "@/components/agents/add-model";
-import { SubscriptionOption } from "@/components/subscriptions/subscription-option";
 import { ProviderIcon } from "@/components/vault/provider-icon";
 import { ErrorState, LoadingState } from "@/components/states";
 import { Badge, Button } from "@/components/ui";
@@ -251,8 +250,6 @@ export function ModelProfilePicker({
   return (
     <div className="space-y-3">
       {current}
-
-      {allowRemove && <SubscriptionOption />}
 
       {/* Provider, model and key, always - and starting on the model in use, so the
           panel says what that is in the same two fields that change it rather than

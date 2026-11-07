@@ -51,23 +51,6 @@ that the gateway supports. See [models](../../docs/models.md) and
 [secrets](../../docs/secrets.md). Model requests use the configured provider and
 may incur its charges.
 
-## Optional personal subscription sessions
-
-The [personal subscription integration](../native-subscriptions/README.md)
-provides a separate terminal for the unmodified Claude Code CLI. Follow its
-deployment guide when adding it to an HTTPS demo. Its public WebSocket path
-requires an additional reverse-proxy route; the direct API tunnel below does not
-provide that route.
-
-Deploy the native broker as a separate Coolify Service resource, with only its
-own settings and dedicated internal key.
-[Coolify 4.6.0 injects a resource's generated environment file into every service](https://github.com/coollabsio/coolify/blob/v4.6.0/bootstrap/helpers/parsers.php#L3609-L3617),
-so appending the broker to this stack would expose application secrets despite
-an explicit `environment:` list. Apply only the integration's frontend override
-to this application resource, using the broker's exact scoped container name on
-the shared `coolify` network. Keep the existing API, data services and their
-settings.
-
 ## Open the private preview
 
 On the computer running the demo browser, use Python with Paramiko installed

@@ -959,24 +959,6 @@ export const TOUR_STEPS: readonly TourStep[] = [
     permission: Perm.connectionsView,
   },
 
-  {
-    id: "subscription-introduction",
-    page: ROUTES.SUBSCRIPTIONS,
-    target: "subscription-introduction",
-  },
-  {
-    id: "subscription-controls",
-    page: ROUTES.SUBSCRIPTIONS,
-    target: "subscription-controls",
-    optional: true,
-  },
-  {
-    id: "subscription-terminal",
-    page: ROUTES.SUBSCRIPTIONS,
-    target: "subscription-terminal",
-    optional: true,
-  },
-
   // Projects: shared instructions and files, and the chats started in them.
   {
     id: "projects-new",

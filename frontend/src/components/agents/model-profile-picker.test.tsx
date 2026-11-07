@@ -89,16 +89,6 @@ function mount(props: Partial<Parameters<typeof ModelProfilePicker>[0]> = {}) {
 }
 
 describe("ModelProfilePicker", () => {
-  it("offers personal subscription use separately from the API profile choices", () => {
-    const onChange = vi.fn();
-    mount({ allowAdd: true, allowRemove: true, onChange });
-    expect(screen.getByRole("link", { name: /Use a subscription/ }).getAttribute("href")).toMatch(
-      /^\/subscriptions(?:\?|$)/,
-    );
-    expect(screen.queryByRole("radio", { name: /subscription/i })).toBeNull();
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
   it("does not offer to add a model where it is only a choice", () => {
     // The regression this pins: the chat popover answers "which model should
     // this conversation run on". Adding one creates something every agent in

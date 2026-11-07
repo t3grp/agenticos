@@ -61,7 +61,6 @@ export const ROUTES = {
   ROUTINES: "/routines",
   VAULT: "/vault",
   SANDBOXES: "/sandboxes",
-  SUBSCRIPTIONS: "/subscriptions",
   REMOTE_AGENTS: "/remote-agents",
   DOCUMENTS: "/documents",
   DOCUMENT_FOLDER: (id: string) => `/documents/${id}`,

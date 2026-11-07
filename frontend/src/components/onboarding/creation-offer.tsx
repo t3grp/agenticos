@@ -2,7 +2,6 @@
 
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProjectTrackingOffer } from "./project-tracking-offer";
-import { NativeSubscriptionOffer } from "./native-subscription-offer";
 import { useTranslations } from "next-intl";
 
 import { isAtAgentLimit } from "@/components/agents/agent-limit-notice";
@@ -56,7 +55,6 @@ export function CreationOffer() {
   });
 
   if (offer === null || !canOfferFlow(FLOWS[offer], can)) return null;
-  if (offer === "explore-subscriptions") return <NativeSubscriptionOffer />;
   // The MCP catalog is compiled into the deployment; empty, there is nothing to
   // connect, and the walk that ends on this offer had no servers to spotlight
   // either. Read the cache the MCP page already filled — no fetch of this always-
