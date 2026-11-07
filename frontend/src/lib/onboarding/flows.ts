@@ -39,6 +39,7 @@ export type FlowId =
   | "create-routine"
   | "create-table"
   | "create-workflow"
+  | "explore-subscriptions"
   | "explore-chat";
 
 /**
@@ -433,6 +434,21 @@ function mcpDialogSteps(page: string, requires?: string): FlowStep[] {
 }
 
 export const FLOWS: Record<FlowId, CreationFlow> = {
+  "explore-subscriptions": {
+    id: "explore-subscriptions",
+    steps: [
+      {
+        id: "flow-subscription-start",
+        page: ROUTES.SUBSCRIPTIONS,
+        target: "subscription-introduction",
+      },
+      {
+        id: "flow-subscription-signin",
+        page: ROUTES.SUBSCRIPTIONS,
+        target: "subscription-controls",
+      },
+    ],
+  },
   "create-agent": {
     id: "create-agent",
     permission: Perm.agentsEdit,
@@ -948,6 +964,8 @@ export const FLOWS: Record<FlowId, CreationFlow> = {
  */
 export function flowForPage(pageId: string): FlowId | null {
   switch (pageId) {
+    case ROUTES.SUBSCRIPTIONS:
+      return "explore-subscriptions";
     case ROUTES.CHAT:
       return "explore-chat";
     case ROUTES.AGENTS:

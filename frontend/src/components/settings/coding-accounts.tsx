@@ -8,6 +8,7 @@ import { Badge, Button } from "@/components/ui";
 import { ErrorState } from "@/components/states";
 import { SectionCard } from "@/components/settings/settings-section";
 import { LocalAgentSettings } from "@/components/desktop/local-agent-settings";
+import { SubscriptionOption } from "@/components/subscriptions/subscription-option";
 import { useCodingAccounts } from "@/hooks/use-coding-accounts";
 import { useShell } from "@/hooks/use-shell";
 import { isDesktopShell } from "@/lib/desktop/shell";
@@ -23,6 +24,7 @@ export function CodingAccounts() {
   const shell = useShell();
   return (
     <>
+      <SubscriptionOption />
       <SectionCard
         title={t("title")}
         description={t("description")}

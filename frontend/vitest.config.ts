@@ -38,7 +38,10 @@ export default defineConfig({
         // next/server.js"). Transformed by Vite instead, the import resolves and
         // `src/middleware.test.ts` can drive the real middleware rather than a
         // stand-in for it.
-        inline: ["next-intl"],
+        // Bun imports Zod's named `z` directly, but Vitest's externalized loader
+        // loses it. Transform the real ESM graph so server-boundary tests exercise
+        // the production schemas, without a schema mock or alternate validator.
+        inline: ["next-intl", "zod"],
       },
     },
     coverage: {

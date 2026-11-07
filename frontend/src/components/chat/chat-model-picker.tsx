@@ -9,6 +9,7 @@ import {
   placeholderWords,
 } from "@/components/agents/add-model";
 import { ModelCombobox } from "@/components/agents/model-combobox";
+import { SubscriptionOption } from "@/components/subscriptions/subscription-option";
 import { getErrorMessage } from "@/lib/api-error";
 import { ProviderIcon } from "@/components/vault/provider-icon";
 import { ProviderRow } from "@/components/vault/provider-row";
@@ -371,6 +372,7 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
           )}
         </div>
       )}
+      <SubscriptionOption />
     </div>
   );
 }
