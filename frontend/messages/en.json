@@ -4285,6 +4285,7 @@
     "you": "(you)"
   },
   "nav": {
+    "aiConnections": "AI connections",
     "monitoring": "Monitoring",
     "memory": "Memory",
     "account": "Account",
@@ -4395,6 +4396,10 @@
     "offer": {
       "accept": "Yes, guide me",
       "decline": "Not now",
+      "connect-personal-model": {
+        "title": "Connect a personal model?",
+        "body": "Save your own API connection, then choose a model for your signed-in agent runs. Saving the connection or model does not send a charged test request."
+      },
       "create-agent": {
         "title": "Create your first agent?",
         "body": "An agent is instructions, a model and a set of tools. Want to build your first one together? We'll check what your organization already has and only stop where you need to."
@@ -4437,6 +4442,14 @@
       }
     },
     "steps": {
+      "personal-model-connections": {
+        "title": "Your AI connections",
+        "body": "Connect your own provider account through a supported API key, then choose its models in an agent or chat. Personal connections can be spent only by your signed-in runs. The page states which subscription sign-ins are available."
+      },
+      "flow-personal-model-connect": {
+        "title": "Connect and choose a model",
+        "body": "Connect an Anthropic or OpenAI API key. After saving it, choose a model from the provider catalog and add it. Its Personal label identifies the connection in agent and chat model pickers. No inference request is sent during this setup."
+      },
       "activity-approvals": {
         "title": "What's waiting on you",
         "body": "Runs that paused for a human decision queue here. Approve or reject each one and the run picks up from where it stopped - this tab only appears if you're allowed to decide them."
@@ -8083,6 +8096,42 @@
     "summarizeConversationAsChecklist": "Summarize the conversation as a checklist of action items.",
     "todo": "todo",
     "yourCustomCommands": "Your custom commands"
+  },
+  "personalModels": {
+    "title": "Your AI connections",
+    "description": "Use a personal provider connection to power the agents you run while signed in.",
+    "personal": "Personal",
+    "personalUnavailable": "Personal connections are not enabled on this deployment yet.",
+    "personalNotConfirmed": "The server did not confirm this connection as personal. Manage the saved key in the vault before trying again.",
+    "personalUse": "Only your signed-in agent runs can use this connection. Scheduled and organisation runs need an organisation connection.",
+    "connection": "Connection",
+    "chooseConnection": "Choose a connection",
+    "connectionName": "{provider} · {person}",
+    "connectApiKey": "Connect API key: {provider}",
+    "name": "Connection name",
+    "apiKey": "API key",
+    "saveConnection": "Save personal connection",
+    "cancel": "Cancel",
+    "getApiKey": "Get an API key",
+    "anthropicCredits": "Eligible Claude subscriptions can provide API credits after linking a Claude Console organisation. Connect an API key from that organisation to use those credits; this does not use your Claude chat allowance.",
+    "openaiApi": "Connect your OpenAI API account. API usage has separate billing from a ChatGPT subscription.",
+    "learnCredits": "How subscription API credits work",
+    "subscriptionSignIn": "ChatGPT and Claude subscription sign-in",
+    "unavailable": "Unavailable on this deployment",
+    "signInUnavailable": "This deployment needs a supported provider sign-in integration before an account or device login can power agents. Use an API connection on this page.",
+    "readPermission": "Viewing personal model connections needs secrets:view and agents:view in this organisation.",
+    "writePermission": "Adding a personal connection needs secrets:edit in this organisation.",
+    "modelPermission": "Adding a model on a connection needs connections:manage in this organisation.",
+    "connectionSaved": "Personal connection saved. Provider access has not been tested.",
+    "modelSaved": "Saved {label}. Choose this connection and model in an agent or chat to use it.",
+    "savedConnections": "Saved personal connections",
+    "noneSaved": "You have no personal model connections in this organisation yet.",
+    "savedNotTested": "Saved · provider access not tested",
+    "chooseModelFor": "Choose a model for {name}",
+    "chooseModel": "Choose model",
+    "modelsUnavailable": "Saved models could not be read.",
+    "retry": "Retry",
+    "manageInVault": "Manage or disconnect connections in the vault"
   },
   "sharing": {
     "access": "Access",

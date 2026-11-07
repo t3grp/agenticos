@@ -401,6 +401,9 @@ class ResolvedCredential:
     # ones back to. `secret` is the pair as it was when the run resolved it,
     # which a refresh in any other run may already have spent.
     credential_source: OpenAICodexCredentialSource | None = None
+    # Present only after resolving an explicitly personal API connection for its
+    # direct signed-in owner. Fallback filtering keeps that authority attached.
+    personal_owner_user_id: UUID | None = None
     # The profile's, like `api`: where the requests may run, for a provider that
     # takes a region. `None` for every provider that does not.
     region: ModelRegion | None = None

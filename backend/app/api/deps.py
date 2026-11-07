@@ -479,7 +479,7 @@ from app.core.exceptions import (
 )
 from app.services import rate_limit
 from app.api.embed_cors import allow_embed_origin
-from app.core.audit import set_api_key
+from app.core.audit import current_impersonator, set_api_key
 from app.core.security import encode_untrusted, verify_token
 from app.db.models.user import User
 from app.api.public_api import is_public_route
@@ -1228,6 +1228,7 @@ async def get_auth_context(
         organization_id=org.id,
         role=membership.role if membership else "",
         is_app_admin=user.is_app_admin,
+        is_impersonated=current_impersonator() is not None,
     )
     return _attributed(request, user, ctx, "console")
 
@@ -1279,6 +1280,7 @@ async def get_path_org_context(
         organization_id=org_id,
         role=membership.role if membership else "",
         is_app_admin=user.is_app_admin,
+        is_impersonated=current_impersonator() is not None,
     )
     return _attributed(request, user, ctx, "console")
 

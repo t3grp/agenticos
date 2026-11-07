@@ -183,6 +183,10 @@ class ModelProfileUpdate(BaseSchema):
 
 class ModelProfileRead(BaseSchema, TimestampSchema):
     id: UUID
+    usage_scope: Literal["organization", "personal"] = Field(
+        default="organization",
+        description="Whether this model uses the organization's connection or your personal one.",
+    )
     label: str
     provider: str
     # Nullable on read though required on write: rows written before the vault

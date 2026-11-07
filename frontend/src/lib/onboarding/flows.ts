@@ -39,6 +39,7 @@ export type FlowId =
   | "create-routine"
   | "create-table"
   | "create-workflow"
+  | "connect-personal-model"
   | "explore-chat";
 
 /**
@@ -225,6 +226,8 @@ export interface FlowStep {
 export interface CreationFlow {
   id: FlowId;
   permission?: Permission;
+  /** Additional permissions when a flow creates more than one kind of resource. */
+  requiresPermissions?: readonly Permission[];
   steps: readonly FlowStep[];
 }
 
@@ -903,6 +906,19 @@ export const FLOWS: Record<FlowId, CreationFlow> = {
   // agent, so a reader with none is asked to build one first and yes hands off to
   // `create-agent`. That fork aside, anyone signed in can chat, so no step past it
   // carries a permission.
+  "connect-personal-model": {
+    id: "connect-personal-model",
+    permission: Perm.connectionsManage,
+    requiresPermissions: [Perm.secretsView, Perm.secretsEdit, Perm.agentsView],
+    steps: [
+      {
+        id: "flow-personal-model-connect",
+        page: ROUTES.SETTINGS_AI_CONNECTIONS,
+        target: "personal-model-setup",
+        signal: { kind: "created", resource: "model" },
+      },
+    ],
+  },
   "explore-chat": {
     id: "explore-chat",
     steps: [
@@ -950,6 +966,8 @@ export function flowForPage(pageId: string): FlowId | null {
   switch (pageId) {
     case ROUTES.CHAT:
       return "explore-chat";
+    case ROUTES.SETTINGS_AI_CONNECTIONS:
+      return "connect-personal-model";
     case ROUTES.AGENTS:
     case AGENT_BUILDER:
       return "create-agent";
@@ -1020,5 +1038,7 @@ export function canOfferFlow(
   flow: CreationFlow,
   can: (permission: Permission) => boolean,
 ): boolean {
-  return !flow.permission || can(flow.permission);
+  return (
+    (!flow.permission || can(flow.permission)) && (flow.requiresPermissions?.every(can) ?? true)
+  );
 }

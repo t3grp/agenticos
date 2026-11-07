@@ -10,7 +10,7 @@
 
 import type { AgentUsage } from "./agents";
 
-import type { SecretKind } from "./secrets";
+import type { SecretKind, SecretUsageScope } from "./secrets";
 
 /** Which of OpenAI's two APIs a profile's requests go to. */
 export type ModelApi = "chat" | "responses";
@@ -68,6 +68,8 @@ export interface ModelProfile {
   label: string;
   provider: string;
   model: string;
+  /** Derived from the backing credential; absent on older deployments. */
+  usage_scope?: SecretUsageScope;
   /**
    * The vault secret this model is keyed by, and the only key it has.
    *

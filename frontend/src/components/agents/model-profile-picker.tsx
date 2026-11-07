@@ -111,6 +111,7 @@ export function ModelProfilePicker({
 }: ModelProfilePickerProps) {
   const t = useTranslations("agents");
   const tc = useTranslations("common");
+  const tPersonal = useTranslations("personalModels");
   const { deleteProfile, refetchProfiles } = useModelProviders();
   const [selectionVersion, setSelectionVersion] = useState(0);
   const currentSelection = useRef(0);
@@ -160,6 +161,7 @@ export function ModelProfilePicker({
           // and reading the column marked every Ollama profile "no key" (#2478).
           noKey={!hasKey(profile)}
           notChat={!runsAgents(profile)}
+          personal={profile.usage_scope === "personal"}
           selectable={usableForAgents(profile) || profile.id === value}
           disabled={disabled}
           onRemove={allowRemove ? () => deleteProfile.mutate(profile.id) : undefined}
@@ -192,6 +194,12 @@ export function ModelProfilePicker({
           dozen saved models the chosen one's badge is a badge among twelve. */}
       {!hasKey(selected) && <Badge variant="destructive">{t("noKey")}</Badge>}
       {!runsAgents(selected) && <Badge variant="destructive">{t("notAChatModel")}</Badge>}
+      {selected.usage_scope === "personal" && (
+        <Badge variant="secondary">{tPersonal("personal")}</Badge>
+      )}
+      {selected.usage_scope === "personal" && (
+        <p className="text-muted-foreground basis-full text-xs">{tPersonal("personalUse")}</p>
+      )}
       {!runsAgents(selected) && (
         <p role="alert" className="text-destructive basis-full text-xs">
           {t("notAChatModelHint", { model: selected.model })}
@@ -318,6 +326,7 @@ function ProfileRow({
   provider,
   noKey,
   notChat,
+  personal,
   selectable = true,
   disabled,
   onRemove,
@@ -330,6 +339,7 @@ function ProfileRow({
   provider: string;
   noKey?: boolean;
   notChat?: boolean;
+  personal?: boolean;
   /** False for a non-chat model listed only so it can be removed. */
   selectable?: boolean;
   disabled?: boolean;
@@ -338,6 +348,7 @@ function ProfileRow({
 }) {
   const t = useTranslations("agents");
   const tc = useTranslations("common");
+  const tPersonal = useTranslations("personalModels");
   return (
     // The radio and the delete are siblings, not nested: a button inside a
     // button is invalid, and the browser resolves it by dropping one of them.
@@ -361,6 +372,7 @@ function ProfileRow({
             <span className="truncate text-sm font-medium">{title}</span>
             {noKey && <Badge variant="destructive">{t("noKey2")}</Badge>}
             {notChat && <Badge variant="destructive">{t("notAChatModel")}</Badge>}
+            {personal && <Badge variant="secondary">{tPersonal("personal")}</Badge>}
           </span>
           {subtitle !== null && (
             <span className="text-muted-foreground mt-0.5 block truncate font-mono text-xs">

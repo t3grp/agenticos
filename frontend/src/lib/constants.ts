@@ -28,6 +28,7 @@ export const ROUTES = {
   SETTINGS_API_REFERENCE: "/settings/api-keys/reference",
   SETTINGS_MCP: "/settings/mcp",
   SETTINGS_ASSISTANT: "/settings/assistant",
+  SETTINGS_AI_CONNECTIONS: "/settings/ai-connections",
   OAUTH_CONSENT: "/oauth/consent",
   MCP_SERVERS: "/mcp-servers",
   CHANNELS: "/channels",

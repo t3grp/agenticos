@@ -1077,6 +1077,11 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // opened help from. Ungated: everyone has their own settings.
   { id: "settings-tabs", page: SETTINGS_DETAIL, target: "settings-tabs" },
   {
+    id: "personal-model-connections",
+    page: ROUTES.SETTINGS_AI_CONNECTIONS,
+    target: "personal-model-connections",
+  },
+  {
     id: "personal-coding-accounts",
     page: SETTINGS_DETAIL,
     target: "personal-coding-accounts",
@@ -1153,6 +1158,7 @@ export function pageKey(path: string): string {
     return ORG_MEMBERS;
   }
   if (path.startsWith(`${ROUTES.GROUPS}/`)) return GROUP_DETAIL;
+  if (path === ROUTES.SETTINGS_AI_CONNECTIONS) return path;
   if (path.startsWith(`${ROUTES.SETTINGS}/`)) return SETTINGS_DETAIL;
   if (path.startsWith(`${ROUTES.DOCUMENTS}/`)) return WORKSPACE_DETAIL;
   if (path.startsWith(`${ROUTES.PROJECTS}/`)) return PROJECT_DETAIL;

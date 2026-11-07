@@ -827,6 +827,15 @@ class AdmittedAs(BaseModel):
             "run parked before this existed was."
         ),
     )
+    is_workflow: bool = Field(
+        default=False,
+        description=(
+            "Whether workflow execution started this run, including an agent nested "
+            "under a dispatch with another surface. Kept across approvals because "
+            "workflow execution cannot spend a personal model connection. Older "
+            "workflow runs are still recognized by their persisted surface."
+        ),
+    )
 
 
 class PausedRunState(BaseModel):
@@ -3524,6 +3533,7 @@ class AgentRunnerService:
         run_limit_usd: Decimal | None = None,
         public_origin: bool = False,
         impersonated: bool = False,
+        is_workflow: bool = False,
         voice: VoiceRun | None = None,
         person_time_zone: str | None = None,
         is_test: bool = False,
@@ -3597,7 +3607,29 @@ class AgentRunnerService:
             watch_receipt = watch_receipt or WatchReadReceipt()
             watch_receipt.check = routine_check
 
-        # Whose ChatGPT sign-in the run's models may run on: the person the run
+        # A workflow step runs as its principal, so the dispatch carries whether
+        # its input came from an outsider. Capture that and impersonation before
+        # any model credential is resolved, not only when constructing the agent.
+        # Imported here because workflow execution imports the agent.run node.
+        from app.services.workflow_execution import context as workflow_context
+
+        dispatching = workflow_context.active()
+        public_origin = public_origin or (
+            surface is RunSurface.WORKFLOW and (dispatching is None or dispatching.public_origin)
+        )
+        impersonated = (
+            impersonated
+            or ctx.is_impersonated
+            or current_impersonator() is not None
+            or (dispatching is not None and dispatching.impersonated)
+        )
+        is_workflow = (
+            is_workflow
+            or ctx.is_workflow
+            or surface is RunSurface.WORKFLOW
+            or dispatching is not None
+        )
+        # Whose personal connection the run's models may run on: the person the run
         # is for. On a resume `ctx` is the approver's, and releasing somebody's
         # run must neither lend it the approver's subscription nor refuse it the
         # owner's. The restored audience already names nobody for a visitor or a
@@ -3612,6 +3644,15 @@ class AgentRunnerService:
                 api_key_id=None,
             )
         )
+        if public_origin or impersonated or is_workflow:
+            models_ctx = replace(
+                models_ctx,
+                subject_is_publisher_fallback=(
+                    models_ctx.subject_is_publisher_fallback or public_origin
+                ),
+                is_impersonated=impersonated,
+                is_workflow=is_workflow,
+            )
         # A caller's override wins over the spec's choice. Only the model is
         # replaced - instructions, tools, budgets and the approval gate are the
         # agent's, so this cannot be used to run something the agent is not.
@@ -4367,32 +4408,6 @@ class AgentRunnerService:
             room_key=memory_room_key,
             via_api_key=ctx.api_key_id is not None,
         )
-        # A workflow step runs as the workflow's principal, so only the dispatch
-        # knows whether an outsider supplied the run's input. Read here rather
-        # than trusted to every caller: a step parked before the flag existed
-        # wakes with it unset, and a step that forgets to pass it must not lend
-        # the run the principal as its person. With no dispatch at all a workflow
-        # run counts as public - both callers run inside one.
-        #
-        # Imported here: `workflow_execution` reaches the `agent.run` node, which
-        # imports this module at load.
-        from app.services.workflow_execution import context as workflow_context
-
-        dispatching = workflow_context.active()
-        public_origin = public_origin or (
-            surface is RunSurface.WORKFLOW and (dispatching is None or dispatching.public_origin)
-        )
-        # Whether an administrator started this run as its person: stated by a
-        # resume from the stored terms, otherwise read from the request that is
-        # starting it or the workflow dispatch it runs inside - the only places
-        # that still know. Carried on the deps and the admitted terms, because
-        # the ambient request state is gone in a spawned task, a worker and a
-        # run resumed after an approval.
-        impersonated = (
-            impersonated
-            or current_impersonator() is not None
-            or (dispatching is not None and dispatching.impersonated)
-        )
         # The run's own person. On a resume that is `owner_user_id` alone, never
         # the approver's `ctx.user_id`: a run whose member was deleted lost its
         # owner to `SET NULL`, and the approver releasing it must not fill the gap.
@@ -4590,6 +4605,7 @@ class AgentRunnerService:
                 subject_is_publisher_fallback=subject_is_publisher_fallback,
                 public_origin=public_origin,
                 impersonated=impersonated,
+                is_workflow=is_workflow,
             ),
         )
         if channel_directory is not None:
@@ -4826,7 +4842,7 @@ class AgentRunnerService:
         """
         catalog = delegation.catalog
         if catalog.rows is None:
-            catalog.rows = await self.models.list_profiles(delegation.ctx)
+            catalog.rows = await self.models.list_profiles(delegation.models_ctx)
         by_id = {profile.id: profile for profile in catalog.rows}
         offered: dict[str, ModelRequestSpec] = {}
         for profile in catalog.rows:
@@ -5289,7 +5305,7 @@ class AgentRunnerService:
                 resources=delegate_resources,
                 secrets=secrets,
                 extra_toolsets=toolsets,
-                reviewer_models=await self._reviewer_models(ctx, runnable),
+                reviewer_models=await self._reviewer_models(delegation.models_ctx, runnable),
             ),
             max_steps=runnable.max_steps,
             preferred_mode=ref.preferred_mode,
@@ -6623,6 +6639,7 @@ class AgentRunnerService:
                 and RunSurface(run.surface) is RunSurface.SCHEDULE
             ),
             impersonated=state.admitted_as.impersonated,
+            is_workflow=state.admitted_as.is_workflow,
             extra_toolsets=None,
             exposure=exposure,
             channel_file_attempts=state.channel_file_attempts,

@@ -51,6 +51,11 @@ that the gateway supports. See [models](../../docs/models.md) and
 [secrets](../../docs/secrets.md). Model requests use the configured provider and
 may incur its charges.
 
+For the personal account option, see
+[Personal model connections](personal-model-connections.md). It describes owner
+access, Anthropic subscription API credits, supported connection methods and the
+matching backend migration required by the AI connections settings page.
+
 ## Open the private preview
 
 On the computer running the demo browser, use Python with Paramiko installed
