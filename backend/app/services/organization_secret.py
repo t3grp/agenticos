@@ -15,14 +15,20 @@ flow and to nowhere else. `smtp_email_service` opens one permitted SMTP account
 straight into its transport, never returning credentials to an API caller.
 """
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import secret_purposes
 from app.core.audit import record_audit
-from app.core.exceptions import AlreadyExistsError, BadRequestError, NotFoundError
+from app.core.exceptions import (
+    AlreadyExistsError,
+    AuthorizationError,
+    BadRequestError,
+    NotFoundError,
+)
+from app.core.field_errors import refused_field
 from app.core.permissions import AuthContext, Perm
 from app.core.secret_kinds import (
     ApiKeySecret,
@@ -45,8 +51,15 @@ from app.db.models.resource_grant import Visibility
 from app.repositories import member_repo, organization_secret_repo, resource_grant_repo
 from app.schemas.resource_grant import as_visibility
 from app.schemas.secret import SecretSummary, SecretUsage
-from app.services.access import SECRET, accessible_ids, resolve_access, visible_resource_ids
+from app.services.access import (
+    SECRET,
+    OwnedResource,
+    accessible_ids,
+    resolve_access,
+    visible_resource_ids,
+)
 from app.services.notifications import NotificationService
+from app.services.sharing import Deferred, ShareChange, register_sharing_guard
 
 if TYPE_CHECKING:
     from app.services.email.service import EmailService
@@ -119,6 +132,7 @@ class OrganizationSecretService:
             see_all=shared is None,
             shared_ids=[] if shared is None else shared,
             purposes=purposes,
+            personal_user_id=ctx.personal_user_id,
         )
         people = await member_repo.get_identities_for_users(
             self.db,
@@ -165,6 +179,7 @@ class OrganizationSecretService:
                     name=secret.name,
                     description=secret.description,
                     kind=SecretKind(secret.kind),
+                    usage_scope="personal" if secret.usage_scope == "personal" else "organization",
                     hint=secret.hint,
                     purpose=secret.purpose,
                     visibility=as_visibility(secret.visibility),
@@ -192,6 +207,7 @@ class OrganizationSecretService:
         description: str | None = None,
         purpose: str = CUSTOM,
         visibility: Visibility = Visibility.ORG,
+        usage_scope: Literal["organization", "personal"] = "organization",
     ) -> OrganizationSecret:
         """Seal and store a secret.
 
@@ -214,6 +230,8 @@ class OrganizationSecretService:
             BadRequestError: If the purpose is not one this deployment offers,
                 or wants a different shape of credential than was given.
         """
+        if usage_scope == "personal":
+            self._check_personal_connection(ctx, value, purpose=purpose, visibility=visibility)
         self._check_purpose(purpose, value.kind)
         await self._refuse_duplicate_name(ctx, name)
         sealed = seal_secret(value, scope=VaultScope.organization(ctx.organization_id))
@@ -233,6 +251,7 @@ class OrganizationSecretService:
             hint=sealed.hint,
             key_version=sealed.key_version,
             created_by_user_id=ctx.user_id,
+            usage_scope=usage_scope,
         )
         notifications = NotificationService(self.db)
         # Before the audit entry, never after it: `record_audit` holds the
@@ -252,6 +271,31 @@ class OrganizationSecretService:
         )
         await notifications.security_event(entry, recipients=audience)
         return secret
+
+    @staticmethod
+    def _check_personal_connection(
+        ctx: AuthContext,
+        value: StorableSecret,
+        *,
+        purpose: str,
+        visibility: Visibility,
+    ) -> None:
+        """Only documented API-key connections can power personal agent models."""
+        if ctx.personal_user_id is None:
+            raise AuthorizationError(message="Sign in as yourself to connect a personal model")
+        if visibility is not Visibility.PRIVATE:
+            raise refused_field("visibility", "A personal model connection must be private")
+        if purpose not in {"anthropic", "openai"} or not isinstance(value, ApiKeySecret):
+            raise refused_field(
+                "usage_scope",
+                "Personal connections currently support Anthropic and OpenAI API keys. "
+                "ChatGPT subscription sign-in is not enabled for this app.",
+            )
+        if purpose == "anthropic" and value.api_key.get_secret_value().startswith("sk-ant-oat"):
+            raise refused_field(
+                "value.api_key",
+                "Use a Claude Console API key for agents, not a Claude Code setup token",
+            )
 
     async def update(
         self,
@@ -284,6 +328,10 @@ class OrganizationSecretService:
             update_data["description"] = description
         if value is not None:
             self._refuse_kind_change(secret, value)
+            if secret.usage_scope == "personal":
+                self._check_personal_connection(
+                    ctx, value, purpose=secret.purpose, visibility=Visibility.PRIVATE
+                )
             sealed = seal_secret(value, scope=VaultScope.organization(ctx.organization_id))
             update_data["authorization_generation"] = uuid4()
             update_data["sealed_secret"] = sealed.ciphertext
@@ -366,6 +414,7 @@ class OrganizationSecretService:
                 key_version=row.key_version,
             )
             for secret_id, row in rows.items()
+            if row.usage_scope != "personal"
         }
 
     async def listing_key(
@@ -393,6 +442,8 @@ class OrganizationSecretService:
             self.db, organization_id=ctx.organization_id, purposes=[provider]
         )
         for secret in secrets:
+            if secret.usage_scope == "personal":
+                continue
             value = unseal_secret(
                 secret.sealed_secret,
                 kind=SecretKind(secret.kind),
@@ -421,7 +472,12 @@ class OrganizationSecretService:
         row = await organization_secret_repo.get(
             self.db, secret_id, organization_id=organization_id
         )
-        if row is None or row.kind != SecretKind.API_KEY.value or row.purpose != provider:
+        if (
+            row is None
+            or row.usage_scope == "personal"
+            or row.kind != SecretKind.API_KEY.value
+            or row.purpose != provider
+        ):
             return None
         if shared and row.visibility != Visibility.ORG.value:
             return None
@@ -514,7 +570,7 @@ class OrganizationSecretService:
         row = await organization_secret_repo.get(
             self.db, secret_id, organization_id=organization_id
         )
-        if row is None:
+        if row is None or row.usage_scope == "personal":
             return None
         return unseal_secret(
             row.sealed_secret,
@@ -647,6 +703,11 @@ class OrganizationSecretService:
                 two read alike, as everywhere secrets are referenced.
         """
         secret = await self._get(ctx, secret_id)
+        if secret.usage_scope == "personal":
+            raise BadRequestError(
+                message="Personal model connections can only be selected as your agent's model",
+                details={"secret_id": str(secret_id)},
+            )
         if secret.kind != kind.value:
             raise NotFoundError(message="Secret not found", details={"secret_id": str(secret_id)})
         return secret
@@ -694,3 +755,43 @@ class OrganizationSecretService:
                 ),
                 details={"secret_id": str(secret.id), "kind": secret.kind},
             )
+
+
+class SecretSharingGuard:
+    """Personal model connections remain owner-only even when the owner can edit them."""
+
+    async def before_visibility(
+        self, db: AsyncSession, ctx: AuthContext, resource: OwnedResource, visibility: Visibility
+    ) -> None:
+        assert isinstance(resource, OrganizationSecret)
+        if resource.usage_scope == "personal" and visibility is not Visibility.PRIVATE:
+            raise BadRequestError(message="Personal model connections cannot be shared")
+
+    async def before_share(
+        self, db: AsyncSession, ctx: AuthContext, resource: OwnedResource, change: ShareChange
+    ) -> Deferred | None:
+        assert isinstance(resource, OrganizationSecret)
+        if resource.usage_scope == "personal" and (
+            change.visibility is not Visibility.PRIVATE
+            or change.subject_user_id is not None
+            or change.subject_group_id is not None
+        ):
+            raise BadRequestError(message="Personal model connections cannot be shared")
+        return None
+
+    async def adopt(self, db: AsyncSession, ctx: AuthContext, resource: OwnedResource) -> None:
+        """Preserve the existing ownership claim for ordinary private vault entries."""
+        assert isinstance(resource, OrganizationSecret)
+        resource.owner_user_id = ctx.subject_id
+        await record_audit(
+            db,
+            actor_user_id=ctx.subject_id,
+            organization_id=ctx.organization_id,
+            action="resource.owner_claimed",
+            target_type=SECRET.key,
+            target_id=str(resource.id),
+            details={"owner_user_id": str(resource.owner_user_id)},
+        )
+
+
+register_sharing_guard(SECRET, SecretSharingGuard())

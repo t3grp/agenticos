@@ -111,6 +111,7 @@ export function useSecrets() {
      * first, or it states as fact something it was never told.
      */
     listError: secrets.error,
+    refetchSecrets: invalidate,
     create,
     rotate,
     remove,
@@ -141,7 +142,7 @@ const PROVIDER_PRIORITY: Readonly<Record<string, number>> = {
  * Cached indefinitely; it changes on redeploy, not on a mutation.
  */
 export function useSecretPurposes() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: qk.secrets.purposes(),
     queryFn: () => apiClient.get<SecretPurposeList>("/secrets/purposes"),
     staleTime: Infinity,
@@ -154,7 +155,7 @@ export function useSecretPurposes() {
       ),
     [data],
   );
-  return { purposes, isLoading };
+  return { purposes, isLoading, error, refetch };
 }
 
 /** What `POST /secrets/openai-codex` takes: a finished sign-in, and what to call it. */

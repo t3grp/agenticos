@@ -19,6 +19,16 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- Personal Anthropic and OpenAI API connections can power existing agents. The
+  AI connections settings page stores an owner-bound vault credential and lets
+  the person choose its model explicitly. Personal credentials are excluded from
+  other users' runs, shared integrations and unattended jobs. Existing credentials
+  retain their organization usage. Anthropic's eligible subscription API credits
+  can fund the connected Console account; provider subscription sign-in remains
+  unavailable until a supported application grant is configured.
+
 ## [1.52.0] - 2026-11-06
 
 ### Fixed

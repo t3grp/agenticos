@@ -23,6 +23,7 @@ import {
 } from "@/components/ui";
 import { InlineChatGPTSignIn } from "@/components/vault/chatgpt-sign-in";
 import { InlineSecret } from "@/components/vault/inline-secret";
+import { PersonalApiConnection } from "@/components/vault/personal-api-connection";
 import {
   useModelProviders,
   usePermissions,
@@ -30,8 +31,15 @@ import {
   useSecretPurposes,
   useSecrets,
 } from "@/hooks";
-import { hasKey, modelDetail, runsAgents, usableForAgents } from "@/lib/model-profiles";
+import {
+  connectionModelLabel,
+  hasKey,
+  modelDetail,
+  runsAgents,
+  usableForAgents,
+} from "@/lib/model-profiles";
 import type { PublishedModel } from "@/types/agents";
+import type { Secret } from "@/types/secrets";
 import { Perm } from "@/types/permissions";
 import { useTranslations } from "next-intl";
 
@@ -92,19 +100,42 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     (profile) => profile.id === (value ?? agentModel?.profile_id),
   );
   const sourceKey = value ?? "agent";
-  const [draft, setDraft] = useState<{ source: string; providerId: string; model: string } | null>(
-    null,
-  );
+  const [draft, setDraft] = useState<{
+    source: string;
+    providerId: string;
+    model: string;
+    secretId: string | null;
+  } | null>(null);
+  const [createdConnection, setCreatedConnection] = useState<Secret | null>(null);
   const edited = draft?.source === sourceKey ? draft : null;
   const providerId = edited?.providerId ?? current?.provider ?? "";
   const model = edited?.model ?? current?.model ?? "";
   const setProviderId = (next: string) =>
-    setDraft({ source: sourceKey, providerId: next, model: "" });
-  const setModel = (next: string) => setDraft({ source: sourceKey, providerId, model: next });
+    setDraft({ source: sourceKey, providerId: next, model: "", secretId: null });
+  const setModel = (next: string) =>
+    setDraft({ source: sourceKey, providerId, model: next, secretId: edited?.secretId ?? null });
   const [failure, setFailure] = useState<string | null>(null);
+  const chooseConnection = (id: string) => {
+    setDraft({ source: sourceKey, providerId, model, secretId: id });
+    setFailure(null);
+  };
 
   const inheritedProfile = currentProfile?.provider === providerId ? currentProfile : undefined;
-  const endpoint = inheritedProfile?.base_url ?? null;
+  const availableSecrets =
+    createdConnection && !secrets.some((secret) => secret.id === createdConnection.id)
+      ? [...secrets, createdConnection]
+      : secrets;
+  const keys = availableSecrets.filter((secret) => secret.purpose === providerId);
+  const chosenSecretId =
+    edited?.secretId ??
+    (inheritedProfile ? inheritedProfile.secret_id : keys.length === 1 ? keys[0]!.id : null);
+  const key = keys.find((secret) => secret.id === chosenSecretId);
+  const personal = key?.usage_scope === "personal";
+  // A new personal connection starts on the provider's API, not an inherited gateway.
+  const endpoint =
+    personal && chosenSecretId !== inheritedProfile?.secret_id
+      ? null
+      : (inheritedProfile?.base_url ?? null);
   const providers = purposes.filter((entry) => entry.category === "model_provider");
   const provider = providers.find((entry) => entry.id === providerId);
   const {
@@ -113,8 +144,9 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     source,
     isLoading: loadingModels,
   } = useProviderModels(
-    providerId,
+    personal && endpoint ? "" : providerId,
     providerId === "openrouter" ? (endpoint ?? undefined) : undefined,
+    personal && !endpoint ? (chosenSecretId ?? undefined) : undefined,
   );
   // An override profile and the agent's published model both carry
   // provider/model/label, so one summary renders whichever is current.
@@ -124,6 +156,12 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     (profile) =>
       profile.provider === providerId &&
       profile.model === model.trim() &&
+      (chosenSecretId !== null
+        ? profile.secret_id === chosenSecretId
+        : inheritedProfile?.usage_scope === "personal"
+          ? profile.id === inheritedProfile.id
+          : profile.usage_scope !== "personal") &&
+      (!(personal && chosenSecretId !== inheritedProfile?.secret_id) || !profile.base_url) &&
       (!endpoint || profile.base_url?.replace(/\/+$/, "") === endpoint.replace(/\/+$/, "")),
   );
   const hasCustomEndpoint = matching.some(
@@ -137,6 +175,7 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     !createProfile.isPending &&
     !loadingProfiles &&
     profilesStatus !== "failed" &&
+    (keys.length <= 1 || chosenSecretId !== null) &&
     (!loadingModels || hasCustomEndpoint);
 
   const apply = async () => {
@@ -146,6 +185,7 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     if (
       current?.provider === provider.id &&
       current.model === modelId &&
+      (currentProfile ? currentProfile.secret_id === chosenSecretId : chosenSecretId === null) &&
       (currentProfile === undefined || usableForAgents(currentProfile))
     ) {
       onChange(value);
@@ -157,10 +197,16 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     // Several profiles can name the same vendor/model. Prefer one that can
     // chat, including a custom endpoint whose names the vendor cannot classify.
     const listingRefuses = refused.includes(modelId);
-    const existing = matching.find(
+    const usable = matching.filter(
       (profile) =>
         usableForAgents(profile) && (!!profile.base_url || (!loadingModels && !listingRefuses)),
     );
+    // Different connection IDs are a billing choice; an array's order cannot decide it.
+    if (new Set(usable.map((profile) => profile.secret_id)).size > 1) {
+      setFailure(tRoot("personalModels.chooseConnection"));
+      return;
+    }
+    const existing = usable[0];
     if (existing) {
       onChange(existing.id);
       return;
@@ -176,10 +222,6 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
       return;
     }
 
-    const key =
-      secrets.find(
-        (secret) => secret.id === inheritedProfile?.secret_id && secret.purpose === provider.id,
-      ) ?? secrets.find((secret) => secret.purpose === provider.id);
     if (key === undefined) {
       // The form below offers to add one, so this says what is missing rather than
       // sending somebody to another page for it.
@@ -188,13 +230,20 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     }
 
     try {
+      const baseLabel = `${provider.label} · ${modelId}`;
+      const labels = profiles.map((profile) => profile.label);
       const profile = await createProfile.mutateAsync({
-        label: `${provider.label} · ${modelId}`,
+        label:
+          personal || labels.includes(baseLabel)
+            ? connectionModelLabel(baseLabel, key.name, labels)
+            : baseLabel,
         provider: provider.id,
         model: modelId,
         secret_id: key.id,
         ...(endpoint ? { base_url: endpoint } : {}),
-        ...(inheritedProfile?.api ? { api: inheritedProfile.api } : {}),
+        ...(inheritedProfile?.api && (!personal || chosenSecretId === inheritedProfile.secret_id)
+          ? { api: inheritedProfile.api }
+          : {}),
       });
       // An id the listing did not classify still reaches here: the server
       // classifies the new profile, and a conversation cannot run on it either.
@@ -219,6 +268,9 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
         <span className="block text-sm leading-5 font-medium break-words whitespace-normal">
           {current.label}
         </span>
+        {currentProfile?.usage_scope === "personal" && (
+          <span className="text-muted-foreground text-xs">{tRoot("personalModels.personal")}</span>
+        )}
         {currentDetail !== null && (
           <span className="text-muted-foreground mt-1 block truncate font-mono text-[11px]">
             {currentDetail}
@@ -324,6 +376,36 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
                 </Select>
               </div>
 
+              {provider !== undefined && keys.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label htmlFor={`${panelId}-connection`}>
+                    {tRoot("personalModels.connection")}
+                  </Label>
+                  <Select value={chosenSecretId ?? ""} onValueChange={chooseConnection}>
+                    <SelectTrigger id={`${panelId}-connection`}>
+                      <SelectValue placeholder={tRoot("personalModels.chooseConnection")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {keys.map((secret) => (
+                        <SelectItem key={secret.id} value={secret.id} textValue={secret.name}>
+                          {secret.name}
+                          {secret.usage_scope === "personal" && (
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              {tRoot("personalModels.personal")}
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {personal && (
+                    <p className="text-muted-foreground text-xs">
+                      {tRoot("personalModels.personalUse")}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label htmlFor="chat-model-id">{t("model")}</Label>
                 {/* The Builder's own picker: the provider's catalog, searchable, and
@@ -353,16 +435,26 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
                 (provider.kind === "openai_codex" ? (
                   <InlineChatGPTSignIn
                     suggestedName={provider.label}
-                    onCreated={() => setFailure(null)}
+                    onCreated={chooseConnection}
                   />
                 ) : (
                   <InlineSecret
                     kind="api_key"
                     purpose={provider.id}
                     suggestedName={provider.label}
-                    onCreated={() => setFailure(null)}
+                    onCreated={chooseConnection}
                   />
                 ))}
+
+              {provider !== undefined && ["anthropic", "openai"].includes(provider.id) && (
+                <PersonalApiConnection
+                  provider={provider}
+                  onCreated={(secret) => {
+                    setCreatedConnection(secret);
+                    chooseConnection(secret.id);
+                  }}
+                />
+              )}
 
               <Button type="button" className="w-full" disabled={!canApply} onClick={apply}>
                 {t("runModel")}

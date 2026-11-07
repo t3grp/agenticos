@@ -552,6 +552,12 @@ class AuthContext:
 
     routine_kind: Literal["trigger", "watch"] = "trigger"
 
+    is_impersonated: bool = False
+    """An administrator acting as this user cannot spend their personal model connection."""
+
+    is_workflow: bool = False
+    """A workflow dispatch cannot spend a personal model connection, including after resume."""
+
     @classmethod
     def anonymous(cls, organization_id: UUID) -> AuthContext:
         """A context for a visitor nobody can name.
@@ -568,6 +574,29 @@ class AuthContext:
     def is_anonymous(self) -> bool:
         """Whether there is a person behind this context."""
         return self.user_id is None
+
+    @property
+    def personal_user_id(self) -> UUID | None:
+        """The signed-in person who may spend an owner-only model connection.
+
+        A key issuer, channel authority, publisher, workflow or trigger creator is not a
+        person approving this model request. Persisted key ceilings and routine
+        origins keep that distinction even after their live credentials are gone.
+        """
+        if (
+            self.is_impersonated
+            or self.is_workflow
+            or self.subject_is_publisher_fallback
+            or self.api_key_id is not None
+            or self.key_scopes is not None
+            or self.channel_identity_id is not None
+            or self.fired_as_creator is not None
+            or self.routine_id is not None
+            or self.routine_source_policy_id is not None
+            or self.routine_activation_id is not None
+        ):
+            return None
+        return self.user_id
 
     @property
     def subject_id(self) -> UUID:
