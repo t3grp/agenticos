@@ -1,12 +1,6 @@
-# Merge with integrations/coolify-demo/compose.yml and the deployment's HTTPS routes.
+# Standalone native-only Coolify Service resource. Do not merge into the app resource.
+# Configure the existing frontend separately with frontend.override.yaml.
 services:
-  agenticos-frontend:
-    image: ${NATIVE_FRONTEND_IMAGE:?NATIVE_FRONTEND_IMAGE is required}
-    pull_policy: never
-    environment:
-      NATIVE_SESSION_URL: http://agenticos-native-subscriptions:8080
-      NATIVE_SESSION_SERVICE_KEY: ${NATIVE_SESSION_SERVICE_KEY:?NATIVE_SESSION_SERVICE_KEY is required}
-
   agenticos-native-subscriptions:
     image: ${NATIVE_SESSION_IMAGE:?NATIVE_SESSION_IMAGE is required}
     pull_policy: never
@@ -33,8 +27,8 @@ services:
       - /tmp:rw,nosuid,nodev,size=268435456,mode=1777
     environment:
       NATIVE_SESSION_SERVICE_KEY: ${NATIVE_SESSION_SERVICE_KEY:?NATIVE_SESSION_SERVICE_KEY is required}
-      NATIVE_SITE_ORIGIN: ${PUBLIC_SITE_URL:?PUBLIC_SITE_URL is required}
-      NATIVE_BACKEND_URL: http://agenticos-api:8000
+      NATIVE_SITE_ORIGIN: ${NATIVE_SITE_ORIGIN:?NATIVE_SITE_ORIGIN is required}
+      NATIVE_BACKEND_URL: ${NATIVE_BACKEND_URL:?NATIVE_BACKEND_URL is required}
       NATIVE_BLOCKED_CIDRS: ${NATIVE_BLOCKED_CIDRS:?NATIVE_BLOCKED_CIDRS is required}
     volumes:
       - native_subscriptions:/state
@@ -75,6 +69,13 @@ services:
       traefik.http.routers.agenticos-native.tls.certresolver: letsencrypt
       traefik.http.routers.agenticos-native.service: agenticos-native
       traefik.http.services.agenticos-native.loadbalancer.server.port: "8080"
+
+networks:
+  edge:
+    driver: bridge
+  proxy:
+    external: true
+    name: coolify
 
 volumes:
   native_subscriptions: {}
