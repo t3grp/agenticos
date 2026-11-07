@@ -145,6 +145,10 @@ read-only root, the listed small capability set, IPv6 disabled and a writable
 `/state` volume. Do not mount the Docker socket, host directories, application
 credentials, CRM records or another user's home.
 
+Keep both `pids_limit` and `deploy.resources.limits.pids` set to `256`.
+[Docker Compose requires these process limits to agree](https://docs.docker.com/reference/compose-file/services/#pids_limit).
+Validate the current rendered Compose definition before starting the resource.
+
 At startup the broker installs a UID-scoped firewall and drops its network
 administration capability before accepting requests. Native users can use the
 Docker resolver and public TCP 443; private, loopback, link-local, metadata and
