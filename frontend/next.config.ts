@@ -60,7 +60,7 @@ const MOVED_ROUTES: readonly { from: string; to: string }[] = [
   { from: "/workspaces/:id", to: "/documents/:id" },
 ];
 
-const nextConfig: NextConfig = {
+export const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: process.env.PUBLIC_SITE_URL
     ? [new URL(process.env.PUBLIC_SITE_URL).hostname]
@@ -97,6 +97,13 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [...staticSecurityHeaders],
+      },
+      // Webmail renders email HTML on another origin, and browsers require
+      // CORS on font responses even when the email itself is publicly viewable.
+      // Keep the wildcard limited to the public font files used by email.
+      {
+        source: "/fonts/email/:path*",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
       },
       // Relax framing for the file endpoint so the chat preview panel can
       // embed PDFs/HTML in an iframe from the same origin. Listed AFTER the
