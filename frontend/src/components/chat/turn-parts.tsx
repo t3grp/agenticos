@@ -368,13 +368,18 @@ export function TextBubble({
     return (
       <div
         className={cn(
-          "bg-foreground/[0.07] text-foreground relative rounded-2xl",
-          compact ? "px-3 py-1.5" : "px-3 py-2 sm:px-4 sm:py-2.5",
+          "bg-foreground/[0.07] text-foreground relative max-w-full min-w-0 rounded-2xl",
+          compact ? "px-3 py-2" : "px-4 py-3",
           replyTo && "max-w-[min(85%,28rem)] min-w-[min(100%,12rem)]",
         )}
       >
         {replyTo && <ReplyQuote reply={replyTo} agents={replyAgents} embedded />}
-        <p className={cn("break-words whitespace-pre-wrap", compact ? "text-[13px]" : "text-sm")}>
+        <p
+          className={cn(
+            "[overflow-wrap:anywhere] break-words whitespace-pre-wrap",
+            compact ? "text-[13px]" : "text-sm",
+          )}
+        >
           <RichText text={text} mentions={mentions ?? []} />
         </p>
       </div>
@@ -387,7 +392,7 @@ export function TextBubble({
     // when the turn ends, so nothing already read ever animates again.
     <div
       className={cn(
-        "prose-sm max-w-none leading-relaxed",
+        "prose-sm max-w-full min-w-0 leading-relaxed [overflow-wrap:anywhere]",
         compact ? "text-[13.5px]" : "text-[15px]",
         // A little more air after the steps than between two rows of them: the
         // answer starts here, and set as tight as a step it read as one more.

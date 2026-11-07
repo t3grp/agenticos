@@ -1359,7 +1359,7 @@ function ChatUI({
   const showWorkspaceHome =
     !compact && messages.length === 0 && voice.call.phase === "idle" && !isLoadingConversation;
   return (
-    <div className="chat-surface @container/sources-layout relative flex h-full min-h-0 w-full overflow-hidden">
+    <div className="chat-surface @container/sources-layout relative flex h-full min-h-0 w-full min-w-0 overflow-hidden">
       <div className="@container/browser-layout relative flex h-full min-h-0 min-w-0 flex-1">
         {/* The column no longer carries the width. The scroller does, and the
           content is centred inside it - so the scrollbar sits at the edge of the
@@ -1371,7 +1371,7 @@ function ChatUI({
           a column narrowed by the sidebar and the conversation list. */}
         <div
           className={cn(
-            "@container/chat relative flex h-full min-w-0 flex-1 flex-col",
+            "@container/chat relative flex h-full min-h-0 min-w-0 flex-1 flex-col",
             showWorkspaceHome && "chat-home-column justify-center-safe overflow-y-auto",
           )}
         >
@@ -1381,7 +1381,7 @@ function ChatUI({
             ref={scrollContainerRef}
             data-chat-scroller
             className={cn(
-              "flex-1 scrollbar-thin overflow-y-auto",
+              "min-h-0 min-w-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain",
               showWorkspaceHome && "flex-none overflow-visible pb-0!",
             )}
             style={{
@@ -1402,7 +1402,8 @@ function ChatUI({
               ref={transcriptRef}
               data-transcript
               className={cn(
-                compact ? "px-3 py-3 text-sm" : "mx-auto max-w-5xl px-2 py-4 sm:px-4 sm:py-6",
+                "w-full min-w-0",
+                compact ? "px-3 py-3 text-sm" : "mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-6",
               )}
             >
               {/* Who else has this chat open, held at the top while the transcript scrolls:
@@ -1553,16 +1554,16 @@ function ChatUI({
                 conversationId={conversationId}
                 hasApprovalPanel={!!pendingApproval && !!onResumeDecisions}
                 isWorking={isProcessing || messages.some((message) => message.isStreaming)}
-                className="pointer-events-auto mx-auto max-h-40 w-full max-w-5xl overflow-y-auto overscroll-contain px-2 pb-2 sm:px-4"
+                className="pointer-events-auto mx-auto max-h-40 w-full max-w-4xl min-w-0 overflow-y-auto overscroll-contain px-4 pb-2 sm:px-6"
               />
             )}
             {personalGaps.length > 0 && (
-              <div className="chat-composer-suggestions pointer-events-auto mx-auto w-full max-w-5xl px-2 pb-2 sm:px-4 sm:pb-2">
+              <div className="chat-composer-suggestions pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
                 <ConnectServicesCard gaps={personalGaps} />
               </div>
             )}
             {pendingApproval && onResumeDecisions && (
-              <div className="pointer-events-auto mx-auto w-full max-w-5xl px-2 pb-2 sm:px-4 sm:pb-2">
+              <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
                 <ToolApprovalDialog
                   actionRequests={pendingApproval.actionRequests}
                   reviewConfigs={pendingApproval.reviewConfigs}
@@ -1573,7 +1574,7 @@ function ChatUI({
               </div>
             )}
             {pendingConnection && onConnectionResponse && (
-              <div className="pointer-events-auto mx-auto w-full max-w-5xl px-2 pb-2 sm:px-4 sm:pb-2">
+              <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
                 <ConnectAccountPrompt
                   request={pendingConnection}
                   disabled={!isConnected || isStopping}
@@ -1582,7 +1583,7 @@ function ChatUI({
               </div>
             )}
             {pendingQuestions && pendingQuestions.length > 0 && onAnswerQuestions && (
-              <div className="pointer-events-auto mx-auto w-full max-w-5xl px-2 pb-2 sm:px-4 sm:pb-2">
+              <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
                 <QuestionPrompt
                   questions={pendingQuestions}
                   disabled={!isConnected || isStopping}
@@ -1592,13 +1593,13 @@ function ChatUI({
             )}
             <div
               className={cn(
-                "pointer-events-auto mx-auto w-full",
+                "pointer-events-auto mx-auto w-full min-w-0",
                 // Glass in the page: the answer scrolls on behind the composer,
                 // blurred, and the strip fades to the page by the caption under it
                 // so no line of text is ever cut in half behind the words.
                 compact
                   ? "px-3 pt-1 pb-1.5"
-                  : "max-w-5xl bg-[linear-gradient(to_bottom,transparent_30%,var(--color-background)_62%)] px-2 pb-2 sm:px-4 sm:pb-4",
+                  : "max-w-4xl bg-[linear-gradient(to_bottom,transparent_30%,var(--color-background)_62%)] px-4 pb-4 sm:px-6",
               )}
             >
               <InterruptedNotice
@@ -1639,7 +1640,7 @@ function ChatUI({
                 same question: at 900px with the conversation list open this box
                 is 360px wide, and a viewport breakpoint showed a reading there
                 that had nowhere to go. */}
-              <div className="@container">
+              <div className="@container min-w-0">
                 {/* While a call is on, the composer does not change: the call is one
                   pill floating above it, so the chat stays the chat and a draft
                   and its attachments are still there when the call ends. */}
@@ -1702,13 +1703,11 @@ function ChatUI({
                     <div
                       data-tour="chat-composer"
                       className={cn(
-                        "panel composer-box focus-within:border-foreground/20 rounded-2xl transition-colors",
+                        "panel composer-box focus-within:border-foreground/25 focus-within:ring-foreground/10 min-w-0 rounded-2xl transition-colors focus-within:ring-2",
                         composerStrip !== null && "rounded-t-none",
                       )}
                     >
-                      <div
-                        className={cn("px-2.5 pt-1 pb-0.5", !compact && "sm:px-4 sm:pt-4 sm:pb-1")}
-                      >
+                      <div className={cn("min-w-0 px-3 pt-2 pb-2", !compact && "sm:px-4 sm:pt-3")}>
                         {isArchived && (
                           <p className="text-muted-foreground pb-2 text-center font-mono text-xs tracking-wider uppercase">
                             {t("conversationArchived")}
@@ -1878,7 +1877,7 @@ function ChatUI({
           {showWorkspaceHome && !emptyState && (
             <div
               ref={setHomeHintsSlot}
-              className="chat-home-hints mx-auto min-h-40 w-full max-w-5xl shrink-0 px-4 pb-4 sm:px-5"
+              className="chat-home-hints mx-auto min-h-40 w-full max-w-4xl min-w-0 shrink-0 px-4 pb-4 sm:px-6"
             />
           )}
         </div>

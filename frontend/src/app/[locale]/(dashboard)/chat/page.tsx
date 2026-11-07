@@ -20,11 +20,11 @@ export default function ChatPage() {
   // it sets currentConversationId AND loads messages atomically. Pre-setting the
   // id here would short-circuit that loader and leave the chat empty on refresh.
   return (
-    <div className={cn("flex min-h-0 flex-1", SAFE_AREA_CLEARANCE)}>
+    <div className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden", SAFE_AREA_CLEARANCE)}>
       <ConversationSidebar />
       {/* Room at the top of the transcript for
           the buttons floating over it on a phone. */}
-      <div className="relative min-w-0 flex-1 max-md:[&_[data-chat-scroller]]:scroll-pt-20 max-md:[&_[data-transcript]]:pt-20">
+      <div className="relative min-h-0 min-w-0 flex-1 max-lg:[&_[data-chat-scroller]]:scroll-pt-20 max-lg:[&_[data-transcript]]:pt-20">
         <PhoneChatBar />
         <ChatContainer requestedConversationId={requestedConversationId} />
       </div>
