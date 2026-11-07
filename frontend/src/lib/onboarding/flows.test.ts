@@ -222,14 +222,15 @@ describe("flowForPage", () => {
     expect(flowForPage(ROUTES.SETTINGS_AI_CONNECTIONS)).toBe("connect-personal-model");
     const flow = FLOWS["connect-personal-model"];
     expect(canOfferFlow(flow, allow)).toBe(true);
-    for (const missing of [
-      Perm.connectionsManage,
-      Perm.secretsView,
-      Perm.secretsEdit,
-      Perm.agentsView,
-    ]) {
+    for (const missing of [Perm.connectionsManage, Perm.agentsView]) {
       expect(canOfferFlow(flow, (permission) => permission !== missing)).toBe(false);
     }
+    expect(
+      canOfferFlow(
+        flow,
+        (permission) => permission !== Perm.secretsEdit && permission !== Perm.secretsView,
+      ),
+    ).toBe(true);
     expect(flow.steps[0]?.signal).toEqual({ kind: "created", resource: "model" });
   });
   it("maps each section, collapsing its detail routes onto the same flow", () => {

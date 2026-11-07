@@ -642,6 +642,9 @@ include = [
     "app/commands/data_protection.py",
     "app/commands/mcp_audit.py",
     "app/core/permissions.py",
+    "app/core/claude_subscription.py",
+    "app/schemas/claude_subscription.py",
+    "app/api/routes/v1/personal_subscriptions.py",
     "app/core/catalog/**",
     "app/core/secret_kinds.py",
     "app/core/vault.py",
@@ -853,6 +856,7 @@ include = [
     "app/services/decision_models.py",
     "app/services/image_models.py",
     "app/services/model_profile.py",
+    "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
     # hides chat models from every picker; one that narrows lets a speech model
     # through publish (#2487).
@@ -1391,6 +1395,9 @@ include = [
     "app/commands/data_protection.py",
     "app/commands/mcp_audit.py",
     "app/core/permissions.py",
+    "app/core/claude_subscription.py",
+    "app/schemas/claude_subscription.py",
+    "app/api/routes/v1/personal_subscriptions.py",
     "app/core/catalog/**",
     "app/core/secret_kinds.py",
     "app/core/vault.py",
@@ -1635,6 +1642,7 @@ include = [
     "app/services/decision_models.py",
     "app/services/image_models.py",
     "app/services/model_profile.py",
+    "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
     # hides chat models from every picker; one that narrows lets a speech model
     # through publish (#2487).

@@ -909,7 +909,7 @@ export const FLOWS: Record<FlowId, CreationFlow> = {
   "connect-personal-model": {
     id: "connect-personal-model",
     permission: Perm.connectionsManage,
-    requiresPermissions: [Perm.secretsView, Perm.secretsEdit, Perm.agentsView],
+    requiresPermissions: [Perm.agentsView],
     steps: [
       {
         id: "flow-personal-model-connect",

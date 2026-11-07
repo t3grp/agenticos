@@ -7,8 +7,9 @@ import { useTranslations } from "next-intl";
 
 import { AddModel } from "@/components/agents/add-model";
 import { SectionCard } from "@/components/settings/settings-section";
+import { ClaudeSubscriptionConnection } from "@/components/settings/claude-subscription-connection";
 import { ErrorState, LoadingState } from "@/components/states";
-import { Badge, Button } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { PersonalApiConnection } from "@/components/vault/personal-api-connection";
 import { ProviderIcon } from "@/components/vault/provider-icon";
 import { useModelProviders, usePermissions, useSecretPurposes, useSecrets } from "@/hooks";
@@ -30,11 +31,15 @@ export function PersonalModelConnections() {
       icon={KeyRound}
       tour="personal-model-connections"
     >
-      {user && can(Perm.secretsView) && can(Perm.agentsView) ? (
-        <PersonalModelConnectionsContent userId={user.id} />
-      ) : (
-        <p className="text-muted-foreground text-sm">{t("readPermission")}</p>
-      )}
+      <div className="space-y-6" data-tour="personal-model-setup">
+        <p className="text-muted-foreground text-sm">{t("personalUse")}</p>
+        <ClaudeSubscriptionConnection />
+        {user && can(Perm.secretsView) && can(Perm.agentsView) ? (
+          <PersonalModelConnectionsContent userId={user.id} />
+        ) : (
+          <p className="text-muted-foreground text-sm">{t("readPermission")}</p>
+        )}
+      </div>
     </SectionCard>
   );
 }
@@ -72,8 +77,7 @@ function PersonalModelConnectionsContent({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="space-y-6" data-tour="personal-model-setup">
-      <p className="text-muted-foreground text-sm">{t("personalUse")}</p>
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2" data-tour="personal-model-connect">
         {providers.map((provider) => (
           <section key={provider.id} className="border-border space-y-3 rounded-xl border p-4">
@@ -104,13 +108,6 @@ function PersonalModelConnectionsContent({ userId }: { userId: string }) {
           </section>
         ))}
       </div>
-      <section className="bg-muted/30 space-y-2 rounded-xl p-4">
-        <h3 className="flex flex-wrap items-center gap-2 text-sm font-medium">
-          {t("subscriptionSignIn")}
-          <Badge variant="secondary">{t("unavailable")}</Badge>
-        </h3>
-        <p className="text-muted-foreground text-xs">{t("signInUnavailable")}</p>
-      </section>
       {!can(Perm.secretsEdit) && (
         <p className="text-muted-foreground text-sm">{t("writePermission")}</p>
       )}

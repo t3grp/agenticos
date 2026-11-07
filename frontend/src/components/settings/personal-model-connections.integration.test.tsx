@@ -64,6 +64,17 @@ beforeEach(() => {
   state.profiles = [];
   state.readFailure = false;
   vi.mocked(apiClient.get).mockImplementation(async (path) => {
+    if (path === "/orgs") return { items: [{ id: "org-1", is_default: true }] };
+    if (path === "/personal-subscriptions/claude")
+      return {
+        available: false,
+        connected: false,
+        state: "disconnected",
+        login_id: null,
+        authorization_url: null,
+        expires_at: null,
+        error_code: null,
+      };
     if (path === "/me/permissions")
       return {
         organization_id: "org-1",
@@ -168,9 +179,11 @@ describe("personal model connections", () => {
     );
   });
 
-  it("has no subscription login action and explains the supported Anthropic credit path", async () => {
+  it("reports an unconfigured native runtime and keeps the separate API credit option", async () => {
     await mount();
-    expect(await screen.findByText("Unavailable on this deployment")).toBeVisible();
+    expect(
+      await screen.findByText("Claude subscription sign-in is not configured on this deployment."),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: "How subscription API credits work" })).toHaveAttribute(
       "href",
       "https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers",

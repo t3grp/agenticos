@@ -70,6 +70,7 @@ from app.agents.spec import (
     VoiceSpec,
 )
 from app.core.audit import current_impersonator, record_audit
+from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.config import settings
 from app.core.exceptions import (
     AlreadyExistsError,
@@ -2155,7 +2156,9 @@ class AgentRegistryService:
         )
         if profile is None:
             return ["The selected model profile no longer exists"]
-        if profile.usage_scope == "personal" and (
+        if (
+            profile.usage_scope == "personal" or profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+        ) and (
             ctx.personal_user_id is None or profile.personal_owner_user_id != ctx.personal_user_id
         ):
             return ["Choose one of your own personal model connections"]
@@ -2183,7 +2186,10 @@ class AgentRegistryService:
         # In the chain's order. One that no longer exists is skipped at run
         # time, not refused here.
         for fallback in (fallbacks[pid] for pid in fallback_ids if pid in fallbacks):
-            if fallback.usage_scope == "personal" and (
+            if (
+                fallback.usage_scope == "personal"
+                or fallback.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+            ) and (
                 ctx.personal_user_id is None
                 or fallback.personal_owner_user_id != ctx.personal_user_id
             ):
@@ -2268,7 +2274,10 @@ class AgentRegistryService:
         personal_out_of_reach = {
             profile.id
             for profile in profiles.values()
-            if profile.usage_scope == "personal"
+            if (
+                profile.usage_scope == "personal"
+                or profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+            )
             and (
                 ctx.personal_user_id is None
                 or profile.personal_owner_user_id != ctx.personal_user_id

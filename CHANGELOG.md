@@ -26,8 +26,12 @@ Two things are versioned separately from this file and worth knowing about:
   the person choose its model explicitly. Personal credentials are excluded from
   other users' runs, shared integrations and unattended jobs. Existing credentials
   retain their organization usage. Anthropic's eligible subscription API credits
-  can fund the connected Console account; provider subscription sign-in remains
-  unavailable until a supported application grant is configured.
+  can fund the connected Console account.
+- Claude subscription sign-in uses the official native client's browser link
+  and returned code from Settings → AI connections. Sonnet, Opus and Haiku
+  personal models power the existing agent loop through a private native
+  runtime, preserving tools, approvals and owner restrictions. The initial
+  adapter supports text and application tools with buffered step responses.
 
 ## [1.52.0] - 2026-11-06
 

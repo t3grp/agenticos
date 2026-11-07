@@ -53,8 +53,9 @@ may incur its charges.
 
 For the personal account option, see
 [Personal model connections](personal-model-connections.md). It describes owner
-access, Anthropic subscription API credits, supported connection methods and the
-matching backend migration required by the AI connections settings page.
+access, Claude subscription sign-in, API connections and the matching backend
+migration required by the AI connections settings page. The native subscription
+option also needs its [private runtime service](../claude-subscription/README.md).
 
 ## Open the private preview
 

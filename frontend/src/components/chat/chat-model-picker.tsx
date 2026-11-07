@@ -9,6 +9,7 @@ import {
   placeholderWords,
 } from "@/components/agents/add-model";
 import { ModelCombobox } from "@/components/agents/model-combobox";
+import { ClaudeSubscriptionModelSelect } from "@/components/chat/claude-subscription-model-select";
 import { getErrorMessage } from "@/lib/api-error";
 import { ProviderIcon } from "@/components/vault/provider-icon";
 import { ProviderRow } from "@/components/vault/provider-row";
@@ -144,7 +145,7 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
     source,
     isLoading: loadingModels,
   } = useProviderModels(
-    personal && endpoint ? "" : providerId,
+    providerId === "claude-subscription" || (personal && endpoint) ? "" : providerId,
     providerId === "openrouter" ? (endpoint ?? undefined) : undefined,
     personal && !endpoint ? (chosenSecretId ?? undefined) : undefined,
   );
@@ -338,127 +339,144 @@ export function ChatModelPicker({ value, agentModel, onChange }: ChatModelPicker
                   </Button>
                 </p>
               )}
-              <div className="space-y-1.5">
-                <Label htmlFor="chat-model-provider">{t("provider")}</Label>
-                <Select
-                  value={providerId}
-                  onValueChange={(next) => {
-                    setProviderId(next);
-                    setFailure(null);
-                  }}
-                >
-                  <SelectTrigger id="chat-model-provider">
-                    <SelectValue placeholder={t("chooseProvider")} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-80">
-                    {providers.map((entry) => {
-                      const keyed = secrets.some((secret) => secret.purpose === entry.id);
-                      return (
-                        <SelectItem
-                          key={entry.id}
-                          value={entry.id}
-                          // Type-to-search keys off this rather than off the mark's own
-                          // title, which is otherwise part of the item's text.
-                          textValue={entry.label}
-                          // Outside the row: the trigger mirrors an item's text, and a
-                          // tick there reads as "selected" rather than "has a key".
-                          trailing={
-                            keyed && (
-                              <Check className="text-muted-foreground ml-auto h-3.5 w-3.5 shrink-0" />
-                            )
-                          }
-                        >
-                          <ProviderRow provider={entry.id} name={entry.label} />
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+              <ClaudeSubscriptionModelSelect
+                profiles={profiles}
+                value={currentProfile?.id ?? null}
+                disabled={loadingProfiles || profilesStatus === "failed"}
+                onChange={(profileId) => {
+                  setFailure(null);
+                  onChange(profileId);
+                }}
+              />
+              {providerId === "claude-subscription" ? (
+                <Button type="button" variant="outline" size="sm" onClick={() => setProviderId("")}>
+                  {tRoot("claudeSubscription.chooseApiModel")}
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="chat-model-provider">{t("provider")}</Label>
+                    <Select
+                      value={providerId}
+                      onValueChange={(next) => {
+                        setProviderId(next);
+                        setFailure(null);
+                      }}
+                    >
+                      <SelectTrigger id="chat-model-provider">
+                        <SelectValue placeholder={t("chooseProvider")} />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-80">
+                        {providers.map((entry) => {
+                          const keyed = secrets.some((secret) => secret.purpose === entry.id);
+                          return (
+                            <SelectItem
+                              key={entry.id}
+                              value={entry.id}
+                              // Type-to-search keys off this rather than off the mark's own
+                              // title, which is otherwise part of the item's text.
+                              textValue={entry.label}
+                              // Outside the row: the trigger mirrors an item's text, and a
+                              // tick there reads as "selected" rather than "has a key".
+                              trailing={
+                                keyed && (
+                                  <Check className="text-muted-foreground ml-auto h-3.5 w-3.5 shrink-0" />
+                                )
+                              }
+                            >
+                              <ProviderRow provider={entry.id} name={entry.label} />
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {provider !== undefined && keys.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label htmlFor={`${panelId}-connection`}>
-                    {tRoot("personalModels.connection")}
-                  </Label>
-                  <Select value={chosenSecretId ?? ""} onValueChange={chooseConnection}>
-                    <SelectTrigger id={`${panelId}-connection`}>
-                      <SelectValue placeholder={tRoot("personalModels.chooseConnection")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {keys.map((secret) => (
-                        <SelectItem key={secret.id} value={secret.id} textValue={secret.name}>
-                          {secret.name}
-                          {secret.usage_scope === "personal" && (
-                            <span className="text-muted-foreground ml-2 text-xs">
-                              {tRoot("personalModels.personal")}
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {personal && (
-                    <p className="text-muted-foreground text-xs">
-                      {tRoot("personalModels.personalUse")}
-                    </p>
+                  {provider !== undefined && keys.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${panelId}-connection`}>
+                        {tRoot("personalModels.connection")}
+                      </Label>
+                      <Select value={chosenSecretId ?? ""} onValueChange={chooseConnection}>
+                        <SelectTrigger id={`${panelId}-connection`}>
+                          <SelectValue placeholder={tRoot("personalModels.chooseConnection")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {keys.map((secret) => (
+                            <SelectItem key={secret.id} value={secret.id} textValue={secret.name}>
+                              {secret.name}
+                              {secret.usage_scope === "personal" && (
+                                <span className="text-muted-foreground ml-2 text-xs">
+                                  {tRoot("personalModels.personal")}
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {personal && (
+                        <p className="text-muted-foreground text-xs">
+                          {tRoot("personalModels.personalUse")}
+                        </p>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="chat-model-id">{t("model")}</Label>
-                {/* The Builder's own picker: the provider's catalog, searchable, and
+                  <div className="space-y-1.5">
+                    <Label htmlFor="chat-model-id">{t("model")}</Label>
+                    {/* The Builder's own picker: the provider's catalog, searchable, and
                 still able to carry an id that is not in it. */}
-                <ModelCombobox
-                  id="chat-model-id"
-                  value={model}
-                  onChange={(next) => {
-                    setModel(next);
-                    setFailure(null);
-                  }}
-                  options={suggestions}
-                  source={source}
-                  loading={loadingModels}
-                  disabled={provider === undefined}
-                  placeholder={placeholderWords(modelPlaceholder(provider?.id), tRoot)}
-                />
-                {failure !== null && <p className="text-destructive text-xs">{failure}</p>}
-              </div>
+                    <ModelCombobox
+                      id="chat-model-id"
+                      value={model}
+                      onChange={(next) => {
+                        setModel(next);
+                        setFailure(null);
+                      }}
+                      options={suggestions}
+                      source={source}
+                      loading={loadingModels}
+                      disabled={provider === undefined}
+                      placeholder={placeholderWords(modelPlaceholder(provider?.id), tRoot)}
+                    />
+                    {failure !== null && <p className="text-destructive text-xs">{failure}</p>}
+                  </div>
 
-              {/* A key can be added here rather than on another page. A picker that can
+                  {/* A key can be added here rather than on another page. A picker that can
               only offer what is already stored, and answers "add one in the Vault"
               when nothing is, is a dead end - and the provider is already chosen, so
               the purpose this key needs is known. */}
-              {provider !== undefined &&
-                !secrets.some((secret) => secret.purpose === provider.id) &&
-                (provider.kind === "openai_codex" ? (
-                  <InlineChatGPTSignIn
-                    suggestedName={provider.label}
-                    onCreated={chooseConnection}
-                  />
-                ) : (
-                  <InlineSecret
-                    kind="api_key"
-                    purpose={provider.id}
-                    suggestedName={provider.label}
-                    onCreated={chooseConnection}
-                  />
-                ))}
+                  {provider !== undefined &&
+                    !secrets.some((secret) => secret.purpose === provider.id) &&
+                    (provider.kind === "openai_codex" ? (
+                      <InlineChatGPTSignIn
+                        suggestedName={provider.label}
+                        onCreated={chooseConnection}
+                      />
+                    ) : (
+                      <InlineSecret
+                        kind="api_key"
+                        purpose={provider.id}
+                        suggestedName={provider.label}
+                        onCreated={chooseConnection}
+                      />
+                    ))}
 
-              {provider !== undefined && ["anthropic", "openai"].includes(provider.id) && (
-                <PersonalApiConnection
-                  provider={provider}
-                  onCreated={(secret) => {
-                    setCreatedConnection(secret);
-                    chooseConnection(secret.id);
-                  }}
-                />
+                  {provider !== undefined && ["anthropic", "openai"].includes(provider.id) && (
+                    <PersonalApiConnection
+                      provider={provider}
+                      onCreated={(secret) => {
+                        setCreatedConnection(secret);
+                        chooseConnection(secret.id);
+                      }}
+                    />
+                  )}
+
+                  <Button type="button" className="w-full" disabled={!canApply} onClick={apply}>
+                    {t("runModel")}
+                  </Button>
+                </div>
               )}
-
-              <Button type="button" className="w-full" disabled={!canApply} onClick={apply}>
-                {t("runModel")}
-              </Button>
             </div>
           )}
         </div>

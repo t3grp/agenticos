@@ -25,10 +25,16 @@ from app.agents.model_resolver import (
     lacks_key,
 )
 from app.core.audit import record_audit
+from app.core.claude_subscription import (
+    CLAUDE_SUBSCRIPTION_MODELS,
+    CLAUDE_SUBSCRIPTION_PROVIDER,
+)
 from app.core.exceptions import (
     AlreadyExistsError,
     AuthorizationError,
     BadRequestError,
+    ConfigurationError,
+    ExternalServiceError,
     InUseError,
     NotFoundError,
 )
@@ -52,8 +58,9 @@ from app.repositories import (
     organization_secret_repo,
     system_agent_repo,
 )
-from app.schemas.model_profile import ModelProfileUpdate
+from app.schemas.model_profile import ModelProfileRead, ModelProfileUpdate
 from app.services.access import AGENT, SECRET, accessible_ids, resolve_access
+from app.services.claude_subscription import ClaudeSubscriptionService, subscription_owner
 from app.services.model_catalog import CUSTOM_LISTINGS, CatalogModel, models_for
 from app.services.model_outputs import model_outputs, not_chat_refusal
 from app.services.openai_codex import VaultCodexCredentials
@@ -87,6 +94,8 @@ def _validate_model_id(provider: str, model: str) -> None:
     """
     if provider == "openrouter" and "/" not in model:
         raise refused_field("model", "OpenRouter model ids are namespaced, e.g. 'openai/gpt-4.1'")
+    if provider == CLAUDE_SUBSCRIPTION_PROVIDER and model not in CLAUDE_SUBSCRIPTION_MODELS:
+        raise refused_field("model", "Choose Sonnet, Opus or Haiku for a Claude subscription")
 
 
 async def validate_endpoint_url(url: str) -> str:
@@ -151,7 +160,9 @@ def usable_for_agents(profile: ModelProfile) -> bool:
 
 
 def is_sign_in(profile: ModelProfile) -> bool:
-    """Whether the profile runs on a ChatGPT sign-in, one person's subscription."""
+    """Whether the profile runs on a person's provider subscription."""
+    if profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER:
+        return True
     provider = PROVIDERS.get(profile.provider)
     return provider is not None and provider.secret_kind is SecretKind.OPENAI_CODEX
 
@@ -199,6 +210,8 @@ def reaches_a_sign_in(profile: ModelProfile, profiles: Mapping[UUID, ModelProfil
 
 def _profile_accessible(profile: ModelProfile, ctx: AuthContext) -> bool:
     """Personal model choices and edits belong to their direct signed-in owner."""
+    if profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER and profile.personal_owner_user_id is None:
+        return False
     return profile.usage_scope != "personal" or (
         ctx.personal_user_id is not None and profile.personal_owner_user_id == ctx.personal_user_id
     )
@@ -230,6 +243,19 @@ def _check_shape(
     arriving at a new combination: a key removed from an OpenAI profile with no
     endpoint is the same unrunnable model creation refuses.
     """
+    if spec.id == CLAUDE_SUBSCRIPTION_PROVIDER:
+        for field, value in (
+            ("secret_id", secret_id),
+            ("base_url", base_url),
+            ("api", api),
+            ("region", region),
+        ):
+            if value is not None:
+                raise refused_field(
+                    field,
+                    "Claude subscriptions use your native sign-in and do not take a key or endpoint",
+                )
+        return
     if spec.requires_base_url and base_url is None:
         raise refused_field(
             "base_url", f"{spec.name} requires an explicit gateway endpoint", provider=spec.id
@@ -262,7 +288,7 @@ def _check_shape(
 
 
 def provider_catalog() -> list[ProviderSpec]:
-    """Every provider a key can be stored for, ordered for a stable picker.
+    """Every provider that can back a model, ordered for a stable picker.
 
     Sorted by display name, case-insensitively: the select that renders this is
     thirty-one rows long, and an order that shifts between deployments is one
@@ -280,6 +306,42 @@ class ModelProfileService:
     async def list_profiles(self, ctx: AuthContext) -> list[ModelProfile]:
         profiles = await credential_repo.list_profiles(self.db, organization_id=ctx.organization_id)
         return [profile for profile in profiles if _profile_accessible(profile, ctx)]
+
+    async def list_profile_views(self, ctx: AuthContext) -> list[ModelProfileRead]:
+        """Picker views with one native-state read for this caller's own profiles."""
+        profiles = await self.list_profiles(ctx)
+        connected = (
+            await self._native_connected(ctx)
+            if any(profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER for profile in profiles)
+            else None
+        )
+        return [
+            ModelProfileRead.model_validate(profile).model_copy(
+                update={"native_connected": connected}
+            )
+            for profile in profiles
+        ]
+
+    async def profile_view(self, ctx: AuthContext, profile: ModelProfile) -> ModelProfileRead:
+        """Serialize an already-authorized profile with its current native availability."""
+        view = ModelProfileRead.model_validate(profile)
+        if profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER:
+            if (
+                not _profile_accessible(profile, ctx)
+                or profile.organization_id != ctx.organization_id
+            ):
+                raise NotFoundError(message="Model profile not found")
+            view.native_connected = await self._native_connected(ctx)
+        return view
+
+    @staticmethod
+    async def _native_connected(ctx: AuthContext) -> bool:
+        try:
+            state = await ClaudeSubscriptionService().status(ctx)
+        except ConfigurationError, ExternalServiceError:
+            # An unavailable optional runtime disables only its own picker rows.
+            return False
+        return state.available and state.connected
 
     async def create_profile(
         self,
@@ -307,11 +369,15 @@ class ModelProfileService:
         provider's default for the endpoint, written down so that a later change
         of default cannot move an existing profile to an API its endpoint lacks.
 
-        `secret_id` is optional exactly for the keyless providers, which is what
+        `secret_id` is optional for the keyless providers, which is what
         makes a self-hosted model configurable at all: a model server on the
         deployment's own network usually has nothing to authenticate against. In
         exchange it *must* carry an endpoint, because there is no public API for
         the platform to fall back on.
+
+        A native Claude subscription instead requires the direct signed-in
+        owner's connected runtime. It stores that immutable owner and accepts
+        neither a vault secret nor a custom endpoint.
 
         Raises:
             BadRequestError: If the key is not this organization's, is not one the
@@ -336,8 +402,11 @@ class ModelProfileService:
         if region is None:
             region = spec.default_region()
         _check_shape(spec, secret_id=secret_id, base_url=base_url, api=api, region=region)
-        await self._check_label_free(ctx, label)
         personal_owner_user_id = None
+        if provider == CLAUDE_SUBSCRIPTION_PROVIDER:
+            owner = await ClaudeSubscriptionService().require_connected(ctx)
+            personal_owner_user_id = owner.user_id
+        await self._check_label_free(ctx, label)
         if secret_id is not None:
             secret = await self._check_key(ctx, secret_id, provider=provider)
             if secret.usage_scope == "personal":
@@ -363,7 +432,7 @@ class ModelProfileService:
             params=params,
             fallback_profile_ids=[str(pid) for pid in (fallback_profile_ids or [])],
             context_length=listed.context_length if listed is not None else None,
-            runs_without_key=secret_id is None,
+            runs_without_key=secret_id is None and provider != CLAUDE_SUBSCRIPTION_PROVIDER,
             personal_owner_user_id=personal_owner_user_id,
         )
         await record_audit(
@@ -388,6 +457,10 @@ class ModelProfileService:
         personal: bool = False,
     ) -> CatalogModel | None:
         """Read creation-time metadata using the selected authenticated gateway credential."""
+        if provider == CLAUDE_SUBSCRIPTION_PROVIDER:
+            return CatalogModel(
+                id=model, name=f"Claude {model.title()} (subscription)", output_modalities=("text",)
+            )
         if personal and base_url is not None:
             # OpenAI-compatible personal endpoints have no supported catalog
             # adapter here. Their key must not be tried at the public provider.
@@ -518,7 +591,11 @@ class ModelProfileService:
             region = changes.region if changes.region is not None else spec.default_region()
         _check_shape(spec, secret_id=secret_id, base_url=base_url, api=api, region=region)
 
-        if profile.usage_scope == "personal" and secret_id is None:
+        if (
+            profile.usage_scope == "personal"
+            and secret_id is None
+            and profile.provider != CLAUDE_SUBSCRIPTION_PROVIDER
+        ):
             raise refused_field("secret_id", "Choose one of your personal API-key connections")
 
         wanted: dict[str, object] = {
@@ -532,6 +609,7 @@ class ModelProfileService:
             # An edit that leaves the key alone keeps the intent stored: renaming
             # a gateway profile whose key was deleted does not make it keyless.
             "runs_without_key": secret_id is None
+            and profile.provider != CLAUDE_SUBSCRIPTION_PROVIDER
             and ("secret_id" in sent or profile.runs_without_key),
         }
         if changes.label is not None:
@@ -690,6 +768,31 @@ class ModelProfileService:
             raise AuthorizationError(
                 message=f"Model '{profile.label}' uses a personal connection; sign in as its owner",
                 details={"profile_id": str(profile.id)},
+            )
+        if profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER:
+            if (
+                ctx is None
+                or ctx.organization_id != organization_id
+                or profile.organization_id != organization_id
+                or not _profile_accessible(profile, ctx)
+            ):
+                raise AuthorizationError(
+                    message="A Claude subscription model requires its signed-in owner"
+                )
+            _check_shape(
+                get_provider(profile.provider),
+                secret_id=profile.secret_id,
+                base_url=profile.base_url,
+                api=_stored_api(profile.api),
+                region=_stored_region(profile.region),
+            )
+            _validate_model_id(profile.provider, profile.model)
+            owner = subscription_owner(ctx)
+            return ResolvedCredential(
+                provider=profile.provider,
+                secret=NoSecret(),
+                personal_owner_user_id=owner.user_id,
+                claude_subscription_owner=owner,
             )
         if profile.secret_id is None:
             if not lacks_key(

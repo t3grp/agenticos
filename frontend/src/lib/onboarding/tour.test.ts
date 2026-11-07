@@ -114,7 +114,7 @@ describe("pageKey", () => {
     expect(pageKey(ROUTES.SETTINGS_SLASH_COMMANDS)).toBe(SETTINGS_DETAIL);
     expect(pageKey(ROUTES.SETTINGS_AI_CONNECTIONS)).toBe(ROUTES.SETTINGS_AI_CONNECTIONS);
     expect(stepsForPage(ROUTES.SETTINGS_AI_CONNECTIONS, () => true).map((step) => step.id)).toEqual(
-      ["personal-model-connections"],
+      ["personal-model-connections", "claude-subscription-connect"],
     );
     expect(pageKey("/documents/abc-123")).toBe(WORKSPACE_DETAIL);
     expect(pageKey("/projects/abc-123")).toBe(PROJECT_DETAIL);
@@ -255,6 +255,7 @@ describe("stepsForPage", () => {
       "chat-voice-call",
       "chat-approval-mode",
       "chat-your-connections",
+      "chat-subscription-model",
     ]);
   });
 

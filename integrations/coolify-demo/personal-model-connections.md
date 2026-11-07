@@ -1,9 +1,39 @@
 # Personal model connections
 
-Personal API connections let a signed-in person select their own Anthropic or
-OpenAI credential as the model for an existing AgenticOS agent. The agent keeps
-its instructions, tools, approvals and budget controls. Select a personal model
-from the chat model picker or the agent's model settings.
+Personal connections let a signed-in person power an existing AgenticOS agent
+with their own Claude subscription, Anthropic API key or OpenAI API key. The
+agent keeps its instructions, tools, approvals and budget controls. Select a
+saved personal model from the chat model picker or the agent's model settings.
+
+## Connect a Claude subscription
+
+The deployment must enable the [private Claude runtime](../claude-subscription/README.md).
+The connection controls require `connections:manage` and the owner's direct
+authenticated session in the selected organization.
+
+1. Open **Settings → AI connections → Claude subscription**.
+2. Choose **Connect Claude** and open the Anthropic sign-in link.
+3. Complete sign-in on Anthropic's page and paste its returned code into T3OS.
+4. When the connection is ready, choose Sonnet, Opus or Haiku and save the model.
+5. Select that personal model for an existing agent or chat.
+
+The official Claude client handles the browser authorization and keeps its
+credentials in the owner's isolated native account directory. T3OS does not
+extract an OAuth token or send it to the ordinary Anthropic API client. This is
+a link-and-paste flow. The code is discarded after submission. Cancel stops that
+pending login; disconnect signs the native account out on this server.
+
+These models support text and existing T3OS function tools, including their
+ordinary validation and approval gates. Each model step returns a buffered
+response. Images, audio, documents and provider-native tools are refused before
+inference. The aliases resolve through the native client, and actual
+availability and limits depend on the account. Saving or listing a model does
+not make a paid inference request.
+
+The model's personal ownership remains after disconnect. Reconnecting the same
+person's account restores its use; another member cannot borrow it. A native
+request does not inherit an organization API key or silently change connection
+type. An explicit agent fallback remains an explicit model configuration.
 
 ## Connect an account's API key
 
@@ -40,19 +70,15 @@ particular request is covered by an included or purchased credit.
 See the current [Anthropic API credit instructions](https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers)
 for eligibility, claiming, expiry and billing details.
 
-## Subscription sign-in availability
+## ChatGPT subscription sign-in
 
-This feature does not implement an Anthropic consumer device-authorization grant.
-The supported connection in this build uses an API key. Anthropic's native CLI
-authentication is not an application registration for this hosted service.
-
-The new personal-connection screen also leaves ChatGPT subscription sign-in
+The personal-connection screen leaves ChatGPT subscription sign-in
 unavailable. The dependency used by the existing legacy organization Codex flow
 does not implement the current Sign in with ChatGPT application registration and
 public inference contract. The new personal connection API rejects that legacy
 credential kind before exchanging a sign-in callback.
 
-An implementation of account sign-in needs the provider's supported application
+An implementation of ChatGPT account sign-in needs the provider's supported application
 grant for this deployment, validated state and tokens, protected and serialized
 refreshes, and the documented model and inference API. See OpenAI's
 [Sign in with ChatGPT overview](https://developers.openai.com/siwc/token-sharing-open-source)
@@ -60,7 +86,7 @@ and [models and inference contract](https://developers.openai.com/siwc/token-sha
 
 ## Ownership and runtime behavior
 
-The vault secret owns the usage restriction. `usage_scope` is `organization` by
+For API connections, the vault secret owns the usage restriction. `usage_scope` is `organization` by
 default for existing and ordinary new credentials. A new personal API connection
 sets `usage_scope: personal` and `visibility: private`, with the authenticated
 person as its owner. The usage scope is immutable.
@@ -91,7 +117,7 @@ different credential. Changing between personal and organization usage creates a
 separate model profile.
 
 The migration adds the usage scope without changing existing rows' behavior.
-Account deletion removes the person's personal credentials instead of promoting
+Account deletion removes the person's personal vault credentials instead of promoting
 them into organization credentials. Downgrading across this migration requires
 removing personal connections first, so a downgrade cannot discard their usage
 restriction while retaining a spendable key.
