@@ -33,6 +33,14 @@ Two things are versioned separately from this file and worth knowing about:
   runtime, preserving tools, approvals and owner restrictions. The initial
   adapter supports text and application tools with buffered step responses.
 
+### Changed
+
+- Redesigned all 22 email templates with Geist typography, t3UI colors and
+  clearer account, invitation, agent activity and billing layouts. HTML and
+  plain-text versions share their copy, action links include a copyable fallback,
+  and the deployment's frontend serves the licensed fonts with system-font
+  fallbacks for email clients that do not load them.
+
 ## [1.52.0] - 2026-11-06
 
 ### Fixed

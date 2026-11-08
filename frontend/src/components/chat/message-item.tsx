@@ -227,7 +227,7 @@ export const MessageItem = memo(function MessageItem({
         // Architect's window, and the message under them at the column's full
         // width: a column of avatars beside every turn spent a gutter on a face
         // that only needs saying once per turn.
-        "group relative flex flex-col overflow-visible",
+        "group relative flex max-w-full min-w-0 flex-col",
         compact ? "gap-1.5" : "gap-2",
         // Each edge decided once, and never as `py-*` with a `pt-0` over it: two
         // utilities of equal specificity leave which one wins to the order of the
@@ -255,7 +255,7 @@ export const MessageItem = memo(function MessageItem({
       {(!continuesTurn || canShowActions) && (
         <div
           className={cn(
-            "flex items-center gap-2",
+            "flex max-w-full min-w-0 items-center gap-2",
             isUser && "flex-row-reverse",
             continuesTurn && "sm:hidden",
           )}
@@ -299,7 +299,7 @@ export const MessageItem = memo(function MessageItem({
       )}
       <div
         className={cn(
-          "overflow-hidden",
+          "max-w-full min-w-0",
           compact ? "space-y-1.5" : "space-y-2",
           isUser ? "flex max-w-[85%] flex-col items-end" : "w-full",
         )}
@@ -332,7 +332,7 @@ export const MessageItem = memo(function MessageItem({
                       type="button"
                       key={att.file.id}
                       onClick={() => openPreview(att.file)}
-                      className="hover:ring-foreground/30 block overflow-hidden rounded-xl border ring-2 ring-transparent transition-all"
+                      className="hover:ring-foreground/30 block max-w-full min-w-0 overflow-hidden rounded-xl border ring-2 ring-transparent transition-shadow"
                       title={t("openFile", { name: att.file.filename })}
                     >
                       <KeptImage
@@ -340,7 +340,7 @@ export const MessageItem = memo(function MessageItem({
                         alt={att.file.filename}
                         width={320}
                         height={256}
-                        className="h-auto max-h-64 w-auto max-w-xs object-contain"
+                        className="h-auto max-h-64 w-auto max-w-[min(20rem,100%)] object-contain"
                       />
                     </button>
                   ) : "file" in att ? (

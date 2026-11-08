@@ -889,7 +889,7 @@ export function ChatInput({
           server?.actions.cancel();
         }
       }}
-      className="chat-input-form relative"
+      className="chat-input-form relative min-w-0"
       data-editing={editing || undefined}
       data-drafting={drafting || undefined}
       onFocusCapture={(event) => {
@@ -1005,7 +1005,10 @@ export function ChatInput({
       {/* Inert rather than hidden while dictating: the composer does not change
           under the page's dictation pill, and the agent the recording goes to
           must not change under it either. */}
-      <div className="chat-input-actions flex items-center gap-1.5 pt-0.5 pb-1" inert={dictating}>
+      <div
+        className="chat-input-actions flex min-w-0 flex-wrap items-center gap-2 pt-2"
+        inert={dictating}
+      >
         <input
           ref={fileInputRef}
           type="file"
@@ -1033,10 +1036,12 @@ export function ChatInput({
         />
         {isUploading && <Spinner className="text-muted-foreground h-4 w-4 shrink-0" />}
         {controlsSlot ? (
-          <div className="chat-input-selection flex min-w-0 items-center gap-1">{controlsSlot}</div>
+          <div className="chat-input-selection flex min-w-0 flex-[1_1_8rem] items-center gap-2">
+            {controlsSlot}
+          </div>
         ) : null}
 
-        <div className="chat-input-send ml-auto flex shrink-0 items-center gap-1">
+        <div className="chat-input-send ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-1">
           {actionsSlot}
           {/* Beside Send and the call, as in ChatGPT; the `+` offers it too. A
               server recording takes the box over with its own bar, so this
