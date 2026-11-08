@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, FileClock, FileX, GitPullRequest, History, Info } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  FileClock,
+  FileX,
+  GitPullRequest,
+  History,
+  Info,
+  Pin,
+  PinOff,
+} from "lucide-react";
 import { usePathname, useRouter } from "@/lib/locale-navigation";
 import { useTranslations } from "next-intl";
 
@@ -99,6 +109,7 @@ export function ArtifactViewer({
     archive,
     unarchive,
     follow,
+    pin,
     remove,
     confirmData,
     withdrawConsent,
@@ -314,6 +325,17 @@ export function ArtifactViewer({
           <span className="sr-only sm:not-sr-only">
             {artifact.following ? t("unfollow") : t("follow")}
           </span>
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="max-sm:size-11 max-sm:p-0"
+          aria-pressed={artifact.pinned}
+          disabled={pin.isPending}
+          onClick={() => pin.mutate({ id: artifact.id, on: !artifact.pinned })}
+        >
+          {artifact.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          <span className="sr-only sm:not-sr-only">{artifact.pinned ? t("unpin") : t("pin")}</span>
         </Button>
         {!artifact.live && restore}
       </ArtifactViewerBar>

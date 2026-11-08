@@ -38,6 +38,7 @@ import type {
 
 const useArtifactViewMock = vi.fn();
 const useArtifactDataMock = vi.fn();
+const usePinArtifactMock = vi.fn();
 const IDLE_READ = {
   data: undefined,
   error: null,
@@ -53,6 +54,7 @@ vi.mock("@/hooks/use-artifacts", () => ({
   useArtifactView: (...args: unknown[]) => useArtifactViewMock(...args),
   useArtifactData: (...args: unknown[]) => useArtifactDataMock(...args),
   useArtifactReasons: (...args: unknown[]) => useArtifactReasonsMock(...args),
+  usePinArtifact: (...args: unknown[]) => usePinArtifactMock(...args),
   usePublicArtifactUnlock: () => unlockMock(),
 }));
 const toastError = vi.fn();
@@ -70,6 +72,9 @@ vi.mock("@/hooks/use-artifact-actions", async (importActual) => {
   return { useArtifactActions: () => idle, useAskingGate: actual.useAskingGate };
 });
 vi.mock("sonner", () => ({ toast: { error: (...args: unknown[]) => toastError(...args) } }));
+
+const pinMutate = vi.fn();
+usePinArtifactMock.mockReturnValue({ mutate: pinMutate, isPending: false });
 
 function version(number: number, overrides: Partial<ArtifactVersion> = {}): ArtifactVersion {
   return {
@@ -99,6 +104,7 @@ function artifact(overrides: Partial<Artifact> = {}): Artifact {
     published_at: "2026-09-22T10:00:00Z",
     archived_at: null,
     live: false,
+    pinned: false,
     current_version: version(3),
     created_at: "2026-09-01T10:00:00Z",
     updated_at: null,
@@ -1051,6 +1057,31 @@ describe("the list card", () => {
 
     expect(screen.getByRole("link", { name: "Open Weekly report" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  });
+
+  it("offers the pin toggle to a reader, who has no menu", () => {
+    useArtifactViewMock.mockReturnValue({ isLoading: false, data: undefined });
+    render(<ArtifactCard artifact={artifact()} />);
+
+    const pin = screen.getByRole("button", { name: "Pin to sidebar" });
+    expect(pin).toBeInTheDocument();
+    expect(pin).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  });
+
+  it("pins an unpinned page from its card, and unpins a pinned one", async () => {
+    useArtifactViewMock.mockReturnValue({ isLoading: false, data: undefined });
+    pinMutate.mockClear();
+    const user = userEvent.setup();
+    const { rerender } = render(<ArtifactCard artifact={artifact()} />);
+    await user.click(screen.getByRole("button", { name: "Pin to sidebar" }));
+    expect(pinMutate).toHaveBeenCalledWith({ id: "a1", on: true });
+
+    rerender(<ArtifactCard artifact={artifact({ pinned: true })} />);
+    const unpin = screen.getByRole("button", { name: "Unpin from sidebar" });
+    expect(unpin).toHaveAttribute("aria-pressed", "true");
+    await user.click(unpin);
+    expect(pinMutate).toHaveBeenCalledWith({ id: "a1", on: false });
   });
 
   it("archives a live page from its menu, without opening it", async () => {

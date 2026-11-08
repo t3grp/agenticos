@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Archive, ArchiveRestore, Globe, MoreHorizontal, Trash2, Users } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Globe,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { ArtifactThumbnail } from "@/components/artifacts/artifact-thumbnail";
@@ -17,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui";
+import { usePinArtifact } from "@/hooks/use-artifacts";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Artifact } from "@/types/artifact";
@@ -58,6 +68,9 @@ export function ArtifactCard({
   const groups = artifact.shared_groups ?? [];
   const version = artifact.current_version?.number ?? 0;
   const archived = artifact.archived_at !== null;
+  // Pinning is any viewer's choice, not an edit right, so the toggle stands
+  // beside the menu rather than in it: the menu only renders for editors.
+  const pin = usePinArtifact();
   return (
     <Card
       className={cn(
@@ -124,40 +137,55 @@ export function ArtifactCard({
               }),
             })}
           </span>
-          {actions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={ta("moreActionsFor", { name: artifact.title })}
-                  className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring pointer-events-auto -my-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {archived ? (
-                  <DropdownMenuItem onSelect={actions.onRestore}>
-                    <ArchiveRestore className="h-4 w-4" />
-                    {t("unarchive")}
+          <span className="pointer-events-auto flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              aria-label={artifact.pinned ? t("unpinFromSidebar") : t("pinToSidebar")}
+              aria-pressed={artifact.pinned}
+              disabled={pin.isPending}
+              onClick={() => pin.mutate({ id: artifact.id, on: !artifact.pinned })}
+              className={cn(
+                "text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+                artifact.pinned && "text-foreground",
+              )}
+            >
+              {artifact.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+            </button>
+            {actions && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={ta("moreActionsFor", { name: artifact.title })}
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring pointer-events-auto -my-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {archived ? (
+                    <DropdownMenuItem onSelect={actions.onRestore}>
+                      <ArchiveRestore className="h-4 w-4" />
+                      {t("unarchive")}
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onSelect={actions.onArchive}>
+                      <Archive className="h-4 w-4" />
+                      {t("archive")}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={actions.onDelete}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {ta("deletePermanently")}
                   </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onSelect={actions.onArchive}>
-                    <Archive className="h-4 w-4" />
-                    {t("archive")}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={actions.onDelete}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {ta("deletePermanently")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </span>
         </div>
       </div>
     </Card>

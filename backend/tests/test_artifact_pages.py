@@ -67,11 +67,14 @@ def _shared_with_no_group(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _nobody_follows(monkeypatch: pytest.MonkeyPatch) -> None:
     """The repository is mocked call by call here, and following is its own
-    concern - `TestFollowing` in `test_artifact_followers.py` covers it."""
+    concern - `TestFollowing` in `test_artifact_followers.py` covers it. Pins
+    are the same: `test_artifact_pins.py` covers them."""
     from app.repositories import artifact as artifact_repo
 
     monkeypatch.setattr(artifact_repo, "is_following", AsyncMock(return_value=False))
     monkeypatch.setattr(artifact_repo, "follower_ids", AsyncMock(return_value=[]))
+    monkeypatch.setattr(artifact_repo, "is_pinned", AsyncMock(return_value=False))
+    monkeypatch.setattr(artifact_repo, "pinned_ids", AsyncMock(return_value=[]))
 
 
 def _ctx(role: str = OrgRoleName.OWNER) -> AuthContext:

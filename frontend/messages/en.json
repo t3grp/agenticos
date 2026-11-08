@@ -4355,6 +4355,7 @@
     "documents": "Documents",
     "signIns": "Sign-ins",
     "projects": "Projects",
+    "pinned": "Pinned",
     "allProjects": "All projects",
     "backgroundJobs": "Background jobs",
     "loadingPage": "Opening the page",
@@ -4988,6 +4989,10 @@
       "artifacts-groups": {
         "title": "By department",
         "body": "Narrow the list to what one group was given. A group is who something reaches, so it is also how the list is grouped."
+      },
+      "nav-pinned": {
+        "title": "Pinned apps",
+        "body": "Apps you pinned sit here in the sidebar, one tap away. Pin one from its card or its page, and unpin it the same way."
       },
       "knowledge-groups": {
         "title": "By department",
@@ -10002,6 +10007,12 @@
     "unfollow": "Unfollow",
     "followed": "You will be notified when a new version is published",
     "unfollowed": "You will no longer be notified about this app",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinToSidebar": "Pin to sidebar",
+    "unpinFromSidebar": "Unpin from sidebar",
+    "pinned": "Pinned to your sidebar",
+    "unpinned": "Removed from your sidebar",
     "archive": "Archive",
     "archiveTitle": "Archive {title}?",
     "archiveWhy": "Nobody can open it and the agent can't publish it again, and its public link turns off. Everything is kept, so you can restore it later.",

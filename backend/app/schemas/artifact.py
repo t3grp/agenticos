@@ -591,6 +591,9 @@ class ArtifactRead(BaseSchema):
     live: bool = Field(
         default=False, description="Whether the current version reads live data through bindings"
     )
+    pinned: bool = Field(
+        default=False, description="Whether the caller pinned this page to their sidebar"
+    )
     archived_at: datetime | None = Field(
         default=None,
         description=(
@@ -765,6 +768,7 @@ class ArtifactDetail(ArtifactRead):
     following: bool = Field(
         description="Whether the caller is told in their inbox when a new version is published"
     )
+    pinned: bool = Field(description="Whether the caller pinned this page to their sidebar")
     public_link: ArtifactPublicLinkRead
     public_data: ArtifactPublicDataRead | None = Field(
         default=None,

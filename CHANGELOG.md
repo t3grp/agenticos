@@ -19,6 +19,13 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- Apps can be pinned to the sidebar. Pinning from an app's card or its page
+  adds it under a Pinned heading in the left navigation, in the order it was
+  pinned; unpinning removes it. Pins are per person, and a pinned app the
+  reader can no longer open simply is not listed.
+
 ### Changed
 
 - Redesigned all 22 email templates with Geist typography, t3UI colors and

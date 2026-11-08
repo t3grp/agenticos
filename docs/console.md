@@ -780,7 +780,9 @@ An agent with **Past conversations** offers your thirty most recent accessible c
 ## What each area is for
 
 **Overview** (Dashboard), **Chat** and **Inbox** lead the sidebar. **Build & manage**
-keeps Agents, Workflows, Routines and Apps visible; Projects follow.
+keeps Agents, Workflows, Routines and Apps visible; Projects follow. Apps you
+pin appear under their own **Pinned** heading, in the order you pinned them,
+and only while you have pins.
 
 **Knowledge** opens by default and holds Knowledge bases, Tables, Skills, Context
 and Documents. Its manually chosen open or closed state is remembered.

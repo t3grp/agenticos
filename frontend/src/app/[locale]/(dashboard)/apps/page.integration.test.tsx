@@ -57,6 +57,7 @@ function page(overrides: Partial<Artifact> = {}): Artifact {
     environment_name: null,
     public_url: null,
     live: false,
+    pinned: false,
     published_at: "2026-09-22T10:00:00Z",
     current_version: null,
     archived_at: null,

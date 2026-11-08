@@ -126,6 +126,7 @@ function detail(overrides: Partial<ArtifactDetailData> = {}): ArtifactDetailData
     bindings: [],
     consent: null,
     following: false,
+    pinned: false,
     public_link: {
       expires_at: null,
       pinned_version_id: null,
@@ -154,6 +155,7 @@ function state(artifact: ArtifactDetailData | null, overrides: Record<string, un
     archive: mutation(),
     unarchive: mutation(),
     follow: mutation(),
+    pin: mutation(),
     remove: mutation(),
     confirmData: mutation(),
     withdrawConsent: mutation(),
@@ -342,6 +344,22 @@ describe("ArtifactViewer", () => {
     rerender(<ArtifactViewer artifactId="a1" initialVersionId={null} />);
     await userEvent.click(screen.getByRole("button", { name: "Unfollow" }));
     expect(follow.mutate).toHaveBeenLastCalledWith(false);
+  });
+
+  it("pins a page, and says so on the button once it does", async () => {
+    const pin = mutation();
+    useArtifactMock.mockReturnValue(state(detail(), { pin }));
+    const { rerender } = render(<ArtifactViewer artifactId="a1" initialVersionId={null} />);
+
+    const button = screen.getByRole("button", { name: "Pin" });
+    expect(button).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(button);
+    expect(pin.mutate).toHaveBeenCalledWith({ id: "a1", on: true });
+
+    useArtifactMock.mockReturnValue(state(detail({ pinned: true }), { pin }));
+    rerender(<ArtifactViewer artifactId="a1" initialVersionId={null} />);
+    await userEvent.click(screen.getByRole("button", { name: "Unpin" }));
+    expect(pin.mutate).toHaveBeenLastCalledWith({ id: "a1", on: false });
   });
 
   it("says in a word how far it reaches", () => {

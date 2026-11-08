@@ -483,6 +483,7 @@ export const qk = {
       projectId?: string;
     }) => ["artifacts", "list", query] as const,
     agents: () => ["artifacts", "agents"] as const,
+    pinned: () => ["artifacts", "pinned"] as const,
     detail: (id: string) => ["artifacts", id] as const,
     versions: (id: string) => ["artifacts", id, "versions"] as const,
     view: (id: string, versionId: string | null, withData = false) =>

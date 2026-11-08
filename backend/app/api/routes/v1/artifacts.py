@@ -122,6 +122,16 @@ async def list_artifact_agents(service: ArtifactSvc, ctx: Auth) -> Any:
     return await service.publishing_agents(ctx)
 
 
+@router.get(
+    "/pinned",
+    response_model=ArtifactList,
+    dependencies=[Depends(require(Perm.ARTIFACTS_VIEW))],
+)
+async def list_pinned_artifacts(service: ArtifactSvc, ctx: Auth) -> Any:
+    """The apps the caller pinned to their sidebar, in the order they pinned them."""
+    return await service.list_pinned(ctx)
+
+
 @router.get("/{artifact_id}", response_model=ArtifactDetail)
 async def get_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> Any:
     """One artifact. An archived one is found only by a caller who may edit it."""
@@ -436,6 +446,18 @@ async def follow_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) ->
 async def unfollow_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> Any:
     """Stop being notified about new versions."""
     return await service.unfollow(ctx, artifact_id)
+
+
+@router.put("/{artifact_id}/pin", response_model=ArtifactDetail)
+async def pin_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> Any:
+    """Pin the page to the caller's sidebar."""
+    return await service.pin(ctx, artifact_id)
+
+
+@router.delete("/{artifact_id}/pin", response_model=ArtifactDetail)
+async def unpin_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> Any:
+    """Take the page off the caller's sidebar."""
+    return await service.unpin(ctx, artifact_id)
 
 
 @router.get("/{artifact_id}/view", response_model=ArtifactView)

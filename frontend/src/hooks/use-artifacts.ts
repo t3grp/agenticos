@@ -150,6 +150,46 @@ export function useArtifactAgents(enabled: boolean) {
 }
 
 /**
+ * The apps the caller pinned to their sidebar, in the order they pinned them.
+ *
+ * The sidebar reads these; a page the caller can no longer open simply is
+ * not in them.
+ */
+export function usePinnedArtifacts(enabled: boolean) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: qk.artifacts.pinned(),
+    queryFn: () => apiClient.get<ArtifactList>("/apps/pinned"),
+    enabled,
+  });
+  return { artifacts: data?.items ?? [], total: data?.total ?? 0, isLoading, error };
+}
+
+/**
+ * Pin or unpin one artifact, from its card or its viewer.
+ *
+ * Mirrors the `follow` mutation in `useArtifact`: the answer is the page with
+ * its new state, which settles the detail and refreshes every list.
+ */
+export function usePinArtifact() {
+  const t = useTranslations("artifacts");
+  const tErrors = useTranslations("errors");
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, on }: { id: string; on: boolean }) =>
+      on
+        ? apiClient.put<ArtifactDetail>(`/apps/${id}/pin`)
+        : apiClient.delete<ArtifactDetail>(`/apps/${id}/pin`),
+    onSuccess: (artifact) => {
+      queryClient.setQueryData(qk.artifacts.detail(artifact.id), artifact);
+      void queryClient.invalidateQueries({ queryKey: qk.artifacts.all() });
+      toast.success(t(artifact.pinned ? "pinned" : "unpinned"));
+    },
+    onError: (error) => toast.error(getErrorMessage(error, tErrors)),
+  });
+}
+
+/**
  * One artifact, its kept versions, and what a member with `edit` may do to it.
  *
  * A 404 is the answer for a missing artifact, one in another organization, one
@@ -252,6 +292,9 @@ export function useArtifact(artifactId: string) {
     },
     onError: fail,
   });
+  // The sidebar reads its pins from the list, so a pin made here has to reach
+  // it: the answer settles the detail and refreshes every list.
+  const pin = usePinArtifact();
   const remove = useMutation({
     mutationFn: () => apiClient.delete<void>(`/apps/${artifactId}`),
     onSuccess: async () => {
@@ -348,6 +391,7 @@ export function useArtifact(artifactId: string) {
     archive,
     unarchive,
     follow,
+    pin,
     remove,
     confirmData,
     withdrawConsent,

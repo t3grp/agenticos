@@ -546,6 +546,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
     permission: Perm.artifactsView,
     optional: true,
   },
+  // A page pinned to the sidebar: only where the caller has pins, which is
+  // when the anchor exists at all.
+  {
+    id: "nav-pinned",
+    page: ROUTES.DASHBOARD,
+    target: "nav-pinned",
+    permission: Perm.artifactsView,
+    optional: true,
+  },
   // One page, `/apps/<id>`: "?"-only and shown in place, from the "?" in its
   // strip. The anchors sit in the strip, never in a dialog or a menu: the walk
   // opens a tab, not a dialog, so a stop cannot reveal what a click would. The

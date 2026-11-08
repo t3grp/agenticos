@@ -63,10 +63,15 @@ PATH = "app.services.artifact"
 
 @pytest.fixture(autouse=True)
 def _nobody_follows(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The repository is mocked call by call here, and following is its own
+    concern - `TestFollowing` in `test_artifact_followers.py` covers it. Pins
+    are the same: `test_artifact_pins.py` covers them."""
     from app.repositories import artifact as artifact_repo
 
     monkeypatch.setattr(artifact_repo, "is_following", AsyncMock(return_value=False))
     monkeypatch.setattr(artifact_repo, "follower_ids", AsyncMock(return_value=[]))
+    monkeypatch.setattr(artifact_repo, "is_pinned", AsyncMock(return_value=False))
+    monkeypatch.setattr(artifact_repo, "pinned_ids", AsyncMock(return_value=[]))
 
 
 @pytest.fixture(autouse=True)
@@ -201,6 +206,102 @@ class TestFollowing:
         follow.assert_not_called()
 
 
+class TestPinning:
+    async def test_pinning_and_unpinning_answer_with_the_page(self, client: OpenClient) -> None:
+        row = _artifact()
+        pin = AsyncMock()
+        unpin = AsyncMock()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=row)),
+            patch(f"{PATH}.artifact_repo.latest_version", new=AsyncMock(return_value=None)),
+            patch(f"{PATH}.artifact_repo.pin", new=pin),
+            patch(f"{PATH}.artifact_repo.unpin", new=unpin),
+            patch(f"{PATH}.artifact_repo.is_pinned", new=AsyncMock(side_effect=[True, False])),
+        ):
+            async with client() as http:
+                pinned = await http.put(_url(f"/{row.id}/pin"))
+                unpinned = await http.delete(_url(f"/{row.id}/pin"))
+        assert pinned.status_code == 200
+        assert pinned.json()["pinned"] is True
+        assert unpinned.status_code == 200
+        assert unpinned.json()["pinned"] is False
+        assert pin.await_args.kwargs["artifact_id"] == row.id
+        assert unpin.await_args.kwargs["artifact_id"] == row.id
+
+    @pytest.mark.security
+    async def test_a_page_the_caller_cannot_open_cannot_be_pinned(self, client: OpenClient) -> None:
+        """Pinning is not a way to learn that a page exists."""
+        pin = AsyncMock()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=None)),
+            patch(f"{PATH}.artifact_repo.pin", new=pin),
+        ):
+            async with client() as http:
+                response = await http.put(_url(f"/{uuid.uuid4()}/pin"))
+        assert response.status_code == 404
+        pin.assert_not_called()
+
+    async def test_pinned_apps_list_in_the_order_they_were_pinned(self, client: OpenClient) -> None:
+        first, second = _artifact(), _artifact()
+        with (
+            patch(
+                f"{PATH}.artifact_repo.pinned_ids",
+                new=AsyncMock(return_value=[first.id, second.id]),
+            ),
+            patch(
+                f"{PATH}.artifact_repo.list_visible",
+                new=AsyncMock(return_value=([second, first], 2)),
+            ),
+            patch(
+                f"{PATH}.artifact_repo.latest_versions",
+                new=AsyncMock(return_value={}),
+            ),
+        ):
+            async with client() as http:
+                response = await http.get(_url("/pinned"))
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 2
+        assert [item["id"] for item in body["items"]] == [str(first.id), str(second.id)]
+        assert all(item["pinned"] is True for item in body["items"])
+
+    async def test_a_pin_whose_page_cannot_be_opened_drops_out_of_the_list(
+        self, client: OpenClient
+    ) -> None:
+        first, second = _artifact(), _artifact()
+        with (
+            patch(
+                f"{PATH}.artifact_repo.pinned_ids",
+                new=AsyncMock(return_value=[first.id, second.id]),
+            ),
+            patch(
+                f"{PATH}.artifact_repo.list_visible",
+                new=AsyncMock(return_value=([first], 1)),
+            ),
+            patch(
+                f"{PATH}.artifact_repo.latest_versions",
+                new=AsyncMock(return_value={}),
+            ),
+        ):
+            async with client() as http:
+                response = await http.get(_url("/pinned"))
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 1
+        assert [item["id"] for item in body["items"]] == [str(first.id)]
+
+    async def test_nothing_pinned_lists_nothing(self, client: OpenClient) -> None:
+        with (
+            patch(f"{PATH}.artifact_repo.pinned_ids", new=AsyncMock(return_value=[])),
+            patch(f"{PATH}.artifact_repo.list_visible", new=AsyncMock()) as visible,
+        ):
+            async with client() as http:
+                response = await http.get(_url("/pinned"))
+        assert response.status_code == 200
+        assert response.json() == {"items": [], "total": 0}
+        visible.assert_not_awaited()
+
+
 class TestMembers:
     async def test_the_listing_carries_each_artifact_s_current_version(
         self, client: OpenClient
@@ -220,6 +321,24 @@ class TestMembers:
         assert body["total"] == 1
         assert body["items"][0]["current_version"]["number"] == 3
         assert body["items"][0]["public_url"] is None
+
+    async def test_the_listing_marks_the_pages_the_caller_pinned(self, client: OpenClient) -> None:
+        row = _artifact()
+        with (
+            patch(f"{PATH}.artifact_repo.list_visible", new=AsyncMock(return_value=([row], 1))),
+            patch(
+                f"{PATH}.artifact_repo.latest_versions",
+                new=AsyncMock(return_value={}),
+            ),
+            patch(
+                f"{PATH}.artifact_repo.pinned_ids",
+                new=AsyncMock(return_value=[row.id]),
+            ),
+        ):
+            async with client() as http:
+                response = await http.get(_url())
+        assert response.status_code == 200
+        assert response.json()["items"][0]["pinned"] is True
 
     async def test_the_listing_narrows_to_a_project_the_caller_can_see(
         self, client: OpenClient

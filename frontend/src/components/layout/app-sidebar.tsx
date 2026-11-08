@@ -26,17 +26,20 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+import { PinnedAppRows } from "@/components/layout/pinned-app-rows";
 import { ProjectRows } from "@/components/layout/project-rows";
 
 import { BrandLink } from "@/components/layout/brand-link";
 import { stripLocale } from "@/lib/active-route";
 import { SidebarShell } from "@/components/layout/sidebar-shell";
 import { useMounted } from "@/hooks/use-mounted";
+import { usePinnedArtifacts } from "@/hooks/use-artifacts";
 import { useSuggestions } from "@/hooks/use-suggestions";
 import { usePermissions } from "@/hooks/use-permissions";
 import { cn, isAppAdmin } from "@/lib/utils";
 import { useAuthStore, useSidebarStore } from "@/stores";
 import { NAV_GROUPS, isActive, type NavGroup, type NavItem } from "@/lib/nav-sections";
+import { Perm } from "@/types/permissions";
 
 export { NAV_GROUPS, isActive, navSectionFor, type NavDomain } from "@/lib/nav-sections";
 
@@ -134,11 +137,19 @@ export function SidebarNav({
   const { user } = useAuthStore();
   const t = useTranslations("nav");
   const admin = isAppAdmin(user);
+  // The pinned group has no fixed entries - the rows are the entries - so the
+  // group only exists while the caller has pins. The rows read the same query,
+  // so this costs no second read.
+  const { artifacts: pinned } = usePinnedArtifacts(can(Perm.artifactsView));
 
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.permission || can(item.permission)),
-  })).filter((group) => group.items.length > 0 && (!group.adminOnly || admin));
+  })).filter(
+    (group) =>
+      (group.items.length > 0 || (group.labelKey === "pinned" && pinned.length > 0)) &&
+      (!group.adminOnly || admin),
+  );
 
   return (
     <nav
@@ -185,7 +196,10 @@ function NavGroupBlock({
     (mounted && (openGroups.includes(key) || (key === "knowledge" && !closedGroups.includes(key))));
 
   return (
-    <div className={cn("flex flex-col gap-0.5", collapsed && "w-full items-center")}>
+    <div
+      data-tour={key === "pinned" ? "nav-pinned" : undefined}
+      className={cn("flex flex-col gap-0.5", collapsed && "w-full items-center")}
+    >
       {group.labelKey &&
         // The heading is what tells the groups apart, and on the rail there is
         // no room for the word. A rule does the same job: it says "a different
@@ -234,6 +248,7 @@ function NavGroupBlock({
           </div>
         ))}
       {key === "projects" && <ProjectRows onNavigate={onNavigate} collapsed={collapsed} />}
+      {key === "pinned" && <PinnedAppRows onNavigate={onNavigate} collapsed={collapsed} />}
       {open
         ? group.items.map((item) => (
             <NavLink key={item.href} item={item} onNavigate={onNavigate} collapsed={collapsed} />

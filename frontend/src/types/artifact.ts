@@ -52,6 +52,8 @@ export interface Artifact {
   public_url: string | null;
   /** Whether the current version is bound to saved views of Virtual Tables. */
   live: boolean;
+  /** Whether the caller pinned this page to their sidebar. */
+  pinned: boolean;
   /** The groups it is shared with, by name (#2124). Only the listing carries it. */
   shared_groups?: string[];
   published_at: string;

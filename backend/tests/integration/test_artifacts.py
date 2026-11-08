@@ -1378,6 +1378,66 @@ class TestFollowing:
         assert not await artifact_repo.is_following(db, artifact_id=artifact.id, user_id=reader.id)
 
 
+class TestPinning:
+    """A pin is a row per person per page: pinning twice is pinning once, and
+    unpinning leaves nothing behind."""
+
+    async def test_pinning_twice_is_pinning_once_and_unpinning_undoes_it(
+        self, db: AsyncSession, storage: LocalFileStorage
+    ) -> None:
+        organization, owner, agent = await _tenant(db)
+        published = await _publish(db, organization, owner, agent, body="<h1>v1</h1>")
+        artifact = await db.get(Artifact, published.artifact_id)
+        assert artifact is not None
+        reader = await _member(db, organization, OrgRoleName.MEMBER)
+
+        await artifact_repo.pin(db, artifact_id=artifact.id, user_id=reader.id)
+        await artifact_repo.pin(db, artifact_id=artifact.id, user_id=reader.id)
+
+        assert await artifact_repo.is_pinned(db, artifact_id=artifact.id, user_id=reader.id)
+        assert await artifact_repo.pinned_ids(db, user_id=reader.id) == [artifact.id]
+
+        await artifact_repo.unpin(db, artifact_id=artifact.id, user_id=reader.id)
+
+        assert not await artifact_repo.is_pinned(db, artifact_id=artifact.id, user_id=reader.id)
+        assert await artifact_repo.pinned_ids(db, user_id=reader.id) == []
+
+    async def test_pins_list_in_the_order_they_were_pinned(
+        self, db: AsyncSession, storage: LocalFileStorage
+    ) -> None:
+        organization, owner, agent = await _tenant(db)
+        first = await _publish(
+            db, organization, owner, agent, body="<h1>one</h1>", name="one", title="One"
+        )
+        second = await _publish(
+            db, organization, owner, agent, body="<h1>two</h1>", name="two", title="Two"
+        )
+        reader = await _member(db, organization, OrgRoleName.MEMBER)
+
+        await artifact_repo.pin(db, artifact_id=first.artifact_id, user_id=reader.id)
+        await artifact_repo.pin(db, artifact_id=second.artifact_id, user_id=reader.id)
+
+        assert await artifact_repo.pinned_ids(db, user_id=reader.id) == [
+            first.artifact_id,
+            second.artifact_id,
+        ]
+
+    async def test_a_deleted_page_takes_its_pins_with_it(
+        self, db: AsyncSession, storage: LocalFileStorage
+    ) -> None:
+        organization, owner, agent = await _tenant(db)
+        published = await _publish(db, organization, owner, agent, body="<h1>v1</h1>")
+        artifact = await db.get(Artifact, published.artifact_id)
+        assert artifact is not None
+        reader = await _member(db, organization, OrgRoleName.MEMBER)
+        await artifact_repo.pin(db, artifact_id=artifact.id, user_id=reader.id)
+
+        await db.delete(artifact)
+        await db.flush()
+
+        assert await artifact_repo.pinned_ids(db, user_id=reader.id) == []
+
+
 class TestAProjectsApps:
     """`project_id` narrows the listing to the apps a run in the project's chats wrote."""
 

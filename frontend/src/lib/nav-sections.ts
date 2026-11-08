@@ -126,6 +126,9 @@ export const NAV_GROUPS: NavGroup[] = [
       },
     ],
   },
+  // Pinned apps are not a fixed section: the group exists so the sidebar has
+  // a place for them, and the rows render only while the caller has pins.
+  { labelKey: "pinned", domain: "use", items: [] },
   {
     labelKey: "projects",
     domain: "use",

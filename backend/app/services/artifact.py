@@ -2317,11 +2317,11 @@ iframe {{ border: 0; width: 100%; height: 100%; display: block; }}
 """.encode()
 
 
-def _refuse_key(ctx: AuthContext) -> None:
-    """Following a page is a person's preference; a key changes none of them."""
+def _refuse_key(ctx: AuthContext, *, action: str = "Following") -> None:
+    """Following - or pinning - a page is a person's preference; a key changes none of them."""
     if ctx.api_key_id is not None:
         raise AuthorizationError(
-            message="Following an app is a person's choice, made in the console, not by an API key",
+            message=f"{action} an app is a person's choice, made in the console, not by an API key",
             details={"subject": "api_key"},
         )
 
@@ -2462,6 +2462,33 @@ class ArtifactService:
         await artifact_repo.unfollow(self.db, artifact_id=artifact.id, user_id=ctx.subject_id)
         return await self.read(ctx, artifact.id)
 
+    async def pin(self, ctx: AuthContext, artifact_id: UUID) -> ArtifactDetail:
+        """Pin this page to the caller's sidebar.
+
+        Anybody who may open the page may pin it; pinning twice is pinning
+        once. A person's own choice, made in the console: an organization key
+        is refused, since a read-only one would otherwise change its issuer's
+        sidebar.
+
+        Raises:
+            AuthorizationError: The caller is an organization key.
+        """
+        _refuse_key(ctx, action="Pinning")
+        artifact = await self.get(ctx, artifact_id)
+        await artifact_repo.pin(self.db, artifact_id=artifact.id, user_id=ctx.subject_id)
+        return await self.read(ctx, artifact.id)
+
+    async def unpin(self, ctx: AuthContext, artifact_id: UUID) -> ArtifactDetail:
+        """Take this page off the caller's sidebar. Not pinned already is not an error.
+
+        Raises:
+            AuthorizationError: The caller is an organization key - see `pin`.
+        """
+        _refuse_key(ctx, action="Pinning")
+        artifact = await self.get(ctx, artifact_id)
+        await artifact_repo.unpin(self.db, artifact_id=artifact.id, user_id=ctx.subject_id)
+        return await self.read(ctx, artifact.id)
+
     async def _detail(
         self, ctx: AuthContext, artifact: Artifact, *, can_edit: bool
     ) -> ArtifactDetail:
@@ -2479,10 +2506,16 @@ class ArtifactService:
             else None
         )
         return ArtifactDetail(
-            **self._read(artifact, current, names).model_dump(),
+            # `pinned` is the caller's own state, read below - the read's
+            # default would otherwise arrive twice.
+            **self._read(artifact, current, names).model_dump(exclude={"pinned"}),
             can_edit=can_edit,
             following=ctx.user_id is not None
             and await artifact_repo.is_following(
+                self.db, artifact_id=artifact.id, user_id=ctx.user_id
+            ),
+            pinned=ctx.user_id is not None
+            and await artifact_repo.is_pinned(
                 self.db, artifact_id=artifact.id, user_id=ctx.user_id
             ),
             public_link=ArtifactPublicLinkRead(
@@ -2591,6 +2624,7 @@ class ArtifactService:
         agent_id: UUID | None = None,
         group_id: UUID | None = None,
         project_id: UUID | None = None,
+        only_ids: Sequence[UUID] | None = None,
         skip: int = 0,
         limit: int = 50,
     ) -> ArtifactList:
@@ -2603,7 +2637,9 @@ class ArtifactService:
         `group_id` narrows to the pages shared with one group, and each page
         names the groups it is shared with, as every other resource's card does.
         `project_id` narrows to the pages made in one project's chats; a project
-        the caller cannot see answers 404, as opening it does.
+        the caller cannot see answers 404, as opening it does. `only_ids`
+        narrows to those rows - the caller's pins, for `list_pinned` - and takes
+        the place of the group filter.
 
         Raises:
             NotFoundError: If `project_id` names a project the caller cannot see.
@@ -2637,9 +2673,9 @@ class ArtifactService:
             edit_ids=edit_ids,
             search=search,
             agent_id=agent_id,
-            only_ids=await shared_with_group(
-                self.db, ctx, resource_type=ARTIFACT, group_id=group_id
-            ),
+            only_ids=only_ids
+            if only_ids is not None
+            else await shared_with_group(self.db, ctx, resource_type=ARTIFACT, group_id=group_id),
             project_id=project_id,
             skip=skip,
             limit=limit,
@@ -2651,14 +2687,39 @@ class ArtifactService:
         names = await artifact_repo.environment_names(
             self.db, sorted({item.environment_id for item in items if item.environment_id})
         )
+        pinned = (
+            set(await artifact_repo.pinned_ids(self.db, user_id=ctx.subject_id))
+            if ctx.user_id is not None
+            else set()
+        )
         return ArtifactList(
             items=[
                 self._read(item, current.get(item.id), names).model_copy(
-                    update={"shared_groups": groups[item.id]}
+                    update={
+                        "shared_groups": groups[item.id],
+                        "pinned": item.id in pinned,
+                    }
                 )
                 for item in items
             ],
             total=total,
+        )
+
+    async def list_pinned(self, ctx: AuthContext) -> ArtifactList:
+        """The caller's pinned apps, in the order they pinned them.
+
+        A pin whose page the caller can no longer open - archived, or access
+        revoked - simply does not list; the pin stays, and access coming back
+        shows it again.
+        """
+        pinned = await artifact_repo.pinned_ids(self.db, user_id=ctx.subject_id)
+        if not pinned:
+            return ArtifactList(items=[], total=0)
+        listed = await self.list_readable(ctx, only_ids=pinned, limit=len(pinned))
+        order = {artifact_id: index for index, artifact_id in enumerate(pinned)}
+        return ArtifactList(
+            items=sorted(listed.items, key=lambda item: order[item.id]),
+            total=listed.total,
         )
 
     async def publishing_agents(self, ctx: AuthContext) -> ArtifactAgentList:

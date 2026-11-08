@@ -110,6 +110,7 @@ from app.db.models.artifact import (
     Artifact,
     ArtifactFollower,
     ArtifactMediaType,
+    ArtifactPin,
     ArtifactVersion,
 )
 from app.db.models.voice_call import VoiceCall, VoiceEndReason
@@ -183,6 +184,7 @@ __all__ = [
     "Artifact",
     "ArtifactFollower",
     "ArtifactMediaType",
+    "ArtifactPin",
     "ArtifactShareRequest",
     "ArtifactVersion",
     "User",

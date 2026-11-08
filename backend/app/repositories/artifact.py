@@ -23,6 +23,7 @@ from app.db.models.artifact import (
     SERVED_STATES,
     Artifact,
     ArtifactFollower,
+    ArtifactPin,
     ArtifactVersion,
     ConsentState,
 )
@@ -718,5 +719,43 @@ async def follower_ids(db: AsyncSession, artifact_id: UUID) -> list[UUID]:
         select(ArtifactFollower.user_id)
         .where(ArtifactFollower.artifact_id == artifact_id)
         .order_by(ArtifactFollower.created_at)
+    )
+    return list(result.scalars().all())
+
+
+async def pin(db: AsyncSession, *, artifact_id: UUID, user_id: UUID) -> None:
+    """Pin an app to a person's sidebar; pinning twice is pinning once."""
+    await db.execute(
+        pg_insert(ArtifactPin)
+        .values(artifact_id=artifact_id, user_id=user_id)
+        .on_conflict_do_nothing(constraint="uq_artifact_pin")
+    )
+    await db.flush()
+
+
+async def unpin(db: AsyncSession, *, artifact_id: UUID, user_id: UUID) -> None:
+    await db.execute(
+        delete(ArtifactPin).where(
+            ArtifactPin.artifact_id == artifact_id, ArtifactPin.user_id == user_id
+        )
+    )
+    await db.flush()
+
+
+async def is_pinned(db: AsyncSession, *, artifact_id: UUID, user_id: UUID) -> bool:
+    result = await db.execute(
+        select(ArtifactPin.id).where(
+            ArtifactPin.artifact_id == artifact_id, ArtifactPin.user_id == user_id
+        )
+    )
+    return result.first() is not None
+
+
+async def pinned_ids(db: AsyncSession, *, user_id: UUID) -> list[UUID]:
+    """The pages a person pinned, in the order they pinned them."""
+    result = await db.execute(
+        select(ArtifactPin.artifact_id)
+        .where(ArtifactPin.user_id == user_id)
+        .order_by(ArtifactPin.created_at)
     )
     return list(result.scalars().all())

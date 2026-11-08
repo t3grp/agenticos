@@ -23,6 +23,10 @@ const recentProjects = vi.fn<() => { id: string; name: string; has_unread_chats?
 vi.mock("@/hooks/use-projects", () => ({
   useProjects: () => ({ projects: recentProjects() }),
 }));
+const pinnedApps = vi.fn<() => { id: string; title: string }[]>(() => []);
+vi.mock("@/hooks/use-artifacts", () => ({
+  usePinnedArtifacts: () => ({ artifacts: pinnedApps() }),
+}));
 const waiting = vi.fn<() => { id: string }[]>(() => []);
 vi.mock("@/hooks/use-suggestions", () => ({ useSuggestions: () => ({ suggestions: waiting() }) }));
 const sidebar = {
@@ -259,6 +263,51 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "Newest · unread" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "unread" })).toBeInTheDocument();
     recentProjects.mockReturnValue([]);
+  });
+
+  it("lists the reader's pinned apps under their own heading, lighting the one open", () => {
+    can.mockReturnValue(true);
+    currentPath.mockReturnValue("/apps/a2");
+    pinnedApps.mockReturnValue([
+      { id: "a1", title: "Weekly report" },
+      { id: "a2", title: "Treasury board" },
+    ]);
+
+    renderNav();
+
+    expect(screen.getByText("pinned")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Weekly report/ })).toHaveAttribute("href", "/apps/a1");
+    expect(screen.getByRole("link", { name: /Treasury board/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    // A pinned app's page is inside the Apps section, so the list entry lights too.
+    expect(screen.getByRole("link", { name: "artifacts" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("W")).toBeInTheDocument();
+    pinnedApps.mockReturnValue([]);
+  });
+
+  it("shows no pinned heading while the reader has no pins", () => {
+    can.mockReturnValue(true);
+    pinnedApps.mockReturnValue([]);
+
+    renderNav();
+
+    expect(screen.queryByText("pinned")).toBeNull();
+  });
+
+  it("draws pinned apps as icons with titles on the rail", () => {
+    can.mockReturnValue(true);
+    pinnedApps.mockReturnValue([{ id: "a1", title: "Weekly report" }]);
+
+    render(<SidebarNav collapsed />);
+
+    expect(screen.getByRole("link", { name: "Weekly report" })).toHaveAttribute(
+      "title",
+      "Weekly report",
+    );
+    expect(screen.getByText("W")).toBeInTheDocument();
+    pinnedApps.mockReturnValue([]);
   });
 
   it("draws the rail as the same list without its words", () => {

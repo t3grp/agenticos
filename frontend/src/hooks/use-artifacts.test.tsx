@@ -10,6 +10,8 @@ import {
   useArtifactDisclosure,
   useArtifacts,
   useArtifactView,
+  usePinArtifact,
+  usePinnedArtifacts,
   usePublicArtifactUnlock,
   usePublicDataDisclosure,
 } from "./use-artifacts";
@@ -74,6 +76,7 @@ const DETAIL: ArtifactDetail = {
   bindings: [],
   consent: null,
   following: false,
+  pinned: false,
   public_link: {
     expires_at: null,
     pinned_version_id: null,
@@ -507,6 +510,70 @@ describe("useArtifact follow", () => {
       await result.current.follow.mutateAsync(true).catch(() => undefined);
     });
     expect(toastError).toHaveBeenCalled();
+  });
+});
+
+describe("useArtifact pin", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("pins with a PUT, unpins with a DELETE, and keeps the answer", async () => {
+    // The pin refreshes every list, and the detail with them: the read that
+    // follows answers the new state, as the server would.
+    let pinned = false;
+    vi.mocked(apiClient.get).mockImplementation((path: string) =>
+      Promise.resolve(path.endsWith("/versions") ? { items: [], total: 0 } : { ...DETAIL, pinned }),
+    );
+    const { result } = renderHook(() => useArtifact("a1"), { wrapper });
+    await waitFor(() => expect(result.current.artifact).not.toBeNull());
+
+    vi.mocked(apiClient.put).mockResolvedValueOnce({ ...DETAIL, pinned: true });
+    pinned = true;
+    await act(() => result.current.pin.mutateAsync({ id: "a1", on: true }));
+    expect(apiClient.put).toHaveBeenCalledWith("/apps/a1/pin");
+    expect(toastSuccess).toHaveBeenCalledWith("Pinned to your sidebar");
+    await waitFor(() => expect(result.current.artifact?.pinned).toBe(true));
+
+    vi.mocked(apiClient.delete).mockResolvedValueOnce({ ...DETAIL, pinned: false });
+    pinned = false;
+    await act(() => result.current.pin.mutateAsync({ id: "a1", on: false }));
+    expect(apiClient.delete).toHaveBeenCalledWith("/apps/a1/pin");
+    expect(toastSuccess).toHaveBeenCalledWith("Removed from your sidebar");
+    await waitFor(() => expect(result.current.artifact?.pinned).toBe(false));
+
+    vi.mocked(apiClient.put).mockRejectedValueOnce(new Error("gone"));
+    await act(async () => {
+      await result.current.pin.mutateAsync({ id: "a1", on: true }).catch(() => undefined);
+    });
+    expect(toastError).toHaveBeenCalled();
+  });
+
+  it("pins one artifact on its own, for the card", async () => {
+    vi.mocked(apiClient.put).mockResolvedValueOnce({ ...DETAIL, pinned: true });
+    const { result } = renderHook(() => usePinArtifact(), { wrapper });
+    await act(() => result.current.mutateAsync({ id: "a1", on: true }));
+    expect(apiClient.put).toHaveBeenCalledWith("/apps/a1/pin");
+    expect(toastSuccess).toHaveBeenCalledWith("Pinned to your sidebar");
+  });
+});
+
+describe("usePinnedArtifacts", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("lists the pinned apps in the order they were pinned", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [DETAIL, { ...DETAIL, id: "a2", title: "Second report" }],
+      total: 2,
+    });
+    const { result } = renderHook(() => usePinnedArtifacts(true), { wrapper });
+    await waitFor(() => expect(result.current.artifacts).toHaveLength(2));
+    expect(apiClient.get).toHaveBeenCalledWith("/apps/pinned");
+    expect(result.current.artifacts.map((artifact) => artifact.id)).toEqual(["a1", "a2"]);
+  });
+
+  it("asks nothing for a caller who may not see artifacts", () => {
+    const { result } = renderHook(() => usePinnedArtifacts(false), { wrapper });
+    expect(result.current.artifacts).toEqual([]);
+    expect(apiClient.get).not.toHaveBeenCalled();
   });
 });
 
