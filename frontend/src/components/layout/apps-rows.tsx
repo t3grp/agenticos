@@ -17,7 +17,7 @@ const SHOWN = 8;
 
 /**
  * The section of apps an agent published that the caller may open: the most
- * recently updated few, then "All apps".
+ * recently published few, then "All apps".
  *
  * The list comes from the same endpoint the Apps page reads, with
  * `mine_or_shared`, so the server decides which apps appear: the caller's own,
