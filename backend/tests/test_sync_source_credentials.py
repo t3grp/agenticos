@@ -25,8 +25,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.core.exceptions import BadRequestError, NotFoundError
-from app.core.permissions import AuthContext, OrgRoleName
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
+from app.core.permissions import AuthContext, OrgRoleName, Perm
 from app.repositories import organization_secret_repo
 from app.schemas.sync_source import (
     SyncSourceClone,
@@ -120,7 +120,16 @@ def _drive(**overrides) -> SyncSourceCreate:
 
 
 class TestTheCredentialIsReferencedNotCarried:
-    async def test_a_source_can_name_an_organization_google_account(self, monkeypatch):
+    @pytest.mark.parametrize(
+        "scope",
+        [
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/drive.readonly",
+        ],
+    )
+    async def test_a_source_can_name_an_organization_google_account(
+        self, monkeypatch, scope
+    ):
         account_id = uuid.uuid4()
         account = SimpleNamespace(
             id=account_id,
@@ -137,7 +146,7 @@ class TestTheCredentialIsReferencedNotCarried:
         monkeypatch.setattr(
             mcp_connection_module.McpConnectionService,
             "account_grant",
-            AsyncMock(return_value=SimpleNamespace(scopes={"https://www.googleapis.com/auth/drive"})),
+            AsyncMock(return_value=SimpleNamespace(scopes={scope})),
         )
         service = _service(monkeypatch)
 
@@ -147,6 +156,56 @@ class TestTheCredentialIsReferencedNotCarried:
 
         assert read.connected_account_id == str(account_id)
         assert read.secret_id is None
+
+    @pytest.mark.parametrize("operation", ["create", "update", "clone"])
+    async def test_google_account_binding_requires_connections_view(
+        self, monkeypatch, operation
+    ):
+        service = _service(monkeypatch)
+        account_id = uuid.uuid4()
+        ctx = AuthContext(
+            user_id=_CALLER,
+            organization_id=_ORG,
+            role=OrgRoleName.MEMBER.value,
+        )
+        assert ctx.has(Perm.COLLECTIONS_EDIT)
+        assert not ctx.has(Perm.CONNECTIONS_VIEW)
+
+        if operation == "create":
+            call = service.create_source(_drive(connected_account_id=account_id), ctx=ctx)
+        elif operation == "update":
+            existing = SimpleNamespace(
+                connector_type="gdrive",
+                secret_id=None,
+                connected_account_id=account_id,
+            )
+            monkeypatch.setattr(service, "get_source", AsyncMock(return_value=existing))
+            call = service.update_source(
+                str(uuid.uuid4()), SyncSourceUpdate(name="Renamed"), ctx=ctx
+            )
+        else:
+            source = SimpleNamespace(
+                id=uuid.uuid4(),
+                name="Shared drive",
+                connector_type="gdrive",
+                config={"folder_id": "1AbC_-def"},
+                secret_id=None,
+                connected_account_id=account_id,
+                organizational_unit=None,
+                sync_mode="new_only",
+                schedule_minutes=None,
+            )
+            monkeypatch.setattr(
+                sync_source_module.sync_source_repo,
+                "get_by_id",
+                AsyncMock(return_value=source),
+            )
+            call = service.clone_source(
+                str(source.id), SyncSourceClone(collection_name="mine"), ctx=ctx
+            )
+
+        with pytest.raises(AuthorizationError):
+            await call
 
     async def test_a_source_naming_a_credential_of_the_right_kind_is_created(self, monkeypatch):
         row = _vault_row(kind="gcp_service_account", hint="9f3c")
@@ -250,6 +309,9 @@ class TestACredentialInTheConfigIsRefused:
         ("connector_type", "field", "value"),
         [
             ("gdrive", "service_account_json", '{"type": "service_account"}'),
+            ("gdrive", "refresh_token", "refresh-secret"),
+            ("gdrive", "access_token", "access-secret"),
+            ("gdrive", "client_secret", "client-secret"),
             ("s3", "access_key_id", "AKIAEXAMPLE"),
             ("s3", "secret_access_key", "very-secret"),
         ],

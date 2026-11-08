@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.updates import writable
 from app.core.audit import record_audit
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.field_errors import refused_field
 from app.core.permissions import AuthContext, Perm
 from app.db.base import Base
@@ -41,7 +41,14 @@ from app.worker.jobs import SYNC_SOURCE, Priority, SyncConnectorSource, sync_sou
 # Kept as a list so a caller posting the old shape is told what to do instead of
 # having the value silently dropped (#937).
 _RETIRED_CREDENTIAL_FIELDS = frozenset(
-    {"service_account_json", "access_key_id", "secret_access_key"}
+    {
+        "service_account_json",
+        "access_key_id",
+        "secret_access_key",
+        "refresh_token",
+        "access_token",
+        "client_secret",
+    }
 )
 
 
@@ -404,6 +411,11 @@ class SyncSourceService:
             raise refused_field(
                 "connected_account_id", "Only Google Drive sources use connected accounts"
             )
+        if not ctx.has(Perm.CONNECTIONS_VIEW):
+            raise AuthorizationError(
+                message="Viewing organization connections is required to use a Google account",
+                details={},
+            )
         from app.repositories import mcp_connection as mcp_connection_repo
 
         account = await mcp_connection_repo.get_account(self.db, account_id)
@@ -424,7 +436,10 @@ class SyncSourceService:
         grant = await McpConnectionService(self.db).account_grant(
             account, organization_id=ctx.organization_id
         )
-        if grant is None or DRIVE not in grant.scopes:
+        if grant is None or not {
+            DRIVE,
+            "https://www.googleapis.com/auth/drive.readonly",
+        }.intersection(grant.scopes):
             raise missing
 
     async def clone_source(
@@ -493,12 +508,9 @@ class SyncSourceService:
 
         if "secret_id" in updates:
             hint = await self._checked_secret(updates["secret_id"], existing.connector_type, ctx)
-        if "connected_account_id" in updates:
-            await self._checked_google_account(
-                updates["connected_account_id"], existing.connector_type, ctx
-            )
         target_secret = updates.get("secret_id", existing.secret_id)
         target_account = updates.get("connected_account_id", existing.connected_account_id)
+        await self._checked_google_account(target_account, existing.connector_type, ctx)
         if target_secret is not None and target_account is not None:
             raise refused_field("connected_account_id", "Choose one Google Drive credential")
 
