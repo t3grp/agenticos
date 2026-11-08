@@ -2631,6 +2631,10 @@ class ArtifactService:
             if include_archived
             else None
         )
+        # A team-visible page is one the caller's role may open, so the sidebar lists it
+        # for the roles that reach team-visible rows; a role that stops at its own and
+        # shared pages does not get them.
+        team_visible = mine_or_shared and ctx.scope_for(Perm.ARTIFACTS_VIEW) >= Scope.TEAM
         if shared_with_me and see_all:
             grant_ids = await resource_grant_repo.list_shared_ids(
                 self.db,
@@ -2646,6 +2650,7 @@ class ArtifactService:
             shared_ids=grant_ids,
             shared_with_me=shared_with_me,
             include_archived=include_archived,
+            team_visible=team_visible,
             edit_scope=ctx.scope_for(Perm.ARTIFACTS_EDIT),
             edit_ids=edit_ids,
             search=search,
