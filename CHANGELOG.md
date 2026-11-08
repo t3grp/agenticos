@@ -19,6 +19,14 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- Added an opt-in Docker image retention operator helper with a dry-run default,
+  explicit current and previous successful release pins, protection for images
+  referenced by any container, and a pre-deployment disk-space check. Installation
+  and deployment-lock coordination are explicit; this does not enable a cleanup
+  schedule or change Coolify settings automatically.
+
 ### Changed
 
 - Redesigned all 22 email templates with Geist typography, t3UI colors and

@@ -4,9 +4,11 @@ Build integrations against AgenticOS's supported extension interfaces and the
 connected application's own APIs. Keep the platform diff small so upstream
 security fixes and improvements remain practical to adopt.
 
-This directory currently contains design guidance and the selected
-[upstream baseline](upstream.json). No adapter implementation or runtime
-compatibility result is claimed.
+This directory contains design guidance, the selected
+[upstream baseline](upstream.json), and the
+[Docker image retention operator helper](docker-image-retention/README.md).
+The helper is separate from application integrations; no adapter implementation
+or runtime compatibility result is claimed.
 
 ## Choose the extension interface
 
