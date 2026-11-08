@@ -8,6 +8,7 @@ import type { ChatPrompt } from "@/components/chat/chat-container";
 import { useShell } from "@/hooks/use-shell";
 import { isDesktopShell } from "@/lib/desktop/shell";
 import { useAssistant } from "@/hooks/use-assistant";
+import { useAssistantPageContext } from "@/hooks/use-assistant-page-context";
 import { useAssistantSignals } from "@/hooks/use-assistant-signals";
 import { pointAt, type ConsoleLink } from "@/lib/assistant-highlight";
 import {
@@ -20,7 +21,7 @@ import {
   setDocked,
 } from "@/lib/assistant-bubbles";
 import { useRouter } from "@/lib/locale-navigation";
-import { ChatScope, useOrgStore } from "@/stores";
+import { ChatScope, useAuthStore, useOrgStore } from "@/stores";
 import { useArchitectAskStore } from "@/stores/architect-ask-store";
 import type { AssistantState } from "@/types/assistant";
 
@@ -53,9 +54,17 @@ export function AssistantWidget() {
   // A failed read leaves the corner empty on every page rather than an error
   // following the reader around; Settings → Assistant is where it is said.
   const { assistant } = useAssistant();
+  const account = useAuthStore((state) => state.user?.id ?? null);
+  const organization = useOrgStore((state) => state.activeOrgId);
   if (!assistant || !assistant.can_use || assistant.agent_id === null) return null;
   if (assistant.status === "ready") {
-    return <ReadyWidget assistant={assistant} agentId={assistant.agent_id} />;
+    return (
+      <ReadyWidget
+        key={JSON.stringify([account, organization])}
+        assistant={assistant}
+        agentId={assistant.agent_id}
+      />
+    );
   }
   if (assistant.status === "needs_model") {
     return <AssistantSetup assistant={assistant} agentId={assistant.agent_id} />;
@@ -102,6 +111,7 @@ function usePhone(): boolean {
 function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentId: string }) {
   const t = useTranslations("assistantWidget");
   const pathname = usePathname();
+  const { page, getSnapshot } = useAssistantPageContext(pathname);
   const signals = useAssistantSignals();
   const organization = useOrgStore((state) => state.activeOrgId);
   const [open, setOpen] = useState(false);
@@ -231,10 +241,8 @@ function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentI
             agentId={agentId}
             open={open}
             prompt={prompt}
-            page={{
-              path: pageOf(pathname),
-              title: typeof document === "undefined" ? "" : document.title,
-            }}
+            page={page}
+            getPageContext={getSnapshot}
             tipsOff={preferences.off}
             onTipsOff={(off) => {
               setBubblesOff(off);

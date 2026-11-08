@@ -371,6 +371,111 @@ class TestFramesWithoutAnAgent:
         assert events == [("error", {"message": "Empty message"})]
 
 
+class TestPageContextForEachTurn:
+    """A snapshot belongs to its submitted question, never to the session."""
+
+    async def test_a_typed_question_reaches_the_chosen_agent_with_its_page(self) -> None:
+        session = _session()
+        run = AsyncMock(return_value=_finished_turn())
+        snapshot = {
+            "path": "/apps/scheduler",
+            "title": "Dispatch",
+            "captured_at": "2026-11-09T01:30:00.000Z",
+            "resource": {"kind": "app", "id": "scheduler"},
+            "view": "week",
+            "selected_ids": ["job-17"],
+            "summary": "The selected job is unassigned.",
+        }
+        frame = _message("Why is this job unassigned?", page_context=snapshot)
+
+        with _chat(run) as chat:
+            await session.process_message(frame)
+
+        sent = run.await_args.kwargs
+        assert sent["user"] is session.user
+        assert sent["organization_id"] == session.organization_id
+        assert str(sent["agent_id"]) == frame["agent_id"]
+        assert sent["user_input"].startswith("Why is this job unassigned?\n\n")
+        assert "untrusted reference data" in sent["user_input"]
+        encoded = sent["user_input"].split("<page_context>\n", 1)[1]
+        assert json.loads(encoded.removesuffix("\n</page_context>")) == snapshot
+        assert chat.prompt.await_args.args[1] == "Why is this job unassigned?"
+
+    async def test_a_bad_snapshot_is_refused_before_persisting_or_running(self) -> None:
+        session = _session()
+        run = AsyncMock()
+        snapshot = {
+            "path": "/apps?credential=private",
+            "title": "Dispatch",
+            "captured_at": "2026-11-09T01:30:00.000Z",
+        }
+
+        with _chat(run) as chat:
+            await session.process_message(_message(page_context=snapshot))
+
+        assert _frame_types(session) == ["error"]
+        error = _sent_events(session)[0][1]["message"]
+        assert "page context could not be read" in error
+        assert "private" not in error
+        chat.prompt.assert_not_awaited()
+        run.assert_not_awaited()
+
+    async def test_a_later_question_uses_its_snapshot_and_can_omit_context(self) -> None:
+        session = _session()
+        run = AsyncMock(return_value=_finished_turn())
+        first = {
+            "path": "/apps/scheduler",
+            "title": "Dispatch",
+            "captured_at": "2026-11-09T01:30:00.000Z",
+        }
+        second = {
+            "path": "/tables/jobs",
+            "title": "Jobs",
+            "captured_at": "2026-11-09T01:31:00.000Z",
+        }
+
+        with _chat(run):
+            await session.process_message(_message("Explain this page", page_context=first))
+            await session.process_message(_message("And this one?", page_context=second))
+            await session.process_message(_message("A general question"))
+
+        prompts = [call.kwargs["user_input"] for call in run.await_args_list]
+        assert '"path": "/apps/scheduler"' in prompts[0]
+        assert '"path": "/tables/jobs"' in prompts[1]
+        assert "/apps/scheduler" not in prompts[1]
+        assert prompts[2] == "A general question"
+
+    async def test_page_context_preserves_the_reply_attribution_and_mentions(self) -> None:
+        session = _session()
+        run = AsyncMock(return_value=_finished_turn())
+        snapshot = {
+            "path": "/projects/brief",
+            "title": "Project brief",
+            "captured_at": "2026-11-09T01:30:00.000Z",
+        }
+        drive = Mentionable(kind="mcp", id="gdrive", name="Google Drive", detail="gdrive_*")
+        frame = _message(
+            "Find the brief",
+            mentions=[{"kind": "mcp", "id": "gdrive"}],
+            page_context=snapshot,
+        )
+
+        with _chat(run) as chat:
+            chat.prompt.return_value = replace(
+                chat.prompt.return_value, for_model="Alex replied: Find the brief"
+            )
+            chat.runner.mentions = AsyncMock(
+                return_value=ResolvedMentions(mentions=[drive], note="Use Google Drive.")
+            )
+            await session.process_message(frame)
+
+        assert run.await_args.kwargs["user_input"].startswith(
+            "Alex replied: Find the brief\n\nUse Google Drive.\n\n"
+        )
+        assert "<page_context>" in run.await_args.kwargs["user_input"]
+        assert chat.prompt.await_args.kwargs["mentions"] == [drive]
+
+
 class TestControlFrames:
     """What `handle_frame` does with each `type` a client can send.
 

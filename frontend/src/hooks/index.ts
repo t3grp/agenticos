@@ -198,3 +198,7 @@ export { useWikiGraph } from "./use-wiki-graph";
 export { useDurableTasks } from "./use-durable-tasks";
 
 export { useCodingAccounts } from "./use-coding-accounts";
+export {
+  useAssistantPageContext,
+  useRegisterAssistantPageContext,
+} from "./use-assistant-page-context";

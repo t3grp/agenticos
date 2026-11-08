@@ -1,5 +1,5 @@
 ---
-source_sha: "361689f179db"
+source_sha: "95cf2c67136d"
 ---
 
 # Die Konsole { #the-console }
@@ -337,9 +337,22 @@ Auf einem Smartphone gibt es keine Sprechblase - sie würde die Seite verdecken,
 Freigaben, die sie schon genannt hat, bleiben für den Rest des Browser-Tabs
 genannt, auch wenn ein Link die Konsole neu lädt.
 
-Sein Fenster ist der Chat der Konsole selbst, keine Seite in der Seite, und öffnet
-sich mit vier Kacheln, sodass die erste Nachricht ein Klick ist; es führt einen
-eigenen Verlauf. Auf dem Telefon füllt es den Bildschirm.
+Das Fenster nutzt den Chat der Konsole und startet mit dem Hauptassistenten.
+Wählen Sie über die Agent-Auswahl in der Kopfzeile einen veröffentlichten Agenten,
+den Sie ausführen dürfen. Beim Wechsel bleibt die aktuelle Unterhaltung erhalten;
+Kopfzeile und Gesprächsverlauf folgen der Auswahl. Die Begrüßungskacheln von
+Architect erscheinen nur, wenn der Hauptassistent ausgewählt ist. Auf dem
+Smartphone füllt das Fenster den Bildschirm.
+
+Jede neue Frage enthält aktuelle strukturierte Informationen zur geöffneten
+Konsolenseite, solange die Seitenfreigabe eingeschaltet ist. Das Fenster zeigt,
+welche Seite geteilt wird, und lässt Sie die Freigabe ausschalten.
+
+Bei einer Frage in der Warteschlange oder beim erneuten Senden einer abgelehnten
+Nachricht bleiben der beim Absenden erfasste Seitenkontext und der damals
+ausgewählte Agent erhalten. Eine neue Frage oder eine neu generierte Antwort
+nutzt die aktuelle Seite und den aktuell ausgewählten Agenten. Beim Wechsel von Konto oder Organisation werden
+Unterhaltung, Agent-Auswahl und Seitenfreigabe des Fensters zurückgesetzt.
 
 Nennt er eine Seite, öffnet der Link sie in der Konsole hinter dem Fenster und
 zeigt auf das gemeinte Bedienelement — die Schaltfläche, die einen Agent anlegt,
@@ -347,7 +360,7 @@ den Reiter mit den Freigaben. Die Kamera in seiner Kopfzeile zeigt ihm die Seite
 auf der Sie sind: Der Browser fragt, welchen Tab Sie teilen, und ein Bild hängt
 an Ihrer nächsten Nachricht.
 
-Längere Aufgaben plant er als Checkliste, die Sie
+Längere Aufgaben plant der Architect als Checkliste, die Sie
 verfolgen können, er merkt sich Notizen über Sie zwischen Unterhaltungen, sagt
 Ihnen, was Ihre Agents kosten, und löscht nur einen versehentlich angelegten
 Agent-Entwurf und eine Routine, deren Entfernen Sie verlangen. Neben Freigaben und einer leeren

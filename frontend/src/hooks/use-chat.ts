@@ -1,6 +1,8 @@
 "use client";
 
 import type { Mentionable } from "@/types/mention";
+import type { AssistantPageContext } from "@/lib/assistant-page-context";
+import type { ChatSubmissionContext } from "@/types/chat";
 import { useSavedChatControls } from "@/hooks/use-saved-chat-controls";
 import type { ApprovalMode } from "@/components/chat/chat-controls";
 
@@ -88,6 +90,8 @@ interface ConversationRef {
 }
 
 interface UseChatOptions {
+  /** Read only at submission; queued turns retain their own detached snapshot. */
+  pageContext?: () => AssistantPageContext | null;
   conversationId?: string | null;
   onConversationCreated?: (conversationId: string) => void;
   /**
@@ -167,8 +171,18 @@ interface TypingPerson {
 export function useChat(options: UseChatOptions = {}) {
   const tErrors = useTranslations("errors");
 
-  const { conversationId, onConversationCreated, onTurnSaved, onTurnInterrupted, testing } =
-    options;
+  const {
+    conversationId,
+    onConversationCreated,
+    onTurnSaved,
+    onTurnInterrupted,
+    testing,
+    pageContext,
+  } = options;
+  const pageContextRef = useRef(pageContext);
+  useLayoutEffect(() => {
+    pageContextRef.current = pageContext;
+  }, [pageContext]);
   // Read at send time, like the model and the approval mode below.
   const testingRef = useRef<ChatTesting | undefined>(testing);
   useEffect(() => {
@@ -184,6 +198,15 @@ export function useChat(options: UseChatOptions = {}) {
   const conversationApi = useConversationStore.useApi();
   const selectionApi = useAgentSelectionStore.useApi();
   const scoped = useInChatScope();
+  const captureSubmission = useCallback((): ChatSubmissionContext | undefined => {
+    const read = pageContextRef.current;
+    if (!read) return undefined;
+    const page = read();
+    return {
+      agentId: selectionApi.getState().selectedAgentId,
+      pageContext: page === null ? null : structuredClone(page),
+    };
+  }, [selectionApi]);
   const {
     setCurrentConversationId,
     setCurrentCost,
@@ -1487,12 +1510,66 @@ export function useChat(options: UseChatOptions = {}) {
   }, [hasAccessToken, connect, disconnect]);
 
   /** Send one message as a turn; answers the id of its bubble on the transcript. */
+  // Capture local grants only after the access gate has completed. A contextual
+  // question can wait while the selected agent or Work on controls change.
+  const readLocalContext = useCallback((): NonNullable<ChatSubmissionContext["local"]> => {
+    const projectId = conversationApi.getState().pendingProjectId;
+    if (!conversationId && projectId && isDesktopShell(readShellInfo())) {
+      const key = projectFolderKey(useAuthStore.getState().user?.id ?? null, tenantId, projectId);
+      if (key !== null) {
+        useWorkOnStore
+          .getState()
+          .applyProject(key, useProjectFoldersStore.getState().byProject[key] ?? null);
+      }
+    }
+    const local = useWorkOnStore.getState().targetFor(conversationId || null);
+    const localBrowser = useWorkOnStore.getState().browserFor(conversationId || null);
+    const localComputer = useWorkOnStore.getState().computerFor(conversationId || null);
+    const localCoding = useWorkOnStore.getState().codingFor(conversationId || null);
+    const codingPreferences = useWorkOnStore
+      .getState()
+      .codingPreferencesFor(conversationId || null);
+    // Chosen per chat and never inherited, so it is read here and not from the target.
+    const localSkills = useWorkOnStore.getState().skillsFor(conversationId || null);
+    const target: Record<string, unknown> | null = local
+      ? {
+          ...local,
+          ...(localComputer || local.computer !== undefined ? { computer: localComputer } : {}),
+          ...(localBrowser || local.browser !== undefined ? { browser: localBrowser } : {}),
+        }
+      : localBrowser || localComputer || localCoding || localSkills.length > 0
+        ? {
+            ...(localBrowser ? { browser: true } : {}),
+            ...(localComputer ? { computer: true } : {}),
+          }
+        : null;
+    const payload = target
+      ? {
+          ...target,
+          ...(localSkills.length > 0 ? { skills: localSkills } : {}),
+          ...(localCoding
+            ? {
+                coding_agent: localCoding,
+                coding_model: codingPreferences.model,
+                coding_effort: codingPreferences.effort,
+              }
+            : {}),
+        }
+      : null;
+    return structuredClone({
+      payload,
+      fileRoot: local && !local.computer_grant ? local.folder : null,
+      projectId,
+    });
+  }, [conversationApi, conversationId, tenantId]);
+
   const doSend = useCallback(
     (
       content: string,
       fileIds?: string[],
       files?: ChatMessageFile[],
       mentions?: Mentionable[],
+      submission?: ChatSubmissionContext,
     ): string => {
       stoppedMessageIdRef.current = null;
       resumedRunIdRef.current = undefined;
@@ -1573,11 +1650,13 @@ export function useChat(options: UseChatOptions = {}) {
         client_message_id: userMessageId,
         conversation_id: conversationId || null,
       };
+      if (submission?.pageContext) payload.page_context = submission.pageContext;
       if (fileIds?.length) payload.file_ids = fileIds;
       if (replyTo) payload.reply_to = replyTo.messageId;
       // Only on the turn that starts the conversation: the server files a new
       // chat into the project and ignores the field on every turn after.
-      const projectId = conversationApi.getState().pendingProjectId;
+      const localContext = submission?.local ?? readLocalContext();
+      const projectId = localContext.projectId;
       if (!conversationId && projectId) payload.project_id = projectId;
       // Resolved again on the server as the person, against what the agent reaches.
       if (mentions?.length) {
@@ -1593,71 +1672,25 @@ export function useChat(options: UseChatOptions = {}) {
       if (approvalModeRef.current !== "follow_agent") {
         payload.approval_mode = approvalModeRef.current;
       }
-      // "Work on: This computer" (#2305): the folder and mode, read at send
-      // time like the agent. The desktop app checks both against what the person
-      // granted on that computer, whatever this frame says.
-      // Resolve before the first frame as well: sending may beat the project
-      // chip's metadata fetch. applyProject preserves an explicit draft override.
-      if (!conversationId && projectId && isDesktopShell(readShellInfo())) {
-        const key = projectFolderKey(useAuthStore.getState().user?.id ?? null, tenantId, projectId);
-        if (key !== null) {
-          useWorkOnStore
-            .getState()
-            .applyProject(key, useProjectFoldersStore.getState().byProject[key] ?? null);
-        }
-      }
-      const local = useWorkOnStore.getState().targetFor(conversationId || null);
-      const localBrowser = useWorkOnStore.getState().browserFor(conversationId || null);
-      const localComputer = useWorkOnStore.getState().computerFor(conversationId || null);
-      const localCoding = useWorkOnStore.getState().codingFor(conversationId || null);
-      const codingPreferences = useWorkOnStore
-        .getState()
-        .codingPreferencesFor(conversationId || null);
-      // Chosen per chat and never inherited, so it is read here and not from the target.
-      const localSkills = useWorkOnStore.getState().skillsFor(conversationId || null);
-      const target: Record<string, unknown> | null = local
-        ? {
-            ...local,
-            ...(localComputer || local.computer !== undefined ? { computer: localComputer } : {}),
-            ...(localBrowser || local.browser !== undefined ? { browser: localBrowser } : {}),
-          }
-        : localBrowser || localComputer || localCoding || localSkills.length > 0
-          ? {
-              ...(localBrowser ? { browser: true } : {}),
-              ...(localComputer ? { computer: true } : {}),
-            }
-          : null;
-      if (target)
-        payload.local = {
-          ...target,
-          ...(localSkills.length > 0 ? { skills: localSkills } : {}),
-          ...(localCoding
-            ? {
-                coding_agent: localCoding,
-                coding_model: codingPreferences.model,
-                coding_effort: codingPreferences.effort,
-              }
-            : {}),
-        };
+      if (localContext.payload) payload.local = localContext.payload;
       const test = testingRef.current;
       if (test) {
         payload.test = true;
         if (test.draft) payload.draft = true;
         else if (test.environmentId) payload.environment_id = test.environmentId;
       }
-      // Read at send time, not captured in the closure: the queue drainer calls
-      // this up to a turn later, and the frame must name whatever is selected
-      // when it actually leaves. The picker keeps a published agent selected
-      // whenever the organization has one, so a frame without an `agent_id`
-      // only happens when nothing is published at all - and the backend
-      // refuses it with the message that says to publish one.
-      const agentId = selectionApi.getState().selectedAgentId;
+      // The floating assistant keeps the target chosen at submission with its
+      // page snapshot. Other chat surfaces retain their selection-at-dispatch
+      // behavior. A missing frozen target must not fall back to another agent.
+      const agentId = submission
+        ? submission.agentId
+        : selectionApi.getState().selectedAgentId;
       if (agentId) payload.agent_id = agentId;
       turnAgentIdRef.current = agentId;
       pendingFileRootRef.current =
-        local && !local.computer_grant
+        localContext.fileRoot !== null
           ? {
-              root: local.folder,
+              root: localContext.fileRoot,
               account: useAuthStore.getState().user?.id ?? null,
               organization: useOrgStore.getState().activeOrgId,
             }
@@ -1674,6 +1707,7 @@ export function useChat(options: UseChatOptions = {}) {
       setCurrentMessageId,
       sendMessage,
       conversationId,
+      readLocalContext,
       // The store action that shuts the browse panel when this turn ends the
       // previous one's browse. Stable, and listed rather than omitted.
       tenantId,
@@ -1681,7 +1715,17 @@ export function useChat(options: UseChatOptions = {}) {
   );
 
   const sendChatMessage = useCallback(
-    (content: string, fileIds?: string[], files?: ChatMessageFile[], mentions?: Mentionable[]) => {
+    (
+      content: string,
+      fileIds?: string[],
+      files?: ChatMessageFile[],
+      mentions?: Mentionable[],
+      submitted?: ChatSubmissionContext,
+    ) => {
+      const captured = submitted ?? captureSubmission();
+      const submission = captured
+        ? { ...captured, local: captured.local ?? readLocalContext() }
+        : undefined;
       // While the agent works a message waits for its answer, as in any chat;
       // "Send now" on the queued message is how it joins the running task
       // instead (#2087) - see `sendQueuedNow`.
@@ -1696,12 +1740,15 @@ export function useChat(options: UseChatOptions = {}) {
         (messageQueueRef.current.length > 0 && interruptedForRef.current === null)
       ) {
         const id = clientId();
-        setQueue([...messageQueueRef.current, { id, content, fileIds, files, mentions }]);
+        setQueue([
+          ...messageQueueRef.current,
+          { id, content, fileIds, files, mentions, ...(submission ? { submission } : {}) },
+        ]);
         return;
       }
-      setSentTurnId(doSend(content, fileIds, files, mentions));
+      setSentTurnId(doSend(content, fileIds, files, mentions, submission));
     },
-    [isConnected, doSend, setQueue],
+    [isConnected, doSend, setQueue, captureSubmission, readLocalContext],
   );
 
   /**
@@ -1715,12 +1762,14 @@ export function useChat(options: UseChatOptions = {}) {
       const queued = messageQueueRef.current.find((q) => q.id === id);
       // Mentions travel with a message, never with a correction: the steer frame
       // carries text alone, so one sent now would lose what it pointed at.
+      // A frozen page/agent submission must also remain a full turn.
       if (
         !queued ||
         !isProcessing ||
         !isConnected ||
         queued.fileIds?.length ||
-        queued.mentions?.length
+        queued.mentions?.length ||
+        queued.submission !== undefined
       )
         return;
       setQueue(messageQueueRef.current.filter((q) => q.id !== id));
@@ -2918,7 +2967,13 @@ export function useChat(options: UseChatOptions = {}) {
       )
         return;
       setQueue(messageQueueRef.current.slice(1));
-      const bubbleId = doSend(next.content, next.fileIds, next.files, next.mentions);
+      const bubbleId = doSend(
+        next.content,
+        next.fileIds,
+        next.files,
+        next.mentions,
+        next.submission,
+      );
       unconfirmedRef.current = { message: next, bubbleId };
     }, 100);
     queuedSendTimer.current = timer;
@@ -3049,6 +3104,7 @@ export function useChat(options: UseChatOptions = {}) {
     connect,
     disconnect,
     sendMessage: sendChatMessage,
+    captureSubmission,
     /** Tell the running turn how one of its drawings rendered. */
     reportVisual,
     stopGeneration,

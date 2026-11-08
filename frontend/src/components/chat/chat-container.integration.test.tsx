@@ -7,6 +7,7 @@ import { announceChange } from "@/lib/live-updates";
 import type { ChangeEvent } from "@/types/change-events";
 import { messageOf } from "./composer-editor";
 import { ChatContainer } from "./chat-container";
+import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { apiClient } from "@/lib/api-client";
 import { initialCall } from "@/lib/voice/call-reducer";
 import {
@@ -1640,5 +1641,92 @@ describe("opening a saved chat", () => {
     });
     expect(screen.getByText("Saved question")).toBeInTheDocument();
     expect(view.container.querySelector(".chat-empty-state")).toBeNull();
+  });
+});
+
+
+describe("the floating assistant's context submission boundary", () => {
+  const page = (): AssistantPageContext => ({
+    path: "/tables/orders",
+    title: "Orders",
+    captured_at: "2026-01-01T00:00:00.000Z",
+  });
+
+  it("sends page context with text typed into the normal composer", async () => {
+    useAgentSelectionStore.getState().select("agent-1");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const current = page();
+    render(
+      <QueryClientProvider client={client}>
+        <ChatContainer agentFixed pageContext={() => current} />
+      </QueryClientProvider>,
+    );
+    const editor = await screen.findByRole("textbox", { name: "Type a message..." });
+    await userEvent.type(editor, "Explain this page");
+    await userEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(socket.send).toHaveBeenCalledWith(expect.objectContaining({
+      message: "Explain this page",
+      agent_id: "agent-1",
+      page_context: current,
+    })));
+  });
+
+  it("keeps the submitted page and agent while a draft save holds the question", async () => {
+    useAgentSelectionStore.getState().select("agent-1");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let current = page();
+    const original = structuredClone(current);
+    const at = (holdSending: boolean) => (
+      <QueryClientProvider client={client}>
+        <ChatContainer
+          agentFixed
+          holdSending={holdSending}
+          pageContext={() => current}
+          emptyState={(onPick) => (
+            <button type="button" onClick={() => onPick("Explain this page")}>pick page</button>
+          )}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(at(true));
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "pick page" }));
+    expect(socket.send.mock.calls.filter(([frame]) => frame.message)).toHaveLength(0);
+    current = { ...page(), path: "/runs", title: "Runs" };
+    act(() => useAgentSelectionStore.getState().select("agent-2"));
+    rerender(at(false));
+    await act(async () => {});
+    expect(socket.send.mock.calls.filter(([frame]) => frame.message)).toHaveLength(0);
+    act(() => useAgentSelectionStore.getState().select("agent-1"));
+
+    await waitFor(() => expect(socket.send).toHaveBeenCalledWith(expect.objectContaining({
+      message: "Explain this page",
+      agent_id: "agent-1",
+      page_context: original,
+    })));
+  });
+
+  it("disables submission for an unavailable agent without secretly holding the question", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const at = (sendDisabled: boolean) => (
+      <QueryClientProvider client={client}>
+        <ChatContainer
+          agentFixed
+          sendDisabled={sendDisabled}
+          pageContext={page}
+          emptyState={(onPick) => (
+            <button type="button" onClick={() => onPick("Do not defer this")}>pick page</button>
+          )}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(at(true));
+    expect(screen.getByRole("textbox")).toHaveAttribute("contenteditable", "false");
+    fireEvent.click(screen.getByRole("button", { name: "pick page" }));
+    rerender(at(false));
+    await act(async () => {});
+
+    expect(socket.send.mock.calls.filter(([frame]) => frame.message)).toHaveLength(0);
   });
 });

@@ -19,6 +19,13 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- The floating assistant includes a previewable current-page context with each
+  question, an option to turn page sharing off, and a picker for published agents
+  the user can run. Queued questions keep their submitted page and agent. Apps
+  can register bounded view details through their existing sandbox bridge.
+
 ### Changed
 
 - Redesigned all 22 email templates with Geist typography, t3UI colors and
