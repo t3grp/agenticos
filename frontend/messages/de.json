@@ -1831,6 +1831,14 @@
       "backgroundTasks": "Hintergrundthemen",
       "stoppingBackgroundTask": "Hintergrundthema stoppen",
       "backgroundTaskStopped": "Hintergrundthema gestoppt",
+      "sendingAgentMessage": "Nachricht an einen Agenten senden",
+      "sendAgentMessage": "Nachricht an einen Agenten gesendet",
+      "readingAgentMessages": "Agentennachrichten lesen",
+      "readAgentMessages": "Agentennachrichten gelesen",
+      "listingAgentThreads": "Agententhemen auflisten",
+      "agentThreads": "Agententhemen",
+      "reactingToAgentMessage": "Auf eine Agentennachricht reagieren",
+      "reactToAgentMessage": "Auf eine Agentennachricht reagiert",
       "memoryResult": "Gedächtnis",
       "manageMemory": "Dein Gedächtnis",
       "memoryRecordedResult": "Im Gedächtnis gespeichert",
@@ -2996,6 +3004,14 @@
         "empty": {
           "title": "Noch nichts hier",
           "description": "Benachrichtigungen erscheinen hier."
+        }
+      },
+      "agent-messages": {
+        "title": "Agentennachrichten",
+        "description": "Themen, die auf Sie warten.",
+        "empty": {
+          "title": "Keine ungelesenen Themen",
+          "description": "Nachrichten zwischen Ihren Agenten erscheinen hier, wenn sie auf Sie warten."
         }
       },
       "artifacts": {
@@ -4242,6 +4258,7 @@
     "loadingPage": "Seite wird geöffnet",
     "tables": "Tabellen",
     "inbox": "Posteingang",
+    "agentMessages": "Agentennachrichten",
     "inboxCount": "{count, plural, =1 {1 wartet} other {# warten}}",
     "consoleVersion": "Konsolenversion {version}",
     "updateAvailable": "Version {version} ist verfügbar",
@@ -4305,6 +4322,10 @@
         "body": "Ein Workflow verkettet Schritte zu einer Automatisierung, die Ihre Agents ausführen. Jetzt einen anlegen? Wir öffnen den Dialog, damit Sie eine leere Arbeitsfläche oder eine Vorlage wählen.",
         "title": "Einen Workflow bauen?"
       },
+      "create-agent-message": {
+        "title": "Erste Nachricht zwischen Agenten senden?",
+        "body": "Ein Agent kann direkt an einen anderen schreiben, in einem Thema, das Sie lesen können. Sollen wir jetzt eine senden? Wir führen Sie hindurch und sehen zu, wie das Thema erscheint."
+      },
       "explore-chat": {
         "title": "Eine kurze Tour durch den Chat?",
         "body": "Sehen Sie, wie Sie eine Unterhaltung beginnen, den antwortenden Agent wechseln und Modell oder Denkaufwand für einen einzelnen Chat ändern. Möchten Sie eine kurze geführte Runde?"
@@ -4338,6 +4359,10 @@
       "agent-history": {
         "title": "Jede Version, aufbewahrt",
         "body": "Jede Veröffentlichung friert den Spec als Version ein, die Sie in ein Environment heben, auf die Sie zurückrollen oder gegen die Sie die Run-Historie lesen können."
+      },
+      "agent-messages": {
+        "title": "Nachrichten zwischen Agenten",
+        "body": "Wenn ein Agent einem anderen schreibt, landet das Thema hier, zuletzt aktive zuerst. Öffnen Sie ein Thema, um es zu lesen, als einer seiner Agenten zu antworten oder auf eine Nachricht zu reagieren."
       },
       "agent-instructions": {
         "title": "Die Instruktionen sind das Verhalten",
@@ -4502,6 +4527,26 @@
       "flow-agent-mcp-connect": {
         "title": "Den Katalog öffnen",
         "body": "Wählen Sie Server verbinden - der Katalog öffnet sich direkt hier im Builder, und wir wählen gemeinsam einen aus."
+      },
+      "flow-agent-message-create": {
+        "title": "Erste Nachricht senden",
+        "body": "Öffnen Sie das Fenster für eine neue Nachricht, um die Worte eines Agenten an einen anderen zu senden."
+      },
+      "flow-agent-message-sender": {
+        "title": "Sendenden Agent wählen",
+        "body": "Wählen Sie, welcher Ihrer ausführbaren Agenten diese Nachricht sendet."
+      },
+      "flow-agent-message-recipient": {
+        "title": "Empfänger wählen",
+        "body": "Suchen Sie die Agenten, denen Sie schreiben dürfen, und wählen Sie den Empfänger."
+      },
+      "flow-agent-message-body": {
+        "title": "Nachricht schreiben",
+        "body": "Schreiben Sie, was der andere Agent hören muss — bis zu 16.000 Zeichen."
+      },
+      "flow-agent-message-send": {
+        "title": "Senden",
+        "body": "Senden Sie die Nachricht und gehen Sie dann weiter, um das neue Thema zu sehen."
       },
       "flow-agent-model-add": {
         "title": "Ein Modell hinzufügen",
@@ -11245,6 +11290,13 @@
       "example3": "Eine Tabelle aus Ihrer Datenbank lesen und zusammenfassen",
       "needs": "Die Zugangsdaten der Dienste im Vault oder ein verbundenes Google-Konto. Ein Deployment installiert das Terminal mit dem Extra mirage, und ein Operator erlaubt die Hosts jedes Servers, den Sie eintragen.",
       "never": "Schreibt nie in einen nur lesbar eingebundenen Ordner und fragt vor jedem Schreiben eine Person, wo Sie das festgelegt haben."
+    },
+    "agent_messages": {
+      "name": "Agentennachrichten",
+      "does": "Lässt einen Agenten direkt an einen anderen schreiben, in einem Thema, das die Konsole mit Antworten, Reaktionen und Dateien zeigt.",
+      "needs": "Zwei veröffentlichte Agenten, die der Aufrufer ausführen darf, und die Berechtigung agents:run zum Lesen des Themas.",
+      "never": "Erreicht keinen Agenten, den der Aufrufer nicht ausführen darf, sendet nicht im Namen eines Menschen und stellt keine Nachricht außerhalb des Themas zu.",
+      "example1": "Bitte den Recherche-Agenten, seine Ergebnisse vor der Frist an den Schreib-Agenten zu übergeben."
     }
   },
   "capabilityCategories": {
@@ -11859,6 +11911,16 @@
         "title": "Verborgene Pfade",
         "description": "Pfade, die der Agent gar nicht sieht, z. B. /drive/HR/."
       }
+    },
+    "agent_messages": {
+      "max_message_chars": {
+        "title": "Längste Nachricht",
+        "description": "Die längste Nachricht, die dieser Agent senden darf, in Zeichen. 16.000 ist auch die Obergrenze der Konsole, sodass ein Thema gleich liest, wie die Nachricht auch gesendet wurde; senken Sie sie für einen Agenten, der kurz schreiben soll."
+      },
+      "allow_attachments": {
+        "title": "Dateianhänge zulassen",
+        "description": "Ob dieser Agent Dateien, die er bereits hochgeladen hat, zusammen mit seinen Nachrichten senden darf. Aus bedeutet nur Text; bereits angehängte Dateien bleiben lesbar."
+      }
     }
   },
   "apiReference": {
@@ -12465,6 +12527,56 @@
       "finding": "Routine"
     },
     "openWorkingChat": "Gespräch öffnen"
+  },
+  "agentMessages": {
+    "title": "Agentennachrichten",
+    "description": "Direkte Nachrichten zwischen Ihren Agenten, in Themen.",
+    "newMessage": "Neue Nachricht",
+    "threadCount": "{count, plural, =0 {Keine Themen} =1 {1 Thema} other {# Themen}}",
+    "failedLoad": "Agentennachrichten konnten nicht geladen werden.",
+    "sent": "Nachricht gesendet.",
+    "cannotSee": "Du kannst in dieser Organisation keine Agentennachrichten sehen",
+    "askForAccess": "Bitte einen Administrator um Zugriff auf Agentennachrichten.",
+    "threadTitle": "{first} und {second}",
+    "lastMessage": "{slug}: {body}",
+    "noMessagesYet": "Noch keine Nachrichten.",
+    "unread": "Ungelesen",
+    "read": "Gelesen",
+    "emptyThreads": {
+      "title": "Noch keine Themen",
+      "description": "Wenn ein Agent einem anderen schreibt, erscheint das Thema hier."
+    },
+    "emptyMessages": {
+      "title": "Noch keine Nachrichten",
+      "description": "In diesem Thema wurde noch nichts gesagt."
+    },
+    "selectThread": {
+      "title": "Wählen Sie ein Thema",
+      "description": "Wählen Sie links ein Thema, um es zu lesen."
+    },
+    "reply": "Antworten",
+    "replyTo": "Antwort an {slug}",
+    "cancelReply": "Antwort abbrechen",
+    "reactWith": "Mit {emoji} reagieren",
+    "charCount": "{count} von {max} Zeichen",
+    "messagePlaceholder": "Nachricht schreiben…",
+    "replyPlaceholder": "Als sendender Agent antworten…",
+    "send": "Senden",
+    "cancel": "Abbrechen",
+    "senderLabel": "Senden als",
+    "recipientLabel": "An",
+    "bodyLabel": "Nachricht",
+    "searchRecipients": "Agenten suchen",
+    "loadingRecipients": "Agenten werden geladen…",
+    "noRecipients": "Kein Agent passt zu dieser Suche.",
+    "removeFile": "{name} entfernen",
+    "noRunnableAgent": "Kein Agent, den Sie ausführen dürfen, ist in diesem Thema.",
+    "newMessageTitle": "Neue Nachricht",
+    "newMessageDescription": "Ein Agent schreibt einem anderen. Der Empfänger erhält die Nachricht in seinem Thema.",
+    "attachFiles": "Dateien anhängen",
+    "tooManyFiles": "Sie können höchstens {max} Dateien anhängen.",
+    "uploadFailed": "Eine Datei konnte nicht hochgeladen werden.",
+    "chooseSender": "Sendenden Agent wählen"
   },
   "agentLimit": {
     "title": "Diese Organisation hat ihr Agenten-Limit erreicht",
