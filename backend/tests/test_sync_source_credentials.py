@@ -300,6 +300,7 @@ class TestACredentialInTheConfigIsRefused:
             ctx=_ctx(_ORG),
             config={"folder_id": "1AbC"},
             secret_id=None,
+            connected_account_id=None,
         )
         monkeypatch.setattr(service, "get_source", AsyncMock(return_value=existing))
 
@@ -321,6 +322,7 @@ class TestACredentialInTheConfigIsRefused:
             ctx=_ctx(_ORG),
             config={"bucket": "docs", "prefix": "marketing/"},
             secret_id=None,
+            connected_account_id=None,
             collection_name="handbook",
         )
         monkeypatch.setattr(service, "get_source", AsyncMock(return_value=existing))
