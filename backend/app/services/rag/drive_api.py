@@ -59,6 +59,16 @@ class DrivePage(BaseModel):
     next_page_token: str | None = Field(default=None, alias="nextPageToken")
 
 
+class SharedDrive(BaseModel):
+    id: str
+    name: str
+
+
+class SharedDrivePage(BaseModel):
+    drives: list[SharedDrive] = []
+    next_page_token: str | None = Field(default=None, alias="nextPageToken")
+
+
 class Token(Protocol):
     """What the client needs of a credential: google-auth's, or a test's."""
 
@@ -119,7 +129,14 @@ class DriveClient:
         self._http.close()
 
     def list_page(
-        self, *, q: str, fields: str, page_size: int, page_token: str | None
+        self,
+        *,
+        q: str,
+        fields: str,
+        page_size: int,
+        page_token: str | None,
+        corpora: str | None = None,
+        drive_id: str | None = None,
     ) -> DrivePage:
         params = {
             "q": q,
@@ -130,9 +147,23 @@ class DriveClient:
         }
         if page_token:
             params["pageToken"] = page_token
+        if corpora:
+            params["corpora"] = corpora
+        if drive_id:
+            params["driveId"] = drive_id
         response = self._http.get("/files", params=params, headers=self._authorization())
         response.raise_for_status()
         return DrivePage.model_validate(response.json())
+
+    def list_drives_page(
+        self, *, fields: str, page_size: int, page_token: str | None
+    ) -> SharedDrivePage:
+        params = {"fields": fields, "pageSize": str(page_size)}
+        if page_token:
+            params["pageToken"] = page_token
+        response = self._http.get("/drives", params=params, headers=self._authorization())
+        response.raise_for_status()
+        return SharedDrivePage.model_validate(response.json())
 
     def metadata(self, file_id: str, *, fields: str) -> DriveFile:
         response = self._http.get(
@@ -144,9 +175,7 @@ class DriveClient:
         return DriveFile.model_validate(response.json())
 
     def download(self, file_id: str, dest_path: Path) -> None:
-        self._stream(
-            _file_path(file_id), {"alt": "media", "supportsAllDrives": "true"}, dest_path
-        )
+        self._stream(_file_path(file_id), {"alt": "media", "supportsAllDrives": "true"}, dest_path)
 
     def export(self, file_id: str, mime_type: str, dest_path: Path) -> None:
         self._stream(
