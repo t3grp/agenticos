@@ -280,7 +280,7 @@ describe("ConnectServerDialog", () => {
 
       await waitFor(() => expect(tab.location.href).toBe("https://consent"));
       expect(document.cookie).toContain(
-        `mcp_oauth_return=${encodeURIComponent("/mcp-servers?server=notion")}`,
+        `mcp_oauth_return=${encodeURIComponent("/connectors?server=notion")}`,
       );
       expect(invalidate).not.toHaveBeenCalled();
       window.dispatchEvent(new Event("focus"));

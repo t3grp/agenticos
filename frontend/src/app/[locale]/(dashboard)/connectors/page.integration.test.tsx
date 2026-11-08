@@ -73,6 +73,26 @@ describe("ConnectorsPage", () => {
     expect(within(list).queryByRole("link", { name: /Sandboxes/ })).not.toBeInTheDocument();
   });
 
+  it("gates each advanced card on the permission its page read before the move", () => {
+    // Vault and Sandboxes were nav entries of their own, each gated by its own
+    // permission. Moving them behind a tab must not widen or narrow either gate.
+    state.tab = "advanced";
+    state.granted = new Set([Perm.secretsView]);
+    const { unmount } = render(<ConnectorsPage />);
+    expect(within(screen.getByRole("list")).getByRole("link", { name: /Vault/ })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).queryByRole("link", { name: /Sandboxes/ }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    state.granted = new Set([Perm.connectionsView]);
+    render(<ConnectorsPage />);
+    expect(
+      within(screen.getByRole("list")).getByRole("link", { name: /Sandboxes/ }),
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole("list")).queryByRole("link", { name: /Vault/ })).not.toBeInTheDocument();
+  });
+
   it("writes the tab to the URL, clearing it when going back to the default tab", async () => {
     const { unmount } = render(<ConnectorsPage />);
     await userEvent.click(screen.getByRole("tab", { name: "Advanced" }));

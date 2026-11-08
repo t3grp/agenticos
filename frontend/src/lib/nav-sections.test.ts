@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { navSectionFor } from "./nav-sections";
+import { NAV_GROUPS, navSectionFor } from "./nav-sections";
+import { ROUTES } from "./constants";
+import { Perm } from "@/types/permissions";
 
 describe("navSectionFor", () => {
   it("names the entry and its group's hue, and says when the path is the section's own page", () => {
@@ -36,3 +38,17 @@ describe("navSectionFor", () => {
     expect(navSectionFor("/settings/profile")).toBeNull();
   });
 });
+
+describe("the Connectors nav entry", () => {
+  it("is the one entry in the connections group, at the MCP servers' old permission", () => {
+    const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
+    expect(group?.items).toEqual([
+      expect.objectContaining({
+        labelKey: "connectors",
+        href: ROUTES.CONNECTORS,
+        permission: Perm.agentsView,
+      }),
+    ]);
+  });
+});
+
