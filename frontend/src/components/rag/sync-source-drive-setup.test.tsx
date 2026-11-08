@@ -120,20 +120,38 @@ function renderPage() {
 }
 
 describe("connecting a Google account from the wizard", () => {
-  it("starts the consent from the credential step, keeping the draft for the return", async () => {
+  it("offers Connect Google account at once on a new Drive source, without a toggle click", async () => {
     accounts([]);
     renderPage();
     await userEvent.click(screen.getByRole("button", { name: "Add source" }));
     await userEvent.type(screen.getByLabelText("Source name"), "Engineering docs");
     await userEvent.click(screen.getByRole("button", { name: /Google Drive/ }));
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Connected Google account" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Connect Google account" }));
+
+    const connectButton = await screen.findByRole("button", { name: "Connect Google account" });
+    expect(screen.getByRole("button", { name: "Connected Google account" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(connectButton);
 
     expect(connect).toHaveBeenCalledTimes(1);
     const saved = readDriveResume();
     expect(saved?.form.name).toBe("Engineering docs");
     expect(saved?.knownAccountIds).toEqual([]);
+  });
+
+  it("keeps the service-account choice one click away on a new Drive source", async () => {
+    accounts([]);
+    renderPage();
+    await userEvent.click(screen.getByRole("button", { name: "Add source" }));
+    await userEvent.type(screen.getByLabelText("Source name"), "Engineering docs");
+    await userEvent.click(screen.getByRole("button", { name: /Google Drive/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Service account" }));
+
+    expect(await screen.findByLabelText(/Vault credential/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Connect Google account" })).toBeNull();
   });
 });
 

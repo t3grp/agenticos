@@ -84,9 +84,13 @@ export function CredentialStep({
   const mayViewAccounts = isDrive && can(Perm.connectionsView);
   const canConnect = isDrive && can(Perm.connectionsManage);
   const connected = useConnectedAccounts("organization", { enabled: mayViewAccounts });
-  const [credentialType, setCredentialType] = useState<"account" | "secret">(
-    form.connected_account_id || resumeFrom ? "account" : "secret",
-  );
+  // The account path is the first choice for a Drive source whose reader can see
+  // the accounts. Derived rather than stored, so it is right once permissions
+  // arrive; a click on either choice is kept.
+  const [chosenType, setChosenType] = useState<"account" | "secret" | null>(null);
+  const credentialType =
+    chosenType ??
+    (form.connected_account_id || resumeFrom || mayViewAccounts ? "account" : "secret");
   const driveAccounts = connected.accounts.filter(
     (account) =>
       account.provider === "google" &&
@@ -164,7 +168,7 @@ export function CredentialStep({
             variant={credentialType === "account" ? "default" : "outline"}
             aria-pressed={credentialType === "account"}
             onClick={() => {
-              setCredentialType("account");
+              setChosenType("account");
               setForm((f) => ({ ...f, secret_id: null }));
             }}
           >
@@ -175,7 +179,7 @@ export function CredentialStep({
             variant={credentialType === "secret" ? "default" : "outline"}
             aria-pressed={credentialType === "secret"}
             onClick={() => {
-              setCredentialType("secret");
+              setChosenType("secret");
               setForm((f) => ({ ...f, connected_account_id: null }));
             }}
           >
