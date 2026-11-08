@@ -9,6 +9,8 @@ describe("navSectionFor", () => {
     expect(navSectionFor("/rag")).toMatchObject({ domain: "knowledge", isRoot: true });
     expect(navSectionFor("/vault")).toMatchObject({ domain: "workspace", isRoot: true });
     expect(navSectionFor("/dashboard")).toMatchObject({ domain: "use", isRoot: true });
+    expect(navSectionFor("/agent-messages")).toMatchObject({ domain: "use", isRoot: true });
+    expect(navSectionFor("/agent-messages")?.item.href).toBe("/agent-messages");
   });
 
   it("places a sub-page in its section without calling it the section's page", () => {

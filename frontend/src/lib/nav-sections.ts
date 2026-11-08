@@ -92,6 +92,13 @@ export const NAV_GROUPS: NavGroup[] = [
         dataTour: "nav-inbox",
         count: "inbox",
       },
+      {
+        labelKey: "agentMessages",
+        href: ROUTES.AGENT_MESSAGES,
+        icon: MessagesSquare,
+        permission: Perm.agentsRun,
+        dataTour: "nav-agent-messages",
+      },
     ],
   },
   {

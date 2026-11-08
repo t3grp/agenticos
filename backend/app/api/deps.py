@@ -513,6 +513,15 @@ def get_project_service(db: DBSession) -> ProjectService:
 
 ProjectSvc = Annotated[ProjectService, Depends(get_project_service)]
 
+from app.services.agent_messages import AgentMessageService
+
+
+def get_agent_message_service(db: DBSession) -> AgentMessageService:
+    return AgentMessageService(db)
+
+
+AgentMessageSvc = Annotated[AgentMessageService, Depends(get_agent_message_service)]
+
 from app.services.project_tracking import ProjectTrackingService
 
 

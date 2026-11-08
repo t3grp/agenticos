@@ -28,6 +28,15 @@ export { useKnowledgeBaseFor, useKnowledgeBases, useKBDetail } from "./use-knowl
 export { useSlashCommands, isBuiltinEnabled, BUILTIN_COMMAND_LIST } from "./use-slash-commands";
 export { useNotificationPreferences } from "./use-notification-preferences";
 export { useNotificationInbox, useUnreadNotificationCount } from "./use-notifications";
+export {
+  useAgentMessageRecipients,
+  useAgentMessages,
+  useAgentMessageThread,
+  useAgentMessageThreads,
+  useMarkAgentMessageThreadRead,
+  useReactToAgentMessage,
+  useSendAgentMessage,
+} from "./use-agent-messages";
 export { useDashboardLayout } from "./use-dashboard-layout";
 export { useDashboardPresets } from "./use-dashboard-presets";
 export { useReusableIntegrations } from "./use-reusable-integrations";
