@@ -4,7 +4,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0296_sync_source_connected_account"
+revision: str = "0296_gdrive_oauth"
 down_revision: str | None = "0295_tool_approval_consent"
 branch_labels: None = None
 depends_on: None = None
