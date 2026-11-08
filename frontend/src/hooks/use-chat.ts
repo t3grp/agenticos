@@ -1700,7 +1700,6 @@ export function useChat(options: UseChatOptions = {}) {
     },
     [
       selectionApi,
-      conversationApi,
       chatApi,
       addMessage,
       updateMessage,
@@ -1708,9 +1707,6 @@ export function useChat(options: UseChatOptions = {}) {
       sendMessage,
       conversationId,
       readLocalContext,
-      // The store action that shuts the browse panel when this turn ends the
-      // previous one's browse. Stable, and listed rather than omitted.
-      tenantId,
     ],
   );
 
