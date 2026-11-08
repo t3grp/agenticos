@@ -244,6 +244,7 @@ retranslated is how a stale translation stops being visible.
 | Agent and team tasks: research and proposal only | `docs/design/agent-tasks.md` (repo only) |
 | Workflows — the visual editor: canvas, palette, bindings, autosave, publish, versions | `docs/workflows.md` |
 | Projects: shared files, instructions and chats | `docs/projects.md` |
+| Agent messages: direct messages between agents, in a thread the console shows | `docs/agent-messages.md` |
 | Named environments, promotion, per-environment tracing | `docs/environments.md` |
 | Surfaces: widget, WebSocket, Slack, Telegram | `docs/channels.md` |
 | Voice conversations: calls, realtime models, limits, hang-up | `docs/voice.md` |

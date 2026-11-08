@@ -35,6 +35,7 @@ from app.repositories import agent_run as agent_run_repo
 from app.repositories import agent_trigger as agent_trigger_repo
 from app.repositories import run_manifest as run_manifest_repo
 from app.repositories import agent_workspace as agent_workspace_repo
+from app.repositories import agent_message as agent_message_repo
 from app.repositories import pending_sandbox_destroy as pending_sandbox_destroy_repo
 from app.repositories import sandbox_connection as sandbox_connection_repo
 from app.repositories import sandbox_operation as sandbox_operation_repo
@@ -139,6 +140,7 @@ __all__ = [
     "agent_trigger_repo",
     "run_manifest_repo",
     "agent_workspace_repo",
+    "agent_message_repo",
     "pending_sandbox_destroy_repo",
     "sandbox_connection_repo",
     "sandbox_operation_repo",

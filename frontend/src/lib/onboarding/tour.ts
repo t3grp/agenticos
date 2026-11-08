@@ -1065,6 +1065,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // routines stop: the launch walk does not take a first login here.
   { id: "inbox-filters", page: ROUTES.INBOX, target: "inbox-filters" },
 
+  // The threads between the reader's agents. "?"-only, gated on running agents:
+  // the walk does not take a first login here either.
+  {
+    id: "agent-messages",
+    page: ROUTES.AGENT_MESSAGES,
+    target: "agent-messages-list",
+    permission: Perm.agentsRun,
+  },
+
   { id: "workspaces-browser", page: ROUTES.DOCUMENTS, target: "workspaces-browser" },
   // The detail a workspace opens onto — the file tree. "?"-only and shown in
   // place: the reader is already on one of their own workspaces, so the walk

@@ -1831,6 +1831,14 @@
       "backgroundTasks": "Background topics",
       "stoppingBackgroundTask": "Stopping a background topic",
       "backgroundTaskStopped": "Background topic stopped",
+      "sendingAgentMessage": "Sending a message to an agent",
+      "sendAgentMessage": "Message sent to an agent",
+      "readingAgentMessages": "Reading agent messages",
+      "readAgentMessages": "Agent messages read",
+      "listingAgentThreads": "Listing agent threads",
+      "agentThreads": "Agent threads",
+      "reactingToAgentMessage": "Reacting to an agent message",
+      "reactToAgentMessage": "Reacted to an agent message",
       "memoryResult": "Memory",
       "manageMemory": "Your memory",
       "memoryRecordedResult": "Saved to memory",
@@ -2996,6 +3004,14 @@
         "empty": {
           "title": "Nothing here yet",
           "description": "Notifications will show up here."
+        }
+      },
+      "agent-messages": {
+        "title": "Agent messages",
+        "description": "Threads waiting on you.",
+        "empty": {
+          "title": "No unread threads",
+          "description": "Messages between your agents appear here when they wait on you."
         }
       },
       "artifacts": {
@@ -4360,6 +4376,7 @@
     "loadingPage": "Opening the page",
     "tables": "Tables",
     "inbox": "Inbox",
+    "agentMessages": "Agent messages",
     "inboxCount": "{count, plural, =1 {1 waiting} other {# waiting}}",
     "blobby": "Blobby",
     "desktopApp": "Desktop app",
@@ -4427,6 +4444,10 @@
         "title": "Build a workflow?",
         "body": "A workflow chains steps into an automation your agents run. Want to start one now? We'll open the create dialog so you can pick a blank canvas or a template."
       },
+      "create-agent-message": {
+        "title": "Send a first message between agents?",
+        "body": "One agent can write directly to another, in a thread you can read. Shall we send one now? We'll walk you through it and watch the thread appear."
+      },
       "explore-chat": {
         "title": "Take a quick tour of chat?",
         "body": "See how to start a conversation, switch which agent answers, and change the model or thinking effort for a single chat. Want a quick guided run through it?"
@@ -4460,6 +4481,10 @@
       "agent-history": {
         "title": "Every version, kept",
         "body": "Each publish freezes the spec as a version you can promote to an environment, roll back to, or read the run history against."
+      },
+      "agent-messages": {
+        "title": "Messages between agents",
+        "body": "When one agent writes to another, the thread lands here, most recently active first. Open a thread to read it, reply as either of its agents, or react to a message."
       },
       "agent-instructions": {
         "title": "Instructions are the behaviour",
@@ -4624,6 +4649,26 @@
       "flow-agent-mcp-connect": {
         "title": "Open the catalog",
         "body": "Choose Connect a server - the catalog opens right here in the builder, and we'll pick one together."
+      },
+      "flow-agent-message-create": {
+        "title": "Send a first message",
+        "body": "Open the new-message dialog to send one agent's words to another."
+      },
+      "flow-agent-message-sender": {
+        "title": "Pick the sending agent",
+        "body": "Choose which of your runnable agents sends this message."
+      },
+      "flow-agent-message-recipient": {
+        "title": "Pick the recipient",
+        "body": "Search the agents you may message and pick the one this goes to."
+      },
+      "flow-agent-message-body": {
+        "title": "Write the message",
+        "body": "Say what the other agent needs to hear — up to 16,000 characters."
+      },
+      "flow-agent-message-send": {
+        "title": "Send it",
+        "body": "Send the message, then step on to see the new thread."
       },
       "flow-agent-model-add": {
         "title": "Add a model",
@@ -11366,6 +11411,13 @@
       "example3": "Read a table from your database and summarise it",
       "needs": "The services' credentials in the vault, or a connected Google account. A deployment installs the terminal with the mirage extra, and an operator allows the hosts of any server you type.",
       "never": "Never writes to a folder you mounted read-only, and asks a person before each write where you said so."
+    },
+    "agent_messages": {
+      "name": "Agent messages",
+      "does": "Lets one agent write directly to another, in a thread the console shows with replies, reactions and files.",
+      "needs": "Two published agents the caller may run, and the agents:run permission to read the thread.",
+      "never": "Does not reach an agent the caller may not run, send on a human's behalf, or deliver a message outside the thread.",
+      "example1": "Ask the research agent to hand its findings to the writing agent before the draft is due."
     }
   },
   "capabilityCategories": {
@@ -11980,6 +12032,16 @@
         "title": "Hidden paths",
         "description": "Paths the agent cannot see at all, e.g. /drive/HR/."
       }
+    },
+    "agent_messages": {
+      "max_message_chars": {
+        "title": "Longest message",
+        "description": "The longest message this agent may send, in characters. 16,000 is the console's ceiling as well, so a thread reads the same however the message was sent; lower it for an agent that should keep its messages short."
+      },
+      "allow_attachments": {
+        "title": "Allow file attachments",
+        "description": "Whether this agent may send files it already uploaded along with its messages. Off means text only; files already attached stay readable."
+      }
     }
   },
   "apiReference": {
@@ -12586,6 +12648,56 @@
       "finding": "Routine"
     },
     "openWorkingChat": "Open conversation"
+  },
+  "agentMessages": {
+    "title": "Agent messages",
+    "description": "Direct messages between your agents, in threads.",
+    "newMessage": "New message",
+    "threadCount": "{count, plural, =0 {No threads} =1 {1 thread} other {# threads}}",
+    "failedLoad": "Couldn't load agent messages.",
+    "sent": "Message sent.",
+    "cannotSee": "You cannot see agent messages in this organization",
+    "askForAccess": "Ask an administrator for access to agent messages.",
+    "threadTitle": "{first} and {second}",
+    "lastMessage": "{slug}: {body}",
+    "noMessagesYet": "No messages yet.",
+    "unread": "Unread",
+    "read": "Read",
+    "emptyThreads": {
+      "title": "No threads yet",
+      "description": "When one agent writes to another, the thread appears here."
+    },
+    "emptyMessages": {
+      "title": "No messages yet",
+      "description": "Nothing has been said in this thread."
+    },
+    "selectThread": {
+      "title": "Pick a thread",
+      "description": "Choose a thread on the left to read it."
+    },
+    "reply": "Reply",
+    "replyTo": "Replying to {slug}",
+    "cancelReply": "Cancel reply",
+    "reactWith": "React with {emoji}",
+    "charCount": "{count} of {max} characters",
+    "messagePlaceholder": "Write a message…",
+    "replyPlaceholder": "Reply as the sending agent…",
+    "send": "Send",
+    "cancel": "Cancel",
+    "senderLabel": "Send as",
+    "recipientLabel": "To",
+    "bodyLabel": "Message",
+    "searchRecipients": "Search agents",
+    "loadingRecipients": "Loading agents…",
+    "noRecipients": "No agents match that search.",
+    "removeFile": "Remove {name}",
+    "noRunnableAgent": "No agent you may run is in this thread.",
+    "newMessageTitle": "New message",
+    "newMessageDescription": "One agent writes to another. The recipient gets the message in their thread.",
+    "attachFiles": "Attach files",
+    "tooManyFiles": "You can attach at most {max} files.",
+    "uploadFailed": "Couldn't upload a file.",
+    "chooseSender": "Choose a sending agent"
   },
   "agentLimit": {
     "title": "This organization is at its agent limit",

@@ -42,6 +42,13 @@ from app.db.models.agent_embed import AgentEmbed
 from app.db.models.embed_visitor import EmbedVisitor
 from app.db.models.agent import Agent, AgentStatus, AgentVersion
 from app.db.models.agent_environment import AgentEnvironment
+from app.db.models.agent_message import (
+    AgentMessage,
+    AgentMessageAttachment,
+    AgentMessageReaction,
+    AgentMessageRead,
+    AgentMessageThread,
+)
 from app.db.models.agent_workspace import AgentWorkspace
 from app.db.models.sandbox_connection import SandboxConnection
 from app.db.models.sandbox_operation import SandboxOperation
@@ -228,6 +235,11 @@ __all__ = [
     "AgentStatus",
     "AgentVersion",
     "AgentEnvironment",
+    "AgentMessage",
+    "AgentMessageAttachment",
+    "AgentMessageReaction",
+    "AgentMessageRead",
+    "AgentMessageThread",
     "AgentWorkspace",
     "LocalService",
     "SandboxConnection",
