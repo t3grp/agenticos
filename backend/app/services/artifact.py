@@ -2586,6 +2586,7 @@ class ArtifactService:
         ctx: AuthContext,
         *,
         shared_with_me: bool = False,
+        mine_or_shared: bool = False,
         include_archived: bool = False,
         search: str | None = None,
         agent_id: UUID | None = None,
@@ -2595,6 +2596,10 @@ class ArtifactService:
         limit: int = 50,
     ) -> ArtifactList:
         """A page of the artifacts this caller may open, newest publication first.
+
+        `mine_or_shared` narrows to what the caller owns or was shared with, even
+        when their role reaches the whole organization - the sidebar's list. An admin
+        keeps the whole organization on the management page, which does not set it.
 
         Archived ones only with `include_archived`, and then only those the caller may
         edit - the rule :meth:`read` applies. Each is read at the version the caller is
@@ -2611,6 +2616,14 @@ class ArtifactService:
         if project_id is not None:
             await ProjectService(self.db).get(ctx, project_id)
         see_all, grant_ids = await self._visibility(ctx)
+        if mine_or_shared and see_all:
+            see_all = False
+            grant_ids = await resource_grant_repo.list_shared_ids(
+                self.db,
+                organization_id=ctx.organization_id,
+                subject_user_id=ctx.subject_id,
+                resource_type=ARTIFACT.key,
+            )
         edit_ids = (
             await visible_resource_ids(
                 self.db, ctx, resource_type=ARTIFACT, perm=Perm.ARTIFACTS_EDIT

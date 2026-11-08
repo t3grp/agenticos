@@ -102,3 +102,41 @@ async def test_a_member_lists_org_wide_apps_and_not_another_members_private_app(
     assert org_id in ids
     assert private_id not in ids
     assert listed.total == 1
+
+    sidebar = await ArtifactService(db).list_readable(ctx, mine_or_shared=True, limit=8)
+    assert {item.id for item in sidebar.items} == {org_id}
+
+
+async def test_an_admin_sidebar_list_leaves_out_another_members_private_app(
+    db: AsyncSession, storage: LocalFileStorage
+) -> None:
+    """The admin's full list has the private page; the sidebar's `mine_or_shared` list does not."""
+    admin = await _user(db, "admin")
+    author = await _user(db, "author")
+    organization = Organization(
+        name="Acme", slug=f"acme-{uuid.uuid4().hex[:8]}", created_by_user_id=author.id
+    )
+    db.add(organization)
+    await db.flush()
+    for person, role in ((admin, "admin"), (author, "member")):
+        db.add(OrganizationMember(organization_id=organization.id, user_id=person.id, role=role))
+    agent = Agent(
+        organization_id=organization.id,
+        name="Reporter",
+        created_by_user_id=author.id,
+        slug=f"a-{uuid.uuid4().hex[:8]}",
+    )
+    db.add(agent)
+    await db.flush()
+
+    private_id = await _publish(db, organization, agent, author, "author-private", Visibility.PRIVATE)
+    org_id = await _publish(db, organization, agent, author, "author-org", Visibility.ORG)
+
+    ctx = ctx_for(admin, organization, role="admin")
+    full = await ArtifactService(db).list_readable(ctx, limit=8)
+    sidebar = await ArtifactService(db).list_readable(ctx, mine_or_shared=True, limit=8)
+
+    assert {item.id for item in full.items} >= {private_id, org_id}
+    assert private_id not in {item.id for item in sidebar.items}
+    assert org_id in {item.id for item in sidebar.items}
+    assert sidebar.total == 1

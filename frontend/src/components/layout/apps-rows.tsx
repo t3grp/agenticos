@@ -19,9 +19,10 @@ const SHOWN = 8;
  * The section of apps an agent published that the caller may open: the most
  * recently updated few, then "All apps".
  *
- * The list comes from the same endpoint the Apps page reads, so the server
- * decides which apps appear (owner, organization-wide, or shared with the
- * caller). The section is absent - heading and link included - when the caller
+ * The list comes from the same endpoint the Apps page reads, with
+ * `mine_or_shared`, so the server decides which apps appear: the caller's own,
+ * organization-wide ones, and those shared with them. An admin sees other
+ * members' private apps only on the "All apps" page, never here. The section is absent - heading and link included - when the caller
  * lacks `artifacts:view`, and while the list is loading or empty, so a person
  * with no apps never sees an empty "Apps" heading.
  */
@@ -36,7 +37,7 @@ export function AppsRows({
   const { can } = usePermissions();
   const pathname = stripLocale(usePathname());
   const allowed = can(Perm.artifactsView);
-  const { artifacts } = useArtifacts({ limit: SHOWN, enabled: allowed });
+  const { artifacts } = useArtifacts({ limit: SHOWN, mineOrShared: true, enabled: allowed });
 
   if (!allowed || artifacts.length === 0) return null;
 

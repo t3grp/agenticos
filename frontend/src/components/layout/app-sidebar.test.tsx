@@ -24,7 +24,7 @@ vi.mock("@/hooks/use-projects", () => ({
   useProjects: () => ({ projects: recentProjects() }),
 }));
 const apps = vi.fn<() => { id: string; title: string; name: string }[]>(() => []);
-const appsQuery = vi.fn<(query: { limit?: number; enabled?: boolean }) => void>();
+const appsQuery = vi.fn<(query: { limit?: number; mineOrShared?: boolean; enabled?: boolean }) => void>();
 vi.mock("@/hooks/use-artifacts", () => ({
   useArtifacts: (query: { limit?: number; enabled?: boolean }) => {
     appsQuery(query);
@@ -470,7 +470,7 @@ describe("the Apps section", () => {
     expect(listed).toHaveLength(8);
     expect(listed[0]).toHaveAttribute("href", "/apps/app-1");
     expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
-    expect(appsQuery).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 8, enabled: true }));
+    expect(appsQuery).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 8, mineOrShared: true, enabled: true }));
   });
 
   it("sits right after the main group and before Build", () => {
