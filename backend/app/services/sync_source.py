@@ -432,14 +432,14 @@ class SyncSourceService:
         ):
             raise missing
         from app.services.mcp_connection import McpConnectionService
-        from app.services.portals.google_oauth import DRIVE
+        from app.services.portals.google_oauth import DRIVE, DRIVE_READONLY
 
         grant = await McpConnectionService(self.db).account_grant(
             account, organization_id=ctx.organization_id
         )
         if grant is None or not {
             DRIVE,
-            "https://www.googleapis.com/auth/drive.readonly",
+            DRIVE_READONLY,
         }.intersection(grant.scopes):
             raise missing
 
