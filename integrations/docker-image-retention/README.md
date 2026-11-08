@@ -140,7 +140,7 @@ maintenance step.
 **Coolify UI deployments do not automatically acquire this helper's lock.** Do
 not add an unattended destructive timer until all relevant deployment and image
 mutation paths are coordinated. During an explicitly coordinated maintenance
-window, inspect the dry run again immediately before applying. No timer is
+window, inspect the dry run again immediately before applying. No image-cleanup timer is
 included here because its safety depends on deployment integration.
 
 ## Interaction with Coolify cleanup
@@ -176,6 +176,37 @@ and the same deployment lock, or publish images from a build service and only
 pull them on the runtime VM. Choose the cache limit from observed build size and
 available headroom; a 5–10 GiB budget may be a starting point, not a universal
 safe value. Inspect shared builders and active builds before any pruning.
+
+### Optional daily cache cleanup
+
+The included [service](docker-unused-build-cache.service) and
+[timer](docker-unused-build-cache.timer) remove default-builder cache that has
+not been used for 24 hours. They run independently of disk usage and retain no
+arbitrary cache-size budget. Docker only prunes eligible unused cache; records
+actively used by BuildKit are not reclaimable. Later builds may need to rebuild
+more layers.
+
+This is **cache-only** maintenance. It does not run the image-retention helper,
+remove images or containers, prune volumes or networks, or restart Docker.
+It affects the shared default builder, so review that scope before installation.
+The service skips an inactive Docker daemon. The schedule is daily at 00:30 UTC
+with up to five minutes of jitter and catch-up after downtime.
+
+On a systemd host where Docker and systemctl are installed under /usr/bin:
+
+```sh
+sudo install -m 0644 integrations/docker-image-retention/docker-unused-build-cache.service /etc/systemd/system/
+sudo install -m 0644 integrations/docker-image-retention/docker-unused-build-cache.timer /etc/systemd/system/
+sudo systemd-analyze verify /etc/systemd/system/docker-unused-build-cache.service /etc/systemd/system/docker-unused-build-cache.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now docker-unused-build-cache.timer
+sudo systemctl list-timers docker-unused-build-cache.timer
+```
+
+Inspect results with `journalctl -u docker-unused-build-cache.service`.
+Disable future runs with `systemctl disable --now docker-unused-build-cache.timer`.
+A timer is installed only when an operator runs these commands. The image
+cleanup coordination requirements above are unchanged.
 
 ## Verification
 

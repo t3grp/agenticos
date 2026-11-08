@@ -26,6 +26,9 @@ Two things are versioned separately from this file and worth knowing about:
   referenced by any container, and a pre-deployment disk-space check. Installation
   and deployment-lock coordination are explicit; this does not enable a cleanup
   schedule or change Coolify settings automatically.
+- Added opt-in systemd units for daily removal of Docker build cache unused for
+  24 hours, independent of disk usage. This separate cache-only job leaves images,
+  containers, volumes and networks intact.
 
 ### Changed
 
