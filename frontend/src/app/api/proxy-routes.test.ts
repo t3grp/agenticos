@@ -85,6 +85,7 @@ import * as skillChanges from "./skill-changes/[[...path]]/route";
 import * as skills from "./skills/[[...path]]/route";
 import * as spend from "./spend/[[...path]]/route";
 import * as stats from "./stats/[[...path]]/route";
+import * as syncSources from "./sync-sources/[[...path]]/route";
 import * as tables from "./tables/[[...path]]/route";
 import * as tasks from "./tasks/[[...path]]/route";
 import * as triggerPortals from "./trigger-portals/[[...path]]/route";
@@ -183,6 +184,7 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["skills", skills],
   ["spend", spend],
   ["stats", stats],
+  ["sync-sources", syncSources],
   ["tables", tables],
   ["tasks", tasks],
   ["trigger-portals", triggerPortals],

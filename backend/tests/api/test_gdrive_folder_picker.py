@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
+from google.auth.exceptions import RefreshError
 from httpx import ASGITransport, AsyncClient
 from pydantic import SecretStr
 
@@ -261,3 +262,27 @@ async def test_google_drive_listing_errors_are_controlled(
     assert response.json()["error"]["code"] == code
     assert response.json()["error"]["message"] == message
     assert "provider detail" not in response.text
+
+
+async def test_revoked_google_grant_returns_reconnect_error(monkeypatch):
+    organization_id = uuid.uuid4()
+    account = _account(organization_id)
+
+    def refresh(_self, _request: object) -> None:
+        raise RefreshError("revoked refresh token details")
+
+    monkeypatch.setattr(_Credentials, "valid", False)
+    monkeypatch.setattr(_Credentials, "refresh", refresh)
+    response = await _get(
+        monkeypatch,
+        organization_id=organization_id,
+        account=account,
+        handler=lambda _request: httpx.Response(200, json={}),
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "EXTERNAL_SERVICE_ERROR"
+    assert response.json()["error"]["message"] == (
+        "Google Drive account authorization expired. Reconnect the account."
+    )
+    assert "revoked refresh token details" not in response.text

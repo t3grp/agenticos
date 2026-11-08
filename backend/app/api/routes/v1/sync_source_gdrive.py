@@ -4,6 +4,7 @@ import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from google.auth.exceptions import RefreshError
 from httpx import HTTPStatusError
 
 from app.api.deps import Auth, McpConnectionSvc, require
@@ -137,4 +138,8 @@ async def list_google_drive_folders(
             ) from None
         raise ExternalServiceError(
             message="Google Drive could not list folders. Try again later."
+        ) from None
+    except RefreshError:
+        raise ExternalServiceError(
+            message="Google Drive account authorization expired. Reconnect the account."
         ) from None
