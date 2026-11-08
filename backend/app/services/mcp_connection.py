@@ -40,6 +40,7 @@ from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from mcp.shared.auth import OAuthToken
@@ -131,6 +132,20 @@ def _oauth_redirect_uri() -> str:
     """Where the provider sends the user back - a Next route that forwards the
     code + state to our (state-authenticated) callback endpoint."""
     return f"{settings.FRONTEND_URL.rstrip('/')}/api/me/mcp-connections/oauth/callback"
+
+
+def _is_google_mcp(url: str) -> bool:
+    """A Google-hosted MCP server. Google publishes no client registration endpoint.
+
+    The same test the console makes in `needsGoogleOAuthClient`, so the two agree on
+    which connections use the organization's Google client.
+    """
+    parsed = urlsplit(url)
+    return (
+        parsed.scheme == "https"
+        and (parsed.hostname or "").endswith(".googleapis.com")
+        and parsed.path.startswith("/mcp/")
+    )
 
 
 def _now_epoch() -> float:
@@ -1115,6 +1130,24 @@ class McpConnectionService:
         )
         _refuse_an_unnamed_second_account([first] if first else [], name=name, label=label)
 
+    async def _org_google_client(self, ctx: AuthContext, url: str) -> tuple[str, SecretStr]:
+        """The organization's Google OAuth client, for a Google-hosted MCP server.
+
+        Read from the vault like every client secret here, and spent on the server
+        side only: the secret goes to Google's token endpoint through the pending
+        flow and is never sent to the browser. Not the deployment's
+        `GOOGLE_CLIENT_ID`, which is sign-in.
+
+        Raises:
+            NotFoundError: The organization has stored no org-visible Google OAuth
+                client - the console shows the prerequisite, with `details.kind`
+                naming the credential to add.
+        """
+        app, _, _ = await OrganizationSecretService(self.db).oauth_app_identity(
+            ctx, kind=SecretKind.GOOGLE_OAUTH_APP
+        )
+        return app.client_id, app.client_secret
+
     async def oauth_start_for_org(
         self,
         ctx: AuthContext,
@@ -1183,6 +1216,8 @@ class McpConnectionService:
                 )
             return connection
 
+        if client_id is None and _is_google_mcp(url):
+            client_id, client_secret = await self._org_google_client(ctx, url)
         return await self._oauth_start(
             name=name,
             url=url,
@@ -1203,8 +1238,14 @@ class McpConnectionService:
         label: str | None = None,
         client_id: str | None = None,
         client_secret: SecretStr | None = None,
+        ctx: AuthContext | None = None,
     ) -> str:
         """Begin the OAuth authorization-code flow for a server this person owns.
+
+        `ctx` is the caller's organization. A Google-hosted server uses that
+        organization's Google client, so a person connecting one never types a
+        client ID; without it the flow falls back to registration, which Google
+        does not offer.
 
         `catalog_key` is stored on the row it creates, and that is the whole
         reason it is a parameter: a personal connection without one can never be
@@ -1223,6 +1264,8 @@ class McpConnectionService:
                 message=f"Unknown catalog server: {catalog_key}",
                 details={"catalog_key": catalog_key},
             )
+        if client_id is None and ctx is not None and _is_google_mcp(url):
+            client_id, client_secret = await self._org_google_client(ctx, url)
         existing = await mcp_connection_repo.get_by_name(self.db, user_id=user_id, name=name)
         # Only a new row: authorizing an existing account again is not a second one.
         if existing is None and catalog_key is not None:

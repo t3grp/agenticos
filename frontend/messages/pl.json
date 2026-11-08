@@ -7061,6 +7061,7 @@
     "oauthFailed": "Logowanie się nie powiodło i żadne połączenie nie zostało zapisane.",
     "oauthMissingCode": "Provider nie przesłał kodu autoryzacji.",
     "googleOAuthClientRequired": "Google wymaga identyfikatora klienta i sekretu z Google Cloud, zanim połączysz konto.",
+    "googleAppAskAdmin": "Poproś administratora o skonfigurowanie Google dla tej organizacji.",
     "googleOAuthSetupGuide": "Otwórz instrukcję konfiguracji Google",
     "oauthRequiredClient": "Klient OAuth w Google Cloud",
     "googleOAuthClientHint": "Utwórz klienta OAuth typu Web application, zaznacz „Use this client for an AI-powered agent” i dodaj dokładny adres przekierowania poniżej.",

@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api-error";
 import type { Translate } from "@/lib/agent-step-captions";
 import { isSafeReturnPath } from "@/lib/safe-return-path";
 
@@ -188,6 +189,15 @@ export function mcpOAuthClient(clientId: string, clientSecret: string): McpOAuth
 }
 
 /** Google's hosted MCP services require a client created in Google Cloud. */
+/**
+ * The backend refused a Google connect because the organization has no Google
+ * app (`google_oauth_app`). Admins are asked to set one up; everyone else is
+ * told to ask one.
+ */
+export function isGoogleAppMissing(error: unknown): boolean {
+  return error instanceof ApiError && error.details?.kind === "google_oauth_app";
+}
+
 export function needsGoogleOAuthClient(url: string): boolean {
   try {
     const parsed = new URL(url);

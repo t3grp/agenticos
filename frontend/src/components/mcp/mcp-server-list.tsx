@@ -42,6 +42,7 @@ import { startMcpOAuth } from "@/lib/mcp-connections-api";
 import {
   type McpOAuthClient,
   mcpOAuthClient,
+  isGoogleAppMissing,
   needsGoogleOAuthClient,
   rememberMcpOAuthReturn,
   secretWithoutClientId,
@@ -305,8 +306,7 @@ export function McpServerList({
       row.auth === "oauth" &&
       row.entry !== null &&
       name !== undefined &&
-      !hasAccount(scope, row) &&
-      !needsGoogleOAuthClient(row.url ?? "")
+      !hasAccount(scope, row)
     ) {
       void handleOAuth(row, name, scope);
       return;
@@ -384,7 +384,22 @@ export function McpServerList({
       // write on `window` as mutating a value from outside the component.
       window.location.assign(authorization_url);
     } catch (caught) {
-      toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign")));
+      if (isGoogleAppMissing(caught)) {
+        if (canManageOrganization) {
+          setDraft({
+            scope,
+            row,
+            existing: null,
+            suggestedName: name,
+            needsLabel: hasAccount(scope, row),
+            googleAppMissing: true,
+          });
+        } else {
+          toast.error(t("googleAppAskAdmin"));
+        }
+      } else {
+        toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign")));
+      }
       setBusyId(null);
     }
     // On success the browser navigates away - leave the row busy.
@@ -412,9 +427,7 @@ export function McpServerList({
   // soon as the catalog has named the row - derived, so nothing has to be set.
   // Closing it is what clears the request.
   const requestedDraft: DraftState | null =
-    draft === null &&
-    requestedRow !== null &&
-    (requestedRow.auth !== "oauth" || needsGoogleOAuthClient(requestedRow.url ?? ""))
+    draft === null && requestedRow !== null && requestedRow.auth !== "oauth"
       ? {
           scope: "personal",
           row: requestedRow,
@@ -444,7 +457,7 @@ export function McpServerList({
       toast.error(t("noSuchServerToConnect", { key: connectKey }));
       return;
     }
-    if (requestedRow.auth !== "oauth" || needsGoogleOAuthClient(requestedRow.url ?? "")) return;
+    if (requestedRow.auth !== "oauth") return;
     const taken = new Set(personal.connections.map((connection) => connection.name));
     const name = freeName(requestedRow, taken) ?? slugForPrefix(connectKey);
     startMcpOAuth({ name, url: requestedRow.url ?? "", catalog_key: connectKey }, "personal")
@@ -452,10 +465,31 @@ export function McpServerList({
         rememberMcpOAuthReturn(serverReturn(connectKey));
         window.location.assign(authorization_url);
       })
-      .catch((caught: unknown) =>
-        toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign"))),
-      );
-  }, [connectKey, catalogLoaded, requestedRow, personal.connections, t, tErrors]);
+      .catch((caught: unknown) => {
+        if (!isGoogleAppMissing(caught)) {
+          toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign")));
+        } else if (canManageOrganization) {
+          setDraft({
+            scope: "personal",
+            row: requestedRow,
+            existing: null,
+            suggestedName: name,
+            needsLabel: hasAccount("personal", requestedRow),
+            googleAppMissing: true,
+          });
+        } else {
+          toast.error(t("googleAppAskAdmin"));
+        }
+      });
+  }, [
+    connectKey,
+    catalogLoaded,
+    requestedRow,
+    personal.connections,
+    canManageOrganization,
+    t,
+    tErrors,
+  ]);
 
   const handleSubmit = async (values: ConnectionFormValues) => {
     if (!activeDraft) return;
@@ -481,7 +515,11 @@ export function McpServerList({
     // Sending the form would make an unauthorized bearer connection that then
     // has to be repaired.
     if (values.auth === "oauth" && existing === null) {
-      if (needsGoogleOAuthClient(url) && (!values.clientId.trim() || !values.clientSecret.trim())) {
+      if (
+        activeDraft.googleAppMissing === true &&
+        needsGoogleOAuthClient(url) &&
+        (!values.clientId.trim() || !values.clientSecret.trim())
+      ) {
         toast.error(t("googleOAuthClientRequired"));
         return;
       }

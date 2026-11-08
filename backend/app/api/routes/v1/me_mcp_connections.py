@@ -11,7 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.agents.mcp_oauth import OAuthError
-from app.api.deps import CurrentUser, McpConnectionSvc, OptionalCurrentUser, key_needs
+from app.api.deps import Auth, CurrentUser, McpConnectionSvc, OptionalCurrentUser, key_needs
 from app.api.public_api import PUBLIC
 from app.core.exceptions import NotFoundError
 from app.core.permissions import Perm
@@ -104,8 +104,13 @@ async def start_mcp_oauth(
     data: McpOAuthStart,
     service: McpConnectionSvc,
     user: CurrentUser,
+    ctx: Auth,
 ) -> Any:
-    """Begin the OAuth flow; returns the provider consent URL to redirect to."""
+    """Begin the OAuth flow; returns the provider consent URL to redirect to.
+
+    A Google-hosted server connects with the organization's Google client, so the
+    caller's organization is needed as well as the person.
+    """
     try:
         authorization_url = await service.oauth_start(
             user_id=user.id,
@@ -115,6 +120,7 @@ async def start_mcp_oauth(
             label=data.label,
             client_id=data.client_id,
             client_secret=data.client_secret,
+            ctx=ctx,
         )
     except OAuthError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
