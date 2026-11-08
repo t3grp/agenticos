@@ -129,6 +129,7 @@
     "loadingPage": "Otwieranie strony",
     "tables": "Tabele",
     "inbox": "Inbox",
+    "agentMessages": "Wiadomości agentów",
     "inboxCount": "{count, plural, =1 {1 czeka} few {# czekają} many {# czeka} other {# czeka}}",
     "blobby": "Blobby",
     "desktopApp": "Aplikacja desktopowa",
@@ -876,6 +877,14 @@
       "backgroundTasks": "Tematy w tle",
       "stoppingBackgroundTask": "Zatrzymywanie tematu w tle",
       "backgroundTaskStopped": "Zatrzymano temat w tle",
+      "sendingAgentMessage": "Wysyłanie wiadomości do agenta",
+      "sendAgentMessage": "Wysłano wiadomość do agenta",
+      "readingAgentMessages": "Czytanie wiadomości agentów",
+      "readAgentMessages": "Przeczytano wiadomości agentów",
+      "listingAgentThreads": "Sprawdzanie wątków agentów",
+      "agentThreads": "Wątki agentów",
+      "reactingToAgentMessage": "Reagowanie na wiadomość agenta",
+      "reactToAgentMessage": "Zareagowano na wiadomość agenta",
       "memoryResult": "Pamięć",
       "manageMemory": "Twoja pamięć",
       "memoryRecordedResult": "Zapisano w pamięci",
@@ -4972,6 +4981,14 @@
           "description": "Powiadomienia pojawią się tutaj."
         }
       },
+      "agent-messages": {
+        "title": "Wiadomości agentów",
+        "description": "Wątki, które na ciebie czekają.",
+        "empty": {
+          "title": "Brak nieprzeczytanych wątków",
+          "description": "Wiadomości między twoimi agentami pojawiają się tutaj, gdy na ciebie czekają."
+        }
+      },
       "routines": {
         "title": "Rutyny",
         "description": "Co działa, gdy nikogo nie ma przy klawiaturze - najbliższe najpierw - i jak poszło ostatnie uruchomienie.",
@@ -6024,6 +6041,10 @@
         "body": "Workflow łączy kroki w automatyzację, którą wykonują Twoi agenci. Chcesz zacząć teraz? Otworzymy okno tworzenia, żebyś wybrał puste płótno albo szablon.",
         "title": "Zbudować workflow?"
       },
+      "create-agent-message": {
+        "title": "Wysłać pierwszą wiadomość między agentami?",
+        "body": "Jeden agent może pisać bezpośrednio do drugiego, w wątku, który możesz przeczytać. Wysłać jedną teraz? Przeprowadzimy Cię przez to i zobaczymy, jak pojawia się wątek."
+      },
       "explore-chat": {
         "title": "Krótki przewodnik po czacie?",
         "body": "Zobacz, jak zacząć rozmowę, przełączyć, który agent odpowiada, i zmienić model albo wysiłek myślenia dla pojedynczego czatu. Chcesz szybki, prowadzony przegląd?"
@@ -6057,6 +6078,10 @@
       "agent-history": {
         "title": "Każda wersja zachowana",
         "body": "Każda publikacja zamraża specyfikację jako wersję, którą możesz wypromować do środowiska, cofnąć się do niej albo odczytać względem niej historię uruchomień."
+      },
+      "agent-messages": {
+        "title": "Wiadomości między agentami",
+        "body": "Gdy jeden agent napisze do drugiego, wątek trafia tutaj, najpierw ostatnio aktywne. Otwórz wątek, żeby go przeczytać, odpowiedzieć jako jeden z jego agentów albo zareagować na wiadomość."
       },
       "agent-instructions": {
         "title": "Instrukcje to zachowanie",
@@ -6221,6 +6246,26 @@
       "flow-agent-mcp-connect": {
         "title": "Otwórz katalog",
         "body": "Wybierz Connect server - katalog otworzy się tutaj, w kreatorze, i wybierzemy jeden razem."
+      },
+      "flow-agent-message-create": {
+        "title": "Wyślij pierwszą wiadomość",
+        "body": "Otwórz okno nowej wiadomości, żeby wysłać słowa jednego agenta do drugiego."
+      },
+      "flow-agent-message-sender": {
+        "title": "Wybierz agenta wysyłającego",
+        "body": "Wybierz, który z twoich agentów, które możesz uruchomić, wysyła tę wiadomość."
+      },
+      "flow-agent-message-recipient": {
+        "title": "Wybierz odbiorcę",
+        "body": "Wyszukaj agentów, do których możesz pisać, i wybierz tego, do którego ma trafić wiadomość."
+      },
+      "flow-agent-message-body": {
+        "title": "Napisz wiadomość",
+        "body": "Napisz, co drugi agent ma usłyszeć — do 16 000 znaków."
+      },
+      "flow-agent-message-send": {
+        "title": "Wyślij ją",
+        "body": "Wyślij wiadomość, a potem przejdź dalej, żeby zobaczyć nowy wątek."
       },
       "flow-agent-model-add": {
         "title": "Dodaj model",
@@ -9393,6 +9438,16 @@
         "title": "Ukryte ścieżki",
         "description": "Ścieżki, których agent w ogóle nie widzi, np. /drive/HR/."
       }
+    },
+    "agent_messages": {
+      "max_message_chars": {
+        "title": "Najdłuższa wiadomość",
+        "description": "Najdłuższa wiadomość, jaką ten agent może wysłać, w znakach. 16 000 to także górna granica konsoli, więc wątek czyta się tak samo, niezależnie od tego, jak wiadomość wysłano; obniż ją dla agenta, który powinien pisać krótko."
+      },
+      "allow_attachments": {
+        "title": "Zezwalaj na załączniki plików",
+        "description": "Czy ten agent może wysyłać pliki, które już przesłał, razem ze swoimi wiadomościami. Wyłączone oznacza tylko tekst; pliki już załączone pozostają czytelne."
+      }
     }
   },
   "apiReference": {
@@ -12081,6 +12136,13 @@
       "example3": "Odczytaj tabelę z bazy danych i ją podsumuj",
       "needs": "Dane dostępowe usług w vaulcie albo połączone konto Google. Wdrożenie instaluje terminal z extra mirage, a operator zezwala na hosty serwerów, które wpiszesz.",
       "never": "Nigdy nie pisze w folderze zamontowanym tylko do odczytu i pyta osobę przed każdym zapisem tam, gdzie tak ustawisz."
+    },
+    "agent_messages": {
+      "name": "Wiadomości agentów",
+      "does": "Pozwala jednemu agentowi pisać bezpośrednio do drugiego, w wątku, który konsola pokazuje z odpowiedziami, reakcjami i plikami.",
+      "needs": "Dwa opublikowane agenty, które wywołujący może uruchomić, oraz uprawnienie agents:run do odczytu wątku.",
+      "never": "Nie dociera do agenta, którego wywołujący nie może uruchomić, nie wysyła w imieniu człowieka ani nie dostarcza wiadomości poza wątkiem.",
+      "example1": "Poproś agenta badawczego, żeby przekazał ustalenia agentowi piszącemu, zanim będzie gotowy szkic."
     }
   },
   "capabilityCategories": {
@@ -12361,6 +12423,56 @@
       "finding": "Rutyna"
     },
     "openWorkingChat": "Otwórz rozmowę"
+  },
+  "agentMessages": {
+    "title": "Wiadomości agentów",
+    "description": "Bezpośrednie wiadomości między twoimi agentami, w wątkach.",
+    "newMessage": "Nowa wiadomość",
+    "threadCount": "{count, plural, =0 {Brak wątków} =1 {1 wątek} few {# wątki} many {# wątków} other {# wątków}}",
+    "failedLoad": "Nie udało się wczytać wiadomości agentów.",
+    "sent": "Wiadomość wysłana.",
+    "cannotSee": "Nie widzisz wiadomości agentów w tej organizacji",
+    "askForAccess": "Poproś administratora o dostęp do wiadomości agentów.",
+    "threadTitle": "{first} i {second}",
+    "lastMessage": "{slug}: {body}",
+    "noMessagesYet": "Jeszcze nie ma wiadomości.",
+    "unread": "Nieprzeczytane",
+    "read": "Przeczytane",
+    "emptyThreads": {
+      "title": "Jeszcze nie ma wątków",
+      "description": "Gdy jeden agent napisze do drugiego, wątek pojawi się tutaj."
+    },
+    "emptyMessages": {
+      "title": "Jeszcze nie ma wiadomości",
+      "description": "W tym wątku nikt jeszcze nic nie napisał."
+    },
+    "selectThread": {
+      "title": "Wybierz wątek",
+      "description": "Wybierz wątek po lewej, żeby go przeczytać."
+    },
+    "reply": "Odpowiedz",
+    "replyTo": "Odpowiedź dla {slug}",
+    "cancelReply": "Anuluj odpowiedź",
+    "reactWith": "Zareaguj {emoji}",
+    "charCount": "{count} z {max} znaków",
+    "messagePlaceholder": "Napisz wiadomość…",
+    "replyPlaceholder": "Odpowiedz jako agent wysyłający…",
+    "send": "Wyślij",
+    "cancel": "Anuluj",
+    "senderLabel": "Wyślij jako",
+    "recipientLabel": "Do",
+    "bodyLabel": "Wiadomość",
+    "searchRecipients": "Szukaj agentów",
+    "loadingRecipients": "Wczytywanie agentów…",
+    "noRecipients": "Żaden agent nie pasuje do tego wyszukiwania.",
+    "removeFile": "Usuń {name}",
+    "noRunnableAgent": "Żaden agent, którego możesz uruchomić, nie jest w tym wątku.",
+    "newMessageTitle": "Nowa wiadomość",
+    "newMessageDescription": "Jeden agent pisze do drugiego. Odbiorca dostaje wiadomość w swoim wątku.",
+    "attachFiles": "Załącz pliki",
+    "tooManyFiles": "Możesz załączyć co najwyżej {max} plików.",
+    "uploadFailed": "Nie udało się przesłać pliku.",
+    "chooseSender": "Wybierz agenta wysyłającego"
   },
   "agentLimit": {
     "title": "Ta organizacja osiągnęła limit agentów",
