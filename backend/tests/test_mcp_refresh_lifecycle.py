@@ -2,11 +2,13 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 from mcp.shared.auth import OAuthToken
+from pydantic import SecretStr
 
 from app.services import mcp_connection as service
 from tests.test_mcp_connections import _base_payload, _oauth_connection
@@ -205,3 +207,98 @@ def test_google_account_source_metadata_is_recovered_only_from_a_verifiable_gran
     assert service.account_source_organization(account) == (
         None if change in {"legacy", "missing_payload"} else SOURCE_ORG
     )
+
+
+def _org_account(org, **overrides):
+    """A member's Google account whose client is the organization's app."""
+    payload = _base_payload(
+        token_endpoint="https://oauth2.googleapis.com/token",
+        provider="google",
+        client_id="org-client",
+        client_secret=None,
+        access_token="old",
+        refresh_token="rt",
+        expires_at=0,
+        account_source_organization_id=org,
+        account_source_secret_id=uuid4(),
+        account_source_generation=uuid4(),
+    )
+    return _oauth_connection(
+        payload,
+        purpose="account",
+        scope="org",
+        organization_id=org,
+        **overrides,
+    )
+
+
+def _live_org_app(monkeypatch, current: dict, org):
+    """The organization's Google app as it stands now: `current` is edited to rotate it."""
+
+    async def app(self, organization_id, *, kind):
+        assert organization_id == org
+        value = SimpleNamespace(
+            client_id=current["client_id"], client_secret=SecretStr(current["secret"])
+        )
+        return value, uuid4(), uuid4()
+
+    monkeypatch.setattr(service.OrganizationSecretService, "oauth_app_identity_for_org", app)
+    # The owner checks are a separate concern, covered in test_connected_accounts.
+    monkeypatch.setattr(
+        service.McpConnectionService, "_account_source_current", AsyncMock(return_value=True)
+    )
+
+
+async def test_a_rotated_org_app_secret_reaches_a_members_next_refresh(monkeypatch):
+    org = uuid4()
+    connection = _org_account(org)
+    current = {"client_id": "org-client", "secret": "first"}
+    _live_org_app(monkeypatch, current, org)
+    refresh = AsyncMock(return_value=OAuthToken(access_token="AT", expires_in=3600))
+    update = AsyncMock(return_value=connection)
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+    monkeypatch.setattr(service.mcp_connection_repo, "update", update)
+
+    await service._rotate_token(AsyncMock(), connection)
+    current["secret"] = "rotated"
+    await service._rotate_token(AsyncMock(), connection)
+
+    secrets_spent = [call.kwargs["client_secret"] for call in refresh.await_args_list]
+    assert secrets_spent == ["first", "rotated"]
+    stored = service._decode_payload(
+        connection, update.await_args.kwargs["update_data"]["oauth_payload"]
+    )
+    assert stored is not None
+    assert stored.client_secret is None
+    assert stored.account_source_organization_id == org
+
+
+async def test_a_grant_reads_the_org_apps_current_secret(monkeypatch):
+    org = uuid4()
+    connection = _org_account(org)
+    current = {"client_id": "org-client", "secret": "rotated"}
+    _live_org_app(monkeypatch, current, org)
+
+    grant = await service.McpConnectionService(AsyncMock()).account_grant(
+        connection, organization_id=org
+    )
+
+    assert grant is not None
+    assert grant.client_id == "org-client"
+    assert grant.client_secret.get_secret_value() == "rotated"
+
+
+async def test_a_switched_org_client_is_not_refreshed_with_the_old_grant(monkeypatch):
+    org = uuid4()
+    connection = _org_account(org)
+    current = {"client_id": "another-client", "secret": "x"}
+    _live_org_app(monkeypatch, current, org)
+    refresh = AsyncMock()
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+
+    grant = await service.McpConnectionService(AsyncMock()).account_grant(
+        connection, organization_id=org
+    )
+
+    assert grant is None
+    refresh.assert_not_awaited()

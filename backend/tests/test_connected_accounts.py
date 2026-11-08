@@ -72,15 +72,25 @@ def repo(monkeypatch) -> MagicMock:
     return mock
 
 
-@pytest.fixture
-def client(monkeypatch) -> GoogleOAuthAppSecret:
+@pytest.fixture(autouse=True)
+def org_google_app(monkeypatch) -> GoogleOAuthAppSecret:
+    """The organization's Google app, as a consent or a refresh reads it.
+
+    Patched at `oauth_app_identity_for_org`, which `oauth_app_identity` delegates to
+    and which a refresh of an org-referenced grant calls directly.
+    """
     creds = GoogleOAuthAppSecret(client_id="org-client", client_secret="org-secret")
     monkeypatch.setattr(
         service_module.OrganizationSecretService,
-        "oauth_app_identity",
+        "oauth_app_identity_for_org",
         AsyncMock(return_value=(creds, SOURCE_SECRET, SOURCE_GENERATION)),
     )
     return creds
+
+
+@pytest.fixture
+def client(org_google_app) -> GoogleOAuthAppSecret:
+    return org_google_app
 
 
 def _account(**overrides) -> McpConnection:

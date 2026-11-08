@@ -36,6 +36,7 @@ import {
   useMcpCatalogPage,
   useMcpServerEntry,
 } from "@/hooks/use-mcp-servers";
+import { apiClient } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/api-error";
 import type { McpConnectionRecord } from "@/lib/mcp-connections-api";
 import { startMcpOAuth } from "@/lib/mcp-connections-api";
@@ -527,12 +528,36 @@ export function McpServerList({
         toast.error(t("clientSecretNeedsId"));
         return;
       }
+      // An admin who types the organization's Google client is registering it
+      // for everyone: it is saved as the org's app, and the connect itself is a
+      // personal one that reads that app. Anyone else keeps a personal client.
+      const adminSavesOrgApp =
+        canManageOrganization &&
+        activeDraft.googleAppMissing === true &&
+        needsGoogleOAuthClient(url);
+      if (adminSavesOrgApp) {
+        try {
+          await apiClient.post("/secrets", {
+            name: "google-oauth-app",
+            description: "Google OAuth client for connected accounts",
+            value: {
+              kind: "google_oauth_app",
+              client_id: values.clientId.trim(),
+              client_secret: values.clientSecret.trim(),
+            },
+            visibility: "org",
+          });
+        } catch (caught) {
+          toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign")));
+          return;
+        }
+      }
       closeDraft();
       await handleOAuth(
         { ...row, url },
         name,
         scope,
-        mcpOAuthClient(values.clientId, values.clientSecret),
+        adminSavesOrgApp ? undefined : mcpOAuthClient(values.clientId, values.clientSecret),
         scope === "organization" ? values.audience : undefined,
         label,
       );

@@ -530,6 +530,12 @@ class OrganizationSecretService:
     async def oauth_app_identity(
         self, ctx: AuthContext, *, kind: SecretKind
     ) -> tuple[OAuthAppSecret, UUID, UUID]:
+        """`oauth_app_identity_for_org` for the caller's own organization."""
+        return await self.oauth_app_identity_for_org(ctx.organization_id, kind=kind)
+
+    async def oauth_app_identity_for_org(
+        self, organization_id: UUID, *, kind: SecretKind
+    ) -> tuple[OAuthAppSecret, UUID, UUID]:
         """Unseal the organization's OAuth client credentials for a token exchange.
 
         The third plaintext reader here, and deliberately the narrowest: it opens one
@@ -541,14 +547,16 @@ class OrganizationSecretService:
         One method over every such kind, because the rule is the same for each and
         it is the rule that matters: `github_oauth_app` connects a repository
         account, `google_oauth_app` and `microsoft_oauth_app` a mailbox, and each
-        organization registers its own client for any of them. A deployment-wide client read from the environment would be a
-        second mechanism for a credential at rest, which this repository does not
-        have.
+        organization registers its own client for any of them. A deployment-wide
+        client read from the environment would be a second mechanism for a credential
+        at rest, which this repository does not have.
 
-        Not gated on `secrets:view`, for the same reason `resolve_for_bindings` is
-        not: this is the runtime spending a credential the organization stored, not a
-        member reading the vault. The caller's `mcp:manage` on the connect route is
-        what authorizes reaching it.
+        Who may reach it is decided by the caller, not here: the org connect route
+        requires `mcp:manage`, and a member's personal connect requires only an
+        active membership of the organization. This method is not gated on
+        `secrets:view`, for the same reason `resolve_for_bindings` is not: it is the
+        runtime spending a credential the organization stored, not a member reading
+        the vault.
 
         Only an *org-visible* credential qualifies, and only an unambiguous one: a
         member's private client must never be spent for the whole organization's
@@ -566,7 +574,7 @@ class OrganizationSecretService:
                 operator knows which rows collide.
         """
         rows = await organization_secret_repo.list_org_visible_by_kind(
-            self.db, organization_id=ctx.organization_id, kind=kind.value
+            self.db, organization_id=organization_id, kind=kind.value
         )
         label = describe_kind(kind)
         if not rows:
@@ -587,7 +595,7 @@ class OrganizationSecretService:
         value = unseal_secret(
             row.sealed_secret,
             kind=kind,
-            scope=VaultScope.organization(ctx.organization_id),
+            scope=VaultScope.organization(organization_id),
             key_version=row.key_version,
         )
         # `unseal_secret` refuses anything whose sealed kind is not the one asked
