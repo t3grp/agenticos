@@ -1779,6 +1779,13 @@
       "runningCodingAgent": "Der Coding Agent arbeitet",
       "codingStepRunning": "{kind, select, read {Liest} search {Sucht} edit {Bearbeitet} command {Führt aus} web {Schlägt nach} other {Arbeitet an}}",
       "codingStepDone": "{kind, select, read {Gelesen} search {Gesucht} edit {Bearbeitet} command {Ausgeführt} web {Nachgeschlagen} other {Verwendet}}",
+      "runningHarness": "Die Harness-Sitzung arbeitet",
+      "harnessStarted": "Eine Harness-Sitzung geöffnet",
+      "harnessPrompted": "Die Harness-Sitzung angestoßen",
+      "harnessStopping": "Die Harness-Sitzung wird geschlossen",
+      "harnessStopped": "Die Harness-Sitzung geschlossen",
+      "harnessListing": "Die Harness-Sitzungen werden aufgelistet",
+      "harnessListed": "Die Harness-Sitzungen aufgelistet",
       "drawingVisual": "Zeichnet",
       "drawVisual": "Hat ein Visual gezeichnet",
       "revisingVisual": "Überarbeitet ein Visual",
@@ -11012,6 +11019,14 @@
       "needs": "Für eine Sandbox: die Capability Sandbox, eine Verbindung und einen Provider-Key oder eine Anmeldung im Vault. Auf diesem Computer: die Desktop-App, einen angemeldeten Coding Agent und einen freigegebenen Ordner mit Vollzugriff.",
       "never": "Lokale Aufgaben erfordern eine Ordnerfreigabe mit Vollzugriff und eine native Startbestätigung. Wählen Sie bei menschlicher Freigabe Immer fragen, um jede Aufgabe zusätzlich im Chat zu bestätigen."
     },
+    "harness": {
+      "name": "Harness",
+      "does": "Hält eine Claude-Code- oder Codex-Sitzung in der Sandbox des Agent offen und steuert sie über mehrere Runden als Arbeits-Backend des Agents, während Sie jeden Prompt im Chat sehen.",
+      "example1": "Einen fehlschlagenden Test beheben und dann in derselben Sitzung weiterfragen",
+      "example2": "Ein Modul lesen und erklären, wie es funktioniert, ohne etwas zu ändern",
+      "needs": "Eine Verbindung und einen Provider-Key im Vault: einen Anthropic-Key oder ein Claude-Abo-Token für Claude Code, einen OpenAI-Key für Codex.",
+      "never": "Eine ChatGPT-Anmeldung funktioniert hier noch nicht; Codex läuft mit einem OpenAI-API-Key. Wählen Sie bei menschlicher Freigabe Immer fragen, um jeden Prompt zusätzlich im Chat zu bestätigen."
+    },
     "compaction": {
       "name": "Lange Gespräche",
       "does": "Kürzt den ältesten Teil eines langen Gesprächs, damit der Agent weiterarbeiten kann, statt an das Limit des Modells zu stoßen.",
@@ -11714,6 +11729,28 @@
       "runs_on": {
         "title": "Wo es läuft",
         "description": "Die Sandbox des Agents mit ihrem konfigurierten Schlüssel, eine temporäre private Cloud-Aufgabe mit dem Profilkonto der startenden Person oder ein in der Desktop-App auf ihrem Computer gewählter Ordner, wo Claude Code und Codex die vorhandene Anmeldung nutzen und keinen Schlüssel brauchen."
+      }
+    },
+    "harness": {
+      "harness": {
+        "title": "Harness",
+        "description": "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code oder Codex."
+      },
+      "access": {
+        "title": "Zugriff",
+        "description": "Was der Harness in der Sandbox des Agent tun darf: nur Code lesen oder Code ändern und Befehle ausführen."
+      },
+      "model": {
+        "title": "Modell",
+        "description": "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex. Nicht gesetzt nimmt den Standard des Harness."
+      },
+      "base_url": {
+        "title": "Anthropic-kompatibler Endpunkt",
+        "description": "Nur Claude Code: ein Gateway, das die API von Anthropic spricht, etwa https://openrouter.ai/api; der Key im Vault ist dann der dieses Gateways. Leer ruft Anthropic direkt auf."
+      },
+      "timeout_minutes": {
+        "title": "Prompt-Zeitlimit (Minuten)",
+        "description": "Wie lange ein Prompt laufen darf, bevor er gestoppt wird. Die Sitzung bleibt offen."
       }
     },
     "workflows": {

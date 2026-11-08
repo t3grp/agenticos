@@ -76,6 +76,7 @@ in [Capabilities](capabilities.md).
 | Past conversations | `conversation_search` |
 | Follow-ups | `follow_ups` |
 | Guardrails | `guardrails` |
+| Harness | `harness` |
 | Image generation | `image_generation` |
 | Knowledge search | `knowledge` |
 | Media offload | `media` |

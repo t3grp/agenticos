@@ -1,5 +1,5 @@
 ---
-source_sha: "af48402946ea"
+source_sha: "3af7676c8020"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -83,6 +83,7 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `text_to_speech` | Texto a voz | analysis | `generate_speech` | — | obligatoria | tal cual |
 | `video_generation` | Generación de vídeo | analysis | `generate_video` | — | obligatoria | delegada |
 | `coding_agent` | Coding agent | analysis | `run_coding_agent` | `sandbox:execute` | obligatoria | delegada |
+| `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | obligatoria | delegada |
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | delegada |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | delegada |
 | `background_tasks` | Temas en segundo plano | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | delegado |
@@ -1754,6 +1755,88 @@ comprueba antes de cada tarea. Codex no nombra ningún modelo en sus eventos, as
 sin `model` su uso se anota sin precio y el coste del run se marca como parcial.
 Igual se anota una tarea que termina antes de que su harness diga cuánto gastó:
 fallida, agotado su tiempo o detenida.
+
+## Harness { #harness }
+
+`harness_start` — *Abre una sesión de harness con nombre con un primer prompt, y la mantiene abierta.*
+`harness_prompt` — *Envía un prompt de seguimiento a una sesión de harness con nombre.*
+`harness_stop` — *Cierra una sesión de harness con nombre.*
+`harness_sessions` — *Lista las sesiones de harness que esta conversación tiene abiertas.*
+
+Un agente respaldado por una sesión de **Claude Code** o **Codex** en su propio
+[sandbox](../sandbox.md), mantenida abierta a lo largo de los turnos: el agente inicia una sesión
+por línea de trabajo y le envía prompts a medida que avanza el trabajo, en lugar de entregar una
+tarea a un harness e informar. La sesión es del CLI: recuerda lo que sus prompts anteriores leyeron y cambiaron, y una persona ve en el chat cómo
+trabaja cada prompt. Otro agente llega a un agente respaldado por harness mediante
+[delegación](#delegation) ordinaria, como a cualquier especialista.
+
+| Configuración | Por defecto | Valores |
+|---|---|---|
+| `harness` | `claude_code` | `claude_code` (una clave API de Anthropic o un token de suscripción de Claude), `codex` (una clave API de OpenAI) |
+| `access` | `read_only` | `read_only` lee el código y responde; `edit` cambia archivos y ejecuta comandos |
+| `model` | el modelo por defecto del harness | Claude Opus, Sonnet o Haiku 5.5 para Claude Code; GPT-5.6 Sol, Terra, Luna o GPT-5.3 Codex para Codex |
+| `base_url` | Anthropic directamente | Solo Claude Code: un gateway que habla la API de Anthropic, como `https://openrouter.ai/api`, cuya clave guarda entonces el vault. Se descarta cuando se elige Codex |
+| `timeout_minutes` | 30 | 1–60, para un prompt. La sesión se mantiene abierta |
+
+**Cuatro herramientas, y el binding decide lo que pueden hacer.** Con `edit`, el harness edita
+cualquier archivo y ejecuta cualquier comando en el sandbox, con sus propios prompts
+desactivados (`--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`):
+nadie se sienta en su terminal, y el contenedor es el límite para el que ambos flags están
+documentados. Con `read_only`, Claude Code corre en modo plan sin ninguna herramienta
+que escriba —sin sus herramientas de edición ni la shell— y lee con Read, Grep y Glob;
+se le dice que nada más puede aprobarse. Codex en un contenedor no tiene `read_only`: su modo de solo lectura es
+un sandbox propio, que no puede arrancar dentro del contenedor del agente, y la publicación
+rechaza la combinación. Que una persona diga que sí antes de cada prompt es la
+**Aprobación humana** de la capability —como cada gate, está apagada
+hasta que alguien la enciende. No hay pestaña de Herramientas: las cuatro herramientas son la capability.
+
+**Sesiones con nombre.** Cada prompt nombra una `session` —`main` cuando no nombra ninguna. El mismo nombre continúa el trabajo anterior de esa sesión en la conversación; un nombre nuevo abre otra. `harness_start` sobre un nombre ya abierto la reinicia, y `harness_stop` la cierra, así que un prompt posterior con ese nombre abre una nueva. Los prompts de un toolset corren uno a la vez, así que dos prompts a la misma sesión no pueden entrelazarse. Una sesión de harness nunca es reanudada por el coding agent, y una tarea del coding agent nunca continúa una sesión de harness: sus archivos de sesión viven separados, `.agenticos/harness/` y `.agenticos/coding-agent/`.
+
+**Las sesiones de una conversación continúan a través de los prompts.** El id de sesión del harness se guarda
+en el sandbox junto al trabajo, en `.agenticos/harness/`, uno por
+conversación y nombre de sesión, así que el segundo prompt de un chat sabe lo que leyó el primero —y un
+chat nunca continúa la sesión de otro en un sandbox compartido por varios, en un proyecto o en un ámbito
+de una persona o un agente. Una sesión que el sandbox ya no guarda empieza de nuevo por sí sola, una vez.
+
+**La persona ve cómo trabaja.** Un prompt corre como una tarea del coding agent: el harness se inicia separado en el sandbox,
+`claude -p --output-format stream-json` o `codex exec --json`, y su archivo de eventos
+se lee cada segundo y medio. Cada paso llega al chat cuando ocurre, en un
+panel propio bajo la marca de Claude Code o Codex, como los pasos de una delegación:
+el archivo que lee, la edición, el comando que ejecuta, lo que dice entre ellos. Cuando
+termina, el resultado de la llamada contiene la respuesta, cada paso y los archivos que
+cambió. Un prompt pasado `timeout_minutes`, y uno que la persona detiene, termina con todo
+su grupo de procesos detenido.
+
+**Lo que necesita.** La capability `sandbox` en el backend `service` con los comandos de shell
+activados —la publicación rechaza cualquier otra cosa— y un runtime con el harness
+instalado: el runtime `workbench` fija Claude Code 2.1.288 y Codex 0.160.0. La
+credencial viene del vault a través del `secret_id` del binding y llega al
+comando por su entorno, nunca en su línea de comandos. En un [proyecto](../projects.md)
+que guarda sus archivos sin contenedor no hay shell, así que el harness queda
+fuera de los runs allí y al agente se le dice por qué.
+
+**Una clave, no un inicio de sesión.** Claude Code acepta una clave API de Anthropic, o el token
+que imprime `claude setup-token` para una suscripción Claude Pro o Max, guardado como clave —
+se distingue por su prefijo `sk-ant-oat`, y solo inicia sesión en Anthropic, no
+en un gateway. Codex acepta una clave API de OpenAI. Un inicio de sesión con ChatGPT aún no se acepta aquí: el flujo de inicio de sesión del coding agent —un home aislado, una comprobación de visibilidad, rotación de tokens leída de vuelta desde el sandbox— no está conectado en esta capability, así que el selector solo ofrece claves API. Una clave API es del agente, como el token de un bot en Slack, así que
+cada run la usa, pregunte quien pregunte —y cualquier cosa que ejecute un prompt puede leerla. Vincula
+una clave que puedan compartir todos los que puedan ejecutar el agente.
+Usar una suscripción personal está sujeto a los términos de Anthropic para
+esos planes, que pueden no permitirlo en un deployment compartido.
+
+**La clave encaja con el harness.** El selector ofrece a Claude Code solo claves guardadas para
+Anthropic, y a Codex solo claves de OpenAI. Una clave guardada para
+`custom` encaja con ambos, igual que la clave ya vinculada. La publicación rechaza una clave
+guardada para otro proveedor y nombra las que acepta el harness: una clave de OpenAI
+vinculada a Claude Code se publicaría y luego fallaría en cada prompt. Con `base_url`
+fijado, la clave es la del gateway —OpenRouter, LiteLLM u otro— así que Claude Code
+acepta entonces cualquier clave.
+
+**Su gasto se mide.** Ambos harness informan de sus tokens por modelo, que se
+apuntan en el ledger del run como cualquier petición de modelo, y el presupuesto se comprueba antes
+de cada prompt. Codex no nombra ningún modelo en sus eventos, así que sin `model` fijado su uso se
+apunta sin precio y el coste del run se marca parcial. Un prompt que termina antes de que su
+harness informe de lo que gastó —fallido, agotado o detenido— se apunta igual.
 
 ## Watch a command { #monitor }
 

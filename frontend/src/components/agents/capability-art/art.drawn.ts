@@ -15,6 +15,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
 
   monitor: 55,
   drafts: 36,
+  harness: 90,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -294,6 +295,38 @@ const PHONE_CALLS =
   '<path class="ln w2" d="M16 15L24 12L30 25L25 30Q29 40 39 45L44 40L56 47L53 55Q31 60 16 32Z"/>' +
   '<path class="ln w2 breathe" d="M12 63H20L24 58L29 69L35 59L40 65H52"/></g></svg>';
 
+/**
+ * Harness: a terminal session standing on the base, kept open while a second
+ * prompt joins it below - one session, prompted across turns.
+ */
+const HARNESS =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/></g>' +
+  '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
+  '<g transform="matrix(0.9 0.5 -0.9 0.5 120 30)"><path class="igrid2" d="M21 3V81M42 3V81M63 3V81M3 21H81M3 42H81M3 63H81"/></g>' +
+  '<polygon class="int" points="91.2,10 148.8,42 146.6,43 89.4,11"/>' +
+  '<polygon class="inr" points="148.8,42 148.8,92 146.6,93 146.6,43"/>' +
+  '<polygon class="inl" points="89.4,61 146.6,93 146.6,43 89.4,11"/>' +
+  '<g transform="matrix(0.9 0.5 0 1 89.4 11)">' +
+  '<rect x="3" y="3" width="42" height="25" rx="2" class="term" />' +
+  '<text x="6" y="10" class="termtx s4 ty0">$ claude -p "fix it"</text>' +
+  '<text x="6" y="17" class="termok s4 ty1">\u2713 22 tests passed</text>' +
+  '<text x="6" y="24" class="termtx s4 ty2">$</text>' +
+  '<rect x="9.5" y="20.6" width="2.6" height="4" rx="0" class="cov blink" style="fill:var(--termFg)"/></g>' +
+  '<g><polygon class="int" points="76.8,67.4 112.8,88.2 102,94.5 66,73.7"/>' +
+  '<polygon class="inl" points="66,75.8 102,96.6 102,94.5 66,73.7"/>' +
+  '<polygon class="inr" points="112.8,90.3 102,96.6 102,94.5 112.8,88.2"/></g>' +
+  '<g transform="matrix(0.9 0.5 0 1 66 73.7)">' +
+  '<text x="3" y="8" class="tx s5 b">and the tests?</text></g>' +
+  '<g class="bob"><g transform="translate(176 32)"><rect x="-19" y="-9" width="38" height="16" rx="8" class="pp" />' +
+  '<text x="0" y="2.4" class="tx mono s7 mid b" >main</text></g></g>' +
+  "</svg>";
+
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
@@ -306,4 +339,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   follow_ups: FOLLOW_UPS,
   phone_calls: PHONE_CALLS,
   drafts: DRAFTS,
+  harness: HARNESS,
 };

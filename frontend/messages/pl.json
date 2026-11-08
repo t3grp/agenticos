@@ -746,6 +746,13 @@
       "runningCodingAgent": "Coding agent pracuje",
       "codingStepRunning": "{kind, select, read {Czyta} search {Szuka} edit {Edytuje} command {Uruchamia} web {Sprawdza w sieci} other {Pracuje nad}}",
       "codingStepDone": "{kind, select, read {Przeczytał} search {Przeszukał} edit {Edytował} command {Uruchomił} web {Sprawdził w sieci} other {Użył}}",
+      "runningHarness": "Sesja harnessu pracuje",
+      "harnessStarted": "Otwarto sesję harnessu",
+      "harnessPrompted": "Wysłano prompt do sesji harnessu",
+      "harnessStopping": "Zamykanie sesji harnessu",
+      "harnessStopped": "Zamknięto sesję harnessu",
+      "harnessListing": "Wyświetlanie sesji harnessu",
+      "harnessListed": "Wyświetlono sesje harnessu",
       "drawingVisual": "Rysuje",
       "drawVisual": "Narysował wizual",
       "revisingVisual": "Poprawia wizual",
@@ -9250,6 +9257,28 @@
         "description": "Sandbox agenta ze skonfigurowanym kluczem, jednorazowe prywatne zadanie w chmurze na koncie z profilu osoby inicjującej albo folder wybrany na jej komputerze w aplikacji desktopowej, gdzie Claude Code i Codex korzystają z istniejącego logowania i nie potrzebują klucza."
       }
     },
+    "harness": {
+      "harness": {
+        "title": "Harness",
+        "description": "Sesja CLI wykonująca pracę agenta: Claude Code albo Codex."
+      },
+      "access": {
+        "title": "Dostęp",
+        "description": "Co harness może robić w sandboxie agenta: tylko czytać kod albo zmieniać kod i uruchamiać polecenia."
+      },
+      "model": {
+        "title": "Model",
+        "description": "Model, na którym działa harness: model Claude dla Claude Code, model OpenAI dla Codexa. Nieustawiony oznacza domyślny model harnessu."
+      },
+      "base_url": {
+        "title": "Endpoint zgodny z Anthropic",
+        "description": "Tylko Claude Code: bramka obsługująca API Anthropic, np. https://openrouter.ai/api; klucz w vault jest wtedy kluczem tej bramki. Puste pole oznacza bezpośrednie połączenie z Anthropic."
+      },
+      "timeout_minutes": {
+        "title": "Limit czasu promptu (minuty)",
+        "description": "Jak długo jeden prompt może trwać, zanim zostanie przerwany. Sesja pozostaje otwarta."
+      }
+    },
     "workflows": {
       "workflow_ids": {
         "title": "Workflowy, które może uruchamiać",
@@ -11847,6 +11876,14 @@
       "example2": "Wyjaśnij, jak działa moduł, bez zmieniania kodu",
       "needs": "W sandboxie: capability Sandbox, połączenie oraz klucz providera lub logowanie w vault. Na tym komputerze: aplikacja desktopowa, zalogowany coding agent i zatwierdzony folder z pełnym dostępem.",
       "never": "Zadania lokalne wymagają folderu z pełnym dostępem i natywnego potwierdzenia startu. Ustaw Human approval na Always ask, aby dodatkowo zatwierdzać każde zadanie na czacie."
+    },
+    "harness": {
+      "name": "Harness",
+      "does": "Utrzymuje otwartą sesję Claude Code albo Codex w sandboxie agenta i prowadzi ją przez kolejne tury jako zaplecze robocze agenta. Każdy prompt widać na czacie.",
+      "example1": "Napraw padający test, a potem kontynuuj w tej samej sesji pytaniami uzupełniającymi",
+      "example2": "Przeczytaj moduł i wyjaśnij, jak działa, bez zmieniania kodu",
+      "needs": "Połączenie oraz klucz providera w vault: klucz Anthropic albo token subskrypcji Claude dla Claude Code, klucz OpenAI dla Codexa.",
+      "never": "Logowanie ChatGPT jeszcze tu nie działa; Codex działa na kluczu API OpenAI. Ustaw Zatwierdzenie przez człowieka na Zawsze pytaj, aby dodatkowo zatwierdzać każdy prompt na czacie."
     },
     "compaction": {
       "name": "Długie rozmowy",
