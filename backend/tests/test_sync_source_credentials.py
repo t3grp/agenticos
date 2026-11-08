@@ -34,6 +34,7 @@ from app.schemas.sync_source import (
     SyncSourceUpdate,
 )
 from app.services import sync_source as sync_source_module
+from app.services import mcp_connection as mcp_connection_module
 from app.services.rag.connectors.s3 import S3Connector
 from app.services.sync_source import SyncSourceService
 
@@ -83,6 +84,7 @@ def _service(
                 collection_name=kwargs["collection_name"],
                 config=kwargs["config"],
                 secret_id=kwargs["secret_id"],
+                connected_account_id=kwargs["connected_account_id"],
                 organizational_unit=kwargs["organizational_unit"],
                 sync_mode=kwargs["sync_mode"],
                 schedule_minutes=kwargs["schedule_minutes"],
@@ -118,6 +120,34 @@ def _drive(**overrides) -> SyncSourceCreate:
 
 
 class TestTheCredentialIsReferencedNotCarried:
+    async def test_a_source_can_name_an_organization_google_account(self, monkeypatch):
+        account_id = uuid.uuid4()
+        account = SimpleNamespace(
+            id=account_id,
+            scope="org",
+            organization_id=_ORG,
+            catalog_key="google",
+            oauth_payload={"connected": True},
+        )
+        monkeypatch.setattr(
+            mcp_connection_module.mcp_connection_repo,
+            "get_account",
+            AsyncMock(return_value=account),
+        )
+        monkeypatch.setattr(
+            mcp_connection_module.McpConnectionService,
+            "account_grant",
+            AsyncMock(return_value=SimpleNamespace(scopes={"https://www.googleapis.com/auth/drive"})),
+        )
+        service = _service(monkeypatch)
+
+        read = await service.create_source(
+            _drive(connected_account_id=account_id), ctx=_ctx(_ORG)
+        )
+
+        assert read.connected_account_id == str(account_id)
+        assert read.secret_id is None
+
     async def test_a_source_naming_a_credential_of_the_right_kind_is_created(self, monkeypatch):
         row = _vault_row(kind="gcp_service_account", hint="9f3c")
         service = _service(monkeypatch, secret=row)

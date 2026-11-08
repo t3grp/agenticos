@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from pydantic import SecretStr
 from unittest.mock import patch
 
 import httpx
@@ -75,6 +76,8 @@ class TestListing:
             "fields": "files(id)",
             "pageSize": "100",
             "pageToken": "p1",
+            "supportsAllDrives": "true",
+            "includeItemsFromAllDrives": "true",
         }
         assert request.headers["Authorization"] == "Bearer t-1"
 
@@ -105,6 +108,7 @@ class TestOneFile:
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/drive/v3/files/f1"
             assert request.url.params["fields"] == "mimeType"
+            assert request.url.params["supportsAllDrives"] == "true"
             return httpx.Response(200, json={"mimeType": "text/plain"})
 
         with drive(handler) as client:
@@ -126,6 +130,7 @@ class TestOneFile:
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/drive/v3/files/f1"
             assert request.url.params["alt"] == "media"
+            assert request.url.params["supportsAllDrives"] == "true"
             return httpx.Response(200, content=b"payload")
 
         dest = tmp_path / "a.txt"
@@ -138,6 +143,7 @@ class TestOneFile:
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/drive/v3/files/d1/export"
             assert request.url.params["mimeType"] == "application/pdf"
+            assert request.url.params["supportsAllDrives"] == "true"
             return httpx.Response(200, content=b"%PDF")
 
         dest = tmp_path / "Doc.pdf"
@@ -187,3 +193,34 @@ class TestTheToken:
             "/keys/sa.json", scopes=SCOPES
         )
         assert SCOPES == ["https://www.googleapis.com/auth/drive.readonly"]
+
+    def test_oauth_grant_refreshes_and_sends_a_bearer_token(self) -> None:
+        seen: list[str] = []
+        credentials = _Credentials(valid=False)
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request.headers["Authorization"])
+            return httpx.Response(200, json={"id": "f1"})
+
+        with patch("google.oauth2.credentials.Credentials", return_value=credentials) as factory:
+            client = DriveClient.from_oauth_grant(
+                client_id="client",
+                client_secret=SecretStr("secret"),
+                refresh_token=SecretStr("refresh"),
+            )
+            client._http = httpx.Client(
+                base_url=DRIVE_API, transport=httpx.MockTransport(handler)
+            )
+            with client:
+                assert client.metadata("f1", fields="id").id == "f1"
+
+        factory.assert_called_once_with(
+            token=None,
+            refresh_token="refresh",
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id="client",
+            client_secret="secret",
+            scopes=SCOPES,
+        )
+        assert credentials.refreshed == 1
+        assert seen == ["Bearer t-2"]

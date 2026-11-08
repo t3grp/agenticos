@@ -1,9 +1,10 @@
 "use client";
 
 import { ExternalLink, KeyRound } from "lucide-react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { Label } from "@/components/ui";
+import { Button, Label } from "@/components/ui";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePermissions, useSecrets } from "@/hooks";
+import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
 import { ROUTES } from "@/lib/constants";
 import type { ConnectorInfo, SyncSourceCreate } from "@/lib/rag-api";
 import { Perm } from "@/types/permissions";
@@ -49,6 +51,13 @@ export function CredentialStep({
   const t = useTranslations("rag");
   const { secrets, isLoading, listError } = useSecrets();
   const { can } = usePermissions();
+  const isDrive = connector.type === "gdrive";
+  const mayViewSecrets = can(Perm.secretsView);
+  const mayViewAccounts = isDrive && can(Perm.connectionsView);
+  const connected = useConnectedAccounts("organization", { enabled: mayViewAccounts });
+  const [credentialType, setCredentialType] = useState<"account" | "secret">(
+    form.connected_account_id ? "account" : "secret",
+  );
 
   if (connector.secret_kind === "none") {
     return (
@@ -64,7 +73,7 @@ export function CredentialStep({
   // Before the picker, not as an empty one: a member who cannot see the
   // organization's credentials is not looking at a list that happens to be
   // empty, and saying so is the difference between "ask somebody" and "add one".
-  if (!can(Perm.secretsView)) {
+  if (!mayViewSecrets && !mayViewAccounts) {
     return <p className="text-muted-foreground text-sm">{t("credentialNeedsPermission")}</p>;
   }
 
@@ -73,75 +82,161 @@ export function CredentialStep({
   // holds no credential when the truth is that it could not be read - and sends
   // them to add a duplicate. `.claude/rules/frontend.md` has the rule: an empty
   // page is ambiguous.
-  if (isLoading) {
+  if (credentialType === "secret" && mayViewSecrets && isLoading) {
     return <p className="text-muted-foreground text-sm">{t("credentialLoading")}</p>;
   }
-  if (listError) {
+  if (credentialType === "secret" && mayViewSecrets && listError) {
     return <p className="text-destructive text-sm">{t("credentialUnreadable")}</p>;
   }
 
-  const usable = secrets.filter((secret) => secret.kind === connector.secret_kind);
+  const usable = mayViewSecrets
+    ? secrets.filter((secret) => secret.kind === connector.secret_kind)
+    : [];
+  const driveAccounts = connected.accounts.filter(
+    (account) =>
+      account.provider === "google" &&
+      !account.needs_reconnect &&
+      account.scopes.includes("https://www.googleapis.com/auth/drive"),
+  );
   const chosen = form.secret_id ?? "";
 
   return (
     <div className="space-y-4">
-      <p className="text-foreground/65 text-sm">{t("credentialIntro", { name: connector.name })}</p>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="sync-credential">
-          {t("credentialLabel")}
-          <span className="text-destructive ml-0.5">*</span>
-        </Label>
-        <Select
-          value={chosen}
-          onValueChange={(value) => setForm((f) => ({ ...f, secret_id: value }))}
-          disabled={usable.length === 0}
-        >
-          <SelectTrigger
-            id="sync-credential"
-            {...(error === undefined
-              ? {}
-              : { "aria-invalid": true, "aria-describedby": "sync-credential-error" })}
+      {isDrive && (
+        <div className="flex gap-2" role="group" aria-label={t("driveCredentialType")}>
+          <Button
+            type="button"
+            variant={credentialType === "account" ? "default" : "outline"}
+            aria-pressed={credentialType === "account"}
+            onClick={() => {
+              setCredentialType("account");
+              setForm((f) => ({ ...f, secret_id: null }));
+            }}
           >
-            <SelectValue placeholder={t("credentialPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {usable.map((secret) => (
-              <SelectItem key={secret.id} value={secret.id} textValue={secret.name}>
-                <span className="flex items-center gap-2">
-                  <KeyRound className="text-muted-foreground h-3.5 w-3.5" />
-                  <span>{secret.name}</span>
-                  <span className="text-muted-foreground font-mono text-xs">··{secret.hint}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {error !== undefined && (
-          <p id="sync-credential-error" className="text-destructive text-xs">
-            {error}
-          </p>
-        )}
-      </div>
+            {t("driveUseAccount")}
+          </Button>
+          <Button
+            type="button"
+            variant={credentialType === "secret" ? "default" : "outline"}
+            aria-pressed={credentialType === "secret"}
+            onClick={() => {
+              setCredentialType("secret");
+              setForm((f) => ({ ...f, connected_account_id: null }));
+            }}
+          >
+            {t("driveUseServiceAccount")}
+          </Button>
+        </div>
+      )}
 
-      {/* A picker with nothing in it and no way to fill it is a dead end, which
-          is the state this whole step replaced - the credential was a textarea
-          and every source got its own copy. Opened in a new tab so the
-          half-filled wizard behind it survives. */}
-      <p className="text-muted-foreground text-sm">
-        {usable.length === 0
-          ? t("credentialNoneStored", { name: connector.name })
-          : t("credentialAddAnother")}{" "}
-        <a
-          href={ROUTES.VAULT}
-          target="_blank"
-          rel="noreferrer"
-          className="text-foreground inline-flex items-center gap-1 underline underline-offset-2"
-        >
-          {t("credentialOpenVault")}
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      </p>
+      {isDrive && credentialType === "account" ? (
+        <div className="space-y-2">
+          {connected.isLoading ? (
+            <p className="text-muted-foreground text-sm">{t("driveAccountsLoading")}</p>
+          ) : connected.error ? (
+            <p className="text-destructive text-sm">{t("driveAccountsUnreadable")}</p>
+          ) : (
+            <>
+              {driveAccounts.length > 0 && (
+                <>
+                  <Label htmlFor="sync-drive-account">{t("driveAccountLabel")}</Label>
+                  <Select
+                    value={form.connected_account_id ?? ""}
+                    onValueChange={(value) =>
+                      setForm((f) => ({ ...f, connected_account_id: value, secret_id: null }))
+                    }
+                  >
+                    <SelectTrigger id="sync-drive-account">
+                      <SelectValue placeholder={t("driveAccountPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driveAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id} textValue={account.email}>
+                          {account.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
+              {driveAccounts.length === 0 && (
+                <p className="text-muted-foreground text-sm">{t("driveNoAccount")}</p>
+              )}
+              <a
+                href={ROUTES.VAULT}
+                target="_blank"
+                rel="noreferrer"
+                className="text-foreground inline-flex items-center gap-1 text-sm underline underline-offset-2"
+              >
+                {t("driveConnectAccount")}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          <p className="text-foreground/65 text-sm">
+            {t("credentialIntro", { name: connector.name })}
+          </p>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="sync-credential">
+            {t("credentialLabel")}
+            <span className="text-destructive ml-0.5">*</span>
+          </Label>
+          <Select
+            value={chosen}
+            onValueChange={(value) => setForm((f) => ({ ...f, secret_id: value }))}
+            disabled={usable.length === 0}
+          >
+            <SelectTrigger
+              id="sync-credential"
+              {...(error === undefined
+                ? {}
+                : { "aria-invalid": true, "aria-describedby": "sync-credential-error" })}
+            >
+              <SelectValue placeholder={t("credentialPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {usable.map((secret) => (
+                <SelectItem key={secret.id} value={secret.id} textValue={secret.name}>
+                  <span className="flex items-center gap-2">
+                    <KeyRound className="text-muted-foreground h-3.5 w-3.5" />
+                    <span>{secret.name}</span>
+                    <span className="text-muted-foreground font-mono text-xs">··{secret.hint}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {error !== undefined && (
+            <p id="sync-credential-error" className="text-destructive text-xs">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* A picker with nothing in it and no way to fill it is a dead end, which
+            is the state this whole step replaced - the credential was a textarea
+            and every source got its own copy. Opened in a new tab so the
+            half-filled wizard behind it survives. */}
+        <p className="text-muted-foreground text-sm">
+          {usable.length === 0
+            ? t("credentialNoneStored", { name: connector.name })
+            : t("credentialAddAnother")}{" "}
+          <a
+            href={ROUTES.VAULT}
+            target="_blank"
+            rel="noreferrer"
+            className="text-foreground inline-flex items-center gap-1 underline underline-offset-2"
+          >
+            {t("credentialOpenVault")}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </p>
+        </>
+      )}
     </div>
   );
 }

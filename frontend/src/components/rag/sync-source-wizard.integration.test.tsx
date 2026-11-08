@@ -40,6 +40,7 @@ const DRIVE_CREDENTIAL = {
 function serve({ secrets = [DRIVE_CREDENTIAL], permissions = ["secrets:view"] } = {}) {
   vi.mocked(apiClient.get).mockImplementation(async (path: string) => {
     if (path === "/secrets") return { items: secrets, total: secrets.length };
+    if (path === "/connected-accounts") return { items: [], total: 0 };
     if (path === "/me/permissions")
       return {
         organization_id: "org-1",
@@ -571,8 +572,8 @@ describe("a config the connector refuses", () => {
 
 describe("the credential step", () => {
   /** Walk as far as the credential step, with a connector that needs one. */
-  async function openCredentialStep() {
-    const view = withQuery(wizard(vi.fn()));
+  async function openCredentialStep(onSubmit = vi.fn()) {
+    const view = withQuery(wizard(onSubmit));
     await userEvent.type(screen.getByLabelText("Source name"), "Engineering docs");
     await userEvent.click(screen.getByRole("button", { name: /Google Drive/ }));
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
@@ -604,6 +605,51 @@ describe("the credential step", () => {
     const sent = onSubmit.mock.calls[0]?.[0] as SyncSourceCreate;
     expect(sent.secret_id).toBe("secret-1");
     expect(sent.config).not.toHaveProperty("service_account_json");
+  });
+
+  it("sends an organization Google account reference for OAuth Drive sync", async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (path: string) => {
+      if (path === "/secrets") return { items: [DRIVE_CREDENTIAL], total: 1 };
+      if (path === "/connected-accounts")
+        return {
+          items: [
+            {
+              id: "account-1",
+              provider: "google",
+              email: "docs@example.com",
+              scopes: ["https://www.googleapis.com/auth/drive"],
+              owner: "organization",
+              needs_reconnect: false,
+              created_at: "2026-08-20T00:00:00Z",
+            },
+          ],
+          total: 1,
+        };
+      if (path === "/me/permissions")
+        return {
+          organization_id: "org-1",
+          role: "builder",
+          is_app_admin: false,
+          permissions: ["secrets:view", "connections:view"].map((permission) => ({
+            permission,
+            scope: "all",
+          })),
+        };
+      return {};
+    });
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    await openCredentialStep(onSubmit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Connected Google account" }));
+    await userEvent.click(await screen.findByLabelText("Google account"));
+    await userEvent.click(await screen.findByRole("option", { name: "docs@example.com" }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create source" }));
+
+    const submitted = onSubmit.mock.calls[0]?.[0] as SyncSourceCreate;
+    expect(submitted.connected_account_id).toBe("account-1");
+    expect(submitted.secret_id).toBeNull();
+    expect(submitted.config).not.toHaveProperty("access_token");
   });
 
   it("offers only the kind this connector authenticates with", async () => {

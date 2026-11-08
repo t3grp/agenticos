@@ -59,6 +59,12 @@ class SyncSource(TimestampMixin, Base):
         nullable=True,
         index=True,
     )
+    connected_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("mcp_connections.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     # Which part of the organization the documents this source brings in belong
     # to, stamped on every chunk it ingests. Free text, and per source rather
     # than per document, because that is how a deployment actually carries it: a
