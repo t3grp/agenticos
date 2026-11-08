@@ -120,3 +120,8 @@ especially `src/backend/provider-drivers.ts`,
 This implementation was written independently; OpenBot's noncommercial source
 was not copied into the AgenticOS fork. The native client and Node retain their
 own packaged licenses; Node's license is also included under `/licenses/node`.
+
+The sign-in URL allowlist accepts the native client’s current
+`https://claude.com/cai/oauth/authorize` page and the legacy
+`https://claude.ai/oauth/authorize` page as exact host/path pairs. Other
+hosts, swapped paths, user information, non-HTTPS ports and fragments are refused.

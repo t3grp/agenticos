@@ -40,11 +40,14 @@ export function claudeAuthorizationUrl(value: string | null): string | null {
   try {
     const url = new URL(value);
     return url.protocol === "https:" &&
-      url.hostname === "claude.ai" &&
-      ["/oauth/authorize", "/oauth/authorize/"].includes(url.pathname) &&
+      ((url.hostname === "claude.ai" &&
+        ["/oauth/authorize", "/oauth/authorize/"].includes(url.pathname)) ||
+        (url.hostname === "claude.com" &&
+          ["/cai/oauth/authorize", "/cai/oauth/authorize/"].includes(url.pathname))) &&
       url.username === "" &&
       url.password === "" &&
-      url.port === ""
+      url.port === "" &&
+      url.hash === ""
       ? url.href
       : null;
   } catch {

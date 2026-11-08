@@ -59,11 +59,16 @@ def authorization_url(output: bytes) -> str | None:
             if (
                 len(value) <= 8192
                 and parsed.scheme == "https"
-                and parsed.hostname == "claude.ai"
+                and (parsed.hostname, parsed.path)
+                in {
+                    ("claude.ai", "/oauth/authorize"),
+                    ("claude.ai", "/oauth/authorize/"),
+                    ("claude.com", "/cai/oauth/authorize"),
+                    ("claude.com", "/cai/oauth/authorize/"),
+                }
                 and parsed.port in {None, 443}
                 and parsed.username is None
                 and parsed.password is None
-                and parsed.path.rstrip("/") == "/oauth/authorize"
                 and not parsed.fragment
             ):
                 return value

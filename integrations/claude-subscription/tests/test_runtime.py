@@ -49,6 +49,12 @@ def connected(engine: ClaudeRuntime, owner: Owner) -> Home:
         b"Paste code https://user@claude.ai/oauth/authorize?state=x\n",
         b"Paste code https://claude.ai:9443/oauth/authorize?state=x\n",
         b"Paste code https://claude.ai/other?state=x\n",
+        b"Paste code https://claude.com/oauth/authorize?state=x\n",
+        b"Paste code https://claude.ai/cai/oauth/authorize?state=x\n",
+        b"Paste code https://claude.com.evil.example/cai/oauth/authorize?state=x\n",
+        b"Paste code https://user@claude.com/cai/oauth/authorize?state=x\n",
+        b"Paste code https://claude.com:9443/cai/oauth/authorize?state=x\n",
+        b"Paste code https://claude.com/cai/oauth/authorize#bad\n",
         b"Paste code https://claude.ai/oauth/authorize#bad\n",
     ],
 )
@@ -56,8 +62,14 @@ def test_prompt_requires_complete_allowlisted_provider_url(text: bytes) -> None:
     assert authorization_url(text) is None
 
 
-def test_prompt_handles_terminal_colors_and_link_wrapper() -> None:
-    url = "https://claude.ai/oauth/authorize?state=x"
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://claude.ai/oauth/authorize?state=x",
+        "https://claude.com/cai/oauth/authorize?state=x",
+    ],
+)
+def test_prompt_handles_terminal_colors_and_link_wrapper(url: str) -> None:
     output = f"\x1b]8;;{url}\x1b\\{url}\x1b]8;;\x1b\\\r\n\x1b[32mPaste code:\x1b[0m"
     assert authorization_url(output.encode()) == url
 
@@ -70,8 +82,7 @@ async def test_real_pipes_login_code_status_and_disconnect(
     assert started.login_id
     waiting = await wait_for_state(native_runtime, owner, "awaiting_code")
     assert (
-        waiting.authorization_url
-        and "claude.ai/oauth/authorize" in waiting.authorization_url
+        waiting.authorization_url and "claude.com/cai/oauth/authorize" in waiting.authorization_url
     )
     assert "fake-challenge" not in repr(waiting)
     verifying = await native_runtime.submit_code(owner, started.login_id, "test-code")
@@ -160,8 +171,7 @@ async def test_native_inference_returns_structured_output_and_actual_usage(
     assert result.structured_output == {"text": "Answer", "tool_calls": []}
     assert result.usage.input_tokens == 12 and result.usage.output_tokens == 8
     assert (
-        result.usage.cache_read_input_tokens == 3
-        and result.usage.cache_creation_input_tokens == 4
+        result.usage.cache_read_input_tokens == 3 and result.usage.cache_creation_input_tokens == 4
     )
     assert result.model == "claude-sonnet-test"
     assert not native_runtime.processes and not native_runtime.active
@@ -210,9 +220,7 @@ async def test_stopping_model_request_reaps_its_process(
     assert not native_runtime.active and not native_runtime.processes
 
 
-async def test_output_limit_stops_process(
-    native_runtime: ClaudeRuntime, owner: Owner
-) -> None:
+async def test_output_limit_stops_process(native_runtime: ClaudeRuntime, owner: Owner) -> None:
     home = connected(native_runtime, owner)
     with pytest.raises(RuntimeFailure, match="CLAUDE_OUTPUT_INVALID"):
         await native_runtime.command(
@@ -268,9 +276,7 @@ def test_homes_require_container_supervisor(
         Homes(tmp_path)
 
 
-@pytest.mark.parametrize(
-    "code", ["", "a\nb", "a\rb", "a\x1bb", "a\x7fb", "a b", "x" * 2049]
-)
+@pytest.mark.parametrize("code", ["", "a\nb", "a\rb", "a\x1bb", "a\x7fb", "a b", "x" * 2049])
 def test_code_rejects_terminal_input_and_keeps_repr_private(code: str) -> None:
     with pytest.raises(ValidationError):
         CodeRequest(

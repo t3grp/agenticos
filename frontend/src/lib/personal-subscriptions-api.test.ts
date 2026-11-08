@@ -63,6 +63,8 @@ describe("provider authorization links", () => {
   it.each([
     "https://claude.ai/oauth/authorize?state=opaque",
     "https://claude.ai:443/oauth/authorize/",
+    "https://claude.com/cai/oauth/authorize?state=opaque",
+    "https://claude.com:443/cai/oauth/authorize/",
   ])("allows the official HTTPS authorization page: %s", (url) => {
     expect(claudeAuthorizationUrl(url)).toBe(new URL(url).href);
   });
@@ -77,6 +79,13 @@ describe("provider authorization links", () => {
     "https://claude.ai:8443/oauth/authorize",
     "https://user:password@claude.ai/oauth/authorize",
     "https://claude.ai/chat",
+    "https://claude.com/oauth/authorize",
+    "https://claude.ai/cai/oauth/authorize",
+    "https://claude.com.evil.test/cai/oauth/authorize",
+    "https://user@claude.com/cai/oauth/authorize",
+    "https://claude.com:8443/cai/oauth/authorize",
+    "https://claude.com/cai/oauth/authorize#fragment",
+    "https://claude.ai/oauth/authorize#fragment",
     "https://console.anthropic.com/oauth/authorize",
     `https://claude.ai/oauth/authorize?state=${"a".repeat(8_192)}`,
   ])("refuses a different origin, path, protocol or malformed link", (url) => {

@@ -25,7 +25,7 @@ elif args[:2] == ["auth", "logout"]:
 elif args[:2] == ["auth", "login"]:
     if (root / ".delay-prompt").exists():
         time.sleep(1.2)
-    print("Open https://claude.ai/oauth/authorize?state=fake-state&code_challenge=fake-challenge", flush=True)
+    print("Open https://claude.com/cai/oauth/authorize?state=fake-state&code_challenge=fake-challenge", flush=True)
     print("Paste code here: ", end="", flush=True)
     code = sys.stdin.readline().strip()
     if code != "test-code":

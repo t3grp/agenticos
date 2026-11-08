@@ -29,11 +29,16 @@ class ClaudeSubscriptionRead(BaseSchema):
         url = urlsplit(value)
         if (
             url.scheme != "https"
-            or url.hostname != "claude.ai"
+            or (url.hostname, url.path)
+            not in {
+                ("claude.ai", "/oauth/authorize"),
+                ("claude.ai", "/oauth/authorize/"),
+                ("claude.com", "/cai/oauth/authorize"),
+                ("claude.com", "/cai/oauth/authorize/"),
+            }
             or url.port not in {None, 443}
             or url.username is not None
             or url.password is not None
-            or url.path not in {"/oauth/authorize", "/oauth/authorize/"}
             or url.fragment
         ):
             raise ValueError("The native runtime returned an invalid authorization page")

@@ -179,6 +179,12 @@ async def test_profiles_require_a_connected_own_subscription():
         "https://claude.ai/other",
         "https://claude.ai/oauth/authorize#fragment",
         "https://claude.ai:invalid/oauth/authorize",
+        "https://claude.com/oauth/authorize",
+        "https://claude.ai/cai/oauth/authorize",
+        "https://claude.com.evil.example/cai/oauth/authorize",
+        "https://someone@claude.com/cai/oauth/authorize",
+        "https://claude.com:444/cai/oauth/authorize",
+        "https://claude.com/cai/oauth/authorize#fragment",
     ],
 )
 async def test_only_the_provider_authorization_page_can_be_returned(url, configured):
@@ -332,3 +338,17 @@ async def test_inference_rejects_malformed_and_oversized_replies(configured, bod
         await runtime.infer(
             subscription_owner(_ctx()), model="haiku", prompt="Hi", output_schema={}
         )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://claude.ai/oauth/authorize?state=fake",
+        "https://claude.com/cai/oauth/authorize?state=fake",
+        "https://claude.com:443/cai/oauth/authorize/",
+    ],
+)
+def test_native_current_and_legacy_authorization_pages(url):
+    from app.schemas.claude_subscription import ClaudeSubscriptionRead
+
+    assert ClaudeSubscriptionRead(available=True, authorization_url=url).authorization_url == url
