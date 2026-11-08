@@ -4373,7 +4373,8 @@
     "whatsNewTitle": "What’s new in {version}",
     "whatsNewDescription": "Recent changes in the version you are using.",
     "whatsNewDone": "Got it",
-    "backgroundWork": "Background work"
+    "backgroundWork": "Background work",
+    "connectors": "Connectors"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -6623,7 +6624,6 @@
     },
     "mcp-servers": {
       "catalogCompiledIntoBackend": "The catalog is compiled into the backend, and nobody has added a server of their own. An empty list here means this deployment ships none.",
-      "externalToolsYourAgents": "Tools your agents can use - Notion, GitHub, your CRM. Connect one for the whole organization, or just for yourself.",
       "mcpServers": "MCP servers",
       "noServersConnect": "No servers to connect"
     },
@@ -7718,6 +7718,17 @@
       "servicesHint": "Audio recording preferences and push notifications for the mobile app.",
       "operations": "Maintenance",
       "operationsHint": "Application updates and deployment diagnostics."
+    },
+    "connectors": {
+      "title": "Connectors",
+      "description": "Everything your agents connect to, in one place.",
+      "apps": "Apps",
+      "advanced": "Advanced",
+      "advancedDescription": "The lower-level connections: chat channels, remote agents, the vault and sandboxes.",
+      "channelsDescription": "Chat platforms your organization is reachable on.",
+      "remoteAgentsDescription": "Other vendors' agents your agents can delegate to.",
+      "vaultDescription": "Keys and secrets your connections use.",
+      "sandboxesDescription": "Where agents run code, and the limits on each host."
     }
   },
   "profile": {

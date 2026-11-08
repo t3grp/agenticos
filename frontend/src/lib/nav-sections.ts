@@ -1,12 +1,8 @@
 import { BackgroundIcon } from "@/components/icons/product-icons";
 import {
-  MessagesSquare,
   Activity,
-  Boxes,
   Building2,
-  KeyRound,
   LayoutDashboard,
-  Network,
   Plug,
   ShieldCheck,
   UsersRound,
@@ -177,56 +173,20 @@ export const NAV_GROUPS: NavGroup[] = [
       { labelKey: "backgroundWork", href: ROUTES.WORK, icon: BackgroundIcon },
     ],
   },
-  // What the organization is connected to. Set up once, revisited rarely, so
-  // folded until opened.
+  // What the organization is connected to, in one place: the apps agents use,
+  // with the lower-level channels, remote agents, vault and sandboxes behind an
+  // Advanced tab (#connectors). Set up once, revisited rarely, so folded until
+  // opened.
   {
     labelKey: "connections",
     domain: "workspace",
     collapsible: true,
     items: [
       {
-        labelKey: "mcpServers",
-        href: ROUTES.MCP_SERVERS,
+        labelKey: "connectors",
+        href: ROUTES.CONNECTORS,
         icon: Plug,
         permission: Perm.agentsView,
-      },
-      {
-        // A chat platform an organization is reachable on. Beside the MCP
-        // servers because it is the same kind of thing - a connection the
-        // organization owns, holding a credential in the vault - and not on
-        // an agent's page, where registering one made it look like a property
-        // of that agent rather than something every agent can be bound to.
-        labelKey: "channels",
-        href: ROUTES.CHANNELS,
-        icon: MessagesSquare,
-        permission: Perm.agentsView,
-      },
-      {
-        // Another vendor's agent, reached over A2A (#2092): a connection the
-        // organization registers once, which its agents then delegate to.
-        labelKey: "remoteAgents",
-        href: ROUTES.REMOTE_AGENTS,
-        icon: Network,
-        permission: Perm.agentsView,
-      },
-      {
-        // Gated on what the backend gates listing on: a Member holding secrets
-        // at OWN scope can use the Vault, so the nav must not hide it behind
-        // the broader connections:manage.
-        labelKey: "vault",
-        href: ROUTES.VAULT,
-        icon: KeyRound,
-        permission: Perm.secretsView,
-      },
-      {
-        // Gated on what the backend gates reading these on. Watching where
-        // sandboxes run - the session list, a host's ceilings - is an operator's
-        // job and rides on connections:view; only the add-and-edit controls on
-        // the page itself need connections:manage.
-        labelKey: "sandboxes",
-        href: ROUTES.SANDBOXES,
-        icon: Boxes,
-        permission: Perm.connectionsView,
       },
     ],
   },

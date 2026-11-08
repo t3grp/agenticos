@@ -35,13 +35,20 @@ const MOVED_ROUTES: readonly { from: string; to: string }[] = [
   // capability is bound to, and a URL naming only half of what it shows is a URL
   // that has to be re-learned later. Both old spellings land on the vault, so
   // neither the pre-move bookmark nor the post-move one breaks.
-  { from: "/settings/providers", to: "/vault" },
-  { from: "/providers", to: "/vault" },
-  { from: "/settings/mcp-servers", to: "/mcp-servers" },
+  { from: "/settings/providers", to: "/connectors/vault" },
+  { from: "/providers", to: "/connectors/vault" },
+  { from: "/settings/mcp-servers", to: "/connectors" },
   // The catalog and a person's own connections were two pages presented as
   // peers, which is why nobody could say what separated them. They are one page
-  // now, with connection state on the row it belongs to.
-  { from: "/settings/integrations", to: "/mcp-servers" },
+  // now, with connection state on the row it belongs to. That page is the Apps
+  // tab of Connectors, which also holds the channels, remote agents, vault and
+  // sandboxes that used to sit as their own nav entries.
+  { from: "/mcp-servers", to: "/connectors" },
+  { from: "/channels", to: "/connectors/channels" },
+  { from: "/remote-agents", to: "/connectors/remote-agents" },
+  { from: "/vault", to: "/connectors/vault" },
+  { from: "/sandboxes", to: "/connectors/sandboxes" },
+  { from: "/settings/integrations", to: "/connectors" },
   // The organization's integrations page rendered the same two components over
   // the same rows as `/kb/{id}`, and the only thing it could show that a
   // collection's page cannot is an integration assigned to no collection yet.

@@ -7,12 +7,17 @@ describe("navSectionFor", () => {
     expect(navSectionFor("/agents")).toMatchObject({ domain: "build", isRoot: true });
     expect(navSectionFor("/agents")?.item.href).toBe("/agents");
     expect(navSectionFor("/rag")).toMatchObject({ domain: "knowledge", isRoot: true });
-    expect(navSectionFor("/vault")).toMatchObject({ domain: "workspace", isRoot: true });
+    expect(navSectionFor("/connectors")).toMatchObject({ domain: "workspace", isRoot: true });
     expect(navSectionFor("/dashboard")).toMatchObject({ domain: "use", isRoot: true });
   });
 
   it("places a sub-page in its section without calling it the section's page", () => {
     expect(navSectionFor("/agents/abc")).toMatchObject({ domain: "build", isRoot: false });
+    // The Advanced connections are sub-pages of Connectors, not entries of their own.
+    expect(navSectionFor("/connectors/vault")).toMatchObject({
+      domain: "workspace",
+      isRoot: false,
+    });
   });
 
   it("calls each tab of a tabbed section its page, and nothing deeper", () => {

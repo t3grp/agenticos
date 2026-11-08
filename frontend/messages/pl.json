@@ -142,7 +142,8 @@
     "whatsNewTitle": "Co nowego w {version}",
     "whatsNewDescription": "Zmiany w wersji, z której korzystasz.",
     "whatsNewDone": "Rozumiem",
-    "backgroundWork": "Praca w tle"
+    "backgroundWork": "Praca w tle",
+    "connectors": "Łączniki"
   },
   "auth": {
     "agreeToTerms": "Tworząc konto, akceptujesz nasz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>.",
@@ -2658,7 +2659,6 @@
     },
     "mcp-servers": {
       "catalogCompiledIntoBackend": "Katalog jest wkompilowany w backend, a nikt nie dodał własnego serwera. Pusta lista oznacza tutaj, że ten deployment nie dostarcza żadnego.",
-      "externalToolsYourAgents": "Narzędzia, których mogą używać Twoi agenci - Notion, GitHub, Twój CRM. Połącz serwer dla całej organizacji albo tylko dla siebie.",
       "mcpServers": "Serwery MCP",
       "noServersConnect": "Brak serwerów do podłączenia"
     },
@@ -4353,6 +4353,17 @@
       "servicesHint": "Nagrywanie dźwięku i powiadomienia push w aplikacji mobilnej.",
       "operations": "Utrzymanie",
       "operationsHint": "Aktualizacje aplikacji i diagnostyka wdrożenia."
+    },
+    "connectors": {
+      "title": "Łączniki",
+      "description": "Wszystko, z czym łączą się twoje agenty, w jednym miejscu.",
+      "apps": "Aplikacje",
+      "advanced": "Zaawansowane",
+      "advancedDescription": "Połączenia niższego poziomu: kanały czatu, zdalne agenty, skarbiec i sandboksy.",
+      "channelsDescription": "Platformy czatu, przez które organizacja jest osiągalna.",
+      "remoteAgentsDescription": "Agenty innych dostawców, którym twoje agenty mogą delegować zadania.",
+      "vaultDescription": "Klucze i sekrety, których używają twoje połączenia.",
+      "sandboxesDescription": "Miejsca, w których agenty uruchamiają kod, i limity na każdym hoście."
     }
   },
   "rag": {
