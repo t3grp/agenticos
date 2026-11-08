@@ -26,6 +26,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+import { AppsRows } from "@/components/layout/apps-rows";
 import { ProjectRows } from "@/components/layout/project-rows";
 
 import { BrandLink } from "@/components/layout/brand-link";
@@ -145,14 +146,18 @@ export function SidebarNav({
       aria-label={t("primary")}
       className={cn("flex flex-col gap-3 py-3", collapsed ? "items-center px-2" : "px-3")}
     >
-      {groups.map((group) => (
-        <NavGroupBlock
-          key={group.labelKey ?? "main"}
-          group={group}
-          onNavigate={onNavigate}
-          collapsed={collapsed}
-        />
-      ))}
+      {groups.map((group) =>
+        group.labelKey === "apps" ? (
+          <AppsRows key="apps" onNavigate={onNavigate} collapsed={collapsed} />
+        ) : (
+          <NavGroupBlock
+            key={group.labelKey ?? "main"}
+            group={group}
+            onNavigate={onNavigate}
+            collapsed={collapsed}
+          />
+        ),
+      )}
     </nav>
   );
 }

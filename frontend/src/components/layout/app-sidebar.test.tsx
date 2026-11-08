@@ -23,6 +23,14 @@ const recentProjects = vi.fn<() => { id: string; name: string; has_unread_chats?
 vi.mock("@/hooks/use-projects", () => ({
   useProjects: () => ({ projects: recentProjects() }),
 }));
+const apps = vi.fn<() => { id: string; title: string; name: string }[]>(() => []);
+const appsQuery = vi.fn<(query: { limit?: number; enabled?: boolean }) => void>();
+vi.mock("@/hooks/use-artifacts", () => ({
+  useArtifacts: (query: { limit?: number; enabled?: boolean }) => {
+    appsQuery(query);
+    return { artifacts: apps(), isLoading: false };
+  },
+}));
 const waiting = vi.fn<() => { id: string }[]>(() => []);
 vi.mock("@/hooks/use-suggestions", () => ({ useSuggestions: () => ({ suggestions: waiting() }) }));
 const sidebar = {
@@ -419,5 +427,64 @@ describe("daily-work navigation", () => {
       "false",
     );
     expect(screen.queryByRole("link", { name: "skills" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the Apps section", () => {
+  const app = (n: number) => ({ id: `app-${n}`, title: `App ${n}`, name: `app-${n}` });
+
+  beforeEach(() => {
+    apps.mockReturnValue([]);
+    appsQuery.mockClear();
+  });
+
+  it("is hidden entirely, and asks for nothing, without artifacts:view", () => {
+    can.mockImplementation((permission) => permission !== "artifacts:view");
+    apps.mockReturnValue([app(1), app(2)]);
+
+    renderNav();
+
+    expect(screen.queryByText("apps")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "allApps" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "App 1" })).not.toBeInTheDocument();
+    expect(appsQuery).not.toHaveBeenCalled();
+  });
+
+  it("is hidden when the caller can open no apps", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue([]);
+
+    renderNav();
+
+    expect(screen.queryByText("apps")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "allApps" })).not.toBeInTheDocument();
+  });
+
+  it("lists at most eight apps, then links to all of them", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue(Array.from({ length: 10 }, (_, i) => app(i + 1)));
+
+    renderNav();
+
+    const listed = screen.getAllByRole("link", { name: /^App \d+$/ });
+    expect(listed).toHaveLength(8);
+    expect(listed[0]).toHaveAttribute("href", "/apps/app-1");
+    expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
+    expect(appsQuery).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 8, enabled: true }));
+  });
+
+  it("sits right after the main group and before Build", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue([app(1)]);
+    sidebar.openGroups = ["monitoring"];
+
+    const { container } = renderNav();
+    const links = Array.from(container.querySelectorAll("a")).map((a) => a.textContent);
+    const order = ["chat", "inbox", "App 1", "allApps", "agents"].map((label) =>
+      links.findIndex((text) => text?.includes(label)),
+    );
+
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 });

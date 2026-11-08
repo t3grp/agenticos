@@ -36,6 +36,8 @@ export interface ArtifactQuery {
   groupId?: string | null;
   /** Only the pages made in this project's chats; null for every project. */
   projectId?: string | null;
+  /** Off when the caller may not list apps, so no request is made. Defaults to on. */
+  enabled?: boolean;
 }
 
 /**
@@ -53,6 +55,7 @@ export function useArtifacts({
   limit = PAGE_SIZE,
   groupId = null,
   projectId = null,
+  enabled = true,
 }: ArtifactQuery = {}) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: qk.artifacts.list({
@@ -64,6 +67,7 @@ export function useArtifacts({
       groupId: groupId ?? "",
       ...(projectId ? { projectId } : {}),
     }),
+    enabled,
     queryFn: () => {
       const params = new URLSearchParams();
       if (search) params.set("q", search);
