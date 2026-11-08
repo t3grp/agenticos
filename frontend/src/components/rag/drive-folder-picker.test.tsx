@@ -75,6 +75,17 @@ describe("the Drive folder picker", () => {
     });
   });
 
+  it("shows a saved folder by its name only once that name has been browsed, never its raw id", async () => {
+    renderPicker(vi.fn(), "f-1");
+
+    expect(await screen.findByText("Syncing the selected folder")).toBeVisible();
+    expect(screen.queryByText(/f-1/)).toBeNull();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Policies" }));
+
+    expect(await screen.findByText("Syncing Policies")).toBeVisible();
+  });
+
   it("says an empty level is empty", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ drives: [], folders: [] });
     renderPicker();

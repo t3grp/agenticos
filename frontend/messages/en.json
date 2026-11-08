@@ -7779,6 +7779,7 @@
     "driveFolderSelect": "Select this folder",
     "driveFolderNotChosen": "No folder chosen yet.",
     "driveFolderChosen": "Syncing {name}",
+    "driveFolderChosenUnnamed": "Syncing the selected folder",
     "driveSectionShared": "Shared drives",
     "driveSectionMine": "My Drive",
     "driveFolderIdHint": "Paste the folder ID: the part of the folder's Google Drive link after /folders/.",

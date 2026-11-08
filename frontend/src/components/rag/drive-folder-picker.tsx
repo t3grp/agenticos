@@ -50,7 +50,13 @@ export function DriveFolderPicker({
   const atRoot = current === null;
   const drives = atRoot ? (listing.data?.drives ?? []) : [];
   const folders = listing.data?.folders ?? [];
-  const chosenName = chosen !== null && chosen.id === value ? chosen.name : value;
+  // A saved folder_id is shown by name only once this picker has seen the name
+  // (selected it, or walked into it). Until then the raw id stays out of view.
+  const chosenName = [chosen, ...path].find((item) => item?.id === value)?.name;
+  const chosenLabel =
+    chosenName === undefined
+      ? t("driveFolderChosenUnnamed")
+      : t("driveFolderChosen", { name: chosenName });
 
   return (
     <div className="space-y-2">
@@ -165,8 +171,7 @@ export function DriveFolderPicker({
         )}
         role={error === undefined ? undefined : "alert"}
       >
-        {error ??
-          (value === "" ? t("driveFolderNotChosen") : t("driveFolderChosen", { name: chosenName }))}
+        {error ?? (value === "" ? t("driveFolderNotChosen") : chosenLabel)}
       </p>
     </div>
   );

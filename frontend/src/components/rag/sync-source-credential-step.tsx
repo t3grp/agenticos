@@ -20,6 +20,23 @@ import { hereForMcpOAuthReturn } from "@/lib/mcp-oauth";
 import type { ConnectorInfo, SyncSourceCreate } from "@/lib/rag-api";
 import { Perm } from "@/types/permissions";
 
+/** The Drive scopes the backend reads with: full access, or read-only. Either lets a source list and sync. */
+const DRIVE_SCOPES = [
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/drive.readonly",
+];
+
+/** Choosing an account drops the folder: a folder id means something only in the account it was found through. */
+function withAccount(form: SyncSourceCreate, id: string): SyncSourceCreate {
+  if (form.connected_account_id === id) return { ...form, secret_id: null };
+  return {
+    ...form,
+    connected_account_id: id,
+    secret_id: null,
+    config: { ...form.config, folder_id: undefined },
+  };
+}
+
 /**
  * Which vault credential this source authenticates with.
  *
@@ -38,23 +55,6 @@ import { Perm } from "@/types/permissions";
  * one, which is the same answer that component gives for the shapes it does not
  * handle.
  */
-/** The Drive scopes the backend reads with: full access, or read-only. Either lets a source list and sync. */
-const DRIVE_SCOPES = [
-  "https://www.googleapis.com/auth/drive",
-  "https://www.googleapis.com/auth/drive.readonly",
-];
-
-/** Choosing an account drops the folder: a folder id means something only in the account it was found through. */
-function withAccount(form: SyncSourceCreate, id: string): SyncSourceCreate {
-  if (form.connected_account_id === id) return { ...form, secret_id: null };
-  return {
-    ...form,
-    connected_account_id: id,
-    secret_id: null,
-    config: { ...form.config, folder_id: undefined },
-  };
-}
-
 export function CredentialStep({
   connector,
   form,
@@ -85,12 +85,15 @@ export function CredentialStep({
   const canConnect = isDrive && can(Perm.connectionsManage);
   const connected = useConnectedAccounts("organization", { enabled: mayViewAccounts });
   // The account path is the first choice for a Drive source whose reader can see
-  // the accounts. Derived rather than stored, so it is right once permissions
-  // arrive; a click on either choice is kept.
+  // the accounts - unless the source already holds a vault credential, which is
+  // what it was made with. Derived rather than stored, so it is right once
+  // permissions arrive; a click on either choice is kept.
   const [chosenType, setChosenType] = useState<"account" | "secret" | null>(null);
   const credentialType =
     chosenType ??
-    (form.connected_account_id || resumeFrom || mayViewAccounts ? "account" : "secret");
+    (!form.secret_id && (form.connected_account_id || resumeFrom || mayViewAccounts)
+      ? "account"
+      : "secret");
   const driveAccounts = connected.accounts.filter(
     (account) =>
       account.provider === "google" &&

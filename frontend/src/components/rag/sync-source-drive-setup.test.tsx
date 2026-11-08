@@ -8,7 +8,7 @@ import { SyncSourceWizard } from "./sync-source-wizard";
 import { apiClient } from "@/lib/api-client";
 import { readDriveResume, saveDriveResume } from "@/lib/drive-oauth-resume";
 import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
-import type { ConnectorInfo, SyncSourceCreate } from "@/lib/rag-api";
+import type { ConnectorInfo, SyncSourceCreate, SyncSourceRead } from "@/lib/rag-api";
 
 vi.mock("@/lib/api-client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
@@ -152,6 +152,57 @@ describe("connecting a Google account from the wizard", () => {
 
     expect(await screen.findByLabelText(/Vault credential/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Connect Google account" })).toBeNull();
+  });
+});
+
+describe("editing a service-account Drive source", () => {
+  const SERVICE_ACCOUNT_SOURCE: SyncSourceRead = {
+    id: "s-1",
+    organization_id: "org-1",
+    name: "Engineering docs",
+    connector_type: "gdrive",
+    collection_name: "handbook",
+    config: { folder_id: "1AbC" },
+    secret_id: "secret-1",
+    secret_hint: "a1b2",
+    organizational_unit: null,
+    sync_mode: "full",
+    schedule_minutes: null,
+    is_active: true,
+    last_sync_at: null,
+    last_sync_status: null,
+    last_error: null,
+    created_at: null,
+  };
+
+  it("keeps the service-account choice when the source holds a vault credential, though accounts are visible", async () => {
+    accounts([DRIVE_ACCOUNT("account-1", "docs@example.com")]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <SyncSourceWizard
+          open
+          onOpenChange={vi.fn()}
+          connectors={[GDRIVE]}
+          collections={[{ name: "handbook", scope: "org" }]}
+          defaultCollection="handbook"
+          editing={SERVICE_ACCOUNT_SOURCE}
+          onSubmit={vi.fn()}
+          onUpdate={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /Continue/ }));
+
+    expect(await screen.findByRole("button", { name: "Service account" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Connected Google account" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 });
 
