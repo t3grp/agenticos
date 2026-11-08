@@ -326,6 +326,7 @@ class SyncSourceService:
         all. The action is what tells such an entry from the approval expiry
         sweep's, the other writer that names nobody.
         """
+        connected_account_id = getattr(source, "connected_account_id", None)
         await record_audit(
             self.db,
             actor_user_id=ctx.user_id,
@@ -339,7 +340,7 @@ class SyncSourceService:
                 "collection_name": source.collection_name,
                 "secret_id": str(source.secret_id) if source.secret_id else None,
                 "connected_account_id": (
-                    str(source.connected_account_id) if source.connected_account_id else None
+                    str(connected_account_id) if connected_account_id else None
                 ),
                 **(extra or {}),
             },
@@ -461,6 +462,7 @@ class SyncSourceService:
         raw = _raw_config(existing)
         # A clone copies a config somebody else's row already holds, and rows
         # predating this check exist. Judged again rather than trusted.
+        await _refuse_a_credential_in_the_config(raw, existing.connector_type)
         await _refuse_an_invalid_config(raw, existing.connector_type)
         # And the credential, which is lent to the new collection's readers: the
         # caller must be one who may bind it, as on create - a member's private
@@ -509,7 +511,9 @@ class SyncSourceService:
         if "secret_id" in updates:
             hint = await self._checked_secret(updates["secret_id"], existing.connector_type, ctx)
         target_secret = updates.get("secret_id", existing.secret_id)
-        target_account = updates.get("connected_account_id", existing.connected_account_id)
+        target_account = updates.get(
+            "connected_account_id", getattr(existing, "connected_account_id", None)
+        )
         await self._checked_google_account(target_account, existing.connector_type, ctx)
         if target_secret is not None and target_account is not None:
             raise refused_field("connected_account_id", "Choose one Google Drive credential")

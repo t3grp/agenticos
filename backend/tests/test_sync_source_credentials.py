@@ -33,8 +33,8 @@ from app.schemas.sync_source import (
     SyncSourceCreate,
     SyncSourceUpdate,
 )
-from app.services import sync_source as sync_source_module
 from app.services import mcp_connection as mcp_connection_module
+from app.services import sync_source as sync_source_module
 from app.services.rag.connectors.s3 import S3Connector
 from app.services.sync_source import SyncSourceService
 
@@ -127,9 +127,7 @@ class TestTheCredentialIsReferencedNotCarried:
             "https://www.googleapis.com/auth/drive.readonly",
         ],
     )
-    async def test_a_source_can_name_an_organization_google_account(
-        self, monkeypatch, scope
-    ):
+    async def test_a_source_can_name_an_organization_google_account(self, monkeypatch, scope):
         account_id = uuid.uuid4()
         account = SimpleNamespace(
             id=account_id,
@@ -150,17 +148,13 @@ class TestTheCredentialIsReferencedNotCarried:
         )
         service = _service(monkeypatch)
 
-        read = await service.create_source(
-            _drive(connected_account_id=account_id), ctx=_ctx(_ORG)
-        )
+        read = await service.create_source(_drive(connected_account_id=account_id), ctx=_ctx(_ORG))
 
         assert read.connected_account_id == str(account_id)
         assert read.secret_id is None
 
     @pytest.mark.parametrize("operation", ["create", "update", "clone"])
-    async def test_google_account_binding_requires_connections_view(
-        self, monkeypatch, operation
-    ):
+    async def test_google_account_binding_requires_connections_view(self, monkeypatch, operation):
         service = _service(monkeypatch)
         account_id = uuid.uuid4()
         ctx = AuthContext(
@@ -337,6 +331,31 @@ class TestACredentialInTheConfigIsRefused:
 
         assert field in exc.value.details["fields"]
         assert "does not go in a source's configuration" in exc.value.message
+
+    async def test_a_clone_with_a_credential_in_its_config_is_refused(self, monkeypatch):
+        service = _service(monkeypatch)
+        source = SimpleNamespace(
+            id=uuid.uuid4(),
+            name="Legacy drive",
+            connector_type="gdrive",
+            config={"folder_id": "1AbC", "refresh_token": "must-not-be-copied"},
+            secret_id=None,
+            connected_account_id=None,
+            organizational_unit=None,
+            sync_mode="new_only",
+            schedule_minutes=None,
+        )
+        monkeypatch.setattr(
+            sync_source_module.sync_source_repo, "get_by_id", AsyncMock(return_value=source)
+        )
+
+        with pytest.raises(BadRequestError) as exc:
+            await service.clone_source(
+                str(source.id), SyncSourceClone(collection_name="copy"), ctx=_ctx(_ORG)
+            )
+
+        assert exc.value.details["fields"] == ["refresh_token"]
+        sync_source_module.sync_source_repo.create.assert_not_awaited()
 
     async def test_a_config_of_only_real_fields_passes(self, monkeypatch):
         service = _service(monkeypatch)
