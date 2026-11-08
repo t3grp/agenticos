@@ -272,9 +272,9 @@ describe("the audience of what a source ingests", () => {
     await userEvent.type(screen.getByLabelText("Source name"), "Engineering docs");
     await userEvent.click(screen.getByRole("button", { name: /Google Drive/ }));
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
-    await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "1AbC_-def");
-    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
     await pickTheCredential();
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "1AbC_-def");
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
 
     expect(await screen.findByText(/Drive service account/)).toHaveTextContent("handbook");
@@ -451,9 +451,9 @@ async function submitConfigured(onSubmit: (data: SyncSourceCreate) => Promise<vo
   await userEvent.type(screen.getByLabelText("Source name"), "Engineering docs");
   await userEvent.click(screen.getByRole("button", { name: /Google Drive/ }));
   await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
-  await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "x' in parents");
-  await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
   await pickTheCredential();
+  await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+  await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "x' in parents");
   await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
   await userEvent.click(screen.getByRole("button", { name: /Create source/ }));
   return view;
@@ -514,7 +514,6 @@ describe("a config the connector refuses", () => {
     );
 
     await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "1AbC");
-    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
     await userEvent.click(screen.getByRole("button", { name: /Create source/ }));
 
@@ -577,8 +576,6 @@ describe("the credential step", () => {
     await userEvent.type(screen.getByLabelText("Source name"), "Engineering docs");
     await userEvent.click(screen.getByRole("button", { name: /Google Drive/ }));
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
-    await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "1AbC");
-    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
     return view;
   }
 
@@ -625,6 +622,8 @@ describe("the credential step", () => {
           ],
           total: 1,
         };
+      if (path === "/sync-sources/gdrive/folders")
+        return { drives: [], folders: [{ id: "folder-7", name: "Engineering" }] };
       if (path === "/me/permissions")
         return {
           organization_id: "org-1",
@@ -644,10 +643,14 @@ describe("the credential step", () => {
     await userEvent.click(await screen.findByLabelText("Google account"));
     await userEvent.click(await screen.findByRole("option", { name: "docs@example.com" }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Engineering" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select this folder" }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(screen.getByRole("button", { name: "Create source" }));
 
     const submitted = onSubmit.mock.calls[0]?.[0] as SyncSourceCreate;
     expect(submitted.connected_account_id).toBe("account-1");
+    expect(submitted.config.folder_id).toBe("folder-7");
     expect(submitted.secret_id).toBeNull();
     expect(submitted.config).not.toHaveProperty("access_token");
   });
@@ -771,6 +774,7 @@ describe("editing a source that exists", () => {
     expect(screen.queryByRole("button", { name: /Use existing/ })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
     expect(screen.getByLabelText(/Google Drive Folder ID/)).toHaveValue("1AbC");
   });
 
@@ -825,8 +829,8 @@ describe("editing a source that exists", () => {
     editor(onUpdate);
 
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
-    await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "x' in parents");
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    await userEvent.type(screen.getByLabelText(/Google Drive Folder ID/), "x' in parents");
     await userEvent.click(screen.getByRole("button", { name: /Continue/ }));
     await screen.findByText("Sync mode");
     await userEvent.click(screen.getByRole("button", { name: /Save changes/ }));
