@@ -218,3 +218,46 @@ async def test_an_account_from_another_organization_is_not_used(monkeypatch):
 
     assert response.status_code == 404
     assert not drive_called
+
+
+@pytest.mark.parametrize(
+    ("upstream_status", "status", "code", "message"),
+    [
+        (
+            401,
+            503,
+            "EXTERNAL_SERVICE_ERROR",
+            "Google Drive rejected the account authorization. Reconnect the account.",
+        ),
+        (403, 403, "AUTHORIZATION_ERROR", "Google Drive denied access to this listing."),
+        (
+            404,
+            404,
+            "NOT_FOUND",
+            "Google Drive folder not found or no longer accessible.",
+        ),
+        (
+            502,
+            503,
+            "EXTERNAL_SERVICE_ERROR",
+            "Google Drive could not list folders. Try again later.",
+        ),
+    ],
+)
+async def test_google_drive_listing_errors_are_controlled(
+    monkeypatch, upstream_status, status, code, message
+):
+    organization_id = uuid.uuid4()
+    account = _account(organization_id)
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(upstream_status, json={"error": {"message": "provider detail"}})
+
+    response = await _get(
+        monkeypatch, organization_id=organization_id, account=account, handler=handler
+    )
+
+    assert response.status_code == status
+    assert response.json()["error"]["code"] == code
+    assert response.json()["error"]["message"] == message
+    assert "provider detail" not in response.text

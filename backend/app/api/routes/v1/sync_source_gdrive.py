@@ -4,9 +4,10 @@ import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from httpx import HTTPStatusError
 
 from app.api.deps import Auth, McpConnectionSvc, require
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AuthorizationError, ExternalServiceError, NotFoundError
 from app.core.permissions import Perm
 from app.repositories import mcp_connection as mcp_connection_repo
 from app.schemas.gdrive_folder import (
@@ -118,4 +119,22 @@ async def list_google_drive_folders(
             shared_drives = _shared_drives(drive) if parent == "root" else []
         return GoogleDriveFolderPickerResponse(drives=shared_drives, folders=folders)
 
-    return await asyncio.to_thread(read)
+    try:
+        return await asyncio.to_thread(read)
+    except HTTPStatusError as exc:
+        status_code = exc.response.status_code
+        if status_code == 403:
+            raise AuthorizationError(
+                message="Google Drive denied access to this listing."
+            ) from None
+        if status_code == 404:
+            raise NotFoundError(
+                message="Google Drive folder not found or no longer accessible."
+            ) from None
+        if status_code == 401:
+            raise ExternalServiceError(
+                message="Google Drive rejected the account authorization. Reconnect the account."
+            ) from None
+        raise ExternalServiceError(
+            message="Google Drive could not list folders. Try again later."
+        ) from None
