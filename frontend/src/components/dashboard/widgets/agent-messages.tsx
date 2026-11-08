@@ -72,7 +72,7 @@ export function AgentMessagesWidget({ title, hint, seeAll, options }: DashboardW
                 </span>
                 <span
                   aria-hidden
-                  className={cn("mt-1.5 size-2 shrink-0 rounded-full bg-primary")}
+                  className={cn("bg-primary mt-1.5 size-2 shrink-0 rounded-full")}
                 />
               </Link>
             </li>

@@ -43,46 +43,32 @@ class TestThreads:
         org = await make_org(db, owner=owner)
         first = await _agent(db, org.id, slug="researcher")
         second = await _agent(db, org.id, slug="summariser")
-        ctx = AuthContext(
-            user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER
-        )
+        ctx = AuthContext(user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER)
         service = AgentMessageService(db)
 
         sent = await service.send(
             ctx,
-            AgentMessageSend(
-                sender_agent_id=first.id, recipient=second.slug, body="hello"
-            ),
+            AgentMessageSend(sender_agent_id=first.id, recipient=second.slug, body="hello"),
         )
         back = await service.send(
             ctx,
-            AgentMessageSend(
-                sender_agent_id=second.id, recipient=first.slug, body="hello back"
-            ),
+            AgentMessageSend(sender_agent_id=second.id, recipient=first.slug, body="hello back"),
         )
 
         assert sent.thread_id == back.thread_id
-        threads = await agent_message_repo.list_threads(
-            db, organization_id=org.id, agent_ids=None
-        )
+        threads = await agent_message_repo.list_threads(db, organization_id=org.id, agent_ids=None)
         assert len(threads[0]) == 1
 
-    async def test_a_thread_in_another_organization_reads_as_absent(
-        self, db: AsyncSession
-    ) -> None:
+    async def test_a_thread_in_another_organization_reads_as_absent(self, db: AsyncSession) -> None:
         owner = await make_user(db)
         org = await make_org(db, owner=owner)
         first = await _agent(db, org.id, slug="researcher")
         second = await _agent(db, org.id, slug="summariser")
-        ctx = AuthContext(
-            user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER
-        )
+        ctx = AuthContext(user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER)
         service = AgentMessageService(db)
         sent = await service.send(
             ctx,
-            AgentMessageSend(
-                sender_agent_id=first.id, recipient=second.slug, body="hello"
-            ),
+            AgentMessageSend(sender_agent_id=first.id, recipient=second.slug, body="hello"),
         )
 
         stranger = await make_user(db)
@@ -96,49 +82,35 @@ class TestThreads:
         with pytest.raises(NotFoundError):
             await service.get_thread(foreign, sent.thread_id)
 
-    async def test_deleting_an_agent_takes_its_threads_with_it(
-        self, db: AsyncSession
-    ) -> None:
+    async def test_deleting_an_agent_takes_its_threads_with_it(self, db: AsyncSession) -> None:
         owner = await make_user(db)
         org = await make_org(db, owner=owner)
         first = await _agent(db, org.id, slug="researcher")
         second = await _agent(db, org.id, slug="summariser")
-        ctx = AuthContext(
-            user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER
-        )
+        ctx = AuthContext(user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER)
         service = AgentMessageService(db)
         sent = await service.send(
             ctx,
-            AgentMessageSend(
-                sender_agent_id=first.id, recipient=second.slug, body="hello"
-            ),
+            AgentMessageSend(sender_agent_id=first.id, recipient=second.slug, body="hello"),
         )
 
         await db.delete(first)
         await db.flush()
 
-        assert (
-            await agent_message_repo.get_thread(db, sent.thread_id) is None
-        )
+        assert await agent_message_repo.get_thread(db, sent.thread_id) is None
 
 
 class TestReactions:
-    async def test_the_same_emoji_twice_is_one_reaction_then_none(
-        self, db: AsyncSession
-    ) -> None:
+    async def test_the_same_emoji_twice_is_one_reaction_then_none(self, db: AsyncSession) -> None:
         owner = await make_user(db)
         org = await make_org(db, owner=owner)
         first = await _agent(db, org.id, slug="researcher")
         second = await _agent(db, org.id, slug="summariser")
-        ctx = AuthContext(
-            user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER
-        )
+        ctx = AuthContext(user_id=owner.id, organization_id=org.id, role=OrgRoleName.OWNER)
         service = AgentMessageService(db)
         sent = await service.send(
             ctx,
-            AgentMessageSend(
-                sender_agent_id=first.id, recipient=second.slug, body="hello"
-            ),
+            AgentMessageSend(sender_agent_id=first.id, recipient=second.slug, body="hello"),
         )
 
         added = await service.react(
@@ -156,7 +128,4 @@ class TestReactions:
         )
         assert taken_back.reacted is False
         assert taken_back.reactions == []
-        assert (
-            await agent_message_repo.list_reactions(db, message_ids=[sent.id])
-            == []
-        )
+        assert await agent_message_repo.list_reactions(db, message_ids=[sent.id]) == []

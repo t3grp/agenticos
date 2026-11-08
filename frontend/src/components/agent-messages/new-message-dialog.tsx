@@ -25,10 +25,7 @@ import {
 import { useAgentMessageRecipients, useSendAgentMessage } from "@/hooks";
 import { useAgents } from "@/hooks/use-agents";
 import { getErrorMessage } from "@/lib/api-error";
-import {
-  MAX_ATTACHMENTS,
-  MAX_MESSAGE_CHARS,
-} from "@/lib/agent-messages-api";
+import { MAX_ATTACHMENTS, MAX_MESSAGE_CHARS } from "@/lib/agent-messages-api";
 import { uploadFile } from "@/lib/file-api";
 import { DIALOG_BODY, DIALOG_COLUMN, DIALOG_FORM } from "@/lib/dialog-sizes";
 import { cn } from "@/lib/utils";
@@ -53,8 +50,11 @@ export function NewMessageDialog({ open, onOpenChange, onSent }: NewMessageDialo
   const t = useTranslations("agentMessages");
   const tErrors = useTranslations("errors");
   const { send } = useSendAgentMessage();
-  const { recipients, isLoading: isLoadingRecipients, error: recipientsError } =
-    useAgentMessageRecipients();
+  const {
+    recipients,
+    isLoading: isLoadingRecipients,
+    error: recipientsError,
+  } = useAgentMessageRecipients();
   const { agents, error: agentsError } = useAgents();
 
   const [senderId, setSenderId] = useState<string | null>(null);
@@ -70,8 +70,7 @@ export function NewMessageDialog({ open, onOpenChange, onSent }: NewMessageDialo
   // published agents among the same set — and the backend still refuses
   // honestly if one of them cannot send.
   const runnable = useMemo(() => agents.filter((agent) => agent.can_run), [agents]);
-  const senderOptions: AgentRef[] =
-    runnable.length > 0 ? runnable : agentsError ? recipients : [];
+  const senderOptions: AgentRef[] = runnable.length > 0 ? runnable : agentsError ? recipients : [];
   const sender = senderId ?? senderOptions[0]?.id ?? null;
 
   const filtered = useMemo(() => {
@@ -257,9 +256,7 @@ export function NewMessageDialog({ open, onOpenChange, onSent }: NewMessageDialo
                     <button
                       type="button"
                       aria-label={t("removeFile", { name: file.name })}
-                      onClick={() =>
-                        setFiles((current) => current.filter((item) => item !== file))
-                      }
+                      onClick={() => setFiles((current) => current.filter((item) => item !== file))}
                       className="text-muted-foreground hover:text-foreground shrink-0"
                     >
                       <X className="size-3.5" aria-hidden />

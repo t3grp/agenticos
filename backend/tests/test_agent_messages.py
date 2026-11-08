@@ -89,9 +89,7 @@ class TestSend:
                 f"{PATH}.agent_message_repo.get_or_create_thread",
                 new=AsyncMock(return_value=thread),
             ),
-            patch(
-                f"{PATH}.agent_message_repo.create_message", new=create_message
-            ),
+            patch(f"{PATH}.agent_message_repo.create_message", new=create_message),
             patch(f"{PATH}.agent_message_repo.touch_thread", new=AsyncMock()),
             patch(f"{PATH}.agent_message_repo.list_reactions", new=AsyncMock(return_value=[])),
             patch(
@@ -119,9 +117,7 @@ class TestSend:
         ):
             await _service().send(
                 _ctx(org, user),
-                AgentMessageSend(
-                    sender_agent_id=sender.id, recipient=str(sender.id), body="hello"
-                ),
+                AgentMessageSend(sender_agent_id=sender.id, recipient=str(sender.id), body="hello"),
             )
 
     async def test_a_draft_agent_cannot_be_messaged(self) -> None:
@@ -181,9 +177,7 @@ class TestSend:
         ):
             await _service().send(
                 _ctx(org, user),
-                AgentMessageSend(
-                    sender_agent_id=sender.id, recipient="outsider", body="hello"
-                ),
+                AgentMessageSend(sender_agent_id=sender.id, recipient="outsider", body="hello"),
             )
 
     async def test_a_reply_must_answer_a_message_in_the_same_thread(self) -> None:
@@ -248,12 +242,17 @@ class TestSend:
     async def test_eleven_attachments_are_refused(self) -> None:
         org, user = uuid.uuid4(), uuid.uuid4()
         sender, recipient = _agent(org, slug="researcher"), _agent(org, slug="summariser")
+        create_thread = AsyncMock()
         with (
             patch(
                 f"{PATH}.agent_repo.get",
                 new=AsyncMock(side_effect=[sender, recipient]),
             ),
             patch(f"{PATH}.resolve_access", new=AsyncMock(return_value=True)),
+            patch(
+                f"{PATH}.agent_message_repo.get_or_create_thread",
+                new=create_thread,
+            ),
             pytest.raises(BadRequestError),
         ):
             await _service().send(
@@ -266,6 +265,9 @@ class TestSend:
                     attachment_file_ids=[uuid.uuid4() for _ in range(11)],
                 ),
             )
+        # The refusal happens before the thread is touched: no empty thread
+        # is left behind for a send that never happened.
+        assert create_thread.await_count == 0
 
 
 class TestReact:

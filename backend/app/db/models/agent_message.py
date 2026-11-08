@@ -130,9 +130,7 @@ class AgentMessage(Base, TimestampMixin):
         nullable=True,
     )
 
-    __table_args__ = (
-        Index("ix_agent_messages_thread_created", "thread_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_agent_messages_thread_created", "thread_id", "created_at"),)
 
     def __repr__(self) -> str:
         return f"<AgentMessage(thread={self.thread_id}, sender={self.sender_agent_id})>"
@@ -176,9 +174,7 @@ class AgentMessageReaction(Base):
         nullable=True,
     )
     emoji: Mapped[str] = mapped_column(String(16), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     __table_args__ = (
         CheckConstraint(

@@ -68,9 +68,7 @@ export function ThreadList({
               )}
             >
               <span className="min-w-0 flex-1">
-                <span className="sr-only">
-                  {t(thread.unread ? "unread" : "read")}
-                </span>
+                <span className="sr-only">{t(thread.unread ? "unread" : "read")}</span>
                 <span
                   className={cn(
                     "block truncate text-sm",

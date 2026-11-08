@@ -308,13 +308,7 @@ async def list_by_ids(
         if not agent_ids:
             return [], 0
         where.append(Agent.id.in_(agent_ids))
-    query = (
-        select(Agent)
-        .where(*where)
-        .order_by(Agent.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-    )
+    query = select(Agent).where(*where).order_by(Agent.created_at.desc()).offset(skip).limit(limit)
     count_query = select(func.count(Agent.id)).where(*where)
     items = list((await db.execute(query)).scalars().all())
     total = (await db.execute(count_query)).scalar() or 0

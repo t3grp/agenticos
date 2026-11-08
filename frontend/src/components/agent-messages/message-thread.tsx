@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Paperclip, Send, X } from "lucide-react";
+import { MessagesSquare, Paperclip, Send, X } from "lucide-react";
 
 import { ErrorState, LoadingState } from "@/components/states";
 import {
@@ -76,11 +76,7 @@ export function MessageThread({ thread }: { thread: AgentMessageThreadRead }) {
     [agents, thread.agent_a.id, thread.agent_b.id],
   );
   const senderOptions: AgentRef[] =
-    runnable.length > 0
-      ? runnable
-      : agentsError
-        ? [thread.agent_a, thread.agent_b]
-        : [];
+    runnable.length > 0 ? runnable : agentsError ? [thread.agent_a, thread.agent_b] : [];
   const sender = senderId ?? senderOptions[0]?.id ?? null;
   const otherAgent = (agentId: string): AgentRef =>
     agentId === thread.agent_a.id ? thread.agent_b : thread.agent_a;
@@ -137,6 +133,7 @@ export function MessageThread({ thread }: { thread: AgentMessageThreadRead }) {
           />
         ) : messages.length === 0 ? (
           <ListCardEmpty
+            icon={MessagesSquare}
             title={t("emptyMessages.title")}
             description={t("emptyMessages.description")}
           />

@@ -73,9 +73,7 @@ async def get_or_create_thread(
 
 async def get_thread(db: AsyncSession, thread_id: UUID) -> AgentMessageThread | None:
     """One thread by id, in any organization."""
-    result = await db.execute(
-        select(AgentMessageThread).where(AgentMessageThread.id == thread_id)
-    )
+    result = await db.execute(select(AgentMessageThread).where(AgentMessageThread.id == thread_id))
     return result.scalar_one_or_none()
 
 
@@ -172,9 +170,7 @@ async def list_messages(
     return items, total
 
 
-async def latest_messages(
-    db: AsyncSession, *, thread_ids: list[UUID]
-) -> dict[UUID, AgentMessage]:
+async def latest_messages(db: AsyncSession, *, thread_ids: list[UUID]) -> dict[UUID, AgentMessage]:
     """The newest message in each of these threads, keyed by thread id.
 
     One query, through Postgres `DISTINCT ON`: the order that picks the row
@@ -284,9 +280,7 @@ async def list_attachments(
     if not message_ids:
         return []
     result = await db.execute(
-        select(AgentMessageAttachment).where(
-            AgentMessageAttachment.message_id.in_(message_ids)
-        )
+        select(AgentMessageAttachment).where(AgentMessageAttachment.message_id.in_(message_ids))
     )
     return list(result.scalars().all())
 
@@ -304,9 +298,7 @@ async def get_attachment(
     return result.scalar_one_or_none()
 
 
-async def list_chat_files(
-    db: AsyncSession, *, file_ids: list[UUID]
-) -> list[ChatFile]:
+async def list_chat_files(db: AsyncSession, *, file_ids: list[UUID]) -> list[ChatFile]:
     """The uploaded files behind these ids, whatever conversation they came from.
 
     The caller already decided these files may be read - they are attached to

@@ -29,8 +29,8 @@ from app.core.permissions import AuthContext, OrgRoleName
 from app.schemas.agent_message import (
     AgentMessageList,
     AgentMessageReactionCreate,
-    AgentMessageRead,
     AgentMessageReactionsRead,
+    AgentMessageRead,
     AgentMessageRecipientList,
     AgentMessageSend,
     AgentMessageThreadList,
@@ -40,9 +40,7 @@ from app.schemas.agent_message import (
 
 pytestmark = pytest.mark.anyio
 
-_CTX = AuthContext(
-    user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.MEMBER
-)
+_CTX = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.MEMBER)
 NOW = datetime(2026, 11, 9, 3, 0, tzinfo=UTC)
 
 
@@ -84,9 +82,7 @@ class TestReading:
 
     async def test_a_thread_listing_passes_pagination_through(self) -> None:
         service = MagicMock(
-            list_threads=AsyncMock(
-                return_value=AgentMessageThreadList(items=[], total=0)
-            )
+            list_threads=AsyncMock(return_value=AgentMessageThreadList(items=[], total=0))
         )
 
         await list_agent_message_threads(service, _CTX, skip=10, limit=5)
@@ -98,9 +94,7 @@ class TestReading:
         service = MagicMock(
             list_recipients=AsyncMock(
                 return_value=AgentMessageRecipientList(
-                    items=[
-                        AgentRef(id=uuid.uuid4(), slug="summariser", name="Summariser")
-                    ],
+                    items=[AgentRef(id=uuid.uuid4(), slug="summariser", name="Summariser")],
                     total=1,
                 )
             )
@@ -114,9 +108,7 @@ class TestReading:
         thread_id = uuid.uuid4()
         service = MagicMock(
             list_messages=AsyncMock(
-                return_value=AgentMessageList(
-                    items=[_message_read(thread_id)], total=1
-                )
+                return_value=AgentMessageList(items=[_message_read(thread_id)], total=1)
             )
         )
 
@@ -129,12 +121,8 @@ class TestReading:
 class TestWriting:
     async def test_a_send_answers_with_the_stored_message(self) -> None:
         thread_id = uuid.uuid4()
-        service = MagicMock(
-            send=AsyncMock(return_value=_message_read(thread_id))
-        )
-        data = AgentMessageSend(
-            sender_agent_id=uuid.uuid4(), recipient="summariser", body="hello"
-        )
+        service = MagicMock(send=AsyncMock(return_value=_message_read(thread_id)))
+        data = AgentMessageSend(sender_agent_id=uuid.uuid4(), recipient="summariser", body="hello")
 
         result = await send_agent_message(data, service, _CTX)
 
@@ -147,9 +135,7 @@ class TestWriting:
         refusal, not a reaction in the wrong place."""
         thread_id, message_id = uuid.uuid4(), uuid.uuid4()
         service = MagicMock(
-            react=AsyncMock(
-                return_value=AgentMessageReactionsRead(reacted=True, reactions=[])
-            )
+            react=AsyncMock(return_value=AgentMessageReactionsRead(reacted=True, reactions=[]))
         )
 
         result = await react_to_agent_message(
@@ -175,9 +161,7 @@ class TestWriting:
     async def test_a_download_streams_the_file_the_service_returned(self) -> None:
         thread_id, message_id, file_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         chat_file = MagicMock()
-        service = MagicMock(
-            download_attachment=AsyncMock(return_value=chat_file)
-        )
+        service = MagicMock(download_attachment=AsyncMock(return_value=chat_file))
         with patch(
             "app.api.routes.v1.agent_messages.chat_file_response",
             new=AsyncMock(return_value="streamed"),

@@ -34,9 +34,7 @@ def upgrade() -> None:
             "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["agent_a_id"], ["agents.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["agent_b_id"], ["agents.id"], ondelete="CASCADE"),
         sa.UniqueConstraint(
@@ -68,12 +66,8 @@ def upgrade() -> None:
             "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["thread_id"], ["agent_message_threads.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["thread_id"], ["agent_message_threads.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["sender_agent_id"], ["agents.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["sender_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
@@ -81,12 +75,8 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_agent_messages_thread_id", "agent_messages", ["thread_id"])
-    op.create_index(
-        "ix_agent_messages_organization_id", "agent_messages", ["organization_id"]
-    )
-    op.create_index(
-        "ix_agent_messages_sender_agent_id", "agent_messages", ["sender_agent_id"]
-    )
+    op.create_index("ix_agent_messages_organization_id", "agent_messages", ["organization_id"])
+    op.create_index("ix_agent_messages_sender_agent_id", "agent_messages", ["sender_agent_id"])
     op.create_index(
         "ix_agent_messages_thread_created", "agent_messages", ["thread_id", "created_at"]
     )
@@ -103,9 +93,7 @@ def upgrade() -> None:
             "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.ForeignKeyConstraint(["message_id"], ["agent_messages.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["reactor_agent_id"], ["agents.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["reactor_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.CheckConstraint(
@@ -148,9 +136,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["message_id"], ["agent_messages.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["chat_file_id"], ["chat_files.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.UniqueConstraint("message_id", "chat_file_id", name="uq_agent_message_attachment"),
     )
     op.create_index(
@@ -174,9 +160,7 @@ def upgrade() -> None:
         sa.Column("thread_id", PG_UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", PG_UUID(as_uuid=True), primary_key=True),
         sa.Column("read_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["thread_id"], ["agent_message_threads.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["thread_id"], ["agent_message_threads.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
 

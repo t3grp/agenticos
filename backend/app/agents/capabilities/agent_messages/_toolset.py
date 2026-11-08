@@ -180,9 +180,7 @@ def build_agent_messages_toolset(
                 reactions = await AgentMessageService(db).react(
                     auth,
                     message_id=message_id,
-                    data=AgentMessageReactionCreate(
-                        emoji=emoji, as_agent_id=deps.agent_id
-                    ),
+                    data=AgentMessageReactionCreate(emoji=emoji, as_agent_id=deps.agent_id),
                 )
                 return reactions.model_dump_json()
         except AppException as exc:

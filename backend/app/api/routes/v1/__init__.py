@@ -291,9 +291,7 @@ v1_router.include_router(
     external_agents.router, prefix="/external-agents", tags=["external-agents"]
 )
 v1_router.include_router(projects.router, prefix="/projects", tags=["projects"])
-v1_router.include_router(
-    agent_messages.router, prefix="/agent-messages", tags=["agent-messages"]
-)
+v1_router.include_router(agent_messages.router, prefix="/agent-messages", tags=["agent-messages"])
 v1_router.include_router(
     sharing.project_sharing_router, prefix="/projects", tags=["projects:sharing"]
 )

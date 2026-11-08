@@ -30,7 +30,6 @@ from app.db.models.chat_file import ChatFile
 from app.repositories import agent_message_repo, agent_repo, chat_file_repo
 from app.schemas.agent_message import (
     MAX_ATTACHMENTS,
-    MAX_BODY_CHARS,
     AgentMessageAttachmentRead,
     AgentMessageList,
     AgentMessagePreview,
@@ -69,7 +68,7 @@ class AgentMessageService:
         agent on either side, and links files the sender already uploaded.
         Returns the message as the thread reads it.
         """
-        sender = await self._agent_or_404(data.sender_agent_id)
+        sender = await self._agent_or_404(data.sender_agent_id, organization_id=ctx.organization_id)
         recipient = await self._resolve_recipient(ctx, data.recipient)
         if sender.id == recipient.id:
             raise BadRequestError(
@@ -85,6 +84,9 @@ class AgentMessageService:
                 details={"body_chars": len(data.body)},
             )
 
+        # Attachments are validated before the thread is touched: a refused
+        # send must not leave an empty thread behind.
+        files = await self._owned_attachments(ctx, data.attachment_file_ids)
         thread = await agent_message_repo.get_or_create_thread(
             self.db,
             organization_id=ctx.organization_id,
@@ -92,7 +94,6 @@ class AgentMessageService:
             agent_b_id=recipient.id,
         )
         reply_to = await self._reply_target(thread, data.reply_to_message_id)
-        files = await self._owned_attachments(ctx, data.attachment_file_ids)
         message = await agent_message_repo.create_message(
             self.db,
             thread=thread,
@@ -124,9 +125,7 @@ class AgentMessageService:
             skip=skip,
             limit=limit,
         )
-        return AgentMessageThreadList(
-            items=await self._read_threads(ctx, threads), total=total
-        )
+        return AgentMessageThreadList(items=await self._read_threads(ctx, threads), total=total)
 
     async def list_threads_for_agent(
         self, ctx: AuthContext, *, agent_id: UUID, skip: int = 0, limit: int = 50
@@ -137,10 +136,8 @@ class AgentMessageService:
         passes, and a person listing another agent's threads needs the same
         reach the console listing needs for any agent in them.
         """
-        agent = await self._agent_or_404(agent_id)
-        if not await resolve_access(
-            self.db, ctx, agent, Perm.AGENTS_RUN, resource_type=AGENT
-        ):
+        agent = await self._agent_or_404(agent_id, organization_id=ctx.organization_id)
+        if not await resolve_access(self.db, ctx, agent, Perm.AGENTS_RUN, resource_type=AGENT):
             raise AuthorizationError(
                 message="This agent is not one you may run",
                 details={"agent_id": agent.id},
@@ -152,9 +149,7 @@ class AgentMessageService:
             skip=skip,
             limit=limit,
         )
-        return AgentMessageThreadList(
-            items=await self._read_threads(ctx, threads), total=total
-        )
+        return AgentMessageThreadList(items=await self._read_threads(ctx, threads), total=total)
 
     async def get_thread(self, ctx: AuthContext, thread_id: UUID) -> AgentMessageThreadRead:
         """One thread, with its last message and whether it waits on the reader."""
@@ -206,7 +201,9 @@ class AgentMessageService:
         reactor_agent_id: UUID | None = None
         reactor_user_id: UUID | None = None
         if data.as_agent_id is not None:
-            reactor = await self._agent_or_404(data.as_agent_id)
+            reactor = await self._agent_or_404(
+                data.as_agent_id, organization_id=ctx.organization_id
+            )
             if reactor.id not in (thread.agent_a_id, thread.agent_b_id):
                 raise BadRequestError(
                     message="Only an agent in this thread may react as itself",
@@ -243,9 +240,7 @@ class AgentMessageService:
         else:
             await agent_message_repo.remove_reaction(self.db, reaction=existing)
         reactions = await self._read_reactions([message.id])
-        return AgentMessageReactionsRead(
-            reacted=reacted, reactions=reactions.get(message.id, [])
-        )
+        return AgentMessageReactionsRead(reacted=reacted, reactions=reactions.get(message.id, []))
 
     async def mark_read(self, ctx: AuthContext, thread_id: UUID) -> None:
         """Record that the caller has had this thread open, now."""
@@ -307,9 +302,7 @@ class AgentMessageService:
             limit=limit,
         )
         return AgentMessageRecipientList(
-            items=[
-                AgentRef(id=agent.id, slug=agent.slug, name=agent.name) for agent in agents
-            ],
+            items=[AgentRef(id=agent.id, slug=agent.slug, name=agent.name) for agent in agents],
             total=total,
         )
 
@@ -326,9 +319,7 @@ class AgentMessageService:
         """
         if ctx.user_id is None or not ctx.key_allows(Perm.AGENTS_RUN):
             return set()
-        extra = await visible_resource_ids(
-            self.db, ctx, resource_type=AGENT, perm=Perm.AGENTS_RUN
-        )
+        extra = await visible_resource_ids(self.db, ctx, resource_type=AGENT, perm=Perm.AGENTS_RUN)
         if extra is None:
             return None
         return await agent_repo.list_visible_ids(
@@ -340,8 +331,8 @@ class AgentMessageService:
             statuses=statuses,
         )
 
-    async def _agent_or_404(self, agent_id: UUID) -> Agent:
-        agent = await agent_repo.get(self.db, agent_id)
+    async def _agent_or_404(self, agent_id: UUID, *, organization_id: UUID) -> Agent:
+        agent = await agent_repo.get(self.db, agent_id, organization_id=organization_id)
         if agent is None:
             raise NotFoundError(message="Agent not found", details={"agent_id": agent_id})
         return agent
@@ -356,7 +347,9 @@ class AgentMessageService:
         """
         agent: Agent | None
         try:
-            agent = await agent_repo.get(self.db, UUID(recipient))
+            agent = await agent_repo.get(
+                self.db, UUID(recipient), organization_id=ctx.organization_id
+            )
         except ValueError:
             agent = None
         if agent is None:
@@ -378,41 +371,29 @@ class AgentMessageService:
                 details={"agent_id": agent.id, "status": agent.status},
             )
 
-    async def _check_can_message(
-        self, ctx: AuthContext, sender: Agent, recipient: Agent
-    ) -> None:
+    async def _check_can_message(self, ctx: AuthContext, sender: Agent, recipient: Agent) -> None:
         for agent in (sender, recipient):
-            if not await resolve_access(
-                self.db, ctx, agent, Perm.AGENTS_RUN, resource_type=AGENT
-            ):
+            if not await resolve_access(self.db, ctx, agent, Perm.AGENTS_RUN, resource_type=AGENT):
                 raise AuthorizationError(
                     message="Messaging needs an agent you may run on both sides",
                     details={"agent_id": agent.id},
                 )
 
-    async def _thread_or_404(
-        self, ctx: AuthContext, thread_id: UUID
-    ) -> AgentMessageThread:
+    async def _thread_or_404(self, ctx: AuthContext, thread_id: UUID) -> AgentMessageThread:
         thread = await agent_message_repo.get_thread(self.db, thread_id)
         if thread is None or thread.organization_id != ctx.organization_id:
-            raise NotFoundError(
-                message="Thread not found", details={"thread_id": thread_id}
-            )
+            raise NotFoundError(message="Thread not found", details={"thread_id": thread_id})
         return thread
 
     async def _message_or_404(self, message_id: UUID) -> AgentMessage:
         message = await agent_message_repo.get_message(self.db, message_id)
         if message is None:
-            raise NotFoundError(
-                message="Message not found", details={"message_id": message_id}
-            )
+            raise NotFoundError(message="Message not found", details={"message_id": message_id})
         return message
 
-    async def _check_can_read_thread(
-        self, ctx: AuthContext, thread: AgentMessageThread
-    ) -> None:
+    async def _check_can_read_thread(self, ctx: AuthContext, thread: AgentMessageThread) -> None:
         for agent_id in (thread.agent_a_id, thread.agent_b_id):
-            agent = await agent_repo.get(self.db, agent_id)
+            agent = await agent_repo.get(self.db, agent_id, organization_id=ctx.organization_id)
             if agent is not None and await resolve_access(
                 self.db, ctx, agent, Perm.AGENTS_RUN, resource_type=AGENT
             ):
@@ -440,9 +421,7 @@ class AgentMessageService:
             )
         return reply_to
 
-    async def _owned_attachments(
-        self, ctx: AuthContext, file_ids: list[UUID]
-    ) -> list[ChatFile]:
+    async def _owned_attachments(self, ctx: AuthContext, file_ids: list[UUID]) -> list[ChatFile]:
         """The files this sender uploaded, in the order they were named.
 
         A duplicate id links once: the link table refuses the second, and a
@@ -456,9 +435,7 @@ class AgentMessageService:
         ordered = list(dict.fromkeys(file_ids))
         if not ordered:
             return []
-        found = await chat_file_repo.get_many(
-            self.db, ordered, user_id=ctx.subject_id
-        )
+        found = await chat_file_repo.get_many(self.db, ordered, user_id=ctx.subject_id)
         found_ids = {chat_file.id for chat_file in found}
         if missing := [file_id for file_id in ordered if file_id not in found_ids]:
             raise NotFoundError(
@@ -473,7 +450,9 @@ class AgentMessageService:
     ) -> list[AgentMessageThreadRead]:
         if not threads:
             return []
-        agent_ids = {agent_id for thread in threads for agent_id in (thread.agent_a_id, thread.agent_b_id)}
+        agent_ids = {
+            agent_id for thread in threads for agent_id in (thread.agent_a_id, thread.agent_b_id)
+        }
         agents, _ = await agent_repo.list_by_ids(
             self.db,
             organization_id=ctx.organization_id,
@@ -501,9 +480,7 @@ class AgentMessageService:
             agent_b = by_id[thread.agent_b_id]
             last = latest.get(thread.id)
             read = reads.get(thread.id)
-            unread = last is not None and (
-                read is None or read.read_at < last.created_at
-            )
+            unread = last is not None and (read is None or read.read_at < last.created_at)
             out.append(
                 AgentMessageThreadRead(
                     id=thread.id,
@@ -526,9 +503,7 @@ class AgentMessageService:
             )
         return out
 
-    async def _read_messages(
-        self, messages: list[AgentMessage]
-    ) -> list[AgentMessageRead]:
+    async def _read_messages(self, messages: list[AgentMessage]) -> list[AgentMessageRead]:
         if not messages:
             return []
         agent_ids = {message.sender_agent_id for message in messages}

@@ -28,7 +28,9 @@ from app.schemas.agent_message import (
 router = APIRouter(dependencies=[PUBLIC])
 
 
-@router.get("", response_model=AgentMessageThreadList, dependencies=[Depends(require(Perm.AGENTS_RUN))])
+@router.get(
+    "", response_model=AgentMessageThreadList, dependencies=[Depends(require(Perm.AGENTS_RUN))]
+)
 async def list_agent_message_threads(
     service: AgentMessageSvc,
     ctx: Auth,
@@ -45,9 +47,7 @@ async def list_agent_message_threads(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require(Perm.AGENTS_RUN))],
 )
-async def send_agent_message(
-    data: AgentMessageSend, service: AgentMessageSvc, ctx: Auth
-) -> Any:
+async def send_agent_message(data: AgentMessageSend, service: AgentMessageSvc, ctx: Auth) -> Any:
     """Send a message as one agent to another, in their thread.
 
     The recipient is the other agent's slug or id. The message is stored, not
@@ -73,9 +73,7 @@ async def list_agent_message_recipients(
 
 
 @router.get("/{thread_id}", response_model=AgentMessageThreadRead)
-async def get_agent_message_thread(
-    thread_id: UUID, service: AgentMessageSvc, ctx: Auth
-) -> Any:
+async def get_agent_message_thread(thread_id: UUID, service: AgentMessageSvc, ctx: Auth) -> Any:
     return await service.get_thread(ctx, thread_id)
 
 
@@ -118,9 +116,7 @@ async def react_to_agent_message(
     return await service.react(ctx, thread_id=thread_id, message_id=message_id, data=data)
 
 
-@router.get(
-    "/{thread_id}/messages/{message_id}/attachments/{file_id}", response_model=None
-)
+@router.get("/{thread_id}/messages/{message_id}/attachments/{file_id}", response_model=None)
 async def download_agent_message_attachment(
     thread_id: UUID,
     message_id: UUID,

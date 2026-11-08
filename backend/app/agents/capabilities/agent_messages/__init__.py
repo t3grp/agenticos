@@ -13,8 +13,8 @@ from app.agents.capabilities._registry import CapabilityBuildContext, Capability
 from app.agents.capabilities.agent_messages._capability import AgentMessages
 from app.agents.capabilities.agent_messages._toolset import (
     LIST_DESCRIPTION,
-    READ_DESCRIPTION,
     REACT_DESCRIPTION,
+    READ_DESCRIPTION,
     SEND_DESCRIPTION,
 )
 
@@ -64,9 +64,7 @@ class AgentMessagesConfig(BaseModel):
         CapabilityToolInfo(
             id="agent_list_threads", description=LIST_DESCRIPTION, side_effecting=False
         ),
-        CapabilityToolInfo(
-            id="agent_react", description=REACT_DESCRIPTION, side_effecting=True
-        ),
+        CapabilityToolInfo(id="agent_react", description=REACT_DESCRIPTION, side_effecting=True),
     ),
     config_schema=AgentMessagesConfig,
     scopes=("agents:message",),
