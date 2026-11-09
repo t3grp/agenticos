@@ -916,3 +916,35 @@ async def test_empty_local_record_can_be_removed_without_provider_key(harness, m
     await harness.service.delete(user_id=harness.user_id, connection_id=connection.id)
     assert not harness.store
     harness.provider.delete_account.assert_not_awaited()
+
+
+@pytest.mark.parametrize("path", ["personal_catalog", "personal_name", "org_catalog"])
+async def test_managed_google_request_refused_before_org_app_lookup(harness, monkeypatch, path):
+    """The Google convenience flow cannot retarget a managed Composio account."""
+    attempt = await start(harness)
+    connection = harness.store[attempt.connection_id]
+    monkeypatch.setattr(
+        lifecycle.connection_repo, "get_by_name", AsyncMock(return_value=connection)
+    )
+    org_app = AsyncMock(return_value=(SimpleNamespace(client_id="org-google-client"), None, None))
+    monkeypatch.setattr(legacy.OrganizationSecretService, "oauth_app_identity", org_app)
+    context = SimpleNamespace(
+        organization_id=uuid4(), user_id=harness.user_id, subject_id=harness.user_id
+    )
+    service = legacy.McpConnectionService(harness.db)
+    google_url = "https://calendarmcp.googleapis.com/mcp/v1"
+    with pytest.raises(BadRequestError, match="Apps"):
+        if path == "org_catalog":
+            await service.oauth_start_for_org(
+                context, name=connection.name, url=google_url, catalog_key=connection.catalog_key
+            )
+        else:
+            await service.oauth_start(
+                user_id=harness.user_id,
+                name=connection.name,
+                url=google_url,
+                ctx=context,
+                catalog_key=connection.catalog_key if path == "personal_catalog" else None,
+            )
+    org_app.assert_not_awaited()
+    assert connection.auth_type == "composio" and connection.oauth_payload is None

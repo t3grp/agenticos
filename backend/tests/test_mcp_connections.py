@@ -65,7 +65,7 @@ from app.core.exceptions import (
 )
 from app.core.permissions import AuthContext, OrgRoleName
 from app.core.pinned_http import PinnedAsyncClient
-from app.core.secret_kinds import GithubOAuthAppSecret
+from app.core.secret_kinds import GithubOAuthAppSecret, SecretKind
 from app.core.vault import VaultScope, seal, unseal
 from app.db.models.mcp_connection import AUTHORIZATION_EXPIRED, McpConnection
 from app.schemas.mcp_connection import (
@@ -6711,3 +6711,132 @@ async def test_persistent_platform_automation_requires_binding_approval(policy):
         MagicMock()
     )
     assert all(tools[name].tool_def.metadata[NEEDS_APPROVAL] is True for name in names)
+
+
+class TestGoogleMcpUsesTheOrganizationsGoogleApp:
+    """A Google-hosted MCP server has no dynamic client registration, so the
+    member should never be asked for a client ID or secret: the consent is made
+    with the organization's `google_oauth_app`, read on the server, and the
+    secret never leaves it."""
+
+    GOOGLE_URL = "https://calendarmcp.googleapis.com/mcp/v1"
+
+    @pytest.fixture
+    def ctx(self) -> AuthContext:
+        return AuthContext(user_id=uuid4(), organization_id=uuid4(), role=OrgRoleName.OWNER.value)
+
+    @pytest.fixture
+    def service(self):
+        return McpConnectionService(db=AsyncMock())
+
+    @pytest.fixture
+    def repo(self, monkeypatch):
+        mock_repo = MagicMock()
+        mock_repo.list_org_scoped = AsyncMock(return_value=([], 0))
+        mock_repo.get_org_scoped_by_name = AsyncMock(return_value=None)
+        mock_repo.get_by_name = AsyncMock(return_value=None)
+        mock_repo.get_org_scoped_by_catalog_key = AsyncMock(return_value=None)
+        mock_repo.list_user_scoped_by_catalog_key = AsyncMock(return_value=[])
+        mock_repo.create = AsyncMock()
+        mock_repo.create_org_scoped = AsyncMock()
+        monkeypatch.setattr(mcp_connection_service, "mcp_connection_repo", mock_repo)
+        return mock_repo
+
+    @pytest.fixture
+    def discovered(self, monkeypatch):
+        """Google publishes no registration endpoint, and takes the secret in the body."""
+        metadata = OAuthMetadata(
+            issuer=AnyUrl("https://accounts.google.com"),
+            authorization_endpoint=AnyUrl("https://accounts.google.com/o/oauth2/v2/auth"),
+            token_endpoint=AnyUrl("https://oauth2.googleapis.com/token"),
+            response_types_supported=["code"],
+            token_endpoint_auth_methods_supported=["client_secret_post", "client_secret_basic"],
+        )
+        found = mcp_oauth.DiscoveredServer(
+            authorization_endpoint=str(metadata.authorization_endpoint),
+            token_endpoint=str(metadata.token_endpoint),
+            registration_endpoint=None,
+            resource=self.GOOGLE_URL,
+            scope=None,
+            metadata=metadata,
+        )
+        discover = AsyncMock(return_value=found)
+        register = AsyncMock(return_value=("registered", None))
+        monkeypatch.setattr(mcp_oauth, "discover", discover)
+        monkeypatch.setattr(mcp_oauth, "register_client", register)
+        return register
+
+    @pytest.fixture
+    def org_app(self, monkeypatch):
+        app = SimpleNamespace(
+            client_id="org-google-client", client_secret=SecretStr("org-google-secret")
+        )
+        identity = AsyncMock(return_value=(app, None, None))
+        monkeypatch.setattr(OrganizationSecretService, "oauth_app_identity", identity)
+        return identity
+
+    @pytest.mark.anyio
+    async def test_an_organization_connect_uses_the_org_google_app_and_registers_nothing(
+        self, service, ctx, repo, discovered, org_app, monkeypatch
+    ):
+        _allow_any_url(monkeypatch)
+
+        url = await service.oauth_start_for_org(ctx, name="calendar", url=self.GOOGLE_URL)
+
+        assert "client_id=org-google-client" in url
+        discovered.assert_not_called()
+        assert org_app.await_args.kwargs == {"kind": SecretKind.GOOGLE_OAUTH_APP}
+
+    @pytest.mark.anyio
+    async def test_a_personal_connect_with_an_organization_uses_the_org_google_app(
+        self, service, ctx, repo, discovered, org_app, monkeypatch
+    ):
+        _allow_any_url(monkeypatch)
+
+        url = await service.oauth_start(
+            user_id=ctx.user_id, name="calendar", url=self.GOOGLE_URL, ctx=ctx
+        )
+
+        assert "client_id=org-google-client" in url
+        discovered.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_without_an_org_google_app_the_connect_is_refused_naming_the_kind(
+        self, service, ctx, repo, discovered, monkeypatch
+    ):
+        _allow_any_url(monkeypatch)
+        monkeypatch.setattr(
+            OrganizationSecretService,
+            "oauth_app_identity",
+            AsyncMock(
+                side_effect=NotFoundError(
+                    message="No Google OAuth app is configured for this organization",
+                    details={"kind": SecretKind.GOOGLE_OAUTH_APP},
+                )
+            ),
+        )
+
+        with pytest.raises(NotFoundError) as refused:
+            await service.oauth_start_for_org(ctx, name="calendar", url=self.GOOGLE_URL)
+
+        assert refused.value.details == {"kind": SecretKind.GOOGLE_OAUTH_APP}
+        discovered.assert_not_called()
+        repo.create_org_scoped.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_a_typed_client_is_kept_over_the_org_app(
+        self, service, ctx, repo, discovered, org_app, monkeypatch
+    ):
+        """An explicit client on the request is the caller's choice, not ours to replace."""
+        _allow_any_url(monkeypatch)
+
+        url = await service.oauth_start_for_org(
+            ctx,
+            name="calendar",
+            url=self.GOOGLE_URL,
+            client_id="typed-client",
+            client_secret=SecretStr("s"),
+        )
+
+        assert "client_id=typed-client" in url
+        org_app.assert_not_called()
