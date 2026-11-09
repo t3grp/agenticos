@@ -21,6 +21,9 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- A usable `/onboarding` page, linked from the account menu, with optional
+  Composio app connections and a direct path into the workspace. App consent
+  opens separately so setup can be skipped or resumed without blocking access.
 - T3OS app onboarding through Composio: choose a goal, connect Gmail, Outlook,
   Google Calendar, Google Drive, Slack, Notion, or GitHub, then start a real read
   task in the assistant. Personal accounts retain member ownership across
@@ -47,6 +50,14 @@ Two things are versioned separately from this file and worth knowing about:
   question, an option to turn page sharing off, and a picker for published agents
   the user can run. Queued questions keep their submitted page and agent. Apps
   can register bounded view details through their existing sandbox bridge.
+- Added an opt-in Docker image retention operator helper with a dry-run default,
+  explicit current and previous successful release pins, protection for images
+  referenced by any container, and a pre-deployment disk-space check. Installation
+  and deployment-lock coordination are explicit; this does not enable a cleanup
+  schedule or change Coolify settings automatically.
+- Added opt-in systemd units for daily removal of Docker build cache unused for
+  24 hours, independent of disk usage. This separate cache-only job leaves images,
+  containers, volumes and networks intact.
 
 ### Changed
 

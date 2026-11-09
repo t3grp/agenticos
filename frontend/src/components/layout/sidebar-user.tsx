@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ChevronsUpDown, LogOut, UserCircle } from "lucide-react";
+import { ChevronsUpDown, Compass, LogOut, UserCircle } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -119,6 +119,12 @@ export function SidebarUser({ compact = false }: { compact?: boolean }) {
           <Link href={ROUTES.SETTINGS_PROFILE}>
             <UserCircle className="mr-2 h-4 w-4" />
             {t("profileAndSettings")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={ROUTES.ONBOARDING}>
+            <Compass className="mr-2 h-4 w-4" aria-hidden />
+            {t("onboarding")}
           </Link>
         </DropdownMenuItem>
         <DesktopSetupMenuItem />
