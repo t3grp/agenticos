@@ -1,5 +1,5 @@
 ---
-source_sha: "c3061d36ef27"
+source_sha: "a8f6e6ca4073"
 ---
 
 # Konfiguracja { #configuration }
@@ -677,6 +677,29 @@ je rozróżniać.
 | `LOGFIRE_ORGANIZATION` | (none) | Slug organizacji, do zbudowania linku **do** zapisanego trace'u. Token jest poświadczeniem do *zapisu* i nie niesie żadnego z tych slugów |
 | `LOGFIRE_PROJECT` | (none) | Slug projektu, obok organizacji. Gdy któregokolwiek brakuje, `logfire_trace_id` runa nadal jest zapisywane, a link nie jest oferowany |
 | `LOGFIRE_BASE_URL` | `https://logfire-us.pydantic.dev` | Do którego wdrożenia Logfire te slugi należą. `logfire-eu` to inny host, a link zbudowany dla niewłaściwego zwraca 404 |
+
+## Połączenia aplikacji Composio { #composio-app-connections }
+
+Katalog **Połączenia → Aplikacje (Connections → Apps)** korzysta z Composio do
+łączenia osobistych kont w aplikacjach. Skonfiguruj te same ustawienia projektu
+dla API i workera. Oba klucze przechowuj na serwerze; frontend otrzymuje tylko
+metadane katalogu i adresy URL autoryzacji.
+
+| Zmienna | Domyślnie | Opis |
+|----------|---------|-------------|
+| `COMPOSIO_API_KEY` | (none) | Klucz projektu runtime do sesji tool-routera i zarządzania połączonymi kontami. Pusty klucz wyłącza zarządzane połączenia aplikacji. |
+| `COMPOSIO_CATALOG_API_KEY` | (none) | Oddzielny klucz projektu z wyłącznie uprawnieniami **Toolkits: Read** i **Tools: Read**. Włącza przeszukiwalny, stronicowany katalog aplikacji oraz jawne migawki narzędzi dla nowych aplikacji. Bez niego katalog udostępnia tylko pierwotne, sprawdzone integracje. |
+| `COMPOSIO_AUTH_CONFIGS` | `{}` | Mapa JSON slugów toolkitów na identyfikatory auth configów projektu. Pierwotne siedem integracji wymaga jawnego wpisu; inne aplikacje używają skonfigurowanego wpisu lub zarządzanego uwierzytelniania Composio, jeśli jest dostępne. Aplikacje wymagające własnej konfiguracji uwierzytelniania pokazują **Wymagana konfiguracja (Setup required)**. |
+| `COMPOSIO_USER_NAMESPACE` | `t3os` | Stabilny prefiks tożsamości użytkownika w Composio. Zachowaj tę samą wartość dla API i workera i nie zmieniaj jej dla istniejących kont. Dla oddzielnego wdrożenia użyj innej przestrzeni nazw. |
+
+Pierwotne integracje zachowują sprawdzone akcje odczytu. Inne obsługiwane
+aplikacje zapisują ograniczoną listę bezpośrednich nazw narzędzi podczas
+łączenia konta i wymagają zgody na każdą akcję. Ponowne łączenie zachowuje tę
+listę; nowe połączenie zapisuje aktualnie dostępne narzędzia. Istniejące serwery MCP
+pozostają na karcie **Serwery MCP (MCP servers)**. Zobacz
+[połączenia aplikacji](mcp.md#connect-an-app-through-composio) oraz
+[instrukcję konfiguracji Composio](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md),
+aby poznać weryfikację powrotu z autoryzacji, zgodę dostawcy i kontrole wdrożenia.
 
 ## Wyszukiwanie w sieci { #web-search }
 

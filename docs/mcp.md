@@ -21,19 +21,28 @@ managed app connection.
 
 ## Connect an app through Composio
 
-In T3OS, **Connectors → Apps** lets you choose a first task and connect Gmail,
-Outlook, Google Calendar, Google Drive, Slack, Notion, or GitHub when the operator
-has enabled it. You consent to each provider account separately. After the
-backend verifies the account, you can start a real read task in your assistant.
+In T3OS, **Connections → Apps** lets you search and browse Composio's app catalog.
+Your selected goal highlights suggestions without hiding other apps. Managed
+authentication is available where the provider supports it; apps that need an
+operator's auth configuration show **Setup required**. You consent to each account
+separately, and the backend verifies that the returned account belongs to you.
 
-Your accounts belong to you and follow the author of each message. The initial
-action set reads app data; it does not send messages or change records. Composio
-hosts provider credentials and relays requests and results. A connected app is
-not automatically a synchronized knowledge source. Existing personal and
-organization MCP connections remain under **Advanced**.
+Your accounts follow the author of each message. The original seven integrations
+keep their reviewed read actions. Other supported apps have an explicit tool
+list saved when you connect, and every action requires your approval. A later
+catalog update cannot silently expand that account's tool access.
 
-The operator configures a project key, toolkit auth configs, and callback identity
-verification. See the fork's
+**Connections → MCP servers** manages existing personal, organization and custom
+MCP servers. Both connection types use the same account ownership, tool limits
+and approval infrastructure. Chat channels, remote agents, the vault and
+sandboxes are on **More**. Existing `?tab=advanced` links still open MCP servers.
+
+Composio hosts provider credentials and relays requests and results. Connecting
+an app does not automatically synchronize it into a knowledge base. Optional
+setup remains available at `/onboarding` and in the account menu.
+
+The operator configures a runtime project key, a separate catalog metadata key,
+any custom toolkit auth configs, and callback identity verification. See the fork's
 [Composio setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
 for configuration, data handling, and required live acceptance checks.
 

@@ -667,6 +667,27 @@ them apart.
 | `LOGFIRE_PROJECT` | (none) | Project slug, alongside the organization. With either unset a run's `logfire_trace_id` is still recorded and no link is offered |
 | `LOGFIRE_BASE_URL` | `https://logfire-us.pydantic.dev` | Which Logfire deployment those slugs belong to. `logfire-eu` is a different host, and a link built for the wrong one 404s |
 
+## Composio app connections
+
+The **Connections → Apps** directory uses Composio to connect personal app
+accounts. Give the API and worker the same project settings. Keep both keys on
+the server; the frontend receives catalog metadata and authorization URLs only.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `COMPOSIO_API_KEY` | (none) | Runtime project key for tool-router sessions and connected-account management. An empty key disables managed app connections. |
+| `COMPOSIO_CATALOG_API_KEY` | (none) | Separate project key with **Toolkits: Read** and **Tools: Read** permissions only. Enables the searchable, paginated app directory and explicit tool snapshots for new apps. Without it, the directory falls back to the original reviewed integrations. |
+| `COMPOSIO_AUTH_CONFIGS` | `{}` | JSON map of toolkit slugs to project auth-config IDs. The original seven integrations require an explicit entry; additional apps use a configured entry or Composio-managed authentication when available. Apps needing custom authentication show **Setup required**. |
+| `COMPOSIO_USER_NAMESPACE` | `t3os` | Stable prefix for the per-user Composio identity. Keep it consistent across API and worker and unchanged for existing accounts. Use a distinct namespace for a separate deployment. |
+
+The original integrations retain their reviewed read actions. Other supported
+apps save a bounded list of direct tool names when the account is connected and
+require approval for every action. Reconnecting retains that list; a new
+connection captures the current tools. Existing MCP servers remain on the **MCP servers**
+tab. See [app connections](mcp.md#connect-an-app-through-composio) and the
+[Composio setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+for callback verification, provider consent and deployment checks.
+
 ## Web search
 
 | Variable | Default | Description |

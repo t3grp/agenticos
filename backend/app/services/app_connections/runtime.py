@@ -5,17 +5,22 @@ selects the provider's most recent account or opens the unrestricted tool router
 """
 
 import logging
+import re
+from collections.abc import Sequence
 
 from app.agents.mcp import McpServerSpec
 from app.agents.spec import AgentSpec, McpApproval, PersonalMcpServerRef
+from app.core.config import settings
 from app.core.exceptions import ExternalServiceError
 from app.db.models.mcp_connection import McpConnection
 from app.services.app_connections import (
     APPS,
+    ComposioApp,
     ComposioClient,
     composio_user_id,
     get_app_by_catalog_key,
     is_configured,
+    toolkit_from_catalog_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,24 +31,45 @@ _GUIDANCE = (
     "they name for the task; if several accounts fit, ask which one before reading. "
     "Identify the app and account when presenting results. An unavailable app is not "
     "an empty search result: explain what could not be checked. Offer connect_account "
-    "only when their request needs that app. These app tools support reading; do not "
-    "claim to have sent, changed, or deleted anything."
+    "only when their request needs that app. Some connected apps can change account "
+    "data; follow the approval step for every such action and report completion only "
+    "after the tool confirms it."
 )
 
 
-def with_app_connection_bindings(spec: AgentSpec) -> AgentSpec:
+def with_app_connection_bindings(
+    spec: AgentSpec, *, dynamic_catalog_keys: Sequence[str] = ()
+) -> AgentSpec:
     """Add configured personal apps to a registered assistant's runtime copy.
 
     The caller verifies that this is the organization's registered assistant.
     Stored agent versions and explicitly configured personal bindings keep their
-    existing ceilings. Account ownership is resolved again for every message.
+    existing ceilings. Dynamic catalog keys come only from this sender's managed
+    app rows; account ownership is resolved again for every message.
     """
     configured = [app for app in APPS if is_configured(app.toolkit)]
-    if not configured:
+    dynamic_keys = sorted(
+        {
+            key
+            for key in dynamic_catalog_keys
+            if get_app_by_catalog_key(key) is None and toolkit_from_catalog_key(key) is not None
+        }
+    )
+    if not configured and not dynamic_keys:
         return spec
-    existing = {
-        ref.catalog_key for ref in spec.mcp_servers if isinstance(ref, PersonalMcpServerRef)
-    }
+    dynamic_key_set = set(dynamic_keys)
+    runtime_servers = [
+        ref.model_copy(update={"approval": "all"})
+        if (
+            isinstance(ref, PersonalMcpServerRef)
+            and ref.catalog_key in dynamic_key_set
+            and ref.approval != "all"
+        )
+        else ref
+        for ref in spec.mcp_servers
+    ]
+    bindings_changed = runtime_servers != spec.mcp_servers
+    existing = {ref.catalog_key for ref in runtime_servers if isinstance(ref, PersonalMcpServerRef)}
     additions = [
         PersonalMcpServerRef(
             account="personal",
@@ -54,13 +80,23 @@ def with_app_connection_bindings(spec: AgentSpec) -> AgentSpec:
         for app in configured
         if app.catalog_key not in existing
     ]
+    additions.extend(
+        PersonalMcpServerRef(
+            account="personal",
+            catalog_key=key,
+            allowed_tools=None,
+            approval="all",
+        )
+        for key in dynamic_keys
+        if key not in existing
+    )
     instructions = spec.instructions
     if _GUIDANCE not in instructions:
         instructions = f"{instructions}\n\n{_GUIDANCE}".strip()
-    if not additions and instructions == spec.instructions:
+    if not additions and instructions == spec.instructions and not bindings_changed:
         return spec
     return spec.model_copy(
-        update={"mcp_servers": [*spec.mcp_servers, *additions], "instructions": instructions}
+        update={"mcp_servers": [*runtime_servers, *additions], "instructions": instructions}
     )
 
 
@@ -78,6 +114,16 @@ async def managed_connection_spec(
     and active grant. A provider outage leaves this account unavailable this turn.
     """
     app = get_app_by_catalog_key(connection.catalog_key or "")
+    dynamic = app is None
+    toolkit = toolkit_from_catalog_key(connection.catalog_key)
+    if dynamic and toolkit is not None and toolkit != "composio":
+        app = ComposioApp(
+            toolkit=toolkit,
+            name=toolkit.replace("-", " ").replace("_", " ").title(),
+            description="Use this connected app account.",
+            category="apps",
+            actions=(),
+        )
     if (
         app is None
         or connection.auth_type != "composio"
@@ -89,12 +135,34 @@ async def managed_connection_spec(
         or connection.composio_status != "ACTIVE"
         or not connection.composio_account_id
         or not connection.composio_auth_config_id
-        or not is_configured(app.toolkit)
+        or not (
+            is_configured(app.toolkit)
+            if not dynamic
+            else settings.COMPOSIO_API_KEY is not None
+            and bool(settings.COMPOSIO_API_KEY.get_secret_value().strip())
+        )
     ):
+        return None
+    if dynamic and connection.url != f"{_ORIGIN}/api/v3.1/toolkits/{app.toolkit}":
         return None
     # A catalog change must not silently expand a person's previously reviewed
     # tool ceiling. The runtime independently intersects all three boundaries.
-    tools = [action.name for action in app.actions if action.read_only]
+    if dynamic:
+        tools = connection.allowed_tools or []
+        if (
+            not tools
+            or len(tools) > 1000
+            or any(
+                not isinstance(tool, str)
+                or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", tool) is None
+                or tool.upper().startswith("COMPOSIO_")
+                for tool in tools
+            )
+            or len(set(tools)) != len(tools)
+        ):
+            return None
+    else:
+        tools = [action.name for action in app.actions if action.read_only]
     for ceiling in (connection.allowed_tools, allowed_tools):
         if ceiling is not None:
             within = set(ceiling)
@@ -139,7 +207,7 @@ async def managed_connection_spec(
         url=url,
         headers=headers,
         allowed_tools=tools,
-        approval="all" if approval == "all" else "writes",
+        approval="all" if dynamic or approval == "all" else "writes",
         include_instructions=False,
         account=account_name,
         source_connection_id=connection.id,
