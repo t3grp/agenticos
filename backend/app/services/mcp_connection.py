@@ -1616,6 +1616,7 @@ class McpConnectionService:
             resource=entry.url,
             redirect_uri=redirect_uri,
             provider=github_oauth.PROVIDER,
+            initiator_id=ctx.subject_id,
         )
         # The organization's existing row for this catalog entry, whatever it is
         # named - the catalog key is how the frontend joins portal to connection,
@@ -1902,6 +1903,7 @@ class McpConnectionService:
             redirect_uri=redirect_uri,
             provider=provider,
             code_verifier=code_verifier,
+            initiator_id=ctx.subject_id,
         )
         existing = await mcp_connection_repo.get_portal_grant(
             self.db, organization_id=ctx.organization_id, portal_key=portal_key

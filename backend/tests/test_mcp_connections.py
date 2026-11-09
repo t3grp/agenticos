@@ -6043,6 +6043,29 @@ class TestGithubPortalOAuth:
             await service.oauth_callback(state="gh-state", code="the-code")
         repo.update.assert_not_called()
 
+    async def test_a_removed_admin_cannot_finish_a_github_connection_they_started(
+        self, service, ctx, repo, creds, monkeypatch
+    ):
+        """The start stamps its initiator on the pending payload, so the callback
+        refuses an admin who has since lost MCP_MANAGE before any token exchange."""
+        await service.oauth_start_for_org_github(ctx, portal_key="github")
+        stored = repo.create_org_scoped.await_args.kwargs
+        pending = _connection(
+            auth_type="oauth",
+            scope="org",
+            organization_id=ctx.organization_id,
+            oauth_state=stored["oauth_state"],
+        )
+        pending.oauth_pending_payload = stored["oauth_pending_payload"]
+        repo.get_by_oauth_state = AsyncMock(return_value=pending)
+        monkeypatch.setattr(mcp_connection_service, "decider_context", AsyncMock(return_value=None))
+        exchange = AsyncMock()
+        monkeypatch.setattr(mcp_connection_service, "_complete_github_flow", exchange)
+
+        with pytest.raises(mcp_connection_service.OAuthError, match="organization access changed"):
+            await service.oauth_callback(state=stored["oauth_state"], code="c")
+        exchange.assert_not_awaited()
+
 
 class TestPolledPortalOAuth:
     """Connecting a portal the platform reads rather than is posted to.
@@ -6168,6 +6191,29 @@ class TestPolledPortalOAuth:
 
         repo.create_org_scoped.assert_not_called()
         assert repo.update.await_count == 1
+
+    async def test_a_removed_admin_cannot_finish_a_portal_connection_they_started(
+        self, service, ctx, repo, client, monkeypatch
+    ):
+        """The start stamps its initiator on the pending payload, so the callback
+        refuses an admin who has since lost MCP_MANAGE before any token exchange."""
+        await service.oauth_start_for_polled_portal(ctx, portal_key="google")
+        stored = repo.create_org_scoped.await_args.kwargs
+        pending = _connection(
+            auth_type="oauth",
+            scope="org",
+            organization_id=ctx.organization_id,
+            oauth_state=stored["oauth_state"],
+        )
+        pending.oauth_pending_payload = stored["oauth_pending_payload"]
+        repo.get_by_oauth_state = AsyncMock(return_value=pending)
+        monkeypatch.setattr(mcp_connection_service, "decider_context", AsyncMock(return_value=None))
+        exchange = AsyncMock()
+        monkeypatch.setattr(mcp_connection_service.google_oauth, "exchange_code", exchange)
+
+        with pytest.raises(mcp_connection_service.OAuthError, match="organization access changed"):
+            await service.oauth_callback(state=stored["oauth_state"], code="c")
+        exchange.assert_not_awaited()
 
 
 class TestCompletingGooglesFlow:
