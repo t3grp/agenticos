@@ -12,6 +12,7 @@ import type { LucideIcon } from "lucide-react";
 import { ADMIN_TABS } from "@/app/[locale]/(dashboard)/admin/admin-tabs";
 import { SETTINGS_TABS } from "@/app/[locale]/(dashboard)/settings/settings-tabs";
 import { NAV_GROUPS } from "@/components/layout/app-sidebar";
+import { navItemVisible } from "@/lib/nav-sections";
 import type { PageTab } from "@/components/dashboard/page-tabs";
 import { useAuth } from "@/hooks";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -180,7 +181,7 @@ export function CommandPalette() {
 
         {NAV_GROUPS.map((group) => {
           if (group.adminOnly && !admin) return null;
-          const items = group.items.filter((item) => !item.permission || can(item.permission));
+          const items = group.items.filter((item) => navItemVisible(item, can));
           if (items.length === 0) return null;
           return (
             <Group key={group.labelKey ?? "main"} heading={t(group.labelKey ?? "navigate")}>

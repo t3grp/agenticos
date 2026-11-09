@@ -71,7 +71,8 @@ type Tab = (typeof TABS)[number];
 
 /**
  * Connectors: one place for everything an agent connects to. The Apps tab is
- * what most people need; Advanced links to the lower-level pages, and each card
+ * what most people need and is not gated here; the page shows it to every
+ * caller who reaches it. Advanced links to the lower-level pages, and each card
  * appears only for a caller who holds the permission its page reads.
  */
 export default function ConnectorsPage() {
