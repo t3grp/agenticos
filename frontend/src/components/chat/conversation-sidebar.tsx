@@ -269,7 +269,7 @@ function ConversationItem({
             </span>
             <span
               id={`${rowId}-metadata`}
-              className="text-muted-foreground flex min-w-0 items-center gap-1 truncate text-xs leading-4"
+              className="text-muted-foreground block truncate text-xs leading-4"
             >
               {waiting ? (
                 tTools("toolState", { status: waiting })
