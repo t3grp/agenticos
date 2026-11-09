@@ -156,6 +156,10 @@ describe("real app connection journey", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
     expect(screen.getByText(/Connect and verify an app for this task first/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Prepare my day" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Continue without apps" })).toHaveAttribute(
+      "href",
+      "/chat",
+    );
     expect(useArchitectAskStore.getState().request).toBeNull();
   });
 
