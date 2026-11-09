@@ -9,7 +9,6 @@ import type { IncomingFiles } from "@/components/chat/chat-input";
 import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { useAuthStore, useOrgStore } from "@/stores";
 import { useArchitectAskStore } from "@/stores/architect-ask-store";
-import { useAuthStore, useOrgStore } from "@/stores";
 import { useArchitectMarkStore } from "@/stores/architect-mark-store";
 import type { AssistantState } from "@/types/assistant";
 
@@ -146,8 +145,6 @@ beforeEach(() => {
   useOrgStore.setState({ activeOrgId: "org-1" });
   useArchitectAskStore.setState({ request: null });
   state.assistant = assistant();
-  useAuthStore.setState({ user: null });
-  useOrgStore.setState({ activeOrgId: null });
   state.pathname = "/agents";
   state.signals = { pendingApprovals: 0, noAgents: false, failedRunId: null, stuckIn: null };
   state.phone = false;
@@ -789,7 +786,7 @@ describe("page context in the floating window", () => {
     fireEvent.click(screen.getByRole("switch", { name: "Use the current page" }));
     expect(chat()).toHaveAttribute("data-page-context", "null");
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]!);
     state.pathname = "/skills";
     rerender(<AssistantWidget />);
     fireEvent.click(screen.getByRole("button", { name: "Open Architect" }));
