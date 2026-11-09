@@ -43,6 +43,14 @@ Two things are versioned separately from this file and worth knowing about:
   personal models power the existing agent loop through a private native
   runtime, preserving tools, approvals and owner restrictions. The initial
   adapter supports text and application tools with buffered step responses.
+- Added an opt-in Docker image retention operator helper with a dry-run default,
+  explicit current and previous successful release pins, protection for images
+  referenced by any container, and a pre-deployment disk-space check. Installation
+  and deployment-lock coordination are explicit; this does not enable a cleanup
+  schedule or change Coolify settings automatically.
+- Added opt-in systemd units for daily removal of Docker build cache unused for
+  24 hours, independent of disk usage. This separate cache-only job leaves images,
+  containers, volumes and networks intact.
 
 ### Changed
 
