@@ -7037,6 +7037,14 @@
       "chat-coding-accounts": {
         "title": "Twoje konta coding",
         "body": "Podłącz Codex lub Claude Code bez wychodzenia z chatu. To Twoje prywatne konta do zadań w chmurze; lokalne narzędzia desktopowe mają osobne logowanie."
+      },
+      "claude-subscription-connect": {
+        "title": "Połącz swoją subskrypcję Claude",
+        "body": "Otwórz logowanie do Claude, ukończ je na własnym koncie i wklej otrzymany kod. Po połączeniu dodaj model subskrypcji i wybierz go w agencie lub czacie."
+      },
+      "chat-subscription-model": {
+        "title": "Użyj swojej subskrypcji Claude",
+        "body": "Wybierz jeden z zapisanych modeli subskrypcji Claude dla tego czatu. Połączenie pozostaje osobiste; zarządzaj nim w Ustawienia → Połączenia AI."
       }
     },
     "chooseLanguage": "Język",
@@ -13481,5 +13489,51 @@
     "jsonLabel": "{name} (JSON)",
     "jsonHint": "Edytuj jako JSON. Poprawne zmiany są zapisywane; niepełny JSON zachowuje ostatnią poprawną wartość.",
     "jsonInvalid": "Wpisz poprawny JSON wymaganego typu. Ostatnia poprawna wartość pozostaje bez zmian."
+  },
+  "claudeSubscription": {
+    "title": "Subskrypcja Claude",
+    "description": "Zaloguj się na swoje konto Claude, aby zasilać osobiste runy agentów.",
+    "permission": "Połączenie subskrypcji Claude wymaga uprawnienia connections:manage w tej organizacji.",
+    "ownSessionOnly": "Zaloguj się na własne konto, aby połączyć lub używać osobistej subskrypcji.",
+    "checking": "Sprawdzanie połączenia z Claude…",
+    "notConfigured": "Logowanie z subskrypcją Claude nie jest skonfigurowane w tym wdrożeniu.",
+    "statusFailed": "Nie udało się sprawdzić połączenia z Claude. Spróbuj ponownie odczytać jego stan.",
+    "requestFailed": "Nie udało się ukończyć żądania logowania. Spróbuj ponownie sprawdzić połączenie.",
+    "signInFailed": "Logowanie do Claude nie zostało ukończone. Zacznij ponownie i użyj kodu z nowej strony logowania.",
+    "invalidLink": "Nie udało się zweryfikować odnośnika logowania do Claude. Anuluj i zacznij ponownie.",
+    "connect": "Połącz subskrypcję Claude",
+    "connected": "Połączono · osobiste",
+    "disconnect": "Odłącz Claude",
+    "starting": "Przygotowywanie logowania do Claude…",
+    "verifying": "Kończenie logowania do Claude…",
+    "openInstructions": "Otwórz Claude, zaloguj się na swoje konto i wklej kod wyświetlony na stronie potwierdzenia.",
+    "openClaude": "Otwórz logowanie do Claude",
+    "code": "Kod logowania do Claude",
+    "codeHint": "Wklej kod ze strony Claude. Pole zostanie wyczyszczone zaraz po wysłaniu.",
+    "complete": "Zakończ logowanie",
+    "cancel": "Anuluj logowanie",
+    "expired": "To logowanie wygasło. Zacznij ponownie, aby otrzymać nowy odnośnik.",
+    "startAgain": "Zacznij ponownie",
+    "expiresIn": "Wygaśnie za {minutes, plural, =1 {1 minutę} few {# minuty} many {# minut} other {# minuty}}.",
+    "retry": "Spróbuj ponownie",
+    "supportedInputs": "To połączenie obsługuje tekst i narzędzia agentów. Obrazy i pliki nie są jeszcze obsługiwane.",
+    "modelHint": "Wybierz model Claude. Twoja subskrypcja określa dostęp do modeli i limity użycia.",
+    "model": "Model subskrypcji",
+    "models": {
+      "sonnet": "Claude Sonnet",
+      "opus": "Claude Opus",
+      "haiku": "Claude Haiku"
+    },
+    "connectionLabel": "Subskrypcja Claude · {person}",
+    "addModel": "Dodaj model subskrypcji",
+    "modelAlreadySaved": "Model już zapisany",
+    "savedModels": "Twoje modele subskrypcji Claude",
+    "chooseSavedModel": "Wybierz zapisany model w agencie lub czacie, aby używać swojej subskrypcji Claude.",
+    "reconnectModels": "Połącz Claude ponownie, aby używać tych zapisanych modeli.",
+    "modelsUnavailable": "Nie udało się odczytać zapisanych modeli subskrypcji.",
+    "chooseSaved": "Wybierz zapisany model subskrypcji",
+    "manageConnection": "Zarządzaj subskrypcją Claude",
+    "chooseApiModel": "Wybierz model API",
+    "disconnected": "Rozłączono"
   }
 }

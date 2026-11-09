@@ -63,6 +63,7 @@ export function SecretsTable({
 }: SecretsTableProps) {
   const t = useTranslations("vault");
   const tc = useTranslations("common");
+  const tPersonal = useTranslations("personalModels");
 
   const hasActions = secrets.some((secret) => secret.can_edit === true);
   const columns = useMemo<Column<Secret>[]>(() => {
@@ -116,7 +117,7 @@ export function SecretsTable({
             <div className="flex flex-col items-start gap-1">
               <Badge variant={secret.visibility === "private" ? "outline" : "secondary"}>
                 {secret.visibility === "private" && <Lock className="mr-1 h-3 w-3" />}
-                {access.label}
+                {secret.usage_scope === "personal" ? tPersonal("personal") : access.label}
               </Badge>
               {access.detail && (
                 <span className="text-muted-foreground text-xs">{access.detail}</span>
@@ -181,14 +182,16 @@ export function SecretsTable({
         cell: (secret) =>
           secret.can_edit === true ? (
             <div className="flex justify-end gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={t("manageAccessTo", { name: secret.name })}
-                onClick={() => onShare(secret)}
-              >
-                <Users className="h-4 w-4" />
-              </Button>
+              {secret.usage_scope !== "personal" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("manageAccessTo", { name: secret.name })}
+                  onClick={() => onShare(secret)}
+                >
+                  <Users className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -214,7 +217,7 @@ export function SecretsTable({
     }
 
     return cols;
-  }, [purposes, hasActions, onShare, onRotate, onDelete, t, tc]);
+  }, [purposes, hasActions, onShare, onRotate, onDelete, t, tc, tPersonal]);
 
   return (
     <>

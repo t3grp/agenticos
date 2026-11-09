@@ -219,6 +219,21 @@ describe("FLOWS", () => {
 });
 
 describe("flowForPage", () => {
+  it("offers personal-model setup only with every permission its controls require", () => {
+    expect(flowForPage(ROUTES.SETTINGS_AI_CONNECTIONS)).toBe("connect-personal-model");
+    const flow = FLOWS["connect-personal-model"];
+    expect(canOfferFlow(flow, allow)).toBe(true);
+    for (const missing of [Perm.connectionsManage, Perm.agentsView]) {
+      expect(canOfferFlow(flow, (permission) => permission !== missing)).toBe(false);
+    }
+    expect(
+      canOfferFlow(
+        flow,
+        (permission) => permission !== Perm.secretsEdit && permission !== Perm.secretsView,
+      ),
+    ).toBe(true);
+    expect(flow.steps[0]?.signal).toEqual({ kind: "created", resource: "model" });
+  });
   it("maps each section, collapsing its detail routes onto the same flow", () => {
     expect(flowForPage(ROUTES.AGENTS)).toBe("create-agent");
     // An Agents "?" that walked into the builder still offers the agent flow.

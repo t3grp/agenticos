@@ -905,6 +905,8 @@ async def _connector_credential(
     if secret_id is None:
         return None
     row = await organization_secret_repo.get(db, secret_id, organization_id=organization_id)
+    if row is not None and row.usage_scope == "personal":
+        return None
     if row is None:
         logger.warning("sync_source_secret_missing", extra={"organization": str(organization_id)})
         return None

@@ -31,7 +31,18 @@ Two things are versioned separately from this file and worth knowing about:
   Migration `0298_composio_connections` adds safe provider metadata; disconnect
   managed accounts before rollback to clean up their provider grants. See the
   [setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md).
-- Agent messages: direct messages between two agents, in a thread the console shows. One thread per pair of agents in an organization; a message is stored, never delivered as a run, with replies, emoji reactions and links to files already uploaded. Sending needs `agents:run` on both agents and both published; reading needs it on either one. The `agent_messages` capability gives an agent `agent_send_message`, `agent_read_messages`, `agent_list_threads` and `agent_react`, under the `agents:message` scope. A message never starts a run of its recipient, and there is no delivery notification yet. New migration `0297_agent_messages`; if the parallel branch holding `0296` lands first, a merge migration is needed.
+- Agent messages: direct messages between two agents, in a thread the console shows. One thread per pair of agents in an organization; a message is stored, never delivered as a run, with replies, emoji reactions and links to files already uploaded. Sending needs `agents:run` on both agents and both published; reading needs it on either one. The `agent_messages` capability gives an agent `agent_send_message`, `agent_read_messages`, `agent_list_threads` and `agent_react`, under the `agents:message` scope. A message never starts a run of its recipient, and there is no delivery notification yet. New migration `0297_agent_messages`; `0299_merge_personal_composio` joins its migration path with existing personal model connections.
+- Personal Anthropic and OpenAI API connections can power existing agents. The
+  AI connections settings page stores an owner-bound vault credential and lets
+  the person choose its model explicitly. Personal credentials are excluded from
+  other users' runs, shared integrations and unattended jobs. Existing credentials
+  retain their organization usage. Anthropic's eligible subscription API credits
+  can fund the connected Console account.
+- Claude subscription sign-in uses the official native client's browser link
+  and returned code from Settings → AI connections. Sonnet, Opus and Haiku
+  personal models power the existing agent loop through a private native
+  runtime, preserving tools, approvals and owner restrictions. The initial
+  adapter supports text and application tools with buffered step responses.
 
 ### Changed
 
@@ -40,6 +51,15 @@ Two things are versioned separately from this file and worth knowing about:
   plain-text versions share their copy, action links include a copyable fallback,
   and the deployment's frontend serves the licensed fonts with system-font
   fallbacks for email clients that do not load them.
+
+### Fixed
+
+- Preserve existing personal API and Claude subscription connections when
+  deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
+  the personal-model and Composio migration branches without changing applied
+  migrations, resetting their state, or replacing stored accounts.
+- Redact Composio's single-use `session_uri` verifier from application logs and
+  exported traces, alongside the existing OAuth callback credentials.
 
 ## [1.52.0] - 2026-11-06
 

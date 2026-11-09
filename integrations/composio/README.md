@@ -51,9 +51,12 @@ else's account. A provider redirect alone never marks a connection ready. If the
 verifier is not configured, leave the integration unavailable until configuration
 and a real consent flow have been checked.
 
-The required migration is `0298_composio_connections`. It adds managed account
-metadata to existing `McpConnection` rows. It does not migrate or replace existing
-MCP credentials.
+Migration `0298_composio_connections` adds managed account metadata to existing
+`McpConnection` rows. The release head, `0299_merge_personal_composio`, also retains
+the already-deployed `0296_personal_model_connections` branch. Run the normal
+upgrade to the current head; either predecessor advances without rewriting an
+applied migration or stamping over it. Existing MCP credentials and personal
+model accounts remain in place.
 
 ## Connection and execution boundaries
 
@@ -148,8 +151,8 @@ Disconnect managed app accounts while the current backend and its Composio key
 are still available. Confirm provider cleanup before removing the key or rolling
 back the schema. A schema downgrade cannot revoke external provider grants.
 
-The migration's downgrade disables remaining managed connection rows before it
-drops their provider metadata; it does not delete personal rows. If accounts were
+Downgrading `0298_composio_connections` disables remaining managed connection rows
+before dropping their provider metadata; it does not delete personal rows. If accounts were
 not disconnected first, their provider identifiers are no longer available in
 T3OS after downgrade. Remove those remaining grants through the Composio project
 and the provider's OAuth controls using the private release record.

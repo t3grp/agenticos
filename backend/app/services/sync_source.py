@@ -376,6 +376,8 @@ class SyncSourceService:
             self.db, ctx, row, Perm.SECRETS_VIEW, resource_type=SECRET
         ):
             raise missing
+        if row.usage_scope == "personal":
+            raise refused_field("secret_id", "A sync source cannot use a personal model connection")
         required = CONNECTOR_REGISTRY[connector_type].SECRET_KIND
         if row.kind != required.value:
             raise refused_field(
