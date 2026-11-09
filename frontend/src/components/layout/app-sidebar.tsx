@@ -37,7 +37,13 @@ import { useSuggestions } from "@/hooks/use-suggestions";
 import { usePermissions } from "@/hooks/use-permissions";
 import { cn, isAppAdmin } from "@/lib/utils";
 import { useAuthStore, useSidebarStore } from "@/stores";
-import { NAV_GROUPS, isActive, type NavGroup, type NavItem } from "@/lib/nav-sections";
+import {
+  NAV_GROUPS,
+  isActive,
+  navItemVisible,
+  type NavGroup,
+  type NavItem,
+} from "@/lib/nav-sections";
 
 export { NAV_GROUPS, isActive, navSectionFor, type NavDomain } from "@/lib/nav-sections";
 
@@ -138,7 +144,7 @@ export function SidebarNav({
 
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.permission || can(item.permission)),
+    items: group.items.filter((item) => navItemVisible(item, can)),
   })).filter((group) => group.items.length > 0 && (!group.adminOnly || admin));
 
   return (

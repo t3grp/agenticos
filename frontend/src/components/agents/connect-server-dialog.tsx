@@ -25,6 +25,7 @@ import { useOrgMcpConnections } from "@/hooks/use-org-mcp-connections";
 import type { McpConnectionRecord } from "@/lib/mcp-connections-api";
 import type { OrgMcpConnectionRecord } from "@/lib/org-mcp-connections-api";
 import type { McpCatalogEntry } from "@/types/mcp";
+import { ROUTES } from "@/lib/constants";
 
 /** What the server itself accepts as a name; it becomes the tool prefix. */
 const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,31}$/;
@@ -289,7 +290,7 @@ function useConsent(scope: Scope, { returnTo, keepThisTab }: ConsentOptions) {
       const { authorization_url } = await startMcpOAuth(input, scope);
       // The other tab lands on this server's accounts, where the new one shows.
       const back =
-        returnTo ?? (input.catalog_key ? `/mcp-servers?server=${input.catalog_key}` : undefined);
+        returnTo ?? (input.catalog_key ? `${ROUTES.CONNECTORS}?server=${input.catalog_key}` : undefined);
       if (back !== undefined) rememberMcpOAuthReturn(back);
       if (tab) {
         // Back in this tab, the connection made in the other is fetched: focus

@@ -4270,7 +4270,8 @@
     "whatsNewTitle": "Neu in {version}",
     "whatsNewDescription": "Änderungen in der verwendeten Version.",
     "whatsNewDone": "Verstanden",
-    "backgroundWork": "Arbeit im Hintergrund"
+    "backgroundWork": "Arbeit im Hintergrund",
+    "connectors": "Konnektoren"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5948,7 +5949,6 @@
     },
     "mcp-servers": {
       "catalogCompiledIntoBackend": "Der Katalog ist ins Backend kompiliert, und niemand hat einen eigenen Server hinzugefügt. Eine leere Liste hier heißt, dass dieses Deployment keinen mitliefert.",
-      "externalToolsYourAgents": "Werkzeuge, die Ihre Agents nutzen können - Notion, GitHub, Ihr CRM. Verbinden Sie einen Server für die ganze Organisation oder nur für sich.",
       "mcpServers": "MCP-Server",
       "noServersConnect": "Keine Server zum Verbinden"
     },
@@ -7643,6 +7643,17 @@
       "servicesHint": "Audioaufzeichnung und Push-Benachrichtigungen für die mobile App.",
       "operations": "Wartung",
       "operationsHint": "Anwendungsupdates und Bereitstellungsdiagnose."
+    },
+    "connectors": {
+      "title": "Konnektoren",
+      "description": "Alles, womit sich deine Agenten verbinden, an einem Ort.",
+      "apps": "Apps",
+      "advanced": "Erweitert",
+      "advancedDescription": "Die Verbindungen auf niedrigerer Ebene: Chat-Kanäle, Remote-Agenten, der Tresor und Sandboxes.",
+      "channelsDescription": "Chat-Plattformen, über die deine Organisation erreichbar ist.",
+      "remoteAgentsDescription": "Agenten anderer Anbieter, an die deine Agenten delegieren können.",
+      "vaultDescription": "Schlüssel und Geheimnisse, die deine Verbindungen verwenden.",
+      "sandboxesDescription": "Wo Agenten Code ausführen, und die Grenzen auf jedem Host."
     }
   },
   "profile": {
