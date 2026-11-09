@@ -169,11 +169,35 @@ def is_google_mcp(url: str) -> bool:
     )
 
 
+_GOOGLE_ORG_CLIENT_SCOPE = " ".join(google_oauth.ACCOUNT_SCOPES)
+"""The fallback scopes for an organization's Google client when the server's metadata
+names none it may ask for. The set the organization's app already consents to."""
+
+_GOOGLE_AUTH_PREFIX = "https://www.googleapis.com/auth/"
+
+
+def _org_client_scope(scope: str | None) -> str:
+    """The scopes an organization's Google client may request, from server metadata.
+
+    Metadata can name only identity scopes and Google's own `googleapis.com/auth/`
+    scopes. Google's consent screen governs what those grant, so the org app's
+    consent is never widened by a server it was pointed at. Anything else is dropped.
+    With nothing left, the fallback is requested.
+    """
+    kept = [
+        item
+        for item in (scope or "").split()
+        if item in {"openid", "email", "profile"} or item.startswith(_GOOGLE_AUTH_PREFIX)
+    ]
+    return " ".join(dict.fromkeys(kept)) or _GOOGLE_ORG_CLIENT_SCOPE
+
+
 def _pinned_to_google(server: DiscoveredServer, client_org_id: UUID | None) -> DiscoveredServer:
     """An organization's Google client is only ever sent to Google's own endpoints.
 
-    Discovery reads endpoints from metadata the server it was pointed at serves. For
-    an organization client that metadata must not decide where the org secret goes.
+    Discovery reads endpoints and scopes from metadata the server it was pointed at
+    serves. For an organization client that metadata must decide neither where the
+    org secret goes nor what the org's app is asked to consent to.
     """
     if client_org_id is None:
         return server
@@ -181,17 +205,25 @@ def _pinned_to_google(server: DiscoveredServer, client_org_id: UUID | None) -> D
         server,
         authorization_endpoint=google_oauth.AUTHORIZE_ENDPOINT,
         token_endpoint=google_oauth.TOKEN_ENDPOINT,
+        scope=_org_client_scope(server.scope),
     )
 
 
-def _payload_pinned_to_google(payload: McpOAuthPayload) -> McpOAuthPayload:
-    """`_pinned_to_google` for a stored payload, applied again at callback and refresh."""
-    if payload.client_org_id is None:
+def _payload_pinned_to_google(
+    connection: McpConnection, payload: McpOAuthPayload
+) -> McpOAuthPayload:
+    """`_pinned_to_google` for a stored payload, applied again at callback and refresh.
+
+    Keyed on the same question as the org secret: a connection whose client is the
+    organization's app is pinned, whether it is an MCP row or an account row.
+    """
+    if _org_app_organization(connection, payload) is None:
         return payload
     return payload.model_copy(
         update={
             "authorization_endpoint": google_oauth.AUTHORIZE_ENDPOINT,
             "token_endpoint": google_oauth.TOKEN_ENDPOINT,
+            "scope": _org_client_scope(payload.scope),
         }
     )
 
@@ -656,7 +688,7 @@ async def _rotate_token(
     # client came from an organization app that is gone or switched.
     if client_secret is None and _org_app_organization(locked, payload) is not None:
         return None
-    payload = _payload_pinned_to_google(payload)
+    payload = _payload_pinned_to_google(locked, payload)
     try:
         token = await mcp_oauth.refresh_tokens(
             token_endpoint=payload.token_endpoint,
@@ -1306,6 +1338,7 @@ class McpConnectionService:
             existing=existing,
             vault_scope=VaultScope.organization(ctx.organization_id),
             create=create,
+            initiator_id=ctx.subject_id,
         )
 
     async def oauth_start(
@@ -1388,6 +1421,7 @@ class McpConnectionService:
         client_id: str | None = None,
         client_secret: SecretStr | None = None,
         client_org_id: UUID | None = None,
+        initiator_id: UUID | None = None,
     ) -> str:
         """The flow both scopes share: discover, register, stage, and hand back a URL.
 
@@ -1432,6 +1466,7 @@ class McpConnectionService:
             client_id=client_id,
             client_secret=client_secret,
             client_org_id=client_org_id,
+            initiator_id=initiator_id,
             scope=server.scope,
             resource=server.resource,
             redirect_uri=redirect_uri,
@@ -1581,6 +1616,7 @@ class McpConnectionService:
             resource=entry.url,
             redirect_uri=redirect_uri,
             provider=github_oauth.PROVIDER,
+            initiator_id=ctx.subject_id,
         )
         # The organization's existing row for this catalog entry, whatever it is
         # named - the catalog key is how the frontend joins portal to connection,
@@ -1867,6 +1903,7 @@ class McpConnectionService:
             redirect_uri=redirect_uri,
             provider=provider,
             code_verifier=code_verifier,
+            initiator_id=ctx.subject_id,
         )
         existing = await mcp_connection_repo.get_portal_grant(
             self.db, organization_id=ctx.organization_id, portal_key=portal_key
@@ -2381,6 +2418,15 @@ class McpConnectionService:
             raise OAuthError("This authorization session is no longer valid - start again.")
         if _now_epoch() - payload.started_at > mcp_oauth.FLOW_TTL_SECS:
             raise OAuthError("This authorization session has expired - start again.")
+        if connection.scope == "org" and payload.initiator_id is not None:
+            # Whoever started the flow must still manage the organization's connections.
+            authority = await decider_context(
+                self.db,
+                organization_id=connection_scope(connection).subject_id,
+                user_id=payload.initiator_id,
+            )
+            if authority is None or not authority.has(Perm.MCP_MANAGE):
+                raise OAuthError("Your organization access changed; start the connection again.")
         if connection.purpose == "account":
             if (
                 browser_nonce is None
@@ -2425,7 +2471,7 @@ class McpConnectionService:
                     "The organization's Google app changed; start the connection again."
                 )
             payload = _payload_pinned_to_google(
-                payload.model_copy(update={"client_secret": org_secret})
+                connection, payload.model_copy(update={"client_secret": org_secret})
             )
         if payload.provider == github_oauth.PROVIDER:
             payload, granted_scopes = await _complete_github_flow(payload, code)

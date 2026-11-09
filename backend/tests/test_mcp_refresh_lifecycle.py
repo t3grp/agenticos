@@ -10,8 +10,10 @@ import pytest
 from mcp.shared.auth import OAuthToken
 from pydantic import SecretStr
 
+from app.core.permissions import Perm
 from app.services import mcp_connection as service
-from tests.test_mcp_connections import _base_payload, _oauth_connection
+from app.services.mcp_connection import OAuthError
+from tests.test_mcp_connections import _base_payload, _connection, _oauth_connection, _seal_into
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
@@ -422,7 +424,9 @@ async def test_an_org_client_is_only_ever_sent_to_googles_endpoints(monkeypatch)
 
     monkeypatch.setattr(service, "_checked_url", AsyncMock(side_effect=lambda url: url))
     monkeypatch.setattr(service.mcp_oauth, "discover", AsyncMock(return_value=server))
-    monkeypatch.setattr(service, "_refuse_a_client_this_server_will_not_authenticate", lambda s: None)
+    monkeypatch.setattr(
+        service, "_refuse_a_client_this_server_will_not_authenticate", lambda s: None
+    )
     monkeypatch.setattr(service.mcp_oauth, "authorization_url", authorize)
     monkeypatch.setattr(service.McpConnectionService, "_stage_pending_oauth", stage)
 
@@ -439,7 +443,9 @@ async def test_an_org_client_is_only_ever_sent_to_googles_endpoints(monkeypatch)
     payload = staged["payload"]
     assert payload.token_endpoint == service.google_oauth.TOKEN_ENDPOINT
     assert payload.authorization_endpoint == service.google_oauth.AUTHORIZE_ENDPOINT
-    assert authorize_with["server"].authorization_endpoint == service.google_oauth.AUTHORIZE_ENDPOINT
+    assert (
+        authorize_with["server"].authorization_endpoint == service.google_oauth.AUTHORIZE_ENDPOINT
+    )
 
 
 async def test_a_refresh_of_an_org_client_spends_the_secret_at_googles_endpoint_only(monkeypatch):
@@ -495,3 +501,138 @@ async def test_a_member_who_left_the_organization_cannot_refresh_on_its_client(m
 
     assert await service._rotate_token(AsyncMock(), connection) is None
     refresh.assert_not_awaited()
+
+
+async def _requested_scope_for(monkeypatch, metadata_scope: str) -> tuple[str, str]:
+    """(scope staged on the pending payload, scope put to the consent URL)."""
+    org = uuid4()
+    server = service.mcp_oauth.DiscoveredServer(
+        authorization_endpoint="https://accounts.google.com/o/oauth2/v2/auth",
+        token_endpoint=service.google_oauth.TOKEN_ENDPOINT,
+        registration_endpoint=None,
+        resource="https://calendarmcp.googleapis.com/mcp/v1",
+        scope=metadata_scope,
+        metadata=MagicMock(),
+    )
+    staged: dict = {}
+    requested: dict = {}
+
+    async def stage(self, **kwargs):
+        staged.update(kwargs)
+
+    def authorize(server_arg, **kwargs):
+        requested["scope"] = server_arg.scope
+        return "https://accounts.google.com/o/oauth2/v2/auth?x"
+
+    monkeypatch.setattr(service, "_checked_url", AsyncMock(side_effect=lambda url: url))
+    monkeypatch.setattr(service.mcp_oauth, "discover", AsyncMock(return_value=server))
+    monkeypatch.setattr(
+        service, "_refuse_a_client_this_server_will_not_authenticate", lambda s: None
+    )
+    monkeypatch.setattr(service.mcp_oauth, "authorization_url", authorize)
+    monkeypatch.setattr(service.McpConnectionService, "_stage_pending_oauth", stage)
+
+    await service.McpConnectionService(AsyncMock())._oauth_start(
+        name="chat",
+        url="https://chatmcp.googleapis.com/mcp/v1",
+        existing=None,
+        vault_scope=None,
+        create=AsyncMock(),
+        client_id="org-client",
+        client_org_id=org,
+    )
+    return staged["payload"].scope, requested["scope"]
+
+
+async def test_an_org_client_requests_only_google_scopes_from_the_metadata(monkeypatch):
+    # A Google scope the server names is kept; a foreign scope in the same list is not.
+    staged, requested = await _requested_scope_for(
+        monkeypatch,
+        "https://www.googleapis.com/auth/chat.messages https://attacker.example/x",
+    )
+    assert staged == "https://www.googleapis.com/auth/chat.messages"
+    assert requested == "https://www.googleapis.com/auth/chat.messages"
+
+
+async def test_an_org_client_falls_back_when_the_metadata_names_no_google_scope(monkeypatch):
+    staged, requested = await _requested_scope_for(
+        monkeypatch, "https://attacker.example/everything https://attacker.example/x"
+    )
+    fixed = " ".join(service.google_oauth.ACCOUNT_SCOPES)
+    assert staged == fixed
+    assert requested == fixed
+
+
+async def test_an_org_client_keeps_a_google_scope_from_the_metadata_unchanged(monkeypatch):
+    staged, requested = await _requested_scope_for(
+        monkeypatch, "openid https://www.googleapis.com/auth/calendar"
+    )
+    assert staged == "openid https://www.googleapis.com/auth/calendar"
+    assert requested == staged
+
+
+async def test_an_org_account_is_pinned_to_googles_token_endpoint_like_an_org_mcp_client(
+    monkeypatch,
+):
+    # The account row has no client_org_id, but its client is the org app, so its
+    # refresh is pinned by the same rule that decides where the org secret goes.
+    org = uuid4()
+    evil = "https://attacker-bucket.storage.googleapis.com/token"
+    connection = _oauth_connection(
+        _base_payload(
+            token_endpoint=evil,
+            provider="google",
+            client_id="org-client",
+            client_secret=None,
+            access_token="old",
+            refresh_token="rt",
+            expires_at=0,
+            account_source_organization_id=org,
+            account_source_secret_id=uuid4(),
+            account_source_generation=uuid4(),
+        ),
+        purpose="account",
+        scope="org",
+        organization_id=org,
+    )
+    current = {"client_id": "org-client", "secret": "org-secret"}
+    _live_org_app(monkeypatch, current, org)
+    refresh = AsyncMock(return_value=OAuthToken(access_token="AT", expires_in=3600))
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+    monkeypatch.setattr(service.mcp_connection_repo, "update", AsyncMock(return_value=connection))
+
+    assert await service._rotate_token(AsyncMock(), connection) == "AT"
+    assert refresh.await_args.kwargs["token_endpoint"] == service.google_oauth.TOKEN_ENDPOINT
+    assert refresh.await_args.kwargs["client_secret"] == "org-secret"
+
+
+@pytest.mark.parametrize("initiator_authority", [None, "without_mcp_manage"])
+async def test_a_removed_admin_cannot_finish_an_org_connection_they_started(
+    monkeypatch, initiator_authority
+):
+    # The person who started the org flow has since left, or lost MCP_MANAGE.
+    org = uuid4()
+    initiator = uuid4()
+    pending = _connection(auth_type="oauth", scope="org", organization_id=org, oauth_state="s")
+    pending.oauth_pending_payload = _seal_into(
+        pending, _base_payload(client_id="org-client", initiator_id=initiator).model_dump_json()
+    )
+    authority = (
+        None
+        if initiator_authority is None
+        else SimpleNamespace(has=lambda perm: perm is not Perm.MCP_MANAGE)
+    )
+    decider = AsyncMock(return_value=authority)
+    monkeypatch.setattr(service, "decider_context", decider)
+    monkeypatch.setattr(
+        service.mcp_connection_repo, "get_by_oauth_state", AsyncMock(return_value=pending)
+    )
+    complete = AsyncMock()
+    monkeypatch.setattr(service, "_complete_mcp_flow", complete)
+
+    with pytest.raises(OAuthError, match="organization access changed"):
+        await service.McpConnectionService(AsyncMock()).oauth_callback(state="s", code="c")
+
+    decider.assert_awaited_once()
+    assert decider.await_args.kwargs["user_id"] == initiator
+    complete.assert_not_awaited()
