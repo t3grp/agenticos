@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { useWorkOnStore } from "@/stores/work-on-store";
 import { useChat } from "./use-chat";
+import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { useVisualImagesStore, useVisualStreamStore } from "@/stores/visual-stream-store";
 import { ApiError } from "@/lib/api-error";
 import { qk } from "@/lib/query-keys";
@@ -6165,4 +6166,227 @@ it("does not restore approvals from stale transcript rows after a terminal recei
   act(() => useChatStore.getState().addMessage(parkedTurn()));
   await act(async () => {});
   expect(get).not.toHaveBeenCalledWith("/runs/r-1/parked");
+});
+
+
+describe("useChat - the floating assistant's submitted page and agent", () => {
+  afterEach(() => vi.useRealTimers());
+
+  const page = (): AssistantPageContext => ({
+    path: "/tables/orders",
+    title: "Orders",
+    captured_at: "2026-01-01T00:00:00.000Z",
+    resource: { kind: "table", id: "orders" },
+    filters: { status: "pending" },
+    selected_ids: ["order-1"],
+  });
+
+  it("includes page context with an ordinary typed question", () => {
+    const current = page();
+    useAgentSelectionStore.getState().select("agent-1");
+    const { result } = renderHook(() => useChat({ pageContext: () => current }), { wrapper });
+    act(() => result.current.sendMessage("Explain this order"));
+
+    expect(lastFrame()).toMatchObject({
+      message: "Explain this order",
+      agent_id: "agent-1",
+      page_context: current,
+    });
+  });
+
+  it("reads the new page on the next submitted question", () => {
+    let current = page();
+    const { result, rerender } = renderHook(() => useChat({ pageContext: () => current }), {
+      wrapper,
+    });
+    act(() => result.current.sendMessage("Explain this"));
+    receive("complete", {});
+    receive("session_ready", {});
+    current = { ...page(), path: "/runs/run-2", title: "Run 2" };
+    rerender();
+    act(() => result.current.sendMessage("And this one?"));
+
+    expect(frame(0).page_context).toMatchObject({ path: "/tables/orders" });
+    expect(frame(1).page_context).toMatchObject({ path: "/runs/run-2", title: "Run 2" });
+  });
+
+  it("keeps a detached page snapshot and chosen agent while offline", async () => {
+    vi.useFakeTimers();
+    socket.isConnected = false;
+    const current = page();
+    const original = structuredClone(current);
+    useAgentSelectionStore.getState().select("agent-1");
+    const { result, rerender } = renderHook(() => useChat({ pageContext: () => current }), {
+      wrapper,
+    });
+    act(() => result.current.sendMessage("Why is this pending?"));
+    current.path = "/runs";
+    current.filters!.status = "complete";
+    current.selected_ids!.push("order-2");
+    act(() => useAgentSelectionStore.getState().select("agent-2"));
+    expect(result.current.queuedMessages[0]?.submission).toMatchObject({
+      agentId: "agent-1",
+      pageContext: original,
+    });
+    socket.isConnected = true;
+    rerender();
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+
+    expect(lastFrame()).toMatchObject({ agent_id: "agent-1", page_context: original });
+  });
+
+  it("keeps the approved local workspace and project with a queued question", async () => {
+    vi.useFakeTimers();
+    socket.isConnected = false;
+    const target = {
+      folder: "/approved/first",
+      mode: "read_only" as const,
+      mcp_services: ["first-service"],
+    };
+    useAgentSelectionStore.getState().select("agent-1");
+    useConversationStore.getState().setPendingProjectId("project-1");
+    useWorkOnStore.getState().set(null, target);
+    try {
+      const { result, rerender } = renderHook(() => useChat({ pageContext: page }), { wrapper });
+      act(() => result.current.sendMessage("Explain this"));
+      target.mcp_services.push("later-service");
+      act(() => {
+        useAgentSelectionStore.getState().select("agent-2");
+        useConversationStore.getState().setPendingProjectId("project-2");
+        useWorkOnStore.getState().set(null, {
+          folder: "/approved/second",
+          mode: "full_access",
+        });
+      });
+      socket.isConnected = true;
+      rerender();
+      await act(async () => vi.advanceTimersByTimeAsync(100));
+
+      expect(lastFrame()).toMatchObject({
+        agent_id: "agent-1",
+        project_id: "project-1",
+        local: {
+          folder: "/approved/first",
+          mode: "read_only",
+          mcp_services: ["first-service"],
+        },
+      });
+    } finally {
+      useWorkOnStore.setState({ byConversation: {}, draft: null, draftProjectKey: null });
+      useConversationStore.getState().setPendingProjectId(null);
+    }
+  });
+
+  it("honors disabling page sharing while still retaining the chosen agent", async () => {
+    vi.useFakeTimers();
+    socket.isConnected = false;
+    useAgentSelectionStore.getState().select("agent-1");
+    const { result, rerender } = renderHook(() => useChat({ pageContext: () => null }), {
+      wrapper,
+    });
+    act(() => result.current.sendMessage("A general question"));
+    act(() => useAgentSelectionStore.getState().select("agent-2"));
+    socket.isConnected = true;
+    rerender();
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+
+    expect(lastFrame().agent_id).toBe("agent-1");
+    expect(lastFrame()).not.toHaveProperty("page_context");
+  });
+
+  it("keeps an explicitly captured submission through a delayed access gate", () => {
+    const original = page();
+    let current = original;
+    useAgentSelectionStore.getState().select("agent-1");
+    const { result, rerender } = renderHook(() => useChat({ pageContext: () => current }), {
+      wrapper,
+    });
+    const submitted = result.current.captureSubmission();
+    current = { ...page(), path: "/settings", title: "Settings" };
+    act(() => useAgentSelectionStore.getState().select("agent-2"));
+    rerender();
+    act(() =>
+      result.current.sendMessage("Explain this", undefined, undefined, undefined, submitted),
+    );
+
+    expect(lastFrame()).toMatchObject({ agent_id: "agent-1", page_context: original });
+  });
+
+  it("preserves the snapshot when a refused queued question is retried", async () => {
+    vi.useFakeTimers();
+    socket.isConnected = false;
+    let current = page();
+    const original = structuredClone(current);
+    useAgentSelectionStore.getState().select("agent-1");
+    const { result, rerender } = renderHook(() => useChat({ pageContext: () => current }), {
+      wrapper,
+    });
+    await act(async () => {});
+    act(() => result.current.sendMessage("Explain this"));
+    socket.isConnected = true;
+    rerender();
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    receive("error", { message: "The agent is temporarily unavailable." });
+    receive("session_ready", {});
+    current = { ...page(), path: "/runs", title: "Runs" };
+    act(() => useAgentSelectionStore.getState().select("agent-2"));
+    rerender();
+    act(() => result.current.retryQueued(result.current.queuedMessages[0]!.id));
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+
+    expect(frame(1)).toMatchObject({ agent_id: "agent-1", page_context: original });
+  });
+
+  it("restores the submitted context from the device outbox", async () => {
+    vi.useFakeTimers();
+    const original = page();
+    keptOutbox.mockResolvedValueOnce([
+      {
+        id: "q-context",
+        content: "Written earlier",
+        submission: { agentId: "agent-1", pageContext: original },
+      },
+    ]);
+    useAgentSelectionStore.getState().select("agent-2");
+    renderHook(
+      () =>
+        useChat({
+          conversationId: "c-context",
+          pageContext: () => ({ ...page(), path: "/runs", title: "Runs" }),
+        }),
+      { wrapper },
+    );
+    await act(async () => {});
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+
+    expect(lastFrame()).toMatchObject({
+      message: "Written earlier",
+      agent_id: "agent-1",
+      page_context: original,
+    });
+  });
+
+  it("does not drop page context by steering a queued question as text", () => {
+    const { result } = renderHook(() => useChat({ pageContext: page }), { wrapper });
+    act(() => result.current.sendMessage("First"));
+    act(() => result.current.sendMessage("About this page"));
+    const queued = result.current.queuedMessages[0]!;
+    act(() => result.current.sendQueuedNow(queued.id));
+
+    expect(sent).toHaveBeenCalledTimes(1);
+    expect(result.current.queuedMessages).toEqual([queued]);
+    expect(result.current.steers).toEqual([]);
+  });
+
+  it("does not substitute another agent for a captured empty selection", () => {
+    const { result } = renderHook(() => useChat({ pageContext: page }), { wrapper });
+    const submitted = result.current.captureSubmission();
+    act(() => useAgentSelectionStore.getState().select("agent-2"));
+    act(() =>
+      result.current.sendMessage("Explain this", undefined, undefined, undefined, submitted),
+    );
+
+    expect(lastFrame()).not.toHaveProperty("agent_id");
+    expect(lastFrame()).toHaveProperty("page_context");
+  });
 });

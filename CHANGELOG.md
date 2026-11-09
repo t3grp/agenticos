@@ -46,6 +46,10 @@ Two things are versioned separately from this file and worth knowing about:
   personal models power the existing agent loop through a private native
   runtime, preserving tools, approvals and owner restrictions. The initial
   adapter supports text and application tools with buffered step responses.
+- The floating assistant includes a previewable current-page context with each
+  question, an option to turn page sharing off, and a picker for published agents
+  the user can run. Queued questions keep their submitted page and agent. Apps
+  can register bounded view details through their existing sandbox bridge.
 - Added an opt-in Docker image retention operator helper with a dry-run default,
   explicit current and previous successful release pins, protection for images
   referenced by any container, and a pre-deployment disk-space check. Installation

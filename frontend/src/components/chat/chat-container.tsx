@@ -26,6 +26,7 @@ import {
   useWorkflows,
 } from "@/hooks";
 import type { ChatTesting, SteerDraft } from "@/hooks/use-chat";
+import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { AgentPicker, isChattable } from "./agent-picker";
 import { useSavedChatControls } from "@/hooks/use-saved-chat-controls";
 import { ChatControls } from "./chat-controls";
@@ -157,6 +158,10 @@ export interface ChatPrompt {
 }
 
 interface ChatContainerProps {
+  /** Optional page reference for the floating assistant; captured on submission. */
+  pageContext?: () => AssistantPageContext | null;
+  /** The selected agent is unavailable; keep the composer visibly disabled. */
+  sendDisabled?: boolean;
   /** Keep the welcome screen out of a saved conversation's initial load. */
   requestedConversationId?: string | null;
   /** Sent as soon as the socket is up, once per `id` (#2063). */
@@ -197,6 +202,8 @@ export function ChatContainer({
   testing,
   pins,
   holdSending = false,
+  pageContext,
+  sendDisabled = false,
 }: ChatContainerProps = {}) {
   // What another app shared with the phone app (#2097): held here once the
   // store hands it over, so leaving the chat and coming back does not attach
@@ -458,6 +465,7 @@ export function ChatContainer({
     delegations,
     browses,
     sendMessage: sendChatMessage,
+    captureSubmission,
     stopGeneration,
     clearMessages,
     queuedMessages,
@@ -484,6 +492,7 @@ export function ChatContainer({
     onTurnSaved: handleTurnSaved,
     onTurnInterrupted: handleTurnInterrupted,
     testing,
+    pageContext,
   });
   // An agent that works on this computer is sent to once it knows where: the
   // chat's folder, the one remembered for it, or the person's answer, asked once.
@@ -593,10 +602,13 @@ export function ChatContainer({
       : null;
   const askAgain = useCallback(
     (question: string) => {
+      if (sendDisabled) return;
+      const submission = pageContext ? captureSubmission() : undefined;
       setLostIn(null);
-      sendMessage(question);
+      if (submission) sendMessage(question, undefined, undefined, undefined, submission);
+      else sendMessage(question);
     },
-    [sendMessage],
+    [sendMessage, sendDisabled, pageContext, captureSubmission],
   );
 
   // What the file panel watches, rather than a timer. Counted from the transcript
@@ -737,45 +749,70 @@ export function ChatContainer({
     (content: string, fileIds?: string[], files?: ChatMessageFile[], mentions?: Mentionable[]) => {
       // Typing on after a call: its summary has said its piece, and would otherwise
       // sit under the new turn.
+      if (sendDisabled) return;
       dismissCall();
+      const submission = pageContext ? captureSubmission() : undefined;
       if (selectedWorkflow) void workflowChat.send(selectedWorkflow, content);
-      else if (holdSending) held.current = [content, fileIds, files, mentions];
+      else if (holdSending)
+        held.current = submission
+          ? [content, fileIds, files, mentions, submission]
+          : [content, fileIds, files, mentions];
+      else if (submission) sendMessage(content, fileIds, files, mentions, submission);
       else sendMessage(content, fileIds, files, mentions);
     },
-    [sendMessage, holdSending, dismissCall, selectedWorkflow, workflowChat],
+    [
+      sendMessage,
+      holdSending,
+      dismissCall,
+      selectedWorkflow,
+      workflowChat,
+      pageContext,
+      captureSubmission,
+      sendDisabled,
+    ],
   );
   useEffect(() => {
-    if (held.current === null || holdSending) return;
+    if (held.current === null || holdSending || sendDisabled) return;
     const waiting = held.current;
+    // A held contextual question must pass the gate for its chosen agent.
+    if (waiting[4] && waiting[4].agentId !== selectedAgentId) return;
     held.current = null;
     sendMessage(...waiting);
-  }, [holdSending, sendMessage]);
+  }, [holdSending, sendMessage, sendDisabled, selectedAgentId]);
 
   const handleRegenerate = useCallback(
     (assistantMessageId: string) => {
+      if (sendDisabled) return;
       const idx = messages.findIndex((m) => m.id === assistantMessageId);
       if (idx < 0) return;
       for (let i = idx - 1; i >= 0; i--) {
         const m = messages[i];
         if (m?.role === "user") {
-          sendMessage(m.content, m.fileIds, m.files, m.mentions);
+          // Regeneration is a new request to the selected agent and current page.
+          send(m.content, m.fileIds, m.files, m.mentions);
           return;
         }
       }
     },
-    [messages, sendMessage],
+    [messages, send, sendDisabled],
   );
 
   // A prompt handed in from outside - a bubble the reader clicked in the
   // widget - goes out once the socket can carry it, and only once.
   const sentPromptRef = useRef<number | null>(null);
   useEffect(() => {
-    if (prompt === null || !isConnected || holdSending || sentPromptRef.current === prompt.id) {
+    if (
+      prompt === null ||
+      !isConnected ||
+      holdSending ||
+      sendDisabled ||
+      sentPromptRef.current === prompt.id
+    ) {
       return;
     }
     sentPromptRef.current = prompt.id;
-    sendMessage(prompt.text);
-  }, [prompt, isConnected, holdSending, sendMessage]);
+    send(prompt.text);
+  }, [prompt, isConnected, holdSending, send, sendDisabled]);
 
   // Slash command handlers - passed down to ChatInput so the / palette can
   // run them locally without going through the agent.
@@ -848,6 +885,7 @@ export function ChatContainer({
         }
         isArchived={isArchived}
         sendMessage={send}
+        sendDisabled={sendDisabled}
         steers={steers}
         // Kept here as well as pushed into the hook, because the context gauge is a
         // share of *this* model's window: a switch has to move the figure at once,
@@ -896,6 +934,7 @@ export function ChatContainer({
 }
 
 interface ChatUIProps {
+  sendDisabled?: boolean;
   hasEarlierMessages: boolean;
   isLoadingEarlier: boolean;
   loadEarlierMessages: () => Promise<void>;
@@ -1084,6 +1123,7 @@ function ChatUI({
   testingDraft,
   incomingFiles,
   onVisualReport,
+  sendDisabled = false,
 }: ChatUIProps) {
   const composerFocusRequest = useConversationStore((state) => state.composerFocusRequest);
   const t = useTranslations("chat");
@@ -1729,6 +1769,7 @@ function ChatUI({
                           mentionsFromDraft={testingDraft}
                           hints={messages.length === 0}
                           disabled={
+                            sendDisabled ||
                             isStopping ||
                             isLoadingConversation ||
                             (!isConnected && !keepsOutbox) ||

@@ -183,6 +183,21 @@ export const TOUR_STEPS: readonly TourStep[] = [
     optional: true,
   },
 
+  {
+    id: "assistant-agent-picker",
+    page: ROUTES.DASHBOARD,
+    target: "assistant-agent-picker",
+    permission: Perm.agentsRun,
+    optional: true,
+  },
+  {
+    id: "assistant-page-context",
+    page: ROUTES.DASHBOARD,
+    target: "assistant-page-context",
+    permission: Perm.agentsRun,
+    optional: true,
+  },
+
   { id: "workspace-background", page: ROUTES.WORK, target: "workspace-background" },
   { id: "chat-start", page: ROUTES.CHAT, target: "chat-start", inTour: true },
   { id: "chat-agent-picker", page: ROUTES.CHAT, target: "chat-agent-picker", inTour: true },

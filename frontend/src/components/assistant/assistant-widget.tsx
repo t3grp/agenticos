@@ -8,6 +8,7 @@ import type { ChatPrompt } from "@/components/chat/chat-container";
 import { useShell } from "@/hooks/use-shell";
 import { isDesktopShell } from "@/lib/desktop/shell";
 import { useAssistant } from "@/hooks/use-assistant";
+import { useAssistantPageContext } from "@/hooks/use-assistant-page-context";
 import { useAssistantSignals } from "@/hooks/use-assistant-signals";
 import { pointAt, type ConsoleLink } from "@/lib/assistant-highlight";
 import {
@@ -110,6 +111,7 @@ function usePhone(): boolean {
 function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentId: string }) {
   const t = useTranslations("assistantWidget");
   const pathname = usePathname();
+  const { page, getSnapshot } = useAssistantPageContext(pathname);
   const signals = useAssistantSignals();
   const organization = useOrgStore((state) => state.activeOrgId);
   const [open, setOpen] = useState(false);
@@ -255,10 +257,8 @@ function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentI
             agentId={agentId}
             open={open}
             prompt={prompt}
-            page={{
-              path: pageOf(pathname),
-              title: typeof document === "undefined" ? "" : document.title,
-            }}
+            page={page}
+            getPageContext={getSnapshot}
             tipsOff={preferences.off}
             onTipsOff={(off) => {
               setBubblesOff(off);

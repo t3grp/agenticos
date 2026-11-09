@@ -1,3 +1,4 @@
+import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import type { ChatPerson } from "./conversation";
 import type { Mentionable } from "./mention";
 
@@ -23,6 +24,18 @@ export interface ChatMessageFile {
  * the composer until it can be sent - and, in the apps, kept sealed on the
  * device so closing the app does not lose it (#2097).
  */
+/** The floating assistant's target and page, fixed when the person submits a question. */
+export interface ChatSubmissionContext {
+  agentId: string | null;
+  pageContext: AssistantPageContext | null;
+  /** Filled after the local-access gate, before a question can enter the outbox. */
+  local?: {
+    payload: Record<string, unknown> | null;
+    fileRoot: string | null;
+    projectId: string | null;
+  };
+}
+
 export interface QueuedMessage {
   id: string;
   content: string;
@@ -35,6 +48,7 @@ export interface QueuedMessage {
    * held, marked, until the person sends it again or drops it.
    */
   refused?: string;
+  submission?: ChatSubmissionContext;
 }
 
 /** The earlier message a turn answers, quoted above it. */
