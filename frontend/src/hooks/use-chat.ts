@@ -1,5 +1,7 @@
 "use client";
 
+import { toolLookupName } from "@/lib/tool-identity";
+
 import type { Mentionable } from "@/types/mention";
 import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import type { ChatSubmissionContext } from "@/types/chat";
@@ -16,7 +18,7 @@ import { useWebSocket } from "./use-websocket";
 import { usePermissions } from "./use-permissions";
 import { adoptAccountContext, contextSavedBy } from "@/lib/account-context";
 import { adoptAccountLocale, localeChosenBy } from "@/lib/account-locale";
-import { ApiError, getErrorMessage } from "@/lib/api-error";
+import { ApiError, getErrorMessage, parseErrorMessage } from "@/lib/api-error";
 import { turnFileSourceFromEvent } from "@/lib/turn-file-source";
 import { clientId } from "@/lib/ids";
 import { keepOutbox, keptOutbox } from "@/lib/offline/device-cache";
@@ -36,6 +38,7 @@ import type {
   ChatMessageFile,
   ChatPerson,
   Compaction,
+  ComputerAccessRequest,
   ConnectionRequest,
   PersonalServiceGap,
   ConversationCost,
@@ -54,6 +57,7 @@ import type {
   ParkedCall,
   ParkedQuestion,
   ResumedRun,
+  RunAnswerResult,
   ToolApproval,
   WireQuestion,
 } from "@/types/runs";
@@ -147,6 +151,7 @@ const TURN_FRAMES: ReadonlySet<string> = new Set([
   "thinking_delta",
   "tool_call",
   "tool_result",
+  "user_question_required",
   "final_result",
   "subagent_start",
   "subagent_text_delta",
@@ -167,6 +172,9 @@ interface TypingPerson {
   person: ChatPerson;
   until: number;
 }
+
+/** The socket ended before this submission's acceptance was acknowledged. */
+class RunAnswerInterrupted extends Error {}
 
 export function useChat(options: UseChatOptions = {}) {
   const tErrors = useTranslations("errors");
@@ -349,21 +357,48 @@ export function useChat(options: UseChatOptions = {}) {
     () => new Set(),
   );
   const [pendingQuestions, setPendingQuestions] = useState<AskUserQuestion[] | null>(null);
-  // Set when those questions belong to a run parked on them - asked of somebody
-  // who left before answering - so the answer continues the run over HTTP
-  // rather than going to a socket whose turn ended long ago (#2064).
+  // A durable question resumes its parked run on this live socket. Delegate
+  // questions belong to that running turn and use ask_user_response (#2064).
   // A run can park on several `ask_user` calls at once; their questions share
   // one card, and `calls` says how many of its answers belong to each.
   const [parkedQuestion, setParkedQuestion] = useState<{
     runId: string;
     calls: { toolCallId: string; count: number }[];
-    messageId: string | null;
+    messageId: string;
   } | null>(null);
   // Runs this hook has already put a parked question up for, as the approvals
   // ref above does for the same reason.
   const questionOfferedForRef = useRef<Set<string>>(new Set());
+  const parkedQuestionRunRef = useRef<string | null>(null);
+  const answeringQuestionRef = useRef<object | null>(null);
+  const liveQuestionRef = useRef(false);
+  const pendingRunAnswerRef = useRef<{
+    requestId: string;
+    runId: string;
+    stream: { started: boolean };
+    resolve: (result: ResumedRun) => void;
+    reject: (error: Error) => void;
+  } | null>(null);
+  const abandonRunAnswer = useCallback(() => {
+    const pending = pendingRunAnswerRef.current;
+    pendingRunAnswerRef.current = null;
+    pending?.reject(new RunAnswerInterrupted());
+  }, []);
+  useEffect(
+    () => () => {
+      answeringQuestionRef.current = null;
+      abandonRunAnswer();
+    },
+    [abandonRunAnswer],
+  );
   // A run paused until the person connects one of their own services, or `null`.
   const [pendingConnection, setPendingConnection] = useState<ConnectionRequest | null>(null);
+  const [pendingComputerAccess, setPendingComputerAccess] = useState<ComputerAccessRequest | null>(
+    null,
+  );
+  const awaitingComputerRef = useRef(false);
+  const continueAfterComputerRef = useRef<{ agentId: string | null } | null>(null);
+  const computerRequestRef = useRef<ComputerAccessRequest | null>(null);
   // Whether a run on the server is still waiting on that card. Beside the state
   // because leaving the conversation takes the card down, and a run nobody
   // answers waits for as long as the socket stays open.
@@ -550,6 +585,28 @@ export function useChat(options: UseChatOptions = {}) {
     }
   }, [activeConversationId, setCurrentCost, conversationApi]);
 
+  /** Put an agent's unanswered question back in front of its person (#2064). */
+  const offerParkedQuestion = useCallback(
+    (asked: ParkedQuestion[], runId: string, messageId: string) => {
+      questionOfferedForRef.current.add(runId);
+      parkedQuestionRunRef.current = runId;
+      liveQuestionRef.current = false;
+      // Every call the run is waiting on, not the first: the backend answers a
+      // call left out as declined, so offering one put words the person never
+      // chose into the others.
+      setPendingQuestions(asked.flatMap((question) => toAskUserQuestions(question.questions)));
+      setParkedQuestion({
+        runId,
+        calls: asked.map((question) => ({
+          toolCallId: question.tool_call_id,
+          count: question.questions.length,
+        })),
+        messageId,
+      });
+    },
+    [],
+  );
+
   // A turn that ended is running nothing, so every call still out ends with it.
   // Not only the ones whose arguments were streaming: a call whose `tool_call`
   // arrived and whose `tool_result` never did is `running`, and left so it spun
@@ -681,7 +738,30 @@ export function useChat(options: UseChatOptions = {}) {
             agent_id: string;
             resumed_run_id?: string;
           };
-          if (followingRef.current === data.conversation_id) {
+          const pendingAnswer = pendingRunAnswerRef.current;
+          const direct =
+            pendingAnswer !== null &&
+            data.conversation_id === activeConversationId &&
+            data.resumed_run_id === pendingAnswer.runId;
+          if (direct) {
+            // Earlier buffered frames still belong to the followed turn. This
+            // server marker is where our own admitted continuation begins.
+            pendingAnswer.stream.started = true;
+            followingRef.current = null;
+            if (currentMessageIdRef.current !== null) {
+              updateMessage(currentMessageIdRef.current, (message) => ({
+                ...message,
+                isStreaming: false,
+              }));
+              abandonOpenCalls(currentMessageIdRef.current);
+            }
+            setCurrentMessageId(null);
+            processingRef.current = true;
+            setIsProcessing(true);
+            sessionReadyRef.current = false;
+            setSessionReady(false);
+          }
+          if (followingRef.current === data.conversation_id || direct) {
             turnAgentIdRef.current = data.agent_id;
             if (data.resumed_run_id) {
               streamedResumesRef.current.add(data.resumed_run_id);
@@ -689,6 +769,11 @@ export function useChat(options: UseChatOptions = {}) {
               setPendingApproval((current) =>
                 current?.runId === data.resumed_run_id ? null : current,
               );
+              if (parkedQuestionRunRef.current === data.resumed_run_id) {
+                setPendingQuestions(null);
+                setParkedQuestion(null);
+                parkedQuestionRunRef.current = null;
+              }
               chatApi.getState().updateMessagesWhere(
                 (message) => message.runId === data.resumed_run_id && !!message.isStreaming,
                 (message) => ({ ...message, isStreaming: false }),
@@ -845,9 +930,18 @@ export function useChat(options: UseChatOptions = {}) {
             !["awaiting_approval", "awaiting_answer", "running"].includes(run_status)
           ) {
             terminalRunIdsRef.current.add(run_id);
+            if (run_status !== "completed") continueAfterComputerRef.current = null;
+            if (parkedQuestionRunRef.current === run_id) {
+              setPendingQuestions(null);
+              setParkedQuestion(null);
+              parkedQuestionRunRef.current = null;
+            }
           }
           const target = currentMessageIdRef.current ?? stoppedMessageIdRef.current;
           if (target) {
+            setParkedQuestion((question) =>
+              question?.messageId === target ? { ...question, messageId: message_id } : question,
+            );
             updateMessage(target, (msg) => ({
               ...msg,
               id: message_id,
@@ -919,17 +1013,22 @@ export function useChat(options: UseChatOptions = {}) {
           // a `write_file` carrying a whole report can take minutes to write them -
           // time the chat used to spend showing nothing but a cursor. So the step is
           // drawn now, as `pending`, and `tool_call` fills it in.
-          const { index, tool_name, tool_call_id } = wsEvent.data as {
+          const { index, tool_name, tool_call_id, tool_id, presentation_kind } = wsEvent.data as {
+            tool_id?: string | null;
+            presentation_kind?: "draft" | "generic" | "platform" | null;
             index: number;
             tool_name?: string;
             tool_call_id?: string;
           };
           if (currentMessageIdRef.current && tool_name && tool_call_id) {
             streamingCallsRef.current.set(index, tool_call_id);
-            if (isVisualTool(tool_name)) visualCallsRef.current.add(tool_call_id);
+            if (isVisualTool(toolLookupName({ name: tool_name, tool_id, presentation_kind })))
+              visualCallsRef.current.add(tool_call_id);
             addToolCallPart(currentMessageIdRef.current, {
               id: tool_call_id,
               name: tool_name,
+              tool_id,
+              presentation_kind,
               args: {},
               status: "pending",
             });
@@ -988,15 +1087,17 @@ export function useChat(options: UseChatOptions = {}) {
 
         case "tool_call": {
           if (currentMessageIdRef.current) {
-            const { tool_name, args, tool_call_id, presentation_kind } = wsEvent.data as {
+            const { tool_name, args, tool_call_id, tool_id, presentation_kind } = wsEvent.data as {
               tool_name: string;
-              presentation_kind?: "draft";
+              tool_id?: string | null;
+              presentation_kind?: "draft" | "generic" | "platform" | null;
               args: Record<string, unknown>;
               tool_call_id: string;
             };
             const toolCall: ToolCall = {
               id: tool_call_id,
               name: tool_name,
+              tool_id,
               presentation_kind,
               args,
               status: "running",
@@ -1145,12 +1246,21 @@ export function useChat(options: UseChatOptions = {}) {
         }
 
         case "error": {
-          setPendingQuestions(null);
+          const { message, code } = wsEvent.data as { message: string; code?: string };
+          // This error may belong to a different followed turn. Only a terminal
+          // marker for its own run can invalidate an already committed question.
+          if (parkedQuestionRunRef.current === null) {
+            setPendingQuestions(null);
+            liveQuestionRef.current = false;
+          }
           setPendingConnection(null);
+          setPendingComputerAccess(null);
+          continueAfterComputerRef.current = null;
+          computerRequestRef.current = null;
           // An open that failed ends the turn here, with no `complete` after it.
           setSandboxPreparing(false);
           awaitingConnectionRef.current = false;
-          const { message, code } = wsEvent.data as { message: string; code?: string };
+          awaitingComputerRef.current = false;
           // A reply save failure means the prompt already ran, even if reconnecting
           // lost its acknowledgement. Offering Retry would execute it again.
           const refused = code === "message_save_failed" ? null : unconfirmedRef.current;
@@ -1206,6 +1316,7 @@ export function useChat(options: UseChatOptions = {}) {
             (request) => !decidedApprovalIdsRef.current.has(request.id),
           );
           if (actionable.length === 0) break;
+          continueAfterComputerRef.current = null;
           offeredApprovalBatchesRef.current.add(
             JSON.stringify([run_id, actionable.map((request) => request.tool_call_id).sort()]),
           );
@@ -1233,6 +1344,17 @@ export function useChat(options: UseChatOptions = {}) {
             // conversation gets it from the stored message instead.
             updateMessage(id, (msg) => ({ ...msg, runId: run_id }));
           }
+          break;
+        }
+
+        case "computer_access": {
+          // The agent reached for the person's files, and the run waits for them
+          // to choose a folder or the whole computer.
+          const wire = wsEvent.data as ComputerAccessRequest;
+          const request = { ...wire, agent_id: wire.agent_id ?? turnAgentIdRef.current };
+          computerRequestRef.current = request;
+          setPendingComputerAccess(request);
+          awaitingComputerRef.current = true;
           break;
         }
 
@@ -1273,13 +1395,80 @@ export function useChat(options: UseChatOptions = {}) {
           break;
         }
 
+        case "run_answer_result": {
+          const result = wsEvent.data as RunAnswerResult;
+          const pending = pendingRunAnswerRef.current;
+          if (pending === null || pending.requestId !== result.request_id) break;
+          pendingRunAnswerRef.current = null;
+          if ("result" in result) pending.resolve(result.result);
+          else {
+            const body = { error: result.error };
+            pending.reject(new ApiError(result.error.status, parseErrorMessage(body), body));
+          }
+          break;
+        }
+
+        case "user_question_required": {
+          const { run_id, questions } = wsEvent.data as {
+            run_id: string;
+            questions: ParkedQuestion[];
+          };
+          if (
+            terminalRunIdsRef.current.has(run_id) ||
+            stopRequestedRef.current ||
+            answeringQuestionRef.current !== null ||
+            questions.length === 0
+          )
+            break;
+          const messages = chatApi.getState().messages;
+          const message =
+            messages.find((message) => message.id === currentMessageIdRef.current) ??
+            [...messages].reverse().find((message) => message.runId === run_id);
+          const conversation =
+            conversationApi.getState().currentConversationId ?? activeConversationId;
+          const callIds = new Set(questions.map((question) => question.tool_call_id));
+          const calls = message?.toolCalls ?? [];
+          const matches = calls.some((call) => callIds.has(call.id));
+          // A delayed frame may belong to a turn that was left, or to an earlier
+          // run in this conversation. Only the matching message may offer it.
+          if (
+            !message ||
+            (message.conversationId && message.conversationId !== conversation) ||
+            (message.runId !== run_id && !matches) ||
+            (calls.length > 0 && !matches)
+          )
+            break;
+          if (
+            calls.some(
+              (call) => callIds.has(call.id) && ["completed", "error"].includes(call.status),
+            )
+          )
+            break;
+          updateMessage(message.id, (message) => ({
+            ...message,
+            runId: run_id,
+            runWaitingFor: "answer",
+          }));
+          for (const call of calls) {
+            if (callIds.has(call.id))
+              updateToolCallPart(message.id, call.id, { status: "awaiting_answer" });
+          }
+          offerParkedQuestion(questions, run_id, message.id);
+          break;
+        }
+
         case "ask_user": {
+          liveQuestionRef.current = true;
           const { questions } = wsEvent.data as { questions: WireQuestion[] };
           setPendingQuestions(toAskUserQuestions(questions ?? []));
           const messageId = currentMessageIdRef.current;
           const message = chatApi.getState().messages.find((message) => message.id === messageId);
           for (const call of message?.toolCalls ?? []) {
-            if (call.name === "ask_user_question" && call.status === "running" && messageId) {
+            if (
+              toolLookupName(call) === "ask_user_question" &&
+              call.status === "running" &&
+              messageId
+            ) {
               updateToolCallPart(messageId, call.id, { status: "awaiting_answer" });
             }
           }
@@ -1295,6 +1484,21 @@ export function useChat(options: UseChatOptions = {}) {
         }
 
         case "complete": {
+          if (
+            continueAfterComputerRef.current &&
+            !(wsEvent.data as { stopped?: boolean }).stopped &&
+            !stopRequestedRef.current &&
+            followingRef.current === null
+          ) {
+            setQueue([
+              ...messageQueueRef.current,
+              {
+                id: clientId(),
+                content: t("localAccess.continue"),
+                agentId: continueAfterComputerRef.current.agentId,
+              },
+            ]);
+          }
           if (followingRef.current === null) {
             const finished =
               conversationApi.getState().currentConversationId ?? activeConversationId;
@@ -1311,10 +1515,14 @@ export function useChat(options: UseChatOptions = {}) {
               useWorkingStore.getState().finish(finished, completedMessage.runId);
             setIsProcessing(false);
           }
-          // A turn that ended is waiting on nothing: a card left up would answer
-          // a run that is gone - a sibling tool failing or parking ends it too.
+          // A connection prompt belongs to the live turn. Durable approval and
+          // question cards outlive this socket's turn and resume their own runs.
           setPendingConnection(null);
+          setPendingComputerAccess(null);
+          continueAfterComputerRef.current = null;
+          computerRequestRef.current = null;
           awaitingConnectionRef.current = false;
+          awaitingComputerRef.current = false;
           // `wsEvent.data`, not `event.data`: the latter is the raw JSON string
           // this handler parsed, and reading a field off it silently yields
           // `undefined` - which looked exactly like a turn nobody measured.
@@ -1391,6 +1599,7 @@ export function useChat(options: UseChatOptions = {}) {
       addToolCallPart,
       updateToolCallPart,
       abandonOpenCalls,
+      offerParkedQuestion,
       setCurrentConversationId,
       setCurrentMessageId,
       onConversationCreated,
@@ -1570,6 +1779,7 @@ export function useChat(options: UseChatOptions = {}) {
       files?: ChatMessageFile[],
       mentions?: Mentionable[],
       submission?: ChatSubmissionContext,
+      agentOverride?: string | null,
     ): string => {
       stoppedMessageIdRef.current = null;
       resumedRunIdRef.current = undefined;
@@ -1682,9 +1892,12 @@ export function useChat(options: UseChatOptions = {}) {
       // The floating assistant keeps the target chosen at submission with its
       // page snapshot. Other chat surfaces retain their selection-at-dispatch
       // behavior. A missing frozen target must not fall back to another agent.
+      // A computer access continuation instead stays with the agent that requested it.
       const agentId = submission
         ? submission.agentId
-        : selectionApi.getState().selectedAgentId;
+        : agentOverride === undefined
+          ? selectionApi.getState().selectedAgentId
+          : agentOverride;
       if (agentId) payload.agent_id = agentId;
       turnAgentIdRef.current = agentId;
       pendingFileRootRef.current =
@@ -1731,6 +1944,8 @@ export function useChat(options: UseChatOptions = {}) {
       if (
         processingRef.current ||
         decidingApprovalRef.current !== null ||
+        answeringQuestionRef.current !== null ||
+        parkedQuestionRunRef.current !== null ||
         !sessionReadyRef.current ||
         !isConnected ||
         (messageQueueRef.current.length > 0 && interruptedForRef.current === null)
@@ -1866,11 +2081,18 @@ export function useChat(options: UseChatOptions = {}) {
     setPendingApproval(null);
     setPendingQuestions(null);
     setParkedQuestion(null);
+    parkedQuestionRunRef.current = null;
     setPendingConnection(null);
+    setPendingComputerAccess(null);
+    continueAfterComputerRef.current = null;
+    computerRequestRef.current = null;
     offeredApprovalBatchesRef.current = new Set();
     decidingApprovalRef.current = null;
     setResumingDelegations(new Set());
     questionOfferedForRef.current = new Set();
+    answeringQuestionRef.current = null;
+    abandonRunAnswer();
+    liveQuestionRef.current = false;
     // A delegation belongs to a run in one organization, and to one conversation
     // inside it - the effect below is the other half of that sentence. Left on
     // screen it would show the previous tenant's specialist names and prompts to
@@ -1881,7 +2103,7 @@ export function useChat(options: UseChatOptions = {}) {
     // picture of somebody else's data.
     setBrowses([]);
     closeBrowserPanel();
-  }, [tenantId, queueAccountId, clearQueued, closeBrowserPanel]);
+  }, [tenantId, queueAccountId, clearQueued, closeBrowserPanel, abandonRunAnswer]);
 
   const queuedConversation = useRef(activeConversationId);
   useLayoutEffect(() => {
@@ -1945,13 +2167,21 @@ export function useChat(options: UseChatOptions = {}) {
     setPendingApproval(null);
     setPendingQuestions(null);
     setParkedQuestion(null);
+    parkedQuestionRunRef.current = null;
     setPendingConnection(null);
+    setPendingComputerAccess(null);
+    continueAfterComputerRef.current = null;
+    computerRequestRef.current = null;
     // The card goes with the conversation it was in, and the run waiting on it
     // is told to carry on without - or it holds the turn open behind a card
     // nobody can see any more.
     if (awaitingConnectionRef.current) {
       awaitingConnectionRef.current = false;
       sendMessage({ type: "connect_account_response", connected: false });
+    }
+    if (awaitingComputerRef.current) {
+      awaitingComputerRef.current = false;
+      sendMessage({ type: "computer_access_response", granted: false });
     }
     setCompacting(null);
     setCompactionImpossible(null);
@@ -1963,7 +2193,10 @@ export function useChat(options: UseChatOptions = {}) {
     // Both, or a question read for this conversation and dropped because the
     // person had moved on is never offered when they come back to it.
     questionOfferedForRef.current = new Set();
-  }, [activeConversationId, closeBrowserPanel, sendMessage]);
+    answeringQuestionRef.current = null;
+    abandonRunAnswer();
+    liveQuestionRef.current = false;
+  }, [activeConversationId, closeBrowserPanel, sendMessage, abandonRunAnswer]);
 
   // The caller's permissions, for the restore effect below: rebuilding the
   // approval panel reads an endpoint gated on `approvals:decide`, so a caller
@@ -2079,25 +2312,6 @@ export function useChat(options: UseChatOptions = {}) {
     [],
   );
 
-  /** Put an agent's unanswered question back in front of its person (#2064). */
-  const offerParkedQuestion = useCallback(
-    (asked: ParkedQuestion[], runId: string, messageId: string | null) => {
-      // Every call the run is waiting on, not the first: the backend answers a
-      // call left out as declined, so offering one put words the person never
-      // chose into the others.
-      setPendingQuestions(asked.flatMap((question) => toAskUserQuestions(question.questions)));
-      setParkedQuestion({
-        runId,
-        calls: asked.map((question) => ({
-          toolCallId: question.tool_call_id,
-          count: question.questions.length,
-        })),
-        messageId,
-      });
-    },
-    [],
-  );
-
   /**
    * Draw what a continued run did, however it was continued - decided approvals,
    * or an answered question - and put back whatever it is now waiting on.
@@ -2108,9 +2322,8 @@ export function useChat(options: UseChatOptions = {}) {
    */
   const showContinuation = useCallback(
     (resumed: ResumedRun, runId: string, settledIds: Set<string>) => {
-      // Redis already drew this segment. Its terminal marker refreshes the
-      // persisted transcript, including any next approval/question. Adding the
-      // HTTP answer too would duplicate the entire continuation.
+      // Live socket frames may already have drawn this segment. Reconcile the
+      // terminal result into it so the continuation appears only once.
       const streamed = streamedResumesRef.current.delete(runId);
       if (resumed.status !== "awaiting_approval" && resumed.status !== "awaiting_answer") {
         if (resumed.status && resumed.status !== "running") terminalRunIdsRef.current.add(runId);
@@ -2148,6 +2361,8 @@ export function useChat(options: UseChatOptions = {}) {
         .map((step) => ({
           id: step.tool_call_id,
           name: step.tool_name,
+          tool_id: step.tool_id,
+          presentation_kind: step.presentation_kind,
           args: step.args,
           result: step.result ?? undefined,
           // A call with a pending approval against it has not run and never
@@ -2159,6 +2374,21 @@ export function useChat(options: UseChatOptions = {}) {
               ? "awaiting_answer"
               : "completed",
         }));
+      const usage: TurnUsage = {
+        input_tokens: resumed.input_tokens,
+        output_tokens: resumed.output_tokens,
+        cache_read_tokens: resumed.cache_read_tokens ?? null,
+        cache_write_tokens: resumed.cache_write_tokens ?? null,
+        cost_usd: resumed.cost_usd ?? "0",
+        cost_is_partial: resumed.cost_is_partial,
+        // A resume is not told where the run stands against its budget, and
+        // an invented percentage is worse than a bar that is not drawn.
+        budget_percent: null,
+        agent_budget_percent: null,
+        sandbox: null,
+        context: null,
+      };
+      setLiveUsage({ conversationId: conversationId || activeConversationId, usage });
       // HTTP and socket delivery can arrive in either order. Reuse only a new
       // continuation segment: the older parked segment has the same run id but
       // contains the calls just decided. If no streamed segment exists yet,
@@ -2178,17 +2408,18 @@ export function useChat(options: UseChatOptions = {}) {
         updateMessage(streamedMessage.id, (message) => ({
           ...message,
           isStreaming: false,
+          usage,
           runWaitingFor:
             parkedAgain.length > 0 ? "approval" : askedAgain.length > 0 ? "answer" : undefined,
-          toolCalls: message.toolCalls?.map((call) => ({
-            ...call,
-            status: parkedAgainIds.has(call.id)
-              ? "awaiting_approval"
-              : askedAgainIds.has(call.id)
-                ? "awaiting_answer"
-                : call.status,
-          })),
         }));
+        for (const call of streamedMessage.toolCalls ?? []) {
+          const status = parkedAgainIds.has(call.id)
+            ? "awaiting_approval"
+            : askedAgainIds.has(call.id)
+              ? "awaiting_answer"
+              : null;
+          if (status !== null) updateToolCallPart(streamedMessage.id, call.id, { status });
+        }
 
         onTurnInterrupted?.();
       } else if (steps.length > 0 || resumed.output) {
@@ -2212,20 +2443,7 @@ export function useChat(options: UseChatOptions = {}) {
           // the continuation's own share would read as the price of the whole
           // answer. Drawn once, under the end of the turn; the figure the
           // parked segment recorded is superseded rather than added to.
-          usage: {
-            input_tokens: resumed.input_tokens,
-            output_tokens: resumed.output_tokens,
-            cache_read_tokens: resumed.cache_read_tokens ?? null,
-            cache_write_tokens: resumed.cache_write_tokens ?? null,
-            cost_usd: resumed.cost_usd ?? "0",
-            cost_is_partial: resumed.cost_is_partial,
-            // A resume is not told where the run stands against its budget, and
-            // an invented percentage is worse than a bar that is not drawn.
-            budget_percent: null,
-            agent_budget_percent: null,
-            sandbox: null,
-            context: null,
-          },
+          usage,
           // The agent that was answering when the run parked. Without it the
           // continuation rendered under the generic robot with no name beside it,
           // so the second half of one turn looked like a different agent had
@@ -2273,6 +2491,7 @@ export function useChat(options: UseChatOptions = {}) {
       addMessage,
       updateMessage,
       chatApi,
+      updateToolCallPart,
       conversationId,
       activeConversationId,
       offerParkedQuestion,
@@ -2286,18 +2505,26 @@ export function useChat(options: UseChatOptions = {}) {
   // conversation is where the card comes back - and only for the person asked,
   // which the endpoint decides by answering everybody else with nothing.
   useEffect(() => {
-    if (pendingQuestions !== null || isProcessing) return;
+    if (
+      !isConnected ||
+      pendingQuestions !== null ||
+      isProcessing ||
+      answeringQuestionRef.current !== null
+    )
+      return;
     const askedMessage = [...messages]
       .reverse()
       .find(
         (message) =>
           message.role === "assistant" &&
+          (message.conversationId === undefined ||
+            message.conversationId === activeConversationId) &&
           (message.runWaitingFor === "answer" ||
             (message.toolCalls ?? []).some((call) => call.status === "awaiting_answer")),
       );
     if (askedMessage === undefined || askedMessage.runId === undefined) return;
     const runId = askedMessage.runId;
-    if (questionOfferedForRef.current.has(runId)) return;
+    if (questionOfferedForRef.current.has(runId) || terminalRunIdsRef.current.has(runId)) return;
     questionOfferedForRef.current.add(runId);
     const conversation = activeConversationId;
     void (async () => {
@@ -2312,7 +2539,14 @@ export function useChat(options: UseChatOptions = {}) {
         questionOfferedForRef.current.delete(runId);
       }
     })();
-  }, [messages, pendingQuestions, isProcessing, activeConversationId, offerParkedQuestion]);
+  }, [
+    messages,
+    pendingQuestions,
+    isProcessing,
+    isConnected,
+    activeConversationId,
+    offerParkedQuestion,
+  ]);
 
   // Stop belongs to the run's owner independently of the decision panel.
   // Query owns retries and cancellation; deriving the control from the current
@@ -2516,15 +2750,29 @@ export function useChat(options: UseChatOptions = {}) {
   /** Answer a question a run parked on, which continues the run (#2064). */
   const answerParkedQuestion = useCallback(
     async (parked: NonNullable<typeof parkedQuestion>, answers: AskUserAnswer[]) => {
+      const ticket = {};
+      answeringQuestionRef.current = ticket;
+      const conversation = activeConversationId;
+      const tenant = queueBelongsTo.current;
+      const account = useAuthStore.getState().user?.id;
+      const organization = useOrgStore.getState().activeOrgId;
+      const stillHere = () =>
+        answeringQuestionRef.current === ticket &&
+        panelsBelongTo.current === conversation &&
+        (conversationApi.getState().currentConversationId ?? conversationId ?? null) ===
+          conversation &&
+        queueBelongsTo.current === tenant &&
+        useOrgStore.getState().activeOrgId === organization &&
+        useAuthStore.getState().user?.id === account;
       const asked = pendingQuestions;
+      const stream = { started: false };
       setPendingQuestions(null);
       setParkedQuestion(null);
+      parkedQuestionRunRef.current = null;
       const setStatus = (status: "running" | "awaiting_answer") => {
         const messageId = parked.messageId;
-        if (messageId !== null) {
-          for (const call of parked.calls) {
-            updateToolCallPart(messageId, call.toolCallId, { status });
-          }
+        for (const call of parked.calls) {
+          updateToolCallPart(messageId, call.toolCallId, { status });
         }
       };
       setStatus("running");
@@ -2537,19 +2785,30 @@ export function useChat(options: UseChatOptions = {}) {
         offset += call.count;
       }
       try {
-        const resumed = await apiClient.post<ResumedRun>(`/runs/${parked.runId}/answers`, {
-          responses,
+        processingRef.current = true;
+        setIsProcessing(true);
+        sessionReadyRef.current = false;
+        setSessionReady(false);
+        const resumed = await new Promise<ResumedRun>((resolve, reject) => {
+          const requestId = clientId();
+          pendingRunAnswerRef.current = { requestId, runId: parked.runId, stream, resolve, reject };
+          sendMessage({
+            type: "answer_run",
+            request_id: requestId,
+            run_id: parked.runId,
+            responses,
+          });
         });
-        if (parked.messageId !== null) {
-          for (const call of parked.calls) {
-            const settled = (resumed.settled ?? []).find(
-              (settledCall) => settledCall.tool_call_id === call.toolCallId,
-            );
-            updateToolCallPart(parked.messageId, call.toolCallId, {
-              status: "completed",
-              result: settled?.result,
-            });
-          }
+        if (!stillHere()) return;
+        updateMessage(parked.messageId, (message) => ({ ...message, runWaitingFor: undefined }));
+        for (const call of parked.calls) {
+          const settled = (resumed.settled ?? []).find(
+            (settledCall) => settledCall.tool_call_id === call.toolCallId,
+          );
+          updateToolCallPart(parked.messageId, call.toolCallId, {
+            status: "completed",
+            result: settled?.result,
+          });
         }
         showContinuation(
           resumed,
@@ -2558,29 +2817,84 @@ export function useChat(options: UseChatOptions = {}) {
         );
         if (resumed.continues_in_chat) toast.info(t("answerAlsoInTheChat"));
       } catch (error) {
+        if (!stillHere()) return;
+        if (error instanceof RunAnswerInterrupted) {
+          // Acceptance is unknown. Reconnect restores only what the persisted
+          // run is still waiting on; submitted answers are never resent.
+          questionOfferedForRef.current.delete(parked.runId);
+          return;
+        }
         toast.error(getErrorMessage(error, tErrors));
         // The continuation itself failed and the backend recorded the run
         // terminal: there is no question left to answer.
-        if (resumeFailureStatus(error) !== null) return;
-        // Otherwise the answer never landed - a dropped connection, a resume that
-        // could not be built - and the run is still parked, so the question goes
-        // back on screen and can be answered again, like an approval does.
+        const terminalStatus = resumeFailureStatus(error);
+        if (terminalRunIdsRef.current.has(parked.runId) || terminalStatus !== null) {
+          terminalRunIdsRef.current.add(parked.runId);
+          setPendingQuestions(null);
+          liveQuestionRef.current = false;
+          setPendingConnection(null);
+          abandonOpenCalls(parked.messageId);
+          const messageId = stream.started ? currentMessageIdRef.current : null;
+          if (messageId !== null) {
+            updateMessage(messageId, (message) => ({ ...message, isStreaming: false }));
+            abandonOpenCalls(messageId);
+          }
+          if (stream.started)
+            setDelegations((current) =>
+              terminalStatus === null
+                ? closeOpenDelegations(current)
+                : resolveAwaitingOnResume(closeOpenDelegations(current), terminalStatus),
+            );
+          onTurnInterrupted?.();
+          return;
+        }
+        // An acknowledged refusal before execution leaves the run parked, so
+        // its question can be answered again after the server becomes ready.
         setPendingQuestions(asked);
         setParkedQuestion(parked);
+        parkedQuestionRunRef.current = parked.runId;
         setStatus("awaiting_answer");
+      } finally {
+        if (answeringQuestionRef.current === ticket) {
+          answeringQuestionRef.current = null;
+          const following = !stream.started && followingRef.current !== null;
+          processingRef.current = following;
+          setIsProcessing(following);
+          if (stream.started) {
+            setCurrentMessageId(null);
+            resumedRunIdRef.current = undefined;
+          }
+          setDrainTick((tick) => tick + 1);
+        }
       }
     },
-    [pendingQuestions, updateToolCallPart, showContinuation, tErrors, t],
+    [
+      pendingQuestions,
+      activeConversationId,
+      conversationId,
+      conversationApi,
+      sendMessage,
+      setCurrentMessageId,
+      updateToolCallPart,
+      updateMessage,
+      showContinuation,
+      abandonOpenCalls,
+      onTurnInterrupted,
+      tErrors,
+      t,
+    ],
   );
 
   const sendAskUserResponses = useCallback(
     (answers: AskUserAnswer[]) => {
-      if (stoppingRef.current !== null) return;
+      if (stoppingRef.current !== null || !isConnected) return;
       if (parkedQuestion !== null) {
+        if (answeringQuestionRef.current !== null) return;
         void answerParkedQuestion(parkedQuestion, answers);
         return;
       }
-      if (!isConnected) return;
+      if (!liveQuestionRef.current) return;
+      liveQuestionRef.current = false;
       setPendingQuestions(null);
       const messageId = currentMessageIdRef.current;
       const message = chatApi.getState().messages.find((message) => message.id === messageId);
@@ -2606,6 +2920,26 @@ export function useChat(options: UseChatOptions = {}) {
     [isConnected, sendMessage],
   );
 
+  /** Release a run paused on `computer_access`: `true` once a folder or the computer was granted. */
+  const sendComputerAccessResponse = useCallback(
+    (granted: boolean) => {
+      if (stoppingRef.current !== null) return;
+      if (!isConnected) return;
+      if (!awaitingComputerRef.current || computerRequestRef.current !== pendingComputerAccess)
+        return;
+      setPendingComputerAccess(null);
+      computerRequestRef.current = null;
+      awaitingComputerRef.current = false;
+      if (granted && continueAfterComputerRef.current === null) {
+        continueAfterComputerRef.current = {
+          agentId: pendingComputerAccess?.agent_id ?? turnAgentIdRef.current,
+        };
+      }
+      sendMessage({ type: "computer_access_response", granted });
+    },
+    [isConnected, sendMessage, pendingComputerAccess],
+  );
+
   /** Take the turn off screen without telling the server anything.
    *
    *  What `stopGeneration` does after it has sent its frame, and what a
@@ -2613,32 +2947,65 @@ export function useChat(options: UseChatOptions = {}) {
    *  to "what does the end of a turn look like on this client". Optimistic, and
    *  it has to be: the server's own `complete` carries `stopped`, but nothing
    *  guarantees it arrives, because the socket may be what went away. Closing
-   *  here means the panels never outlive the run that fed them.
+   *  here closes its transient panels. A committed question survives a socket
+   *  drop because it is restored from the parked run before another submission.
    */
-  const endTurnLocally = useCallback(() => {
-    processingRef.current = false;
-    if (currentMessageIdRef.current) {
-      updateMessage(currentMessageIdRef.current, (msg) => ({ ...msg, isStreaming: false }));
-      abandonOpenCalls(currentMessageIdRef.current);
-    }
-    setCurrentMessageId(null);
-    currentGroupIdRef.current = null;
-    setIsProcessing(false);
-    setPendingApproval(null);
-    setPendingQuestions(null);
-    setParkedQuestion(null);
-    setPendingConnection(null);
-    awaitingConnectionRef.current = false;
-    setDelegations(closeOpenDelegations);
-    // A dropped socket can no longer bring `sandbox_ready`, and the next turn
-    // on the open sandbox sends no preparation frames to clear it (#2251).
-    setSandboxPreparing(false);
-  }, [updateMessage, abandonOpenCalls, setCurrentMessageId]);
+  const endTurnLocally = useCallback(
+    (preserveQuestion = false) => {
+      if (!preserveQuestion) {
+        answeringQuestionRef.current = null;
+        abandonRunAnswer();
+      }
+      liveQuestionRef.current = false;
+      processingRef.current = false;
+      if (currentMessageIdRef.current) {
+        updateMessage(currentMessageIdRef.current, (msg) => ({ ...msg, isStreaming: false }));
+        abandonOpenCalls(currentMessageIdRef.current);
+      }
+      setCurrentMessageId(null);
+      currentGroupIdRef.current = null;
+      setIsProcessing(false);
+      setPendingApproval(null);
+      if (!preserveQuestion || parkedQuestion === null) {
+        setPendingQuestions(null);
+        setParkedQuestion(null);
+        parkedQuestionRunRef.current = null;
+      }
+      setPendingConnection(null);
+      setPendingComputerAccess(null);
+      continueAfterComputerRef.current = null;
+      computerRequestRef.current = null;
+      awaitingConnectionRef.current = false;
+      awaitingComputerRef.current = false;
+      setDelegations(closeOpenDelegations);
+      // A dropped socket can no longer bring `sandbox_ready`, and the next turn
+      // on the open sandbox sends no preparation frames to clear it (#2251).
+      setSandboxPreparing(false);
+    },
+    [updateMessage, abandonOpenCalls, setCurrentMessageId, parkedQuestion, abandonRunAnswer],
+  );
 
   const stopGeneration = useCallback(() => {
     if (stoppingRef.current !== null) return;
+    continueAfterComputerRef.current = null;
+    computerRequestRef.current = null;
+    const submittedAnswer = pendingRunAnswerRef.current;
+    if (submittedAnswer !== null && !submittedAnswer.stream.started) {
+      // Stop our submitted task before its stream takes over; the message on
+      // screen can still belong to a different turn this socket was following.
+      answeringQuestionRef.current = null;
+      abandonRunAnswer();
+      sendMessage({ type: "stop" });
+      const following = followingRef.current !== null;
+      processingRef.current = following;
+      setIsProcessing(following);
+      for (const message of chatApi.getState().messages) {
+        if (message.runId === submittedAnswer.runId) abandonOpenCalls(message.id);
+      }
+      return;
+    }
     // A turn this tab only follows is not this socket's to stop: stop following.
-    if (followingRef.current !== null) {
+    if (followingRef.current !== null && answeringQuestionRef.current === null) {
       followingRef.current = null;
       sendMessage({ type: "unfollow" });
       endTurnLocally();
@@ -2661,6 +3028,7 @@ export function useChat(options: UseChatOptions = {}) {
         queryClient.setQueryData(qk.runs.canStop(tenantId, stopAccountId, parked.runId), false);
         if (parkedQuestion?.runId === parked.runId) {
           setParkedQuestion(null);
+          parkedQuestionRunRef.current = null;
           setPendingQuestions(null);
         }
         setPendingApproval((current) => (current?.runId === parked.runId ? null : current));
@@ -2741,6 +3109,8 @@ export function useChat(options: UseChatOptions = {}) {
     conversationApi,
     sendMessage,
     endTurnLocally,
+    abandonRunAnswer,
+    abandonOpenCalls,
     parkedQuestion,
     cancellableParked,
     queryClient,
@@ -2845,11 +3215,13 @@ export function useChat(options: UseChatOptions = {}) {
       sessionReadyRef.current = true;
       setSessionReady(true);
     }
-    if (dropped && (isProcessing || !sessionReadyRef.current)) {
+    const answerWasPending = pendingRunAnswerRef.current !== null;
+    if (dropped) abandonRunAnswer();
+    if (dropped && (isProcessing || !sessionReadyRef.current || answerWasPending)) {
       const thread = { id: activeConversationId };
       interruptedRef.current = thread;
       interruptedForRef.current = thread;
-      endTurnLocally();
+      endTurnLocally(true);
       setInterruptedFor(thread);
       // The baseline the effect below watches. Taken here, after
       // `endTurnLocally` has stopped the half-written answer streaming: that
@@ -2865,7 +3237,15 @@ export function useChat(options: UseChatOptions = {}) {
     interruptedRef.current = null;
     if (thread.id !== activeConversationId) return;
     onTurnInterrupted?.();
-  }, [isConnected, isProcessing, activeConversationId, endTurnLocally, onTurnInterrupted, chatApi]);
+  }, [
+    isConnected,
+    isProcessing,
+    activeConversationId,
+    endTurnLocally,
+    onTurnInterrupted,
+    chatApi,
+    abandonRunAnswer,
+  ]);
 
   // Coming back to the chat with a turn still drawn as streaming. The store
   // outlives the page; the socket and this hook do not, so the turn left behind
@@ -2944,7 +3324,15 @@ export function useChat(options: UseChatOptions = {}) {
   // in, and the person decides whether it goes again or not at all.
   useEffect(() => {
     if (interruptedFor !== null) return;
-    if (!isConnected || isProcessing || !sessionReady || decidingApprovalRef.current) return;
+    if (
+      !isConnected ||
+      isProcessing ||
+      !sessionReady ||
+      decidingApprovalRef.current ||
+      answeringQuestionRef.current !== null ||
+      parkedQuestionRunRef.current !== null
+    )
+      return;
     const next = messageQueueRef.current[0];
     if (!next || next.refused !== undefined) return;
     const account = useAuthStore.getState().user?.id;
@@ -2959,6 +3347,8 @@ export function useChat(options: UseChatOptions = {}) {
         messageQueueRef.current[0] !== next ||
         processingRef.current ||
         decidingApprovalRef.current !== null ||
+        answeringQuestionRef.current !== null ||
+        parkedQuestionRunRef.current !== null ||
         !sessionReadyRef.current
       )
         return;
@@ -2969,6 +3359,7 @@ export function useChat(options: UseChatOptions = {}) {
         next.files,
         next.mentions,
         next.submission,
+        next.agentId,
       );
       unconfirmedRef.current = { message: next, bubbleId };
     }, 100);
@@ -2984,6 +3375,7 @@ export function useChat(options: UseChatOptions = {}) {
     interruptedFor,
     doSend,
     queuedMessages,
+    pendingQuestions,
     setQueue,
     drainTick,
     tenantId,
@@ -3131,5 +3523,8 @@ export function useChat(options: UseChatOptions = {}) {
     /** The service a paused run is waiting for the person to connect. See `ConnectAccountPrompt`. */
     pendingConnection,
     sendConnectionResponse,
+    /** What a paused run asked the person's computer for. See `useComputerAccessOnUse`. */
+    pendingComputerAccess,
+    sendComputerAccessResponse,
   };
 }

@@ -1654,7 +1654,11 @@
       "unread": "Neue Antwort",
       "unreadHeading": "Ungelesen",
       "unnamedProject": "Ein Projekt",
-      "apiFilterLabel": "API-Gespräche ausblenden"
+      "apiFilterLabel": "API-Gespräche ausblenden",
+      "sharedHeading": "Mit Ihnen geteilt",
+      "sharedLoading": "Geteilte Unterhaltungen werden geladen…",
+      "sharedFailed": "Geteilte Unterhaltungen konnten nicht geladen werden.",
+      "retryShared": "Geteilte Unterhaltungen erneut laden"
     },
     "skipComment": "Kommentar überspringen",
     "sourceCount": "{count, plural, =1 {1 Quelle} other {# Quellen}}",
@@ -1745,11 +1749,11 @@
       "knowledgeBaseSearch": "Suche in der Wissensdatenbank",
       "listed": "{named, select, no {Aufgelistet …} other {{subject} aufgelistet}}",
       "listing": "{named, select, no {Listet auf …} other {Listet {subject} auf}}",
-      "loadSkill": "Skill laden",
+      "loadSkill": "Skill lesen",
       "loading": "Wird geladen …",
       "availableSkills": "Verfügbare Skills",
       "lookingThroughSkills": "Sieht die Skills durch",
-      "loadingSkill": "Lädt einen Skill",
+      "loadingSkill": "Liest einen Skill",
       "lookedFor": "{named, select, no {Gesucht …} other {Nach {subject} gesucht}}",
       "lookingAtChannel": "Sieht sich den Kanal an",
       "lookingAtChannelMembers": "Sieht nach, wer im Kanal ist",
@@ -2490,8 +2494,9 @@
     "approvalRememberFailed": "Die Freigabe konnte nicht entfernt werden. Erneut versuchen.",
     "approvalRememberRetry": "Erneut versuchen",
     "localAccess": {
+      "continue": "Zugriff erteilt - bitte fortfahren.",
       "title": "Wo darf {agent} arbeiten?",
-      "description": "{agent} arbeitet auf deinem Computer. Du wirst einmal für diesen Agenten gefragt; ändere oder widerrufe es später unter Chat controls → Work on.",
+      "description": "{agent} braucht für diese Anfrage Dateien auf deinem Computer. Deine Wahl wird für diesen Agenten gespeichert; ändere oder widerrufe es später unter Chat controls → Work on.",
       "computer": "Ganzer Computer",
       "computerHint": "Darf überall, wo dein Konto Zugriff hat, Dateien lesen und ändern und Befehle als du ausführen. Dein Computer fragt nach einer Bestätigung.",
       "folder": "Ordner wählen",
@@ -2499,7 +2504,23 @@
       "cancel": "Nicht jetzt",
       "agentUnavailable": "Der ausgewählte Agent konnte nicht geladen werden. Versuche es erneut.",
       "failed": "Zugriff auf diesem Computer konnte nicht eingerichtet werden"
-    }
+    },
+    "fork": "In neue Unterhaltung abzweigen",
+    "forkedToast": "Unterhaltung abgezweigt",
+    "failedForkConversation": "Unterhaltung konnte nicht abgezweigt werden",
+    "forkedFrom": "Abgezweigt aus <link>{title}</link>",
+    "untitledFork": "Unbenannte Unterhaltung",
+    "leaveShared": "Aus meinen Chats entfernen",
+    "leftShared": "Aus Ihren Chats entfernt",
+    "failedLeaveShared": "Unterhaltung konnte nicht entfernt werden",
+    "conversationViewOnly": "Schreibgeschützt mit Ihnen geteilt",
+    "accessChanged": "Zugriff geändert",
+    "failedToChangeAccess": "Zugriff konnte nicht geändert werden",
+    "accessLevelFor": "Zugriffsstufe für {name}",
+    "accessChecking": "Zugriff auf die Unterhaltung wird geprüft…",
+    "accessFailed": "Der Zugriff auf diese Unterhaltung konnte nicht geprüft werden",
+    "accessRetry": "Erneut versuchen",
+    "forking": "Unterhaltung wird verzweigt…"
   },
   "common": {
     "archiveNamedConfirm": "{name} archivieren?",
@@ -4167,6 +4188,7 @@
     "failedLoadConnections": "Verbindungen konnten nicht geladen werden",
     "failedLoadOrgServers": "Die MCP-Server der Organisation konnten nicht geladen werden",
     "finishConsentThenReturn": "Schließen Sie es im geöffneten Tab ab und kommen Sie zurück - der Server erscheint hier, sobald er autorisiert ist.",
+    "finishConsentInBrowser": "Schließen Sie die Anmeldung in Ihrem Browser ab und kommen Sie zurück - der Server erscheint hier, sobald er autorisiert ist.",
     "consentTabBlocked": "Ihr Browser hat den Anmelde-Tab blockiert. Erlauben Sie Pop-ups für diese Seite und versuchen Sie es erneut.",
     "fromRegistry": "Registry",
     "fromRegistryHint": "Aus der öffentlichen MCP-Registry. Niemand hier hat ihn geprüft: Die Beschreibung stammt vom Herausgeber, und es gibt keinen Hinweis darauf, welches Credential er verlangt.",
@@ -4864,6 +4886,10 @@
         "title": "Einen Server finden",
         "body": "Durchsuchen Sie den Katalog oder grenzen Sie ihn nach Kategorie ein und danach, ob Sie ihn schon verbunden haben."
       },
+      "organization-switcher": {
+        "title": "Wählen Sie Ihre Organisation",
+        "body": "Der Name zeigt die Organisation, in der Sie arbeiten. Öffnen Sie das Menü, um die Organisation zu wechseln, Organisationen zu verwalten oder eine neue anzulegen. Agents, Wissen und Aktivität folgen Ihrer Auswahl."
+      },
       "notification-bell": {
         "title": "Bleiben Sie im Bilde",
         "body": "Ein fehlgeschlagener Run, eine Freigabe, die auf Sie wartet, ein Budget, das zur Neige geht, eine Nachricht eines App-Admins – alles landet hier, mit einem Schalter für App und E-Mail bei den Arten, die Sie in den Einstellungen abschalten können."
@@ -5335,6 +5361,14 @@
       "chat-subscription-model": {
         "title": "Dein Claude-Abonnement verwenden",
         "body": "Wähle eines deiner gespeicherten Claude-Abonnement-Modelle für diesen Chat. Die Verbindung bleibt persönlich; verwalte sie unter Einstellungen → AI-Verbindungen."
+      },
+      "workflow-run-questions": {
+        "title": "Dem Agent antworten",
+        "body": "Ein Agent in diesem Workflow kann Rückfragen stellen. Antworte hier, um die gespeicherte Unterhaltung und den Workflow fortzusetzen."
+      },
+      "workflow-input-contract": {
+        "title": "Erwartete Eingabe festlegen",
+        "body": "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft." 
       }
     },
     "chooseLanguage": "Sprache",
@@ -5803,7 +5837,7 @@
       "inCategoryUse": "Bereits verwendete Kategorien",
       "inTagUse": "Bereits verwendete Tags",
       "mcpToolLoad": "Diese MCP-Server geben dem Modell bei jeder Anfrage {count} Werkzeuge - etwa {tokens, number} Tokens, bevor jemand etwas schreibt, und mehr Werkzeuge, als ein Modell gut auseinanderhält. Die Tool-Suche hält sie zurück, bis der Agent eines nachschlägt.",
-      "mcpToolLoadEnable": "Tool-Suche einschalten",
+      "mcpToolLoadEnable": "MCP-Tool-Suche einschalten",
       "agentDescriptionLabel": "Beschreibung",
       "agentNameLabel": "Name",
       "agentNameRequired": "Ein Agent braucht einen Namen.",
@@ -6637,7 +6671,7 @@
       "avatarColourHint": "Wird als Ihr Avatar angezeigt, bis Sie ein Bild hochladen.",
       "prefArtifactVersionPublished": "App aktualisiert",
       "prefArtifactVersionPublishedTrigger": "Eine App, der Sie folgen, erhält eine neue Version - vom Agent neu veröffentlicht oder von einer Person wiederhergestellt.",
-      "prefResourceShared": "Mit Ihrer Gruppe geteilt",
+      "prefResourceShared": "Mit Ihnen oder Ihrer Gruppe geteilt",
       "prefResourceSharedTrigger": "Etwas - ein Agent, ein Skill, Wissen, eine App - wird mit einer Gruppe geteilt, in der Sie sind.",
       "prefBudgetWarning": "Abteilungsbudget bei 80 %",
       "prefBudgetWarningTrigger": "Eine Abteilung, die Sie leiten, hat 80 % ihres monatlichen Budgets verbraucht. Administratoren werden über jede Abteilung informiert.",
@@ -7126,7 +7160,8 @@
         "queued": "In der Warteschlange",
         "running": "Läuft",
         "waiting_approval": "Wartet auf Freigabe",
-        "waiting_retry": "Wird wiederholt"
+        "waiting_retry": "Wird wiederholt",
+        "waiting_for_user": "Wartet auf Antwort"
       },
       "nodeStatus": {
         "cancelled": "Abgebrochen",
@@ -7673,7 +7708,11 @@
       "replyMailboxUnavailable": "Ausgewähltes Postfach nicht verfügbar",
       "replyMailboxConnect": "Zuerst Gmail oder Outlook unter Integrationen verbinden.",
       "replySharedMailbox": "Freigegebenes Outlook-Postfach (optional)",
-      "startRunListHint": "Ein Eintrag pro Zeile. Leere Zeilen werden ignoriert."
+      "startRunListHint": "Ein Eintrag pro Zeile. Leere Zeilen werden ignoriert.",
+      "runQuestionsTitle": "Dein Agent braucht eine Antwort, um fortzufahren",
+      "runQuestionsFailed": "Die Fragen konnten nicht geladen werden.",
+      "runQuestionsRetry": "Erneut versuchen",
+      "startRunSchema": "Erwartetes Eingabeschema"
     },
     "adminApns": {
       "title": "iPhone-Benachrichtigungen",
@@ -8299,6 +8338,9 @@
     "loading": "Wird geladen"
   },
   "teams": {
+    "organizationLabel": "Organisation",
+    "organizationSwitcher": "Organisation wechseln, aktuell: {name}",
+    "selectOrganization": "Organisation auswählen",
     "acmeCom": "acme.com",
     "approvalWaiver": "Freigaben im Chat übergehen",
     "approvalWaiverDescription": "Ob eine Unterhaltung laufen darf, ohne für Freigaben anzuhalten.",
@@ -8947,13 +8989,15 @@
     "templatesMore": "{count, plural, =1 {1 weitere zeigen} other {# weitere zeigen}}",
     "templatesFewer": "Weniger zeigen",
     "local": {
+      "useAllowed": "Erlaubten Ordner verwenden",
+      "allRoutines": "Alle meine Routinen",
       "label": "Arbeiten auf",
       "hint": "Jeder Lauf arbeitet über die Desktop-App in einem Ordner auf Ihrem Computer oder in der Sandbox des Agenten. Ist die App geschlossen, wartet der Lauf auf sie.",
       "elsewhereHint": "Jeder Lauf arbeitet in diesem Ordner auf Ihrem Computer. Ändern Sie ihn in der Desktop-App auf diesem Computer.",
       "sandbox": "Die Sandbox des Agenten",
       "pick": "Ordner wählen…",
       "useSandbox": "Sandbox verwenden",
-      "routineHint": "Ordner und Vorgänge wählen. Beim Speichern bestätigt dieser Computer nur diese Routine.",
+      "routineHint": "Ordner und Vorgänge wählen. Beim ersten Mal fragt dieser Computer einmal, ob alle deine Routinen dort arbeiten dürfen; spätere Routinen in diesem Ordner brauchen keine Bestätigung.",
       "read": "Lesen",
       "write": "Schreiben",
       "execute": "Befehle ausführen",
@@ -9426,7 +9470,13 @@
         "boolean": "Ja oder nein",
         "date": "Datum",
         "choice": "Auswahl"
-      }
+      },
+      "contractFormat": "Eingabevertrag",
+      "simpleFields": "Einfache Felder",
+      "jsonSchema": "JSON Schema",
+      "formatHint": "Wähle einfache Felder oder einen JSON-Schema-Vertrag. Beide gespeicherten Formate bleiben erhalten, solange dieser Trigger geöffnet ist; nur das ausgewählte Format wird im Workflow gespeichert.",
+      "schemaHint": "Verwende JSON Schema Draft 2020-12 für verschachtelte Objekte, Arrays und Referenzen. Eingaben werden vor dem Start eines Runs geprüft.",
+      "schemaInvalid": "Gib ein JSON-Objekt ein. Diese Änderung wurde nicht gespeichert."
     },
     "pickerHostLabel": "Sandbox-Host",
     "pickerHostDefault": "Der Standard-Host der Organisation",
@@ -9620,7 +9670,7 @@
     "templateUnknown": "{placeholder} bezeichnet nichts, was dieser Schritt lesen kann.",
     "templatePreview": "Vorschau:",
     "templateSuggestions": "Werte aus vorherigen Schritten",
-    "triggerHintCall": "Der Schritt Run a workflow eines anderen Workflows startet diesen mit seiner Eingabe, geprüft gegen diese Felder. Die Schritte danach lesen sie als payload.",
+    "triggerHintCall": "Der Schritt Run a workflow eines anderen Workflows startet diesen mit seiner Eingabe, geprüft gegen diesen Eingabevertrag. Die Schritte danach lesen die Eingabe als payload.",
     "pickerWorkflowLabel": "Workflow",
     "pickerWorkflowPlaceholder": "Workflow wählen",
     "pickerWorkflowNone": "Noch kein Workflow ist mit dem Auslöser Called by a workflow veröffentlicht.",
@@ -10939,7 +10989,8 @@
     "revoked": "Schlüssel widerrufen",
     "couldNotLoad": "Ihre API-Schlüssel konnten nicht geladen werden",
     "emptyTitle": "Noch keine API-Schlüssel",
-    "emptyWhy": "Erstellen Sie einen, um die API aus einem Skript, Postman oder Claude Code aufzurufen."
+    "emptyWhy": "Erstellen Sie einen, um die API aus einem Skript, Postman oder Claude Code aufzurufen.",
+    "personalConsentWhy": "Persönliche Zustimmung ist nicht in den Voreinstellungen enthalten. Damit dieser Schlüssel oder diese App Routinen und Watches mit Ihren persönlichen Verbindungen und Daten genehmigen darf, wählen Sie personal:consent unter Benutzerdefiniert."
   },
   "mcpOauth": {
     "title": "{client} möchte in Ihrem Namen handeln",
@@ -11334,7 +11385,7 @@
     "tool_search": {
       "name": "Tool-Suche",
       "does": "Ein Agent mit vielen Tools findet das richtige, wenn er es braucht, statt jedes Mal alle zu lesen.",
-      "example1": "Ein Agent, der mit mehreren MCP-Servern mit Dutzenden Tools verbunden ist",
+      "example1": "Ein Agent mit vielen aktivierten Capabilities und gebundenen MCP-Servern",
       "needs": "Nichts weiter.",
       "never": "Fügt nie ein Tool hinzu; blendet Tools nur aus, bis der Agent eines sucht."
     },
@@ -11863,6 +11914,26 @@
       "max_results": {
         "title": "Treffer pro Suche",
         "description": "Wie viele Treffer die lokale Suche liefert; bei nativer Suche ignoriert."
+      },
+      "defer_capabilities": {
+        "title": "Capability-Tools verzögert laden",
+        "description": "Geeignete Tools aktivierter Capabilities ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben Capability-Tools sichtbar."
+      },
+      "defer_mcp_servers": {
+        "title": "MCP-Tools verzögert laden",
+        "description": "Geeignete Tools gebundener MCP-Server ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben MCP-Tools sichtbar."
+      },
+      "exclude_capabilities": {
+        "title": "Immer sichtbare Capabilities",
+        "description": "Kommagetrennte Capability-IDs, deren Tools sichtbar bleiben, etwa knowledge oder visuals. Diese Capabilities müssen weiterhin aktiviert sein."
+      },
+      "exclude_mcp_servers": {
+        "title": "Immer sichtbare MCP-Server",
+        "description": "Kommagetrennte Namensraum-Präfixe der MCP-Tools, die sichtbar bleiben, etwa github_work oder agenticos. Das Präfix vor dem Tool-Namen verwenden und Bindestriche durch Unterstriche ersetzen."
+      },
+      "exclude_tools": {
+        "title": "Immer sichtbare Tools",
+        "description": "Kommagetrennte Tool-Namen, wie sie das Modell sieht, die sichtbar bleiben sollen. Umbenannte Capability-Tools und vollständige MCP-Tool-Namen mit Präfix verwenden, etwa github_work_list_issues."
       }
     },
     "web_fetch": {

@@ -61,6 +61,10 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Changed
 
+- Update Pydantic AI, its harness and skills integration, pricing data and
+  Logfire to the versions locked by the agent-framework dependency update.
+  Normalize wrapped question answers before saving a parked run so the
+  durable answer remains JSON data.
 - Redesigned all 22 email templates with Geist typography, t3UI colors and
   clearer account, invitation, agent activity and billing layouts. HTML and
   plain-text versions share their copy, action links include a copyable fallback,
@@ -77,6 +81,200 @@ Two things are versioned separately from this file and worth knowing about:
   exported traces, alongside the existing OAuth callback credentials.
 - Match agent-message timestamp types and message/Drive index metadata to their
   applied migrations so model writes and schema verification use the same types.
+
+## [1.60.0] - 2026-11-09
+
+### Added
+
+- **Fork a conversation at an answer (#2762).** **Fork into a new conversation**
+  under an agent's answer opens a new conversation of your own, in the same
+  project, holding the history up to and including that answer, so you can try
+  another approach or take a side question elsewhere without changing the
+  original. Only the owner can fork, up to ten a minute, within 2,000 messages,
+  10,000 tool calls and 20 MiB; concurrent transcript updates are fenced before
+  copying. Retained copies have a 100 MiB member and 1 GiB organization
+  allowance, including fixed row reservations, freed when a fork is deleted.
+  Drawings with stored image files are refused before copying. The fork copies
+  messages, tool calls and a long conversation's summary, including its
+  externalized text and media within the copy limits, not attachment or
+  workspace files, generated images, cost or runs. Conversations with a saved
+  checklist fork only at the latest answer and retain its tasks and dependencies.
+  Its **Forked from** line
+  is shown only to you. `POST /conversations/{id}/fork` does the same over the
+  API. See [the console guide](docs/console.md#forking).
+- **Conversations shared with you, in the chat sidebar.** They sit under
+  **Shared with you**, below your favourites, for the organization you are in,
+  with their agents, unread dots and running state; until now a conversation shared
+  with you could only be opened by its link. Renaming, sharing, archiving and
+  deleting stay the owner's; their menu holds **Remove from my chats**, which
+  ends your own access (`DELETE /conversations/{id}/shared-with-me`).
+- **A conversation shared with you to read has no message box.** It used to
+  offer one, and the message failed with "Conversation not found".
+  `GET /conversations/shared-with-me` now says each share's `share_permission`.
+- **Change a person's access to a conversation in place.** Each person in the
+  Share dialog has a View/Edit picker, so turning a reader into an editor no
+  longer means revoking and sharing again. The owner only; a share link stays
+  view-only (`PATCH /conversations/{id}/shares/{share_id}`).
+- **A notification when a conversation is shared with you.** It opens the
+  conversation, and follows your preference for "Shared with you or your
+  group" (in the inbox, by email or by push), which the "Shared with your
+  group" preference is now called.
+
+### Fixed
+
+- Shared conversation favourites and read receipts update immediately, including
+  new answers arriving in an open shared thread. Channel participants' direct
+  share permissions are checked even when their thread is already listed.
+- Shared sidebar refreshes read only listing columns. Direct-share notification
+  fanout is rate-limited across conversations by organization, sender, recipient
+  and pair, retaining a local floor when Redis is unavailable.
+
+## [1.59.1] - 2026-11-09
+
+### Fixed
+
+- Knowledge sync failures now show their error on the dashboard. Knowledge-base
+  write controls follow effective access to that base, including edit grants,
+  instead of the member's organization-wide permission (#2772).
+
+## [1.59.0] - 2026-11-09
+
+### Changed
+
+- **Breaking: global unfiled knowledge needs operator provenance.** App-scoped
+  bases no longer publish or clear ambiguous legacy chunks merely by claiming a
+  retained collection name. New CLI imports record operator origin; tracked
+  ingestions retain document origin after their owner or base is deleted.
+  Migration `0300_unfiled_writer_provenance.py` preserves certain document
+  ownership and quarantines unknown data. Operators must audit retained imports
+  with `agenticos cmd rag-unfiled-provenance <name>` and, only after inspecting
+  their source, explicitly use `--confirm-operator` to share unknown operator
+  imports with every organization. Known document data is never promoted by
+  that command. Re-ingest private data into its authorized base instead (#2773).
+
+## [1.58.3] - 2026-11-08
+
+### Fixed
+
+- Desktop and mobile native dependencies use an immutable GTK-compatible backport of the GLib string iterator soundness fix (RUSTSEC-2024-0429). The mobile build no longer enables the legacy HTML path that pulled vulnerable `rand` 0.7.3 (RUSTSEC-2026-0097).
+
+## [1.58.2] - 2026-11-08
+
+### Fixed
+
+- Concurrent first ingests into the same new collection no longer fail on PostgreSQL catalog uniqueness. Table and index creation is serialized per collection, and a rolled-back creator releases waiting writes (#2774).
+
+## [1.58.1] - 2026-11-08
+
+### Fixed
+
+- Nightly proactivity uses its own look attempts rather than watches to decide when someone is due. Successful looks remember which prompts they read, so deferred prompts survive intervening watches and a settled approval or question wait does not cause an extra model call. Watches still count toward personal spending limits. Existing recent messages may receive one catch-up look after upgrading (#2777).
+
+## [1.58.0] - 2026-11-08
+
+### Added
+
+- Workflow agent steps can use the existing Ask Question tool to wait for a user and resume the same conversation. Questions remain available in the originating chat and workflow run view after reload; answers are saved before the workflow worker continues under its current budget. Question cards honor current workflow grants and retain newer questions when polling overlaps a delayed answer response. Completed answers remain in agent context after chat compaction, and question waits do not stall shared mailbox polling.
+
+## [1.57.0] - 2026-11-08
+
+### Added
+
+- Workflow Manual, API and Called by a workflow triggers can declare an optional
+  JSON Schema Draft 2020-12 input contract, including nested objects, arrays,
+  enums, required fields, length limits, additional-property restrictions and
+  local `$defs`/`$ref` references. Published versions freeze the contract; invalid
+  input is rejected before a run starts with field paths. API and MCP discovery
+  expose the effective schema, preserving existing simple-field and untyped inputs.
+  Raw-schema validation runs in an isolated process with bounded resources and
+  diagnostics, with Linux address-space limits and native macOS support. Step tests use the contract of the entry that reaches the tested step.
+  Publication rejects negations that exclude every object; discovered legacy
+  date fields retain calendar validation without requiring format assertions.
+  Discovery marks the additional integer-token requirement of legacy simple fields.
+  Validator memory exhaustion returns a controlled input refusal rather than
+  a retryable server failure.
+
+### Changed
+
+- **Breaking:** agent `list_workflows` discovery refuses encoded responses above
+  32 KiB. Narrow the agent's workflow binding or input contracts, or inspect
+  contracts through the HTTP input-schema endpoint outside the agent context.
+
+## [1.56.4] - 2026-11-08
+
+### Changed
+
+- Add optional CodeRabbit review preferences and document installation and review triggers; the GitHub App must be installed separately (#2812).
+
+## [1.56.3] - 2026-11-08
+
+### Fixed
+
+- Keep guardrail-refused prompts out of later models through queued workflow branches, retries and calls, routine retention, conversation search, platform MCP readers, cached summaries, parked continuations, voice reconnects and transcript titles (#2767). Existing cached summaries are rebuilt once after upgrading.
+
+## [1.56.2] - 2026-11-07
+
+### Fixed
+
+- Keep renamed tools’ chat views, drawings, drafts and run steps through streaming, reloads and shared links; prevent external tools from claiming built-in renderers by name (#2740).
+- Cancel clipboard feedback timers when a copied card closes, including copies that finish after the card unmounts.
+
+## [1.56.1] - 2026-11-07
+
+### Fixed
+
+- **Skills use skill-specific names.** Models open a skill with `read_skill`
+  from an “available skills” catalog; `read_skill_resource` still reads its
+  supporting files. Native deferred loading, approval policies and saved
+  conversation histories remain compatible, including existing `load_capability`
+  approval keys and histories.
+
+## [1.56.0] - 2026-11-07
+
+### Added
+
+- Local routines ask once: the desktop app lets all your routines in an organization work in a folder (or your home folder, for the whole computer), and every later routine there is saved without another dialog. The permission survives app updates and signing in again; a routine follows your current desktop session. Approving another folder or stronger operations keeps earlier grants. On Windows, routine folders must use local drives rather than UNC or device paths.
+- The public API lists, opens and renames your conversations (`GET`/`POST /api/v1/conversations`, `PATCH /api/v1/conversations/{id}`), checks one of your own MCP connections (`POST /api/v1/me/mcp-connections/{id}/test`), and the platform MCP server gains `list_conversations`, `create_conversation`, `test_my_connection` and `update_proactivity_settings`, so a routine's topic chat and the organization's watch cadence and briefing can be set up without the console.
+
+### Fixed
+
+- A replacement desktop that does not hold a routine’s grant leaves its incoming events waiting for the approved computer and warns the owner; it does not disable the routine or discard those events. Delegates retain a shared local-workspace requirement before computer access has been granted, so they can ask for access too.
+- Routine permissions are verified against the current store fingerprint in the OS keychain, so editing the JSON or replaying a revoked store cannot extend consent. **Upgrade:** explicitly unlink and relink the computer, then approve existing local routines again; older grants have no trusted fingerprint. A missing keychain or interrupted permission write fails closed and requires the same reset.
+- Routine folder admission refuses symbolic links in the root path, including a replaced grant root, instead of resolving them before checking access. Local folder commands retain the approved directory through Linux sandbox startup, preventing a concurrent folder rename or symlink replacement from changing what is mounted. Linux needs bubblewrap with `--bind-fd` support. On Linux, task environment variables are applied inside the sandbox and passed privately through a descriptor.
+- An agent whose workspace is your computer no longer refuses a message, or asks where it may work before you send one, when no folder is chosen. It answers what needs no files and asks for your computer only when a request needs your files; the chat continues with them once you choose.
+- An API key you issued, or an MCP client you authorized, with the explicitly selected `personal:consent` scope can now create and change your own routines that act as you and your watches, review a routine's sources, and publish an agent without withdrawing your routines' consent. This scope is excluded from all presets, including Full access, and existing credentials gain no consent automatically. It used to be refused as if it were somebody else; an agent's run credential outside your private chat and an administrator impersonating you are still refused.
+- A routine its agent cannot run - for example one whose agent works on your computer and that names no folder - no longer leaves a run that the stale-run sweep later reports as a crash; it stops with a notification that says why.
+- A watch check is bounded: at most 30 model requests, with long tool results trimmed and an overgrown history summarized. A first check of a whole Notion workspace had made about 40 requests and cost $2.
+- Connecting an MCP server in the desktop app opens the provider's sign-in in your own browser instead of inside the app window, so saved passwords, passkeys and existing sign-ins work there. Finish signing in and return to the app; the server appears once it is authorised.
+
+## [1.55.0] - 2026-11-07
+
+### Changed
+
+- The organization switcher now sits at the top of the sidebar, showing the active organization's name and avatar without opening the account menu. It remains available in the collapsed sidebar and phone menu, with organization management and creation in the same dropdown.
+
+## [1.54.1] - 2026-11-07
+
+### Fixed
+
+- Chat questions are saved before their answer card appears. Switching chats or reopening the conversation restores the unanswered card and answering continues the same run, instead of leaving the agent waiting on a connection with no visible form. Chat answers retain the live question channel so delegates can ask follow-up questions during the continuation.
+
+## [1.54.0] - 2026-11-07
+
+### Added
+
+- Tool search can defer eligible tools from enabled capabilities as well as bound
+  MCP servers. Choose either group or both, and keep whole capabilities, MCP
+  server namespaces or individual exposed tools visible from the first request.
+  Existing configurations keep their MCP-only deferral behavior.
+
+## [1.53.0] - 2026-11-07
+
+### Fixed
+
+- Public embed messages now spend a per-connection allowance before attachment parsing, reject lists above three file IDs before inspecting them, and aggregate invalid IDs into one bounded log entry without their values. Malformed frames cannot spend the allowance shared with other anonymous visitors. This prevents malformed frames from amplifying the newly enabled application logs.
+
+- API, worker, ingestion children and CLI now emit timestamped, redacted application logs to stderr, with `LOG_LEVEL=INFO` by default. SQL queries and HTTP transport chatter stay quiet; Logfire console spans are opt-in with `LOGFIRE_CONSOLE=true` in every environment. (#2771)
 
 ## [1.52.0] - 2026-11-06
 
@@ -20581,7 +20779,25 @@ installed hook did nothing.
   codebase has diverged from the generator past the point where a 3-way merge
   helps.
 
-[Unreleased]: https://github.com/vstorm-co/agenticos/compare/v1.52.0...HEAD
+[Unreleased]: https://github.com/vstorm-co/agenticos/compare/v1.60.1...HEAD
+[1.60.1]: https://github.com/vstorm-co/agenticos/compare/v1.60.0...v1.60.1
+[1.60.0]: https://github.com/vstorm-co/agenticos/compare/v1.59.1...v1.60.0
+[1.59.1]: https://github.com/vstorm-co/agenticos/compare/v1.59.0...v1.59.1
+[1.59.0]: https://github.com/vstorm-co/agenticos/compare/v1.58.3...v1.59.0
+[1.58.3]: https://github.com/vstorm-co/agenticos/compare/v1.58.2...v1.58.3
+[1.58.2]: https://github.com/vstorm-co/agenticos/compare/v1.58.1...v1.58.2
+[1.58.1]: https://github.com/vstorm-co/agenticos/compare/v1.58.0...v1.58.1
+[1.58.0]: https://github.com/vstorm-co/agenticos/compare/v1.57.0...v1.58.0
+[1.57.0]: https://github.com/vstorm-co/agenticos/compare/v1.56.4...v1.57.0
+[1.56.4]: https://github.com/vstorm-co/agenticos/compare/v1.56.3...v1.56.4
+[1.56.3]: https://github.com/vstorm-co/agenticos/compare/v1.56.2...v1.56.3
+[1.56.2]: https://github.com/vstorm-co/agenticos/compare/v1.56.1...v1.56.2
+[1.56.1]: https://github.com/vstorm-co/agenticos/compare/v1.56.0...v1.56.1
+[1.56.0]: https://github.com/vstorm-co/agenticos/compare/v1.55.0...v1.56.0
+[1.55.0]: https://github.com/vstorm-co/agenticos/compare/v1.54.1...v1.55.0
+[1.54.1]: https://github.com/vstorm-co/agenticos/compare/v1.54.0...v1.54.1
+[1.54.0]: https://github.com/vstorm-co/agenticos/compare/v1.53.0...v1.54.0
+[1.53.0]: https://github.com/vstorm-co/agenticos/compare/v1.52.0...v1.53.0
 [1.52.0]: https://github.com/vstorm-co/agenticos/compare/v1.51.0...v1.52.0
 [1.51.0]: https://github.com/vstorm-co/agenticos/compare/v1.50.2...v1.51.0
 [1.50.2]: https://github.com/vstorm-co/agenticos/compare/v1.50.1...v1.50.2

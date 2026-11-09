@@ -1,5 +1,5 @@
 ---
-source_sha: "95cf2c67136d"
+source_sha: "c7783da0b195"
 ---
 
 # Die Konsole { #the-console }
@@ -182,7 +182,9 @@ Routines hat zwei Tabs. **Agentenaufgaben** startet einen gewählten Agenten nac
 Zeitplan oder Ereignis mit seinen Werkzeugen; die Läufe erscheinen in Activity.
 **Meine Beobachtungen** liest nur persönliche verbundene Konten und sendet
 Ergebnisse in den privaten Posteingang. Jeder Tab hat eigene Erstellungsaktionen.
-`/routines?tab=watches` öffnet die Beobachtungen.
+`/routines?tab=watches` öffnet die Beobachtungen. Eine Prüfung stellt höchstens
+30 Modellanfragen, lange Ergebnisse werden gekürzt; so bleibt eine Beobachtung
+eines großen Workspace günstig.
 
 Organisation → Proaktivität trennt Vorschläge, Überwachung, gemeinsame Limits, Zustellungszeiten und Begrüßungen. Ungespeicherte Änderungen lassen sich verwerfen. Hintergrunddienste zeigen Status und Verbrauch; Modell- und Budgeteinstellungen werden pro Dienst aufgeklappt.
 
@@ -220,6 +222,13 @@ Ihren Morgen: zu der Stunde, die die Proaktivität der Organisation hält, nenne
 eine Benachrichtigung und eine Direktnachricht von jedem ihrer Slack-, Teams-
 und Mattermost-Bots, der Sie kennt, was neu ist. Jeder Fund steht nur in einem
 Briefing.
+
+Der Organisationswechsler steht unter dem Logo oben in der Seitenleiste und zeigt
+den Namen und Avatar der aktiven Organisation. Öffnen Sie ihn, um die
+Organisation zu wechseln, Organisationen zu verwalten oder eine neue anzulegen.
+In der eingeklappten Seitenleiste bleibt der Avatar als Wechsler erhalten; das
+Menü auf dem Smartphone bietet dasselbe Bedienelement. Die Kontoeinstellungen
+bleiben im Kontomenü unten.
 
 Die Suche steht oberhalb der Navigationsziele; am Computer ist ihr Tastenkürzel
 sichtbar. Benachrichtigungen und Kontomenü bleiben unterhalb der scrollbaren Liste.
@@ -337,22 +346,9 @@ Auf einem Smartphone gibt es keine Sprechblase - sie würde die Seite verdecken,
 Freigaben, die sie schon genannt hat, bleiben für den Rest des Browser-Tabs
 genannt, auch wenn ein Link die Konsole neu lädt.
 
-Das Fenster nutzt den Chat der Konsole und startet mit dem Hauptassistenten.
-Wählen Sie über die Agent-Auswahl in der Kopfzeile einen veröffentlichten Agenten,
-den Sie ausführen dürfen. Beim Wechsel bleibt die aktuelle Unterhaltung erhalten;
-Kopfzeile und Gesprächsverlauf folgen der Auswahl. Die Begrüßungskacheln von
-Architect erscheinen nur, wenn der Hauptassistent ausgewählt ist. Auf dem
-Smartphone füllt das Fenster den Bildschirm.
-
-Jede neue Frage enthält aktuelle strukturierte Informationen zur geöffneten
-Konsolenseite, solange die Seitenfreigabe eingeschaltet ist. Das Fenster zeigt,
-welche Seite geteilt wird, und lässt Sie die Freigabe ausschalten.
-
-Bei einer Frage in der Warteschlange oder beim erneuten Senden einer abgelehnten
-Nachricht bleiben der beim Absenden erfasste Seitenkontext und der damals
-ausgewählte Agent erhalten. Eine neue Frage oder eine neu generierte Antwort
-nutzt die aktuelle Seite und den aktuell ausgewählten Agenten. Beim Wechsel von Konto oder Organisation werden
-Unterhaltung, Agent-Auswahl und Seitenfreigabe des Fensters zurückgesetzt.
+Sein Fenster ist der Chat der Konsole selbst, keine Seite in der Seite, und öffnet
+sich mit vier Kacheln, sodass die erste Nachricht ein Klick ist; es führt einen
+eigenen Verlauf. Auf dem Telefon füllt es den Bildschirm.
 
 Nennt er eine Seite, öffnet der Link sie in der Konsole hinter dem Fenster und
 zeigt auf das gemeinte Bedienelement — die Schaltfläche, die einen Agent anlegt,
@@ -360,7 +356,7 @@ den Reiter mit den Freigaben. Die Kamera in seiner Kopfzeile zeigt ihm die Seite
 auf der Sie sind: Der Browser fragt, welchen Tab Sie teilen, und ein Bild hängt
 an Ihrer nächsten Nachricht.
 
-Längere Aufgaben plant der Architect als Checkliste, die Sie
+Längere Aufgaben plant er als Checkliste, die Sie
 verfolgen können, er merkt sich Notizen über Sie zwischen Unterhaltungen, sagt
 Ihnen, was Ihre Agents kosten, und löscht nur einen versehentlich angelegten
 Agent-Entwurf und eine Routine, deren Entfernen Sie verlangen. Neben Freigaben und einer leeren
@@ -457,6 +453,21 @@ sich zuletzt bewegt hat. Einer, dessen Run noch arbeitet, zeigt einen Spinner un
 wie lange er schon läuft; einer mit einer Antwort, die Sie seit dem letzten Öffnen
 nicht gesehen haben, trägt einen Punkt, den das Öffnen löscht - nur für Sie, denn
 einen geteilten Thread liest jeder seiner Leser für sich.
+
+Unterhaltungen, die andere mit Ihnen geteilt haben, stehen unter **Mit Ihnen
+geteilt**, unter Ihren Favoriten. Umbenennen, Teilen, Archivieren und Löschen
+liegen bei ihren Besitzern. Im Menü können Sie Favoriten setzen oder entfernen und **Aus meinen Chats entfernen** wählen,
+das Ihren Zugriff beendet und die Unterhaltung für alle anderen unverändert
+lässt. Eine zum Lesen mit Ihnen geteilte Unterhaltung hat kein Eingabefeld.
+Teilt jemand eine Unterhaltung mit Ihnen, erhalten Sie eine Benachrichtigung,
+die sie öffnet. Ungelesene und favorisierte geteilte Unterhaltungen stehen in ihren üblichen Bereichen.
+
+Unter **Teilen** hat jede Person, mit der die Unterhaltung geteilt ist, neben
+ihrem Namen eine Auswahl **Ansehen** oder **Bearbeiten**, um zu ändern, was sie
+darf, ohne den Zugriff zu entziehen und neu zu teilen. Ein Freigabelink bleibt
+schreibgeschützt.
+
+Direkte Freigaben sind pro Minute auf 100 Versuche je Organisation, 20 je Absender, 20 je Empfänger und fünf je Absender–Empfänger-Paar innerhalb der Organisation begrenzt. Neue Unterhaltungen setzen diese Grenzen nicht zurück. Eine Ablehnung liefert `429` mit einer Wartezeit und erstellt weder Freigabe noch Benachrichtigung. Freigabelisten und tatsächlicher Zugriff werden bei aktiver Seite alle 15 Sekunden aktualisiert.
 
 Drei Dinge im Eingabefeld sind wissenswert.
 
@@ -871,6 +882,22 @@ Anruf, der sich neu verbunden hat, ist weiterhin eine Zeile, mit Zeit und Kosten
 aller Verbindungen summiert. Die Dashboard-Karte **Sprachminuten (Voice
 minutes)**, im Nutzungsband für jemanden mit `runs:view`, zeigt die
 Anrufminuten und Anrufe des Zeitraums und die drei häufigsten Agents.
+
+### Ein Gespräch abzweigen { #forking }
+
+Um einen anderen Ansatz zu probieren oder eine Nebenfrage dort zu klären, wo sie den Hauptfaden nicht überfrachtet, wählen Sie unter einer Antwort des Agenten **In neue Unterhaltung abzweigen**. Sie erhalten ein neues, eigenes Gespräch im selben Projekt, mit allem bis einschließlich dieser Antwort. Die nächste Nachricht macht dort mit demselben Verlauf weiter; das Original bleibt unverändert.
+
+Abzweigen kann nur, wem das Gespräch gehört: Wer es zum Ansehen oder Bearbeiten freigegeben bekommen hat, sieht die Aktion nicht. Eine Abzweigung kopiert die Nachrichten und die Tool-Aufrufe, nicht die Dateien der Anhänge, die Dateien, die der Agent in seinen Workspace geschrieben hat, die von Agenten erzeugten Bilder, die Kosten oder die Run-Datensätze. Der Agent kennt den Text eines Anhangs weiterhin, aber die Abzweigung zeigt keine Karte dafür; ein von einem Agenten erzeugtes Bild gehört dem Original und lädt nicht mehr, sobald das Original gelöscht ist. Solange ein Run in diesem Verlauf noch schreibt oder auf eine Freigabe oder eine Frage wartet, lässt sich das Gespräch nicht abzweigen.
+
+Oben in einer Abzweigung steht **Abgezweigt aus** mit einem Link zum Original. Diese Zeile sehen nur Sie: Geben Sie die Abzweigung frei, sieht die andere Person ein gewöhnliches Gespräch.
+
+Eine Abzweigung ist auf 2.000 Nachrichten, 10.000 Werkzeugaufrufe und 20 MiB kopierten Text und strukturierte Daten begrenzt. Pro Mitglied und Organisation sind höchstens zehn Anfragen pro Minute erlaubt. Eine gerade aktualisierte Unterhaltung kann die Abzweigung kurzzeitig ablehnen; versuchen Sie es nach der Aktualisierung erneut. Zu große Verläufe müssen vor dem Kopieren gekürzt werden.
+
+Gespeicherte Abzweigungen haben ein eigenes Kontingent von 100 MiB pro Mitglied innerhalb einer Organisation und 1 GiB für die gesamte Organisation. Jede Kopie reserviert ihre Nutzdaten sowie 4 KiB für die Unterhaltung und 1 KiB je Nachricht oder Werkzeugaufruf. PostgreSQL serialisiert die Zulassung, sodass parallele Anfragen das Kontingent nicht überschreiten. Erst das Löschen der Kopie gibt die Reservierung frei; Archivierung oder Löschen des Originals tun dies nicht. Zeichnungen mit gespeicherten Bilddateien lassen sich derzeit nicht abzweigen. Wählen Sie eine frühere Antwort; die Anfrage wird vor dem Erstellen einer beschädigten Kopie abgelehnt.
+
+Ausgelagerter Text und Medien einer übernommenen Zusammenfassung werden in die Kopie eingebettet. Das Löschen des Originals entfernt diesen Kontext daher nicht. Die wiederhergestellten Inhalte zählen zum Limit von 20 MiB. Die Wiederherstellung ist auf 100 externe Verweise und zehn Sekunden begrenzt. Fehlende Inhalte oder überschrittene Grenzen führen zur Ablehnung ohne unvollständige Kopie.
+
+Eine Unterhaltung mit einer gespeicherten Checkliste kann nur an ihrer neuesten Nachricht abgezweigt werden, wenn diese eine Antwort des Assistenten ist. Die Kopie behält diese Checkliste einschließlich Aufgaben-IDs und Abhängigkeiten. Frühere Checklistenstände werden nicht gespeichert; eine frühere Abzweigung wird daher abgelehnt, statt spätere Aufgaben in einen älteren Verlauf zu kopieren.
 
 ### Hintergrundthemen { #background-topics }
 
