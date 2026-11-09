@@ -50,6 +50,10 @@ Two things are versioned separately from this file and worth knowing about:
   adds it under a Pinned heading in the left navigation, in the order it was
   pinned; unpinning removes it. Pins are per person, and a pinned app the
   reader can no longer open simply is not listed.
+- The floating assistant includes a previewable current-page context with each
+  question, an option to turn page sharing off, and a picker for published agents
+  the user can run. Queued questions keep their submitted page and agent. Apps
+  can register bounded view details through their existing sandbox bridge.
 - Added an opt-in Docker image retention operator helper with a dry-run default,
   explicit current and previous successful release pins, protection for images
   referenced by any container, and a pre-deployment disk-space check. Installation

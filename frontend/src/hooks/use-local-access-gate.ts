@@ -28,6 +28,7 @@ export function useLocalAccessGate<A extends unknown[]>(
   options?: { selectedAgentId: string | null; metadataPending: boolean; projectId?: string | null },
 ): (...args: A) => void {
   const desktop = isDesktopShell(useShell());
+  const conversationApi = useConversationStore.useApi();
   const t = useTranslations("chat.localAccess");
   const latest = useRef(agent);
   useEffect(() => {
@@ -43,7 +44,7 @@ export function useLocalAccessGate<A extends unknown[]>(
         if (metadataPending)
           pending.current.push({
             agentId: selectedAgentId,
-            conversationId: useConversationStore.getState().currentConversationId,
+            conversationId: conversationApi.getState().currentConversationId,
             scope: accountScope(),
             args,
           });
@@ -54,18 +55,18 @@ export function useLocalAccessGate<A extends unknown[]>(
         send(...args);
         return;
       }
-      const conversationId = useConversationStore.getState().currentConversationId;
+      const conversationId = conversationApi.getState().currentConversationId;
       const scope = accountScope();
       const stillHere = () =>
         scope === accountScope() &&
         latest.current?.id === agent.id &&
-        useConversationStore.getState().currentConversationId === conversationId;
+        conversationApi.getState().currentConversationId === conversationId;
       const workOn = useWorkOnStore.getState();
       const explicit = workOn.explicitTargetFor(conversationId);
       // A project's cloud workspace supersedes the agent's local default.
       const project =
         projectId ??
-        (conversationId === null ? useConversationStore.getState().pendingProjectId : null);
+        (conversationId === null ? conversationApi.getState().pendingProjectId : null);
       if (project && explicit === null) {
         send(...args);
         return;
@@ -111,7 +112,7 @@ export function useLocalAccessGate<A extends unknown[]>(
         if (stillHere()) toast.error(t("failed"));
       });
     },
-    [desktop, agent, send, selectedAgentId, metadataPending, projectId, t],
+    [desktop, agent, send, selectedAgentId, metadataPending, projectId, t, conversationApi],
   );
   useEffect(() => {
     if (metadataPending || pending.current.length === 0) return;
@@ -120,11 +121,11 @@ export function useLocalAccessGate<A extends unknown[]>(
     for (const item of queued)
       if (
         item.agentId === agent?.id &&
-        item.conversationId === useConversationStore.getState().currentConversationId &&
+        item.conversationId === conversationApi.getState().currentConversationId &&
         item.scope === accountScope()
       )
         gate(...item.args);
       else toast.error(t("agentUnavailable"));
-  }, [agent, gate, metadataPending, t]);
+  }, [agent, gate, metadataPending, t, conversationApi]);
   return gate;
 }

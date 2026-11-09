@@ -1,5 +1,5 @@
 ---
-source_sha: "df184b376180"
+source_sha: "a1c685490bed"
 ---
 
 # Apps { #artifacts }
@@ -973,6 +973,42 @@ veröffentlicht. Die Prüfungen:
   lädt;
 - eine gebundene Seite, deren Skript nie `agenticos.onData` aufruft oder
   `agenticos.data` liest und die deshalb keine Datensätze zeigt.
+
+### Kontext mit dem Assistenten teilen { #sharing-context-with-the-assistant }
+
+Mit `agenticos.setAssistantContext` beschreibt eine statische App oder eine App
+mit Daten-Bindings ihre aktuelle Ansicht für den schwebenden Assistenten. Die
+Funktion ist im Hauptviewer `/apps/{artifactId}` der Konsole für angemeldete
+Benutzer verfügbar. Rufen Sie sie erneut auf, sobald sich Ansicht, Filter oder
+ausgewählte Datensätze ändern:
+
+```javascript
+agenticos.setAssistantContext({
+  view: "Orders",
+  filters: { status: "waiting", region: "west" },
+  selected_ids: ["order-42"],
+  summary: "Three orders are waiting for review.",
+  selected_text: "Order 42: awaiting approval."
+});
+```
+
+Alle Felder sind optional. Mit `agenticos.setAssistantContext(null)` löschen Sie
+die von der App gelieferten Details. Texte werden auf diese Länge gekürzt;
+überzählige Einträge werden weggelassen:
+
+| Feld | Grenze |
+|---|---|
+| `view` | 120 Zeichen |
+| `filters` | 20 Einträge; Schlüssel mit 80 Zeichen; Zeichenkettenwerte mit 240 Zeichen |
+| `selected_ids` | 20 IDs als Zeichenketten, je 128 Zeichen |
+| `summary` | 6.000 Zeichen |
+| `selected_text` | 2.000 Zeichen |
+
+Die Konsole liefert App-ID, Titel, Version und aktuellen Pfad. Der iframe kann
+diese Identität nicht ersetzen oder zusätzliche Berechtigungen erteilen. Die API
+nutzt die bestehende Sandbox-Brücke; sie liest das DOM nicht aus und erfasst
+weder Formularfelder noch URL-Abfrageparameter automatisch. Der Betrachter
+steuert die Freigabe im [Assistentenfenster](console.md#the-assistant).
 
 ### Die Seite sehen: Vorschau { #seeing-the-page-preview }
 

@@ -2499,7 +2499,9 @@
       "cancel": "Not now",
       "agentUnavailable": "The selected agent could not be loaded. Try again.",
       "failed": "Could not set up access on this computer"
-    }
+    },
+    "sendNowNotWithPageContext": "This question keeps its selected agent and page, and waits for a full answer",
+    "queuedPageContext": "Page: {page}"
   },
   "common": {
     "archiveNamedConfirm": "Archive {name}?",
@@ -5138,7 +5140,7 @@
       },
       "assistant-widget": {
         "title": "Your Architect",
-        "body": "Ask it anything about the platform - it builds agents with you, explains errors and finds settings. Its speech bubbles suggest what to do on each page; turn them off in Settings → Assistant."
+        "body": "Open the floating assistant to ask about the page you are viewing. Choose who answers, inspect or switch off the page context, and keep asking as you navigate. Its speech bubbles suggest what to do on each page."
       },
       "groups-new": {
         "title": "Add a group",
@@ -5475,6 +5477,14 @@
       "chat-subscription-model": {
         "title": "Use your Claude subscription",
         "body": "Choose one of your saved Claude subscription models to power this chat. The connection stays personal; manage it in Settings → AI connections."
+      },
+      "assistant-agent-picker": {
+        "title": "Choose who answers",
+        "body": "Select a published agent you can run. The next question goes to that agent, while previous answers keep their original attribution."
+      },
+      "assistant-page-context": {
+        "title": "Include the current page",
+        "body": "The next question includes the page details shown here. View them before sending or switch page context off. Queued questions keep the page and agent selected when you submitted them."
       }
     },
     "chooseLanguage": "Language",
@@ -11304,7 +11314,18 @@
     },
     "screenshot": "Show it this page",
     "screenshotFailed": "The screenshot could not be taken. Paste one into the conversation instead.",
-    "defaultName": "Architect"
+    "defaultName": "Architect",
+    "pageContext": {
+      "include": "Use the current page",
+      "using": "Using: {page}",
+      "off": "Page context is off",
+      "view": "View context",
+      "explanation": "These page details will accompany your next question. Each queued question keeps the page it was submitted from.",
+      "page": "Page",
+      "record": "Record",
+      "viewLabel": "View",
+      "selected": "Selected records"
+    }
   },
   "assistantSettings": {
     "notForYou": "Your role doesn't include running agents, so the assistant isn't available to you. An administrator can change that.",

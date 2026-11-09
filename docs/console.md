@@ -298,9 +298,20 @@ On a phone there is no bubble - it would cover the page it talks about - and the
 button carries the dot instead. Approvals it has raised stay raised for the rest
 of the browser tab, even when a link reloads the console.
 
-Its window is the console's own chat, not a page inside the page, and opens on
-four tiles, so a first message is a click; it keeps its own conversation
-history. On a phone it fills the screen.
+Its window uses the console's chat and starts with the main assistant selected.
+Use the agent selector in the header to choose a published agent you are allowed
+to run. Switching agents keeps the current conversation; the header and
+conversation history follow the selection. The Architect's welcome tiles appear
+only when the main assistant is selected. On a phone the window fills the screen.
+
+Each new question includes fresh structured context about the current console
+page while page context is enabled. The window shows which page will be shared and
+lets you switch sharing off.
+
+A queued question or a retry of a refused submission keeps the page context and
+agent selected when you submitted it. A new question or regenerated answer uses
+the current page and current agent. Changing account or organization resets the
+window's conversation, agent selection and page context setting.
 
 When it names a page, the link opens in the console behind the window and
 points at the control it means — the button that creates an agent, the tab with
@@ -308,7 +319,7 @@ the approvals. The camera in its header shows it the page you are on: your
 browser asks which tab to share, and one picture is attached to your next
 message.
 
-It plans longer jobs as a checklist you can watch, keeps notes about
+The Architect plans longer jobs as a checklist you can watch, keeps notes about
 you between conversations, can tell you what your agents cost, and deletes
 nothing but an agent draft it made by mistake and a routine you ask it to
 remove. Besides approvals and an

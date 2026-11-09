@@ -1,5 +1,5 @@
 ---
-source_sha: "df184b376180"
+source_sha: "a1c685490bed"
 ---
 
 # Aplikacje { #artifacts }
@@ -878,6 +878,42 @@ Sprawdzane są:
 - `AO.onData`, `AO.records`, `AO.run` albo `AO.onRun` na stronie, która nie ładuje `lib/agenticos-3.js`;
 - strona z bindingami, której skrypt nigdy nie wywołuje `agenticos.onData` ani nie
   czyta `agenticos.data`, więc nie pokazuje żadnych rekordów.
+
+### Udostępnianie kontekstu asystentowi { #sharing-context-with-the-assistant }
+
+`agenticos.setAssistantContext` pozwala aplikacji statycznej lub aplikacji z
+bindingami danych opisać bieżący widok pływającemu asystentowi. Funkcja jest
+dostępna w głównym widoku `/apps/{artifactId}` konsoli dla zalogowanego
+użytkownika. Wywołuj ją ponownie po zmianie widoku, filtrów lub wybranych
+rekordów:
+
+```javascript
+agenticos.setAssistantContext({
+  view: "Orders",
+  filters: { status: "waiting", region: "west" },
+  selected_ids: ["order-42"],
+  summary: "Three orders are waiting for review.",
+  selected_text: "Order 42: awaiting approval."
+});
+```
+
+Wszystkie pola są opcjonalne. Wywołaj `agenticos.setAssistantContext(null)`, aby
+usunąć szczegóły przekazane przez aplikację. Tekst jest skracany do podanych
+limitów, a nadmiarowe wpisy są pomijane:
+
+| Pole | Limit |
+|---|---|
+| `view` | 120 znaków |
+| `filters` | 20 wpisów; klucze po 80 znaków; wartości tekstowe po 240 znaków |
+| `selected_ids` | 20 identyfikatorów tekstowych, po 128 znaków każdy |
+| `summary` | 6000 znaków |
+| `selected_text` | 2000 znaków |
+
+Konsola dostarcza ID, tytuł i wersję aplikacji oraz bieżącą ścieżkę. Ramka iframe
+nie może zastąpić tej tożsamości ani nadać dodatkowych uprawnień. API korzysta z
+istniejącego mostu sandboxa; nie odczytuje DOM ani nie zbiera automatycznie pól
+formularzy lub parametrów zapytania w adresie URL. Oglądający kontroluje
+udostępnianie w [oknie asystenta](console.md#the-assistant).
 
 ### Jak wygląda strona: podgląd { #seeing-the-page-preview }
 

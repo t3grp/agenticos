@@ -116,3 +116,37 @@ real documents and operational records in their approved private systems.
 Reference the upstream [MCP guide](docs/mcp.md),
 [HTTP API](docs/api.md), [testing guide](docs/testing.md), and
 [branching guide](docs/branching.md) for their current contracts.
+
+## Floating assistant integration
+
+The floating assistant's page-sharing controls and agent selector are described in
+[the console guide](docs/console.md#the-assistant). Embedded apps publish their
+current view through the bounded setter in
+[the app guide](docs/artifacts.md#sharing-context-with-the-assistant).
+
+The frontend attaches a fresh `page_context` to each submitted question while
+sharing is enabled. Every console page has a route/title fallback; mounted pages
+may register explicit details with `useRegisterAssistantPageContext`. Primary
+app viewers register their app identity, title and version. Richer app details
+require `window.agenticos.setAssistantContext(details)` when the view changes.
+Context registration reads no form values, full page text, query values or browser
+selection automatically.
+
+The WebSocket session validates the bounded reference object before saving an
+accepted question and appends it as untrusted model input. Page identities do not
+grant access, select an agent or trigger a resource fetch. The selected agent
+still runs under the authenticated caller's existing permissions. The context
+note is not a new transcript field; it is model input subject to the normal run,
+trace and compaction behavior. Client outboxes retain the submitted snapshot with
+queued questions.
+
+Queued questions freeze the page, selected agent, project and local workspace
+after the applicable access gate. Regeneration is a new submission using the
+current page and selected agent. The floating chat uses its own conversation
+scope, and account or organization changes remount the widget. App registrations
+also track the current document nonce and clear when that document changes.
+
+Release the frontend and backend changes together in T3-built images. No database
+migration or new dependency is required. Follow the existing validation and
+promotion process above; creating a feature branch does not update a running
+deployment.

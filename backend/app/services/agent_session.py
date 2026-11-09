@@ -55,12 +55,14 @@ from app.services.agent_chat import (
     ChatAgentRunner,
     ChatTurn,
     OpenedRun,
+    page_context_note,
     requested_agent_id,
     requested_approval_mode,
     requested_environment_id,
     requested_local,
     requested_mentions,
     requested_model_profile_id,
+    requested_page_context,
     requested_testing,
     requested_time_zone,
 )
@@ -598,6 +600,7 @@ class AgentSession:
         # What the person pointed at with `@`, resolved as them against what the
         # agent can reach (#2189). It never changes which agent answers.
         try:
+            page_context = requested_page_context(data)
             mention_refs = requested_mentions(data)
             if mention_refs:
                 async with get_db_context() as db:
@@ -782,15 +785,17 @@ class AgentSession:
                     draft_tools=lambda: opened[0].draft_tools if opened else (),
                 )
 
+                user_input = prompt.for_model or user_message
+                if mention_note is not None:
+                    user_input = f"{user_input}\n\n{mention_note}"
+                if page_context is not None:
+                    user_input = f"{user_input}\n\n{page_context_note(page_context)}"
+
                 turn = await ChatAgentRunner(db).run(
                     user=self.user,
                     organization_id=self.organization_id,
                     agent_id=agent_id,
-                    user_input=(
-                        prompt.for_model or user_message
-                        if mention_note is None
-                        else f"{prompt.for_model or user_message}\n\n{mention_note}"
-                    ),
+                    user_input=user_input,
                     message_history=model_history,
                     attachments=attachments,
                     conversation_id=(
