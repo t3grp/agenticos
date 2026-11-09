@@ -1,4 +1,102 @@
 {
+  "appConnections": {
+    "enable": "Enable",
+    "enabled": "Account enabled.",
+    "title": "Connect your apps",
+    "description": "Bring the tools you already use into T3OS. Start with one useful task.",
+    "unconfiguredTitle": "App connections are not configured yet",
+    "unconfiguredDescription": "Your administrator needs to enable the app connection service. Existing and custom MCP connections remain available in Advanced.",
+    "progress": "Connection setup progress",
+    "steps": {
+      "1": "1 · Your goal",
+      "2": "2 · Connect apps",
+      "3": "3 · First task"
+    },
+    "chooseGoal": "Start with something useful.",
+    "goalHint": "Choose a starting point. You can connect more apps later.",
+    "goals": {
+      "day": {
+        "title": "Prepare my day",
+        "description": "A useful brief before your first meeting.",
+        "prompt": "Use only my connected {toolkit} account {account} (connection {connection}; service {catalog}) to summarize today's upcoming meetings and what I should prepare. Read only; do not create, change, or send anything. Do not switch to a different account. Include source links where available, and explain any missing access rather than inventing a result."
+      },
+      "inbox": {
+        "title": "Review my inbox",
+        "description": "Find the messages that need your attention.",
+        "prompt": "Use only my connected {toolkit} account {account} (connection {connection}; service {catalog}) to summarize a small set of recent messages that need my attention and suggest next steps. Read only; do not send, delete, archive, or change anything. Do not switch accounts. Include source links where available, and explain any missing access rather than inventing a result."
+      },
+      "answers": {
+        "title": "Find project answers",
+        "description": "Turn project notes into clear next steps.",
+        "prompt": "Use only my connected {toolkit} account {account} (connection {connection}; service {catalog}) to find a small set of recent project notes and summarize priorities, decisions, and open questions. Read only; do not change anything. Do not switch accounts. Cite the sources you used and ask me to narrow the project if the available context is ambiguous."
+      }
+    },
+    "catalogTitle": "Choose the apps you use",
+    "catalogHint": "Each app asks for its own authorization. One account is enough to start.",
+    "toolkits": {
+      "googlecalendar": "Read upcoming events and meeting details.",
+      "gmail": "Find and read messages relevant to your request.",
+      "outlook": "Read relevant messages and upcoming meetings.",
+      "googledrive": "Find and read relevant project documents.",
+      "notion": "Read project pages you make available.",
+      "slack": "Find relevant conversations and project updates.",
+      "github": "Review repository activity, issues, and pull requests."
+    },
+    "connectNamed": "Connect {name}",
+    "addAccount": "Add account",
+    "connect": "Connect",
+    "notConfigured": "Not configured",
+    "browseAll": "Browse all apps",
+    "noApps": "No apps are available on this deployment.",
+    "yourAccounts": "Your connected accounts",
+    "personalHint": "Your account stays personal. Agents use it only through tools configured for your own account.",
+    "statuses": {
+      "pending": "Awaiting authorization",
+      "connected": "Connected",
+      "expired": "Reconnect required",
+      "failed": "Connection failed",
+      "disabled": "Disabled"
+    },
+    "defaultAccount": "Default account",
+    "authorizationVerified": "Authorization verified. App access is checked again when a tool runs.",
+    "checkFailed": "The latest check could not verify access. Reconnect or try checking again.",
+    "reconnect": "Reconnect",
+    "checkConnection": "Check access",
+    "makeDefault": "Make default",
+    "disconnect": "Disconnect",
+    "defaultHint": "The default account is used when no account is specified. Other connected accounts remain available.",
+    "consentHint": "Continue to authorize this app, then return here to verify the connection.",
+    "accountLabel": "Account label (optional)",
+    "accountLabelPlaceholder": "For example, Work or Personal",
+    "intendedAccess": "How your assistant can use this app",
+    "providerPermissions": "Review the exact permissions on the provider's consent screen. T3OS action policies are separate from those permissions.",
+    "cancel": "Cancel",
+    "continueToApp": "Continue to app",
+    "disconnectTitle": "Disconnect this account?",
+    "disconnectHint": "Remove {account} from T3OS. Agents and routines that rely on this connection will need another account or a new connection.",
+    "firstTaskTitle": "Put your connection to work.",
+    "firstTaskHint": "Choose an account and ask your assistant to complete a real task. The result opens in your assistant conversation.",
+    "firstTaskNeedsAccount": "Connect and verify an app for this task first. You can also skip setup and explore T3OS.",
+    "useAccount": "Use this account",
+    "assistantUnavailable": "Your assistant is not ready to run this task. Your connections are saved; an administrator can check the assistant's model and access settings.",
+    "retry": "Try again",
+    "taskSent": "Request sent to your assistant. Follow its progress and any access questions in the conversation.",
+    "callbackVerified": "Your app authorization was verified.",
+    "callbackPending": "Authorization is not ready yet. Check the account below or reconnect.",
+    "callbackFailed": "We could not verify the app connection. Try again or reconnect.",
+    "invalidAuthorizationUrl": "The app returned an invalid authorization address. Please try again.",
+    "connectFailed": "We could not start authorization. Please try again.",
+    "permissionHint": "Your first task requests read access. Other actions follow the agent's approval policy.",
+    "back": "Back",
+    "skip": "Skip for now",
+    "continue": "Continue",
+    "chooseApps": "Choose apps",
+    "verifying": "Verifying your connection…",
+    "retryVerification": "Verify again",
+    "connectionChecked": "Account status refreshed.",
+    "defaultChanged": "Default account updated.",
+    "disconnected": "Account disconnected."
+  },
   "admin": {
     "actions": "Actions",
     "active": "Active",
@@ -4197,6 +4295,7 @@
     "oauthMissingCode": "The provider sent no authorization code.",
     "googleOAuthClientRequired": "Google requires a Client ID and client secret from Google Cloud before you can connect.",
     "googleAppAskAdmin": "Ask an admin to set up Google for this organization.",
+    "googleAppDescription": "Google OAuth client for connected accounts",
     "googleOAuthSetupGuide": "Open Google setup guide",
     "oauthRequiredClient": "Google Cloud OAuth client",
     "googleOAuthClientHint": "Create a Web application OAuth client, select “Use this client for an AI-powered agent”, and add the exact redirect URL below.",
@@ -4427,6 +4526,10 @@
       "create-kb": {
         "title": "Create a knowledge base?",
         "body": "A knowledge base lets your agents search your documents. Want to set one up now? We'll walk you through it."
+      },
+      "connect-app": {
+        "title": "Connect an app?",
+        "body": "Choose a useful starting task, authorize one app, and ask your assistant to use it. You can skip any step."
       },
       "create-mcp": {
         "title": "Connect an MCP server?",
@@ -4774,6 +4877,14 @@
         "title": "Fill in the connection",
         "body": "Name it - the name prefixes its tool names - keep Organization so your agents can use it, and paste a token if this server asks for one. Then choose Next."
       },
+      "flow-app-goal": {
+        "title": "Choose your first task",
+        "body": "Pick Prepare my day, Review my inbox, or Find project answers, then choose apps. One connected account is enough to start. You can change the goal or skip setup."
+      },
+      "flow-app-authorize": {
+        "title": "Authorize, then try it",
+        "body": "Connect an app and review its permissions on the provider's screen. When you return, T3OS verifies the account. Continue to First task, choose the account, and ask your assistant. Finish this guide whenever you are ready; it does not authorize an app."
+      },
       "flow-mcp-field-pick": {
         "title": "Pick a server",
         "body": "This is the catalog of systems your agents can get tools from. Find the one you want and choose Connect on it."
@@ -4841,6 +4952,10 @@
       "mcp-add": {
         "title": "Bring your own",
         "body": "Not in the catalog? Add a custom server by pasting its URL - for the whole organization, or just for yourself."
+      },
+      "app-connections": {
+        "title": "Connect your apps",
+        "body": "Start with a goal and connect only the apps you need. Each provider asks for its own authorization. Advanced keeps custom MCP and shared connections available."
       },
       "mcp-catalog": {
         "title": "Plug in tools",

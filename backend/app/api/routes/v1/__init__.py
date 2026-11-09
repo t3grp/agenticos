@@ -25,6 +25,7 @@ from app.api.routes.v1 import admin_conversations
 from app.api.routes.v1 import me_channel_link
 from app.api.routes.v1 import me_connected_accounts
 from app.api.routes.v1 import me_mcp_connections
+from app.api.routes.v1 import me_app_connections
 from app.api.routes.v1 import org_connected_accounts
 from app.api.routes.v1 import me_suggestions
 from app.api.routes.v1 import me_watches
@@ -243,6 +244,9 @@ v1_router.include_router(
 
 v1_router.include_router(
     me_mcp_connections.router, prefix="/me/mcp-connections", tags=["me:mcp-connections"]
+)
+v1_router.include_router(
+    me_app_connections.router, prefix="/me/app-connections", tags=["me:app-connections"]
 )
 v1_router.include_router(
     me_connected_accounts.router,

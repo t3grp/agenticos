@@ -43,6 +43,7 @@ export { useReusableIntegrations } from "./use-reusable-integrations";
 export { useLocalServices } from "./use-local-services";
 export { useExternalAgents } from "./use-external-agents";
 export { useMcpConnections } from "./use-mcp-connections";
+export { useAppConnections } from "./use-app-connections";
 export { useOrgMcpConnections, useOrgMcpToolCalls } from "./use-org-mcp-connections";
 export { useUsableMcpConnections } from "./use-usable-mcp-connections";
 export { useMcpToolServers } from "./use-mcp-tool-servers";

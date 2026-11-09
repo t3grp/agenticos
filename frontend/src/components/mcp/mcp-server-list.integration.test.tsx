@@ -20,6 +20,11 @@ vi.mock("@/lib/api-client", async () => {
   };
 });
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const managedConnect = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/use-managed-app-connect", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/use-managed-app-connect")>()),
+  useManagedAppConnect: () => managedConnect,
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
@@ -240,6 +245,29 @@ describe("McpServerList", () => {
     vi.clearAllMocks();
     registryResults = [];
   });
+
+  it.each(["connect", "server"])(
+    "routes a managed app's %s link to native setup without generic OAuth",
+    async (parameter) => {
+      catalogEntries = [
+        ...CATALOG.items,
+        {
+          ...CATALOG.items[1]!,
+          key: "composio-gmail",
+          name: "Gmail",
+          auth: "composio",
+          url: null,
+        },
+      ];
+      window.history.replaceState({}, "", `/connectors?${parameter}=composio-gmail`);
+      await mount();
+      await waitFor(() =>
+        expect(managedConnect).toHaveBeenCalledWith("composio-gmail", { sameTab: true }),
+      );
+      expect(apiClient.post).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
 
   it("keeps the card to two controls and counts what is behind them", async () => {
     // The card used to grow a chip per connection, so a server with three

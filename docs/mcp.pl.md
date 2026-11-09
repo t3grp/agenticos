@@ -1,5 +1,5 @@
 ---
-source_sha: "7a4618e328b7"
+source_sha: "c5fb177443aa"
 ---
 
 # MCP — narzędzia, których nikt tutaj nie musi pisać { #mcp-the-tools-nobody-here-has-to-write }
@@ -11,8 +11,8 @@ Organizacja wskazuje serwer, jego narzędzia pojawiają się w Builderze i po na
 stronie nie zmienia się żaden kod.
 
 Wszystko w [katalogu capability](reference/capabilities.md) to kod, który
-napisaliśmy i trzymamy na 100% pokrycia. Wszystko tutaj to URL, który ktoś
-wkleił.
+napisaliśmy i trzymamy na 100% pokrycia. Połączenia MCP udostępniają narzędzia
+przez adres serwera lub zarządzane połączenie z aplikacją.
 
 !!! info "To nie są alternatywy"
 
@@ -23,6 +23,26 @@ wkleił.
     **MCP** to właściwy kształt dla kilkudziesięciu produktów SaaS, z których
     firma akurat korzysta, gdzie jedyną liczącą się gwarancją jest „narzędzia są
     tymi, które opublikował dostawca”.
+
+## Połącz aplikację przez Composio { #connect-an-app-through-composio }
+
+W T3OS wybierz **Connectors → Apps**, określ pierwsze zadanie i połącz Gmail,
+Outlook, Google Calendar, Google Drive, Slack, Notion lub GitHub, jeśli operator
+włączył daną aplikację. Każde konto wymaga osobnej zgody u dostawcy. Po
+weryfikacji konta przez backend możesz uruchomić rzeczywiste zadanie odczytu
+w swoim asystencie.
+
+Konta należą do Ciebie, a ich użycie zależy od autora bieżącej wiadomości.
+Początkowy zestaw akcji odczytuje dane; nie wysyła wiadomości ani nie zmienia
+rekordów. Composio przechowuje poświadczenia dostawcy i pośredniczy w żądaniach
+oraz wynikach. Połączona aplikacja nie staje się automatycznie synchronizowanym
+źródłem wiedzy. Istniejące osobiste i organizacyjne połączenia MCP pozostają
+dostępne w **Advanced**.
+
+Operator konfiguruje klucz projektu, konfiguracje uwierzytelniania i weryfikację
+tożsamości przy powrocie z logowania. Zobacz
+[instrukcję konfiguracji Composio](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+z opisem przetwarzania danych i wymaganych testów z rzeczywistym dostawcą.
 
 ## Połączenie { #a-connection }
 

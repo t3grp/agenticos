@@ -649,6 +649,14 @@ export const qk = {
     messages: (threadId: string) => ["agent-messages", threadId, "messages"] as const,
     recipients: () => ["agent-messages", "recipients"] as const,
   },
+  appConnections: {
+    all: () => ["app-connections"] as const,
+    scope: (userId: string, orgId: string | null) => ["app-connections", userId, orgId] as const,
+    catalog: (userId: string, orgId: string | null) =>
+      ["app-connections", userId, orgId, "catalog"] as const,
+    list: (userId: string, orgId: string | null) =>
+      ["app-connections", userId, orgId, "list"] as const,
+  },
   connectedAccounts: {
     all: () => ["connected-accounts"] as const,
     // A person's own, and the organization's: two owners, two lists.

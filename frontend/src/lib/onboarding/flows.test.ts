@@ -91,6 +91,7 @@ describe("FLOWS", () => {
     expect(first?.roam).toBe(true);
     expect(first?.target).toBeUndefined();
     expect(first?.signal).toEqual({ kind: "opened" });
+    expect(first?.activate).toBe("connectors-advanced");
     expect(flow.steps[1]?.blockSubmit).toBe("mcp-dialog-connect");
     expect(last?.signal).toEqual({ kind: "created", resource: "mcp" });
     expect(last?.inOverlay).toBe(true);
@@ -227,7 +228,7 @@ describe("flowForPage", () => {
     expect(flowForPage(KB_DETAIL)).toBe("create-kb");
     expect(flowForPage(ROUTES.TABLES)).toBe("create-table");
     expect(flowForPage(TABLE_DETAIL)).toBe("create-table");
-    expect(flowForPage(ROUTES.MCP_SERVERS)).toBe("create-mcp");
+    expect(flowForPage(ROUTES.MCP_SERVERS)).toBe("connect-app");
     expect(flowForPage(ROUTES.ROUTINES)).toBe("create-routine");
     expect(flowForPage(ROUTES.WORKFLOWS)).toBe("create-workflow");
     expect(flowForPage(ROUTES.ORGS)).toBe("create-org");

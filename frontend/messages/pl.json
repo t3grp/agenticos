@@ -1,4 +1,102 @@
 {
+  "appConnections": {
+    "enable": "Włącz",
+    "enabled": "Konto zostało włączone.",
+    "title": "Połącz swoje aplikacje",
+    "description": "Korzystaj w T3OS z narzędzi, których już używasz. Zacznij od jednego przydatnego zadania.",
+    "unconfiguredTitle": "Połączenia z aplikacjami nie są jeszcze skonfigurowane",
+    "unconfiguredDescription": "Administrator musi włączyć usługę połączeń. Dotychczasowe i własne połączenia MCP są nadal dostępne na karcie Zaawansowane.",
+    "progress": "Postęp konfiguracji połączeń",
+    "steps": {
+      "1": "1 · Twój cel",
+      "2": "2 · Połącz aplikacje",
+      "3": "3 · Pierwsze zadanie"
+    },
+    "chooseGoal": "Zacznij od czegoś przydatnego.",
+    "goalHint": "Wybierz punkt wyjścia. Kolejne aplikacje możesz połączyć później.",
+    "goals": {
+      "day": {
+        "title": "Przygotuj mój dzień",
+        "description": "Przydatne podsumowanie przed pierwszym spotkaniem.",
+        "prompt": "Użyj wyłącznie mojego połączonego konta {toolkit} {account} (połączenie {connection}; usługa {catalog}), aby podsumować dzisiejsze nadchodzące spotkania i przygotowania. Tylko odczyt: niczego nie twórz, nie zmieniaj ani nie wysyłaj. Nie przełączaj konta. Dodaj dostępne odnośniki do źródeł i wyjaśnij braki dostępu zamiast wymyślać wynik."
+      },
+      "inbox": {
+        "title": "Przejrzyj moją skrzynkę",
+        "description": "Znajdź wiadomości, które wymagają Twojej uwagi.",
+        "prompt": "Użyj wyłącznie mojego połączonego konta {toolkit} {account} (połączenie {connection}; usługa {catalog}), aby podsumować niewielki zestaw ostatnich wiadomości wymagających uwagi i zasugerować następne kroki. Tylko odczyt: niczego nie wysyłaj, nie usuwaj, nie archiwizuj ani nie zmieniaj. Nie przełączaj konta. Dodaj dostępne źródła i wyjaśnij braki dostępu zamiast wymyślać wynik."
+      },
+      "answers": {
+        "title": "Znajdź odpowiedzi o projekcie",
+        "description": "Zamień notatki projektowe w jasne następne kroki.",
+        "prompt": "Użyj wyłącznie mojego połączonego konta {toolkit} {account} (połączenie {connection}; usługa {catalog}), aby znaleźć niewielki zestaw ostatnich notatek projektowych i podsumować priorytety, decyzje oraz otwarte pytania. Tylko odczyt: niczego nie zmieniaj. Nie przełączaj konta. Podaj wykorzystane źródła i poproś o wskazanie projektu, jeśli kontekst jest niejednoznaczny."
+      }
+    },
+    "catalogTitle": "Wybierz używane aplikacje",
+    "catalogHint": "Każda aplikacja wymaga osobnej autoryzacji. Na początek wystarczy jedno konto.",
+    "toolkits": {
+      "googlecalendar": "Odczytuj nadchodzące wydarzenia i szczegóły spotkań.",
+      "gmail": "Wyszukuj i odczytuj wiadomości związane z zadaniem.",
+      "outlook": "Odczytuj odpowiednie wiadomości i nadchodzące spotkania.",
+      "googledrive": "Wyszukuj i odczytuj dokumenty projektu.",
+      "notion": "Odczytuj udostępnione strony projektu.",
+      "slack": "Wyszukuj odpowiednie rozmowy i aktualizacje projektu.",
+      "github": "Przeglądaj aktywność repozytorium, zgłoszenia i pull requesty."
+    },
+    "connectNamed": "Połącz {name}",
+    "addAccount": "Dodaj konto",
+    "connect": "Połącz",
+    "notConfigured": "Nieskonfigurowane",
+    "browseAll": "Przeglądaj wszystkie aplikacje",
+    "noApps": "W tym wdrożeniu nie ma dostępnych aplikacji.",
+    "yourAccounts": "Twoje połączone konta",
+    "personalHint": "Konto pozostaje osobiste. Agenci korzystają z niego tylko przez narzędzia skonfigurowane dla Twojego konta.",
+    "statuses": {
+      "pending": "Oczekuje na autoryzację",
+      "connected": "Połączono",
+      "expired": "Wymaga ponownego połączenia",
+      "failed": "Połączenie nieudane",
+      "disabled": "Wyłączone"
+    },
+    "defaultAccount": "Konto domyślne",
+    "authorizationVerified": "Autoryzacja zweryfikowana. Dostęp jest sprawdzany ponownie przy uruchomieniu narzędzia.",
+    "checkFailed": "Ostatnia kontrola nie potwierdziła dostępu. Połącz ponownie lub powtórz kontrolę.",
+    "reconnect": "Połącz ponownie",
+    "checkConnection": "Sprawdź dostęp",
+    "makeDefault": "Ustaw jako domyślne",
+    "disconnect": "Rozłącz",
+    "defaultHint": "Konto domyślne jest używane, gdy nie wskazano innego. Pozostałe połączone konta są nadal dostępne.",
+    "consentHint": "Przejdź do autoryzacji aplikacji, a potem wróć tutaj, aby zweryfikować połączenie.",
+    "accountLabel": "Etykieta konta (opcjonalnie)",
+    "accountLabelPlaceholder": "Na przykład Służbowe lub Osobiste",
+    "intendedAccess": "Jak asystent może korzystać z aplikacji",
+    "providerPermissions": "Sprawdź dokładne uprawnienia na ekranie zgody dostawcy. Zasady działań T3OS są od nich niezależne.",
+    "cancel": "Anuluj",
+    "continueToApp": "Przejdź do aplikacji",
+    "disconnectTitle": "Rozłączyć to konto?",
+    "disconnectHint": "Usuń {account} z T3OS. Agenci i procedury korzystający z tego połączenia będą potrzebować innego konta lub nowego połączenia.",
+    "firstTaskTitle": "Wykorzystaj swoje połączenie.",
+    "firstTaskHint": "Wybierz konto i zleć asystentowi prawdziwe zadanie. Wynik pojawi się w rozmowie z asystentem.",
+    "firstTaskNeedsAccount": "Najpierw połącz i zweryfikuj aplikację do tego zadania. Możesz też pominąć konfigurację i poznać T3OS.",
+    "useAccount": "Użyj tego konta",
+    "assistantUnavailable": "Asystent nie jest gotowy do wykonania zadania. Połączenia są zapisane; administrator może sprawdzić model i ustawienia dostępu.",
+    "retry": "Spróbuj ponownie",
+    "taskSent": "Zlecenie wysłano do asystenta. Śledź postęp i pytania o dostęp w rozmowie.",
+    "callbackVerified": "Autoryzacja aplikacji została zweryfikowana.",
+    "callbackPending": "Autoryzacja nie jest jeszcze gotowa. Sprawdź konto poniżej lub połącz ponownie.",
+    "callbackFailed": "Nie udało się zweryfikować połączenia. Spróbuj ponownie lub połącz konto od nowa.",
+    "invalidAuthorizationUrl": "Aplikacja zwróciła nieprawidłowy adres autoryzacji. Spróbuj ponownie.",
+    "connectFailed": "Nie udało się rozpocząć autoryzacji. Spróbuj ponownie.",
+    "permissionHint": "Pierwsze zadanie wymaga odczytu. Inne działania podlegają zasadom zatwierdzania agenta.",
+    "back": "Wstecz",
+    "skip": "Pomiń na razie",
+    "continue": "Kontynuuj",
+    "chooseApps": "Wybierz aplikacje",
+    "verifying": "Weryfikowanie połączenia…",
+    "retryVerification": "Zweryfikuj ponownie",
+    "connectionChecked": "Status konta odświeżony.",
+    "defaultChanged": "Konto domyślne zaktualizowane.",
+    "disconnected": "Konto rozłączone."
+  },
   "common": {
     "archiveNamedConfirm": "Zarchiwizować {name}?",
     "chooseSection": "Sekcja: {section}",
@@ -6034,6 +6132,10 @@
         "title": "Utworzyć bazę wiedzy?",
         "body": "Baza wiedzy pozwala Twoim agentom przeszukiwać Twoje dokumenty. Skonfigurujemy jedną teraz? Przeprowadzimy Cię przez to."
       },
+      "connect-app": {
+        "title": "Połączyć aplikację?",
+        "body": "Wybierz pierwsze przydatne zadanie, autoryzuj jedną aplikację i poproś asystenta o jej użycie. Każdy krok możesz pominąć."
+      },
       "create-mcp": {
         "title": "Podłączyć serwer MCP?",
         "body": "Serwery MCP dają agentom narzędzia z innych systemów. Dodamy połączenie teraz? Przeprowadzimy Cię przez to."
@@ -6380,6 +6482,14 @@
         "title": "Wypełnij połączenie",
         "body": "Nazwij je - nazwa poprzedza nazwy jego narzędzi - zostaw zakres organizacyjny, żeby Twoi agenci mogli z niego korzystać, i wklej token, jeśli ten serwer o niego prosi. Potem wybierz Dalej."
       },
+      "flow-app-goal": {
+        "title": "Wybierz pierwsze zadanie",
+        "body": "Wybierz Przygotuj mój dzień, Przejrzyj moją skrzynkę lub Znajdź odpowiedzi o projekcie, a następnie aplikacje. Na początek wystarczy jedno konto. Możesz zmienić cel lub pominąć konfigurację."
+      },
+      "flow-app-authorize": {
+        "title": "Autoryzuj i wypróbuj",
+        "body": "Połącz aplikację i sprawdź uprawnienia na stronie dostawcy. Po powrocie T3OS zweryfikuje konto. Przejdź do pierwszego zadania, wybierz konto i poproś asystenta o pomoc. Możesz zakończyć przewodnik w dowolnym momencie; samo zakończenie nie autoryzuje aplikacji."
+      },
       "flow-mcp-field-pick": {
         "title": "Wybierz serwer",
         "body": "To katalog systemów, z których Twoi agenci mogą czerpać narzędzia. Znajdź ten, który chcesz, i kliknij na nim Connect."
@@ -6447,6 +6557,10 @@
       "mcp-add": {
         "title": "Dodaj własny",
         "body": "Nie ma go w katalogu? Dodaj własny serwer, wklejając jego URL - dla całej organizacji albo tylko dla siebie."
+      },
+      "app-connections": {
+        "title": "Połącz swoje aplikacje",
+        "body": "Zacznij od celu i połącz tylko potrzebne aplikacje. Każdy dostawca prosi o własną autoryzację. Niestandardowe MCP i połączenia współdzielone znajdziesz w sekcji Zaawansowane."
       },
       "mcp-catalog": {
         "title": "Podłącz narzędzia",
@@ -7120,6 +7234,7 @@
     "oauthMissingCode": "Provider nie przesłał kodu autoryzacji.",
     "googleOAuthClientRequired": "Google wymaga identyfikatora klienta i sekretu z Google Cloud, zanim połączysz konto.",
     "googleAppAskAdmin": "Poproś administratora o skonfigurowanie Google dla tej organizacji.",
+    "googleAppDescription": "Klient OAuth Google dla połączonych kont",
     "googleOAuthSetupGuide": "Otwórz instrukcję konfiguracji Google",
     "oauthRequiredClient": "Klient OAuth w Google Cloud",
     "googleOAuthClientHint": "Utwórz klienta OAuth typu Web application, zaznacz „Use this client for an AI-powered agent” i dodaj dokładny adres przekierowania poniżej.",

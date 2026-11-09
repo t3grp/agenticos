@@ -229,7 +229,7 @@ retranslated is how a stale translation stops being visible.
 | The agent spec, field by field | `docs/reference/spec.md` |
 | Every workflow node: config, ports, errors, retries | `docs/reference/workflow-nodes.md` |
 | What the console calls each thing, and its name in the API and spec | `docs/reference/glossary.md` |
-| MCP connections, the server catalog, OAuth | `docs/mcp.md` |
+| MCP connections, the server catalog, OAuth, managed Composio apps | `docs/mcp.md` |
 | Providers, model profiles, fallbacks, cost | `docs/models.md` |
 | Which model to pick, open weights vs closed | `docs/choosing-models.md` |
 | Adoption, roles, cost, the security review | `docs/rollout.md` |
