@@ -6,6 +6,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   visuals: 140,
   background_tools: 222,
   background_tasks: 222,
+  agent_messages: 250,
   workflows: 270,
   text_to_speech: 28,
   computer_use: 200,
@@ -26,6 +27,18 @@ const BACKGROUND_TASKS =
   '<g class="breathe"><rect class="inl" x="57" y="40" width="39" height="30" rx="4"/><path class="igrid2" d="M64 49H87M64 57H81"/></g>' +
   '<g class="bob"><rect class="inr" x="143" y="38" width="39" height="30" rx="4"/><path class="igrid2" d="M151 47H174M151 55H168"/></g>' +
   '<rect class="ict" x="101" y="20" width="39" height="34" rx="4"/><path class="igrid2" d="M109 31H131M109 40H124"/>' +
+  "</svg>";
+
+/** Two agents writing to each other: a window each, and a reaction under the answer. */
+const AGENT_MESSAGES =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<polygon class="ict" points="120,35 195,78 120,121 45,78"/>' +
+  '<path class="igrid" d="M76 70L118 94L165 67M118 94V55"/>' +
+  '<g class="breathe"><rect class="inl" x="57" y="40" width="39" height="30" rx="4"/><path class="igrid2" d="M64 49H87M64 57H81"/></g>' +
+  '<g class="bob"><rect class="inr" x="143" y="38" width="39" height="30" rx="4"/><path class="igrid2" d="M151 47H174M151 55H168"/></g>' +
+  '<path class="igrid2" d="M100 55H140"/>' +
+  '<g class="bob"><circle class="ac" cx="162" cy="78" r="6"/></g>' +
   "</svg>";
 
 /** Visuals: a board standing on the base with a small diagram on it, and `draw()` above. */
@@ -298,6 +311,7 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
   background_tasks: BACKGROUND_TASKS,
+  agent_messages: AGENT_MESSAGES,
   workflows: WORKFLOWS,
   monitor: MONITOR,
   text_to_speech: TEXT_TO_SPEECH,

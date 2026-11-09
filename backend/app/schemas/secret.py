@@ -16,6 +16,13 @@ from app.schemas.resource_grant import VisibilityLiteral
 
 
 class SecretCreate(BaseSchema):
+    usage_scope: Literal["organization", "personal"] = Field(
+        default="organization",
+        description=(
+            "Personal connections are private, belong to the signed-in user, and may only "
+            "power that user's interactive agent runs. They cannot be shared or used by jobs."
+        ),
+    )
     name: str = Field(
         min_length=1, max_length=128, description="How this secret is picked in the Builder"
     )
@@ -79,6 +86,7 @@ class OpenAICodexSecretCreate(BaseSchema):
     name: str = Field(min_length=1, max_length=128)
     description: str | None = Field(default=None, max_length=1000)
     visibility: VisibilityLiteral = Field(default="private")
+    usage_scope: Literal["organization", "personal"] = Field(default="organization")
     callback_url: str = Field(
         min_length=1,
         max_length=_MAX_CALLBACK_URL,
@@ -99,6 +107,10 @@ class SecretPurposeRead(BaseSchema):
     label: str
     category: Literal["model_provider", "search", "observability", "connector", "other"]
     kind: SecretKind
+    personal_supported: bool = Field(
+        default=False,
+        description="Whether this deployment accepts an owner-only personal model connection for this provider.",
+    )
     help_url: str | None = None
     description: str = ""
     icon: str = Field(
@@ -126,6 +138,7 @@ class SecretUsage(BaseSchema):
 
 class SecretRead(BaseSchema, TimestampSchema):
     id: UUID
+    usage_scope: Literal["organization", "personal"] = Field(default="organization")
     name: str
     description: str | None = None
     kind: SecretKind

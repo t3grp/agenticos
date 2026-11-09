@@ -36,6 +36,13 @@ export interface ArtifactQuery {
   groupId?: string | null;
   /** Only the pages made in this project's chats; null for every project. */
   projectId?: string | null;
+  /**
+   * Only what the caller owns or was shared with, even for a role that reaches
+   * the whole organization - the sidebar's list. Off for the management page.
+   */
+  mineOrShared?: boolean;
+  /** Off when the caller may not list apps, so no request is made. Defaults to on. */
+  enabled?: boolean;
 }
 
 /**
@@ -53,6 +60,8 @@ export function useArtifacts({
   limit = PAGE_SIZE,
   groupId = null,
   projectId = null,
+  mineOrShared = false,
+  enabled = true,
 }: ArtifactQuery = {}) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: qk.artifacts.list({
@@ -63,7 +72,9 @@ export function useArtifacts({
       limit,
       groupId: groupId ?? "",
       ...(projectId ? { projectId } : {}),
+      ...(mineOrShared ? { mineOrShared } : {}),
     }),
+    enabled,
     queryFn: () => {
       const params = new URLSearchParams();
       if (search) params.set("q", search);
@@ -73,6 +84,7 @@ export function useArtifacts({
       params.set("limit", String(limit));
       if (groupId) params.set("group_id", groupId);
       if (projectId) params.set("project_id", projectId);
+      if (mineOrShared) params.set("mine_or_shared", "true");
       return apiClient.get<ArtifactList>(`/apps?${params}`);
     },
     placeholderData: (previous) => previous,

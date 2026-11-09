@@ -16,6 +16,7 @@ from uuid import UUID
 from pydantic import Field, computed_field
 
 from app.agents.model_resolver import ModelApi, ModelRegion, lacks_key
+from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.secret_kinds import SecretKind
 from app.schemas.base import BaseSchema, TimestampSchema
 from app.services.model_outputs import listed_model_outputs
@@ -83,10 +84,9 @@ class ModelProfileCreate(BaseSchema):
     secret_id: UUID | None = Field(
         default=None,
         description=(
-            "The vault secret this model is keyed by. Required for every provider except "
-            "the keyless ones (Ollama, a LiteLLM proxy), where there is nothing to "
-            "authenticate against - the service refuses the wrong combination rather than "
-            "letting a model that cannot answer be created."
+            "The vault secret this model is keyed by. Omit for keyless endpoints and "
+            "Claude subscription models, which require the signed-in user's connected "
+            "native subscription instead. The service refuses incompatible combinations."
         ),
     )
     base_url: str | None = Field(
@@ -183,8 +183,14 @@ class ModelProfileUpdate(BaseSchema):
 
 class ModelProfileRead(BaseSchema, TimestampSchema):
     id: UUID
+    usage_scope: Literal["organization", "personal"] = Field(
+        default="organization",
+        description="Whether this model uses the organization's connection or your personal one.",
+    )
     label: str
     provider: str
+    # Read-time state only, never an account identifier and never persisted.
+    native_connected: bool | None = Field(default=None, exclude=True)
     # Nullable on read though required on write: rows written before the vault
     # became the only key store have none, and a read schema describes what is
     # in the database rather than what a new row must contain. The Builder shows
@@ -255,6 +261,8 @@ class ModelProfileRead(BaseSchema, TimestampSchema):
         network - is false. Agent and chat model pickers leave such a profile out
         and mark it "no key"; publish refuses it until it gets a key.
         """
+        if self.provider == CLAUDE_SUBSCRIPTION_PROVIDER:
+            return self.native_connected is not True
         return lacks_key(
             self.provider,
             secret_id=self.secret_id,

@@ -177,6 +177,8 @@ export interface SecretPurpose {
   kind: StorableSecretKind;
   help_url: string | null;
   description: string;
+  /** Explicit server capability: an older backend must not accept a personal key by accident. */
+  personal_supported?: boolean;
   /**
    * The brand mark to draw, as the console's glyph table names them. Empty for a
    * model provider - whose id already is a key - and for a service whose brand
@@ -192,6 +194,9 @@ export interface SecretPurposeList {
 
 /** How far a secret reaches. The same scale every shared resource here uses. */
 export type SecretVisibility = "private" | "team" | "org";
+
+/** Who may spend a model credential, independently of who may view its metadata. */
+export type SecretUsageScope = "organization" | "personal";
 
 export interface Secret {
   /** Effective edit access in listings; absent on older deployments or write responses. */
@@ -209,6 +214,8 @@ export interface Secret {
   /** What the key is for - a provider id, a service id, or `custom`. */
   purpose?: string;
   visibility?: SecretVisibility;
+  /** Personal model connections may be used only by their signed-in owner. */
+  usage_scope?: SecretUsageScope;
   owner_user_id?: string | null;
   /** Whose key it is, when it belongs to one person rather than the team. */
   owner_email?: string | null;
@@ -251,6 +258,7 @@ export interface NewSecret {
   /** What it is for. Drives which providers the model picker can offer. */
   purpose?: string;
   visibility?: SecretVisibility;
+  usage_scope?: SecretUsageScope;
 }
 
 /**

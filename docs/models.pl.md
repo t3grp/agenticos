@@ -1,5 +1,5 @@
 ---
-source_sha: "bfe431b65940"
+source_sha: "1991069bf88d"
 ---
 
 # Modele i providery { #models-and-providers }
@@ -402,6 +402,7 @@ ani nic, czym się uwierzytelnić.
 | AWS Bedrock | `bedrock` | access key id, klucz tajny, region, opcjonalny token sesji |
 | Google Vertex AI | `google_cloud` | JSON konta serwisowego |
 | ChatGPT (Codex subscription) | `openai_codex` | logowanie do ChatGPT, zapisywane przez zalogowanie się, a nie wpisywane |
+| [Subskrypcja Claude](https://github.com/t3grp/agenticos/blob/t3/integrations/claude-subscription/README.md) | `claude-subscription` | osobiste konto Claude połączone przez oficjalnego klienta; aliasy `sonnet`, `opus`, `haiku` |
 
 Pierwsze trzy są powodem, dla którego sekret w ogóle ma *rodzaj*. Formularz, który
 zbierałby dla Azure jeden nieprzejrzysty token, zbierałby coś, co da się wypełnić

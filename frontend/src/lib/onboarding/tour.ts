@@ -891,11 +891,19 @@ export const TOUR_STEPS: readonly TourStep[] = [
   { id: "vault-keys", page: ROUTES.VAULT, target: "vault-keys", permission: Perm.secretsView },
 
   {
+    id: "app-connections",
+    page: ROUTES.CONNECTORS,
+    activate: "connectors-apps",
+    target: "app-connections",
+    inTour: true,
+    optional: true,
+  },
+  {
     id: "mcp-catalog",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-catalog",
     permission: Perm.agentsView,
-    inTour: true,
   },
   // The catalog controls — filter, custom-add, connect — render only inside the
   // list, which the page swaps for an empty-state card when the catalog has no
@@ -905,6 +913,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-filter",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-filter",
     permission: Perm.agentsView,
     optional: true,
@@ -912,6 +921,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-add",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-add",
     permission: Perm.connectionsManage,
     optional: true,
@@ -919,6 +929,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-connect",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-connect",
     permission: Perm.agentsView,
     optional: true,
@@ -1074,6 +1085,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // routines stop: the launch walk does not take a first login here.
   { id: "inbox-filters", page: ROUTES.INBOX, target: "inbox-filters" },
 
+  // The threads between the reader's agents. "?"-only, gated on running agents:
+  // the walk does not take a first login here either.
+  {
+    id: "agent-messages",
+    page: ROUTES.AGENT_MESSAGES,
+    target: "agent-messages-list",
+    permission: Perm.agentsRun,
+  },
+
   { id: "workspaces-browser", page: ROUTES.DOCUMENTS, target: "workspaces-browser" },
   // The detail a workspace opens onto — the file tree. "?"-only and shown in
   // place: the reader is already on one of their own workspaces, so the walk
@@ -1085,6 +1105,24 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // in the shared layout, so it lands on whichever of the four pages the reader
   // opened help from. Ungated: everyone has their own settings.
   { id: "settings-tabs", page: SETTINGS_DETAIL, target: "settings-tabs" },
+  {
+    id: "personal-model-connections",
+    page: ROUTES.SETTINGS_AI_CONNECTIONS,
+    target: "personal-model-connections",
+  },
+  {
+    id: "claude-subscription-connect",
+    page: ROUTES.SETTINGS_AI_CONNECTIONS,
+    target: "claude-subscription-connect",
+    permission: Perm.connectionsManage,
+  },
+  {
+    id: "chat-subscription-model",
+    page: ROUTES.CHAT,
+    target: "chat-subscription-model",
+    permission: Perm.connectionsManage,
+    optional: true,
+  },
   {
     id: "personal-coding-accounts",
     page: SETTINGS_DETAIL,
@@ -1162,6 +1200,7 @@ export function pageKey(path: string): string {
     return ORG_MEMBERS;
   }
   if (path.startsWith(`${ROUTES.GROUPS}/`)) return GROUP_DETAIL;
+  if (path === ROUTES.SETTINGS_AI_CONNECTIONS) return path;
   if (path.startsWith(`${ROUTES.SETTINGS}/`)) return SETTINGS_DETAIL;
   if (path.startsWith(`${ROUTES.DOCUMENTS}/`)) return WORKSPACE_DETAIL;
   if (path.startsWith(`${ROUTES.PROJECTS}/`)) return PROJECT_DETAIL;

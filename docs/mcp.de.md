@@ -1,5 +1,5 @@
 ---
-source_sha: "7a4618e328b7"
+source_sha: "c5fb177443aa"
 ---
 
 # MCP — die Tools, die hier niemand schreiben muss { #mcp-the-tools-nobody-here-has-to-write }
@@ -11,8 +11,8 @@ Eine Organisation zeigt auf einen Server, dessen Tools erscheinen im Builder, un
 auf unserer Seite ändert sich kein Code.
 
 Alles im [Capability-Katalog](reference/capabilities.md) ist Code, den wir
-geschrieben haben und auf 100 % Abdeckung halten. Alles hier ist eine URL, die
-jemand eingefügt hat.
+geschrieben haben und auf 100 % Abdeckung halten. MCP-Verbindungen erreichen
+Tools über eine Server-URL oder eine verwaltete App-Verbindung.
 
 !!! info "Die beiden sind keine Alternativen"
 
@@ -23,6 +23,26 @@ jemand eingefügt hat.
     **MCP** ist die richtige Form für die Dutzenden SaaS-Produkte, die ein
     Unternehmen zufällig nutzt, und wo die einzige Garantie, auf die es ankommt,
     lautet: „die Tools sind die, die der Anbieter veröffentlicht hat“.
+
+## Eine App über Composio verbinden { #connect-an-app-through-composio }
+
+Unter **Connectors → Apps** in T3OS wählen Sie eine erste Aufgabe und verbinden
+Gmail, Outlook, Google Calendar, Google Drive, Slack, Notion oder GitHub, sofern
+der Betreiber die App aktiviert hat. Sie erteilen für jedes Anbieterkonto einzeln
+Ihre Zustimmung. Nach der Prüfung durch das Backend starten Sie eine echte
+Leseaufgabe mit Ihrem Assistenten.
+
+Ihre Konten gehören Ihnen und werden für den Absender der jeweiligen Nachricht
+verwendet. Die ersten Aktionen lesen App-Daten; sie versenden keine Nachrichten
+und ändern keine Datensätze. Composio verwahrt die Anbieterzugangsdaten und
+vermittelt Anfragen und Ergebnisse. Eine verbundene App wird nicht automatisch
+als Wissensquelle synchronisiert. Bestehende persönliche und organisationsweite
+MCP-Verbindungen bleiben unter **Advanced** verfügbar.
+
+Der Betreiber konfiguriert einen Projektschlüssel, Authentifizierungskonfigurationen
+und die Identitätsprüfung beim Rückruf. Die
+[Composio-Einrichtungsanleitung](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+beschreibt Konfiguration, Datenverarbeitung und erforderliche Praxistests.
 
 ## Eine Connection { #a-connection }
 

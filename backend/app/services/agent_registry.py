@@ -70,6 +70,7 @@ from app.agents.spec import (
     VoiceSpec,
 )
 from app.core.audit import current_impersonator, record_audit
+from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.config import settings
 from app.core.exceptions import (
     AlreadyExistsError,
@@ -201,6 +202,7 @@ DEFAULT_GRANTED_SCOPES = frozenset(
         "code:execute",
         "sandbox:execute",
         "agents:delegate",
+        "agents:message",
         "tables:read",
         "tables:write",
         "workflows:run",
@@ -2155,6 +2157,12 @@ class AgentRegistryService:
         )
         if profile is None:
             return ["The selected model profile no longer exists"]
+        if (
+            profile.usage_scope == "personal" or profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+        ) and (
+            ctx.personal_user_id is None or profile.personal_owner_user_id != ctx.personal_user_id
+        ):
+            return ["Choose one of your own personal model connections"]
         outputs = model_outputs(profile.provider, profile.model, base_url=profile.base_url)
         if not outputs.chat:
             return [not_chat_refusal(profile.label, profile.model, outputs)]
@@ -2179,6 +2187,15 @@ class AgentRegistryService:
         # In the chain's order. One that no longer exists is skipped at run
         # time, not refused here.
         for fallback in (fallbacks[pid] for pid in fallback_ids if pid in fallbacks):
+            if (
+                fallback.usage_scope == "personal"
+                or fallback.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+            ) and (
+                ctx.personal_user_id is None
+                or fallback.personal_owner_user_id != ctx.personal_user_id
+            ):
+                problems.append("Remove the personal fallback that this signed-in user cannot use")
+                continue
             found = model_outputs(fallback.provider, fallback.model, base_url=fallback.base_url)
             if not found.chat:
                 problems.append(
@@ -2255,7 +2272,19 @@ class AgentRegistryService:
             )
         }
         problems = _SpecProblems()
-        if not out_of_reach:
+        personal_out_of_reach = {
+            profile.id
+            for profile in profiles.values()
+            if (
+                profile.usage_scope == "personal"
+                or profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+            )
+            and (
+                ctx.personal_user_id is None
+                or profile.personal_owner_user_id != ctx.personal_user_id
+            )
+        }
+        if not out_of_reach and not personal_out_of_reach:
             return problems
         who = "you" if person is not None else "an API key"
         ask = ", or ask its owner to share the sign-in with you" if person is not None else ""
@@ -2264,6 +2293,11 @@ class AgentRegistryService:
             profile = profiles.get(ref.profile_id)
             if profile is None:
                 continue
+            if profile.id in personal_out_of_reach:
+                problems.refuse(
+                    ref.field,
+                    f"{ref.says}This personal model connection can only be chosen by its signed-in owner",
+                )
             if profile.secret_id in out_of_reach:
                 instead = "pin another delegate or version" if ref.pinned else "pick another model"
                 problems.refuse(
@@ -2273,6 +2307,11 @@ class AgentRegistryService:
                 )
             for fallback_id in chains[profile.id]:
                 fallback = profiles.get(fallback_id)
+                if fallback_id in personal_out_of_reach:
+                    problems.refuse(
+                        ref.field,
+                        f"{ref.says}Remove the personal fallback that this signed-in user cannot use",
+                    )
                 if fallback is not None and fallback.secret_id in out_of_reach:
                     instead = (
                         "pin another delegate or version"
@@ -3834,7 +3873,7 @@ class AgentRegistryService:
         return agent, AgentSpec.model_validate(version.spec), version.id
 
     async def with_assistant_guidance(self, agent: Agent, spec: AgentSpec) -> AgentSpec:
-        """Add current Projects guidance only to the registered Architect's runtime copy.
+        """Add current guidance and personal apps to the registered assistant's runtime copy.
 
         Existing installations keep their customized stored specs. Other agents
         and external MCP clients keep their own workflow, even with platform tools.
@@ -3848,6 +3887,8 @@ class AgentRegistryService:
         assistant = await organization_assistant_repo.for_agent(self.db, agent.id)
         if assistant is None or assistant.organization_id != agent.organization_id:
             return spec
+        from app.services.app_connections.runtime import with_app_connection_bindings
+
         guidance = (
             (agent_templates.TEMPLATES_ROOT / "general/platform-assistant/PROJECTS.md")
             .read_text()
@@ -3876,8 +3917,10 @@ class AgentRegistryService:
                 instructions,
             )
         if not additions and instructions == spec.instructions:
-            return spec
-        return spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+            return with_app_connection_bindings(spec)
+        return with_app_connection_bindings(
+            spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+        )
 
     async def refuse_a_switched_off_assistant(self, agent_id: UUID) -> None:
         """Refuse running - or continuing a run of - an assistant somebody switched off (#2063).

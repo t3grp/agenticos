@@ -7,7 +7,8 @@ An organization points at a server, its tools appear in the Builder, and no code
 changes on our side.
 
 Everything in the [capability catalog](reference/capabilities.md) is code we wrote
-and hold to 100% coverage. Everything here is a URL somebody pasted.
+and hold to 100% coverage. MCP connections reach tools through a server URL or a
+managed app connection.
 
 !!! info "The two are not alternatives"
 
@@ -17,6 +18,24 @@ and hold to 100% coverage. Everything here is a URL somebody pasted.
     **MCP** is the right shape for the dozens of SaaS products a company happens to
     use, where the guarantee that matters is only "the tools are the ones the
     vendor published".
+
+## Connect an app through Composio
+
+In T3OS, **Connectors → Apps** lets you choose a first task and connect Gmail,
+Outlook, Google Calendar, Google Drive, Slack, Notion, or GitHub when the operator
+has enabled it. You consent to each provider account separately. After the
+backend verifies the account, you can start a real read task in your assistant.
+
+Your accounts belong to you and follow the author of each message. The initial
+action set reads app data; it does not send messages or change records. Composio
+hosts provider credentials and relays requests and results. A connected app is
+not automatically a synchronized knowledge source. Existing personal and
+organization MCP connections remain under **Advanced**.
+
+The operator configures a project key, toolkit auth configs, and callback identity
+verification. See the fork's
+[Composio setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+for configuration, data handling, and required live acceptance checks.
 
 ## A connection
 

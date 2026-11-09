@@ -93,6 +93,29 @@ describe("the palette's destinations", () => {
     expect(screen.getByRole("option", { name: "agents" })).toBeInTheDocument();
   });
 
+  it("hides Connectors from a role that holds none of its three areas", async () => {
+    // Connectors shows to any holder of agents, secrets or connections view.
+    // The palette must follow the sidebar, not the single `permission` field.
+    can.mockImplementation(
+      (permission) =>
+        permission !== "agents:view" &&
+        permission !== "secrets:view" &&
+        permission !== "connections:view",
+    );
+
+    await openPalette();
+
+    expect(screen.queryByRole("option", { name: "connectors" })).not.toBeInTheDocument();
+  });
+
+  it("offers Connectors to a role that holds only secrets view", async () => {
+    can.mockImplementation((permission) => permission === "secrets:view");
+
+    await openPalette();
+
+    expect(await screen.findByRole("option", { name: "connectors" })).toBeInTheDocument();
+  });
+
   it("keeps the admin section for platform admins only", async () => {
     await openPalette();
     expect(screen.queryByRole("option", { name: "adminOverview" })).not.toBeInTheDocument();

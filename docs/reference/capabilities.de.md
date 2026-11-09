@@ -1,5 +1,5 @@
 ---
-source_sha: "af48402946ea"
+source_sha: "fa87a235553d"
 ---
 
 # Der Capability-Katalog { #the-capability-catalog }
@@ -87,6 +87,7 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `monitor` | Einen Befehl beobachten | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | übergeben |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | übergeben |
 | `background_tasks` | Hintergrundthemen | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | übergeben |
+| `agent_messages` | Agentennachrichten | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | unverändert |
 | `planning` | Planung | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | unverändert |
 | `thinking` | Nachdenken | reasoning | keine, mit Absicht | — | — | abgebildet |
 | `system_reminders` | Erinnerung an Anweisungen | reasoning | keine, mit Absicht | — | — | ohne Wirkung |
@@ -518,6 +519,10 @@ neben der Capability.
 ## Hintergrundthemen { #background-tasks }
 
 Ausdrückliche Arbeit in einem neuen Thema über die ursprüngliche Antwort hinaus. Der Quellagent fasst das Ergebnis mit aktueller Historie ohne Werkzeuge zusammen. [Hintergrundthemen](../console.de.md#background-topics) beschreibt Grenzen, Freigaben, Stoppen und Unterbrechungen. Getrennt von vorübergehendem `background_tools` und asynchronen Subagenten eines Laufs.
+
+## Agentennachrichten { #agent-messages }
+
+Direkte Nachrichten zwischen zwei Agenten, in einem Thread, den die Konsole zeigt. Ein Thread pro Agentenpaar, in einer Organisation; eine Nachricht wird gespeichert, nie als Lauf zugestellt. Senden braucht `agents:run` für beide Agenten, Lesen für einen von beiden, und beide müssen veröffentlicht sein. Siehe [Agentennachrichten](../agent-messages.de.md) für Antworten, Reaktionen, Dateien und was es nicht tut. Dies ist die offene Version der Delegierung: Wo eine Delegierung den Austausch im übergeordneten Agenten verbirgt, kann einen Thread jeder lesen, der einen der beiden Agenten ausführen darf.
 
 ## Frühere Gespräche { #conversation-search }
 

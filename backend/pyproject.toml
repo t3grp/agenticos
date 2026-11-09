@@ -642,6 +642,9 @@ include = [
     "app/commands/data_protection.py",
     "app/commands/mcp_audit.py",
     "app/core/permissions.py",
+    "app/core/claude_subscription.py",
+    "app/schemas/claude_subscription.py",
+    "app/api/routes/v1/personal_subscriptions.py",
     "app/core/catalog/**",
     "app/core/secret_kinds.py",
     "app/core/vault.py",
@@ -846,6 +849,7 @@ include = [
     "app/services/portals/outlook_calendar.py",
     "app/services/portals/registry.py",
     "app/services/mcp_connection.py",
+    "app/services/app_connections/**",
     "app/services/mirage_mounts.py",
     # Which providers can draw an image, derived from the SDK. What it decides is
     # what the Builder offers, and a probe that quietly starts answering "no"
@@ -853,6 +857,7 @@ include = [
     "app/services/decision_models.py",
     "app/services/image_models.py",
     "app/services/model_profile.py",
+    "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
     # hides chat models from every picker; one that narrows lets a speech model
     # through publish (#2487).
@@ -953,6 +958,11 @@ include = [
     "app/services/project_workspace_transfer.py",
     "app/worker/tasks/project_tasks.py",
     "app/api/routes/v1/projects.py",
+    "app/repositories/agent_message.py",
+    "app/services/agent_messages.py",
+    "app/api/routes/v1/agent_messages.py",
+    "app/db/models/agent_message.py",
+    "app/schemas/agent_message.py",
     "app/api/routes/v1/context.py",
     "app/db/models/artifact.py",
     "app/db/models/artifact_share_request.py",
@@ -1391,6 +1401,9 @@ include = [
     "app/commands/data_protection.py",
     "app/commands/mcp_audit.py",
     "app/core/permissions.py",
+    "app/core/claude_subscription.py",
+    "app/schemas/claude_subscription.py",
+    "app/api/routes/v1/personal_subscriptions.py",
     "app/core/catalog/**",
     "app/core/secret_kinds.py",
     "app/core/vault.py",
@@ -1628,6 +1641,7 @@ include = [
     "app/services/portals/outlook_calendar.py",
     "app/services/portals/registry.py",
     "app/services/mcp_connection.py",
+    "app/services/app_connections/**",
     "app/services/mirage_mounts.py",
     # Which providers can draw an image, derived from the SDK. What it decides is
     # what the Builder offers, and a probe that quietly starts answering "no"
@@ -1635,6 +1649,7 @@ include = [
     "app/services/decision_models.py",
     "app/services/image_models.py",
     "app/services/model_profile.py",
+    "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
     # hides chat models from every picker; one that narrows lets a speech model
     # through publish (#2487).
@@ -1735,6 +1750,11 @@ include = [
     "app/services/project_workspace_transfer.py",
     "app/worker/tasks/project_tasks.py",
     "app/api/routes/v1/projects.py",
+    "app/repositories/agent_message.py",
+    "app/services/agent_messages.py",
+    "app/api/routes/v1/agent_messages.py",
+    "app/db/models/agent_message.py",
+    "app/schemas/agent_message.py",
     "app/api/routes/v1/context.py",
     "app/db/models/artifact.py",
     "app/db/models/artifact_share_request.py",

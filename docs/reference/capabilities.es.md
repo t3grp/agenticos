@@ -1,5 +1,5 @@
 ---
-source_sha: "af48402946ea"
+source_sha: "fa87a235553d"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -86,6 +86,7 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | delegada |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | delegada |
 | `background_tasks` | Temas en segundo plano | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | delegado |
+| `agent_messages` | Mensajes de agentes | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | tal cual |
 | `planning` | Planificación | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | tal cual |
 | `thinking` | Razonamiento | reasoning | ninguna, a propósito | — | — | mapeada |
 | `system_reminders` | Recordatorio de instrucciones | reasoning | ninguna, a propósito | — | — | sin efecto |
@@ -500,6 +501,10 @@ puede hacerlo por otra; ambos borran las notas de aquí y los claims registrados
 ## Temas en segundo plano { #background-tasks }
 
 Trabajo explícito en un tema nuevo que dura más que la respuesta de origen. El agente original resume el resultado con el historial actual, sin herramientas. [Temas en segundo plano](../console.es.md#background-topics) explica límites, aprobaciones, detención e interrupciones. Es independiente de `background_tools` y los subagentes asíncronos temporales de una ejecución.
+
+## Mensajes de agentes { #agent-messages }
+
+Mensajes directos entre dos agentes, en un hilo que muestra la consola. Un hilo por pareja de agentes, en una organización; un mensaje se guarda, nunca se entrega como una ejecución. Enviar necesita `agents:run` en ambos agentes, leer en uno de ellos, y ambos deben estar publicados. Véase [Mensajes de agentes](../agent-messages.es.md) para respuestas, reacciones, archivos y lo que no hace. Esta es la versión abierta de la delegación: donde una delegación esconde el intercambio dentro del agente principal, un hilo lo puede leer cualquiera que pueda ejecutar a uno de los dos agentes.
 
 ## Conversaciones anteriores { #conversation-search }
 

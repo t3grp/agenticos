@@ -71,6 +71,7 @@ import * as orgGroupSpendCsv from "./orgs/[id]/groups/[groupId]/spend.csv/route"
 import * as orgDirectoryMappings from "./orgs/[id]/directory-mappings/route";
 import * as orgDirectoryMapping from "./orgs/[id]/directory-mappings/[mappingId]/route";
 import * as providers from "./providers/[[...path]]/route";
+import * as personalSubscriptions from "./personal-subscriptions/[[...path]]/route";
 import * as rag from "./rag/[[...path]]/route";
 import * as ratings from "./ratings/[[...path]]/route";
 import * as roles from "./roles/[[...path]]/route";
@@ -85,6 +86,7 @@ import * as skillChanges from "./skill-changes/[[...path]]/route";
 import * as skills from "./skills/[[...path]]/route";
 import * as spend from "./spend/[[...path]]/route";
 import * as stats from "./stats/[[...path]]/route";
+import * as syncSources from "./sync-sources/[[...path]]/route";
 import * as tables from "./tables/[[...path]]/route";
 import * as tasks from "./tasks/[[...path]]/route";
 import * as triggerPortals from "./trigger-portals/[[...path]]/route";
@@ -169,6 +171,7 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["orgs/[id]/directory-mappings", orgDirectoryMappings],
   ["orgs/[id]/directory-mappings/[mappingId]", orgDirectoryMapping],
   ["providers", providers],
+  ["personal-subscriptions", personalSubscriptions],
   ["rag", rag],
   ["ratings", ratings],
   ["roles", roles],
@@ -183,6 +186,7 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["skills", skills],
   ["spend", spend],
   ["stats", stats],
+  ["sync-sources", syncSources],
   ["tables", tables],
   ["tasks", tasks],
   ["trigger-portals", triggerPortals],
