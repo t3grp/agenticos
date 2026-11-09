@@ -432,15 +432,12 @@ class SyncSourceService:
         ):
             raise missing
         from app.services.mcp_connection import McpConnectionService
-        from app.services.portals.google_oauth import DRIVE, DRIVE_READONLY
+        from app.services.portals.google_oauth import DRIVE_GRANT_SCOPES
 
         grant = await McpConnectionService(self.db).account_grant(
             account, organization_id=ctx.organization_id
         )
-        if grant is None or not {
-            DRIVE,
-            DRIVE_READONLY,
-        }.intersection(grant.scopes):
+        if grant is None or not DRIVE_GRANT_SCOPES.intersection(grant.scopes):
             raise missing
 
     async def clone_source(

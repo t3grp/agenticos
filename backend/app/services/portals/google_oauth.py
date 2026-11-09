@@ -37,6 +37,7 @@ USERINFO_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo"
 
 DRIVE = "https://www.googleapis.com/auth/drive"
 DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly"
+DRIVE_GRANT_SCOPES = frozenset({DRIVE, DRIVE_READONLY})
 GMAIL = "https://www.googleapis.com/auth/gmail.modify"
 CALENDAR = "https://www.googleapis.com/auth/calendar"
 DOCS = "https://www.googleapis.com/auth/documents"

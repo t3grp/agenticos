@@ -30,9 +30,11 @@ from app.repositories import (
     collection_teardown_repo,
     ingestion_spend_repo,
     knowledge_base_repo,
-    mcp_connection as mcp_connection_repo,
     organization_secret_repo,
     rag_document_repo,
+)
+from app.repositories import (
+    mcp_connection as mcp_connection_repo,
 )
 from app.repositories import sync_log as sync_log_repo
 from app.repositories import sync_source as sync_source_repo
@@ -45,9 +47,9 @@ from app.services.ingestion_config import (
     IngestionConfigService,
     deployment_defaults,
 )
-from app.services.notifications import NotificationService
 from app.services.mcp_connection import McpConnectionService
-from app.services.portals.google_oauth import DRIVE as GOOGLE_DRIVE_SCOPE
+from app.services.notifications import NotificationService
+from app.services.portals.google_oauth import DRIVE_GRANT_SCOPES as GOOGLE_DRIVE_SCOPES
 from app.services.rag.config import DocumentExtensions
 from app.services.rag.connectors import CONNECTOR_REGISTRY, RemoteListing, WithdrawnFile
 from app.services.rag.documents import DocumentProcessor
@@ -921,7 +923,7 @@ async def _connector_credential(
         grant = await McpConnectionService(db).account_grant(
             account, organization_id=organization_id
         )
-        if grant is None or GOOGLE_DRIVE_SCOPE not in grant.scopes:
+        if grant is None or not GOOGLE_DRIVE_SCOPES.intersection(grant.scopes):
             return None
         return GoogleDriveOAuthGrant(
             client_id=grant.client_id,
