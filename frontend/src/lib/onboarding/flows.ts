@@ -39,6 +39,7 @@ export type FlowId =
   | "create-routine"
   | "create-table"
   | "create-workflow"
+  | "create-agent-message"
   | "explore-chat";
 
 /**
@@ -760,6 +761,55 @@ export const FLOWS: Record<FlowId, CreationFlow> = {
       ...kbDialogSteps(ROUTES.RAG),
     ],
   },
+  // Send a first message between two agents: open the dialog, then the
+  // fields in turn, then send. The last step carries no signal — there is
+  // no `agent-message` FlowResource for the coach to count (it counts
+  // lists, and no list here is the message count) — so it advances on Next
+  // after the reader sends.
+  "create-agent-message": {
+    id: "create-agent-message",
+    permission: Perm.agentsRun,
+    steps: [
+      {
+        id: "flow-agent-message-create",
+        page: ROUTES.AGENT_MESSAGES,
+        target: "agent-messages-new",
+        permission: Perm.agentsRun,
+        signal: { kind: "opened" },
+      },
+      {
+        id: "flow-agent-message-sender",
+        page: ROUTES.AGENT_MESSAGES,
+        target: "agent-message-dialog-sender",
+        permission: Perm.agentsRun,
+        inOverlay: true,
+        blockSubmit: "agent-message-dialog-send",
+      },
+      {
+        id: "flow-agent-message-recipient",
+        page: ROUTES.AGENT_MESSAGES,
+        target: "agent-message-dialog-recipient",
+        permission: Perm.agentsRun,
+        inOverlay: true,
+        blockSubmit: "agent-message-dialog-send",
+      },
+      {
+        id: "flow-agent-message-body",
+        page: ROUTES.AGENT_MESSAGES,
+        target: "agent-message-dialog-body",
+        permission: Perm.agentsRun,
+        inOverlay: true,
+        blockSubmit: "agent-message-dialog-send",
+      },
+      {
+        id: "flow-agent-message-send",
+        page: ROUTES.AGENT_MESSAGES,
+        target: "agent-message-dialog-send",
+        permission: Perm.agentsRun,
+        inOverlay: true,
+      },
+    ],
+  },
   "create-table": {
     id: "create-table",
     permission: Perm.tablesCreate,
@@ -969,6 +1019,8 @@ export function flowForPage(pageId: string): FlowId | null {
       return "create-routine";
     case ROUTES.WORKFLOWS:
       return "create-workflow";
+    case ROUTES.AGENT_MESSAGES:
+      return "create-agent-message";
     case ROUTES.ORGS:
     case ORG_MEMBERS:
     case ORG_ROLES:

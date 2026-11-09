@@ -12,6 +12,7 @@ export const ROUTES = {
   WORK: "/work",
   CHAT: "/chat",
   INBOX: "/inbox",
+  AGENT_MESSAGES: "/agent-messages",
   PROFILE: "/profile",
   SETTINGS: "/settings",
   SETTINGS_PROFILE: "/settings/profile",

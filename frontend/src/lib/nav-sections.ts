@@ -90,6 +90,28 @@ export const NAV_GROUPS: NavGroup[] = [
         dataTour: "nav-inbox",
         count: "inbox",
       },
+      {
+        labelKey: "agentMessages",
+        href: ROUTES.AGENT_MESSAGES,
+        icon: MessagesSquare,
+        permission: Perm.agentsRun,
+        dataTour: "nav-agent-messages",
+      },
+    ],
+  },
+  {
+    // The apps an agent published, listed by `AppsRows`, which lists only what the
+    // caller may open and hides the whole section when there is none. This entry
+    // is the route table's record of `/apps`; "All apps" is its one static row.
+    labelKey: "apps",
+    domain: "use",
+    items: [
+      {
+        labelKey: "allApps",
+        href: ROUTES.ARTIFACTS,
+        icon: PanelsTopLeft,
+        permission: Perm.artifactsView,
+      },
     ],
   },
   {
@@ -115,12 +137,6 @@ export const NAV_GROUPS: NavGroup[] = [
         href: ROUTES.ROUTINES,
         icon: TimerReset,
         permission: Perm.agentsView,
-      },
-      {
-        labelKey: "artifacts",
-        href: ROUTES.ARTIFACTS,
-        icon: PanelsTopLeft,
-        permission: Perm.artifactsView,
       },
     ],
   },

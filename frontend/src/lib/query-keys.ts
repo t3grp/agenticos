@@ -635,6 +635,20 @@ export const qk = {
     inbox: () => ["notifications", "inbox"] as const,
     unreadCount: () => ["notifications", "unread-count"] as const,
   },
+  agentMessages: {
+    all: () => ["agent-messages"] as const,
+    // Called with nothing it is the prefix over every page, which is what a
+    // mutation invalidates: a send lands in whatever page holds the thread.
+    // A `(skip, limit)` variant stays a sub-key of that prefix, so a caller
+    // that ever reads one server page is invalidated by the same bare `list()`.
+    list: (skip?: number, limit?: number) =>
+      skip === undefined
+        ? (["agent-messages", "list"] as const)
+        : (["agent-messages", "list", skip, limit] as const),
+    detail: (threadId: string) => ["agent-messages", threadId] as const,
+    messages: (threadId: string) => ["agent-messages", threadId, "messages"] as const,
+    recipients: () => ["agent-messages", "recipients"] as const,
+  },
   connectedAccounts: {
     all: () => ["connected-accounts"] as const,
     // A person's own, and the organization's: two owners, two lists.
