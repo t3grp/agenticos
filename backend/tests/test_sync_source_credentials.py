@@ -106,7 +106,7 @@ def _service(
 
 
 def _vault_row(*, kind: str, hint: str = "a1b2") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), kind=kind, hint=hint)
+    return SimpleNamespace(id=uuid.uuid4(), kind=kind, hint=hint, usage_scope="organization")
 
 
 def _drive(**overrides) -> SyncSourceCreate:

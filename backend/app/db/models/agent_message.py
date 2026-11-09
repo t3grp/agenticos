@@ -24,6 +24,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
     String,
@@ -56,7 +57,6 @@ class AgentMessageThread(Base, TimestampMixin):
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     agent_a_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -68,13 +68,14 @@ class AgentMessageThread(Base, TimestampMixin):
         ForeignKey("agents.id", ondelete="CASCADE"),
         nullable=False,
     )
-    last_message_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
             "organization_id", "agent_a_id", "agent_b_id", name="uq_agent_message_thread_pair"
         ),
         CheckConstraint("agent_a_id < agent_b_id", name="ck_agent_message_thread_order"),
+        Index("ix_agent_message_threads_organization_id", "organization_id"),
         Index(
             "ix_agent_message_threads_org_recent",
             "organization_id",
@@ -101,19 +102,16 @@ class AgentMessage(Base, TimestampMixin):
         PG_UUID(as_uuid=True),
         ForeignKey("agent_message_threads.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     sender_agent_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("agents.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     # Who sent it as that agent: the person in the console, or the run's
     # member when the agent sent it itself. Null only where no member stands
@@ -130,7 +128,12 @@ class AgentMessage(Base, TimestampMixin):
         nullable=True,
     )
 
-    __table_args__ = (Index("ix_agent_messages_thread_created", "thread_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_agent_messages_thread_id", "thread_id"),
+        Index("ix_agent_messages_organization_id", "organization_id"),
+        Index("ix_agent_messages_sender_agent_id", "sender_agent_id"),
+        Index("ix_agent_messages_thread_created", "thread_id", "created_at"),
+    )
 
     def __repr__(self) -> str:
         return f"<AgentMessage(thread={self.thread_id}, sender={self.sender_agent_id})>"
@@ -155,13 +158,11 @@ class AgentMessageReaction(Base):
         PG_UUID(as_uuid=True),
         ForeignKey("agent_messages.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     reactor_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -174,9 +175,13 @@ class AgentMessageReaction(Base):
         nullable=True,
     )
     emoji: Mapped[str] = mapped_column(String(16), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
     __table_args__ = (
+        Index("ix_agent_message_reactions_message_id", "message_id"),
+        Index("ix_agent_message_reactions_organization_id", "organization_id"),
         CheckConstraint(
             "(reactor_agent_id IS NULL) != (reactor_user_id IS NULL)",
             name="ck_agent_message_reaction_reactor",
@@ -218,22 +223,22 @@ class AgentMessageAttachment(Base, TimestampMixin):
         PG_UUID(as_uuid=True),
         ForeignKey("agent_messages.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     chat_file_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("chat_files.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
 
     __table_args__ = (
+        Index("ix_agent_message_attachments_message_id", "message_id"),
+        Index("ix_agent_message_attachments_chat_file_id", "chat_file_id"),
+        Index("ix_agent_message_attachments_organization_id", "organization_id"),
         UniqueConstraint("message_id", "chat_file_id", name="uq_agent_message_attachment"),
     )
 
@@ -260,7 +265,7 @@ class AgentMessageRead(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    read_at: Mapped[datetime] = mapped_column(nullable=False)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     def __repr__(self) -> str:
         return f"<AgentMessageRead(thread={self.thread_id}, user={self.user_id})>"

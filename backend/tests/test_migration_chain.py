@@ -20,6 +20,7 @@ reads the files, and the files are the whole of the question.
 
 from pathlib import Path
 
+import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 
@@ -35,8 +36,8 @@ def test_the_chain_has_exactly_one_head() -> None:
     heads = _chain().get_heads()
     assert len(heads) == 1, (
         f"{len(heads)} alembic heads: {', '.join(sorted(heads))}. Two migrations "
-        "written against the same parent were merged one after the other; point "
-        "the later one's down_revision at the earlier one."
+        "written against the same parent were merged one after the other; add "
+        "a merge migration without rewriting either deployed history."
     )
 
 
@@ -70,6 +71,86 @@ def test_no_unmerged_migrations_claim_the_same_parent() -> None:
         and not any(set(children) <= ancestors for ancestors in merged_ancestors)
     }
     assert not forked, f"unmerged revisions sharing a parent: {forked}"
+
+
+@pytest.mark.parametrize(
+    ("current", "remaining"),
+    [
+        (
+            "0296_personal_model_connections",
+            {
+                "0296_gdrive_oauth",
+                "0297_agent_messages",
+                "0298_composio_connections",
+                "0299_merge_personal_composio",
+            },
+        ),
+        (
+            "0298_composio_connections",
+            {
+                "0296_personal_model_connections",
+                "0296_gdrive_oauth",
+                "0299_merge_personal_composio",
+            },
+        ),
+        (
+            "0296_gdrive_oauth",
+            {
+                "0296_personal_model_connections",
+                "0297_agent_messages",
+                "0298_composio_connections",
+                "0299_merge_personal_composio",
+            },
+        ),
+        (
+            ("0296_personal_model_connections", "0298_composio_connections"),
+            {"0296_gdrive_oauth", "0299_merge_personal_composio"},
+        ),
+        (
+            (
+                "0296_personal_model_connections",
+                "0298_composio_connections",
+                "0296_gdrive_oauth",
+            ),
+            {"0299_merge_personal_composio"},
+        ),
+    ],
+)
+def test_deployed_personal_app_and_drive_heads_apply_only_their_missing_upgrades(
+    current: str | tuple[str, ...], remaining: set[str]
+) -> None:
+    # Traverse the actual scripts with Alembic's upgrade-planner options.
+    # Reparenting an already-deployed revision must not replay its DDL.
+    pending = list(
+        _chain().iterate_revisions("0299_merge_personal_composio", current, implicit_base=True)
+    )
+
+    ordered = [revision.revision for revision in reversed(pending)]
+    assert set(ordered) == remaining
+    assert len(ordered) == len(remaining)
+    assert ordered[-1] == "0299_merge_personal_composio"
+    if "0297_agent_messages" in remaining:
+        assert ordered.index("0297_agent_messages") < ordered.index("0298_composio_connections")
+
+
+def test_deployed_personal_and_app_revisions_keep_their_original_parents() -> None:
+    chain = _chain()
+    parents: dict[str, str | list[str] | tuple[str, ...] | None] = {}
+    for revision in (
+        "0296_personal_model_connections",
+        "0297_agent_messages",
+        "0298_composio_connections",
+        "0296_gdrive_oauth",
+    ):
+        script = chain.get_revision(revision)
+        assert script is not None
+        parents[revision] = script.down_revision
+    assert parents == {
+        "0296_personal_model_connections": "0295_tool_approval_consent",
+        "0297_agent_messages": "0295_tool_approval_consent",
+        "0298_composio_connections": "0297_agent_messages",
+        "0296_gdrive_oauth": "0295_tool_approval_consent",
+    }
 
 
 # `alembic_version.version_num` is `VARCHAR(32)`, which alembic creates and never

@@ -4401,6 +4401,7 @@
     "you": "(you)"
   },
   "nav": {
+    "aiConnections": "AI connections",
     "monitoring": "Monitoring",
     "memory": "Memory",
     "account": "Account",
@@ -4515,6 +4516,10 @@
     "offer": {
       "accept": "Yes, guide me",
       "decline": "Not now",
+      "connect-personal-model": {
+        "title": "Connect a personal model?",
+        "body": "Connect your Claude subscription or a personal API key, then choose a model for your signed-in agent runs. Saving a connection or model does not send an inference request."
+      },
       "create-agent": {
         "title": "Create your first agent?",
         "body": "An agent is instructions, a model and a set of tools. Want to build your first one together? We'll check what your organization already has and only stop where you need to."
@@ -4565,6 +4570,14 @@
       }
     },
     "steps": {
+      "personal-model-connections": {
+        "title": "Your AI connections",
+        "body": "Connect your Claude subscription or a personal API key, then choose its models in an agent or chat. Only your signed-in runs can use personal connections."
+      },
+      "flow-personal-model-connect": {
+        "title": "Connect and choose a model",
+        "body": "Connect Claude by opening its sign-in page and pasting the returned code, or save an Anthropic or OpenAI API key. Then add a model and select it in an agent or chat. Setup does not send an inference request."
+      },
       "activity-approvals": {
         "title": "What's waiting on you",
         "body": "Runs that paused for a human decision queue here. Approve or reject each one and the run picks up from where it stopped - this tab only appears if you're allowed to decide them."
@@ -5432,6 +5445,14 @@
       "chat-coding-accounts": {
         "title": "Your coding accounts",
         "body": "Connect Codex or Claude Code without leaving the chat. These are your private cloud accounts; local desktop tools keep their own sign-in."
+      },
+      "claude-subscription-connect": {
+        "title": "Connect your Claude subscription",
+        "body": "Open Claude sign-in, complete it with your own account, and paste the returned code. Once connected, add a subscription model and choose it in an agent or chat."
+      },
+      "chat-subscription-model": {
+        "title": "Use your Claude subscription",
+        "body": "Choose one of your saved Claude subscription models to power this chat. The connection stays personal; manage it in Settings → AI connections."
       }
     },
     "chooseLanguage": "Language",
@@ -8280,6 +8301,39 @@
     "summarizeConversationAsChecklist": "Summarize the conversation as a checklist of action items.",
     "todo": "todo",
     "yourCustomCommands": "Your custom commands"
+  },
+  "personalModels": {
+    "title": "Your AI connections",
+    "description": "Use a personal provider connection to power the agents you run while signed in.",
+    "personal": "Personal",
+    "personalUnavailable": "Personal connections are not enabled on this deployment yet.",
+    "personalNotConfirmed": "The server did not confirm this connection as personal. Manage the saved key in the vault before trying again.",
+    "personalUse": "Only your signed-in agent runs can use this connection. Scheduled and organisation runs need an organisation connection.",
+    "connection": "Connection",
+    "chooseConnection": "Choose a connection",
+    "connectionName": "{provider} · {person}",
+    "connectApiKey": "Connect API key: {provider}",
+    "name": "Connection name",
+    "apiKey": "API key",
+    "saveConnection": "Save personal connection",
+    "cancel": "Cancel",
+    "getApiKey": "Get an API key",
+    "anthropicCredits": "Eligible Claude subscriptions can provide API credits after linking a Claude Console organisation. Connect an API key from that organisation to use those credits; this does not use your Claude chat allowance.",
+    "openaiApi": "Connect your OpenAI API account. API usage has separate billing from a ChatGPT subscription.",
+    "learnCredits": "How subscription API credits work",
+    "readPermission": "Viewing personal model connections needs secrets:view and agents:view in this organisation.",
+    "writePermission": "Adding a personal connection needs secrets:edit in this organisation.",
+    "modelPermission": "Adding a model on a connection needs connections:manage in this organisation.",
+    "connectionSaved": "Personal connection saved. Provider access has not been tested.",
+    "modelSaved": "Saved {label}. Choose this connection and model in an agent or chat to use it.",
+    "savedConnections": "Saved personal connections",
+    "noneSaved": "You have no personal model connections in this organisation yet.",
+    "savedNotTested": "Saved · provider access not tested",
+    "chooseModelFor": "Choose a model for {name}",
+    "chooseModel": "Choose model",
+    "modelsUnavailable": "Saved models could not be read.",
+    "retry": "Retry",
+    "manageInVault": "Manage or disconnect connections in the vault"
   },
   "sharing": {
     "access": "Access",
@@ -13729,5 +13783,51 @@
     "jsonLabel": "{name} (JSON)",
     "jsonHint": "Edit as JSON. Valid changes are saved; incomplete JSON keeps the last valid value.",
     "jsonInvalid": "Enter valid JSON of the required type. The last valid value is unchanged."
+  },
+  "claudeSubscription": {
+    "title": "Claude subscription",
+    "description": "Sign in with your Claude account to power your personal agent runs.",
+    "permission": "Connecting a Claude subscription needs connections:manage in this organisation.",
+    "ownSessionOnly": "Sign in as yourself to connect or use a personal subscription.",
+    "checking": "Checking Claude connection…",
+    "notConfigured": "Claude subscription sign-in is not configured on this deployment.",
+    "statusFailed": "Your Claude connection could not be checked. Retry to read its status.",
+    "requestFailed": "The sign-in request could not be completed. Retry to check the connection.",
+    "signInFailed": "Claude sign-in did not complete. Start again and use the code from the new sign-in page.",
+    "invalidLink": "The Claude sign-in link could not be verified. Cancel and start again.",
+    "connect": "Connect Claude subscription",
+    "connected": "Connected · personal",
+    "disconnect": "Disconnect Claude",
+    "starting": "Preparing Claude sign-in…",
+    "verifying": "Completing Claude sign-in…",
+    "openInstructions": "Open Claude, sign in to your account, then paste the code shown on its confirmation page.",
+    "openClaude": "Open Claude sign-in",
+    "code": "Claude sign-in code",
+    "codeHint": "Paste the code from the Claude page. It is cleared as soon as you submit it.",
+    "complete": "Complete sign-in",
+    "cancel": "Cancel sign-in",
+    "expired": "This sign-in has expired. Start again to get a new link.",
+    "startAgain": "Start again",
+    "expiresIn": "Expires in {minutes, plural, =1 {1 minute} other {# minutes}}.",
+    "retry": "Retry",
+    "supportedInputs": "This connection supports text and agent tools. Images and files are not supported yet.",
+    "modelHint": "Choose a Claude model. Your subscription determines model access and usage limits.",
+    "model": "Subscription model",
+    "models": {
+      "sonnet": "Claude Sonnet",
+      "opus": "Claude Opus",
+      "haiku": "Claude Haiku"
+    },
+    "connectionLabel": "Claude subscription · {person}",
+    "addModel": "Add subscription model",
+    "modelAlreadySaved": "Model already saved",
+    "savedModels": "Your Claude subscription models",
+    "chooseSavedModel": "Choose a saved model in an agent or chat to use your Claude subscription.",
+    "reconnectModels": "Reconnect Claude to use these saved models.",
+    "modelsUnavailable": "Your saved subscription models could not be read.",
+    "chooseSaved": "Choose a saved subscription model",
+    "manageConnection": "Manage Claude subscription",
+    "chooseApiModel": "Choose an API model",
+    "disconnected": "Disconnected"
   }
 }

@@ -1,6 +1,6 @@
 /**
- * Agent-to-agent messages: the shapes the console speaks with the backend's
- * `/api/v1/agent-messages` routes (via the BFF proxy). They mirror
+ * Agent-to-agent messages: the shapes the console sends through the BFF proxy
+ * to the backend's agent-message routes. They mirror
  * `backend/app/schemas/agent_message.py` exactly — ids are UUID strings on
  * the wire, and `last_message.body` is the first 200 characters.
  */

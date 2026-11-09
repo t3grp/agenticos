@@ -18,6 +18,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import AuthContext, OrgRoleName, Perm, Scope
+from app.db.models.organization_secret import OrganizationSecret
 from app.db.models.resource_grant import GRANT_ORDER, GrantLevel, Visibility
 from app.repositories import member_repo, resource_grant_repo, user_repo
 
@@ -160,6 +161,9 @@ async def resolve_access(
     if resource.organization_id != ctx.organization_id:
         return False
 
+    if not _personal_secret_allows(ctx, resource):
+        return False
+
     if resource_type is TABLE:
         from app.services.task_access import table_access
 
@@ -184,6 +188,14 @@ async def resolve_access(
     if granted is None:
         return False
     return GRANT_ORDER[granted] >= GRANT_ORDER[required]
+
+
+def _personal_secret_allows(ctx: AuthContext, resource: OwnedResource) -> bool:
+    """A personal model connection cannot be delegated through a role or grant."""
+    if not isinstance(resource, OrganizationSecret) or resource.usage_scope != "personal":
+        return True
+    person = ctx.personal_user_id
+    return person is not None and resource.owner_user_id == person
 
 
 async def accessible_ids(
@@ -229,6 +241,7 @@ async def accessible_ids(
         resource.id
         for resource in resources
         if resource.organization_id == ctx.organization_id
+        and _personal_secret_allows(ctx, resource)
         and (_scope_allows(scope, resource, subject) or resource.id in granted)
     }
     if resource_type is TABLE:

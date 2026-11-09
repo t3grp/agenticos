@@ -50,6 +50,7 @@ from app.agents.loop_guard import ToolLoopStopped
 from app.agents.steering import SteeringInbox
 from app.agents.subagent_events import SubagentEventSink
 from app.agents.visual_reports import VisualReports
+from app.core.audit import current_impersonator
 from app.core.exceptions import AuthorizationError, BadRequestError, RunFailedError
 from app.core.field_errors import field_problems
 from app.core.permissions import AuthContext
@@ -830,4 +831,5 @@ class ChatAgentRunner:
             user_id=user.id,
             organization_id=organization_id,
             role=membership.role,
+            is_impersonated=current_impersonator() is not None,
         )
