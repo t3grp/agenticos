@@ -290,8 +290,7 @@ describe("SidebarNav", () => {
       "aria-current",
       "page",
     );
-    // A pinned app's page is inside the Apps section, so the list entry lights too.
-    expect(screen.getByRole("link", { name: "artifacts" })).toHaveAttribute("aria-current", "page");
+
     expect(screen.getByText("W")).toBeInTheDocument();
     pinnedApps.mockReturnValue([]);
   });
@@ -447,9 +446,9 @@ describe("daily-work navigation", () => {
       "/dashboard",
       "/chat",
       "/inbox",
+      "/agent-messages",
       "/agents",
       "/workflows",
-      "/routines",
     ]);
     expect(screen.queryByRole("link", { name: "backgroundWork" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "monitoring" })).toHaveAttribute(

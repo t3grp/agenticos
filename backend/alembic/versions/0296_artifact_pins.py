@@ -5,7 +5,7 @@ page, a unique constraint so pinning twice is pinning once, and CASCADE deletes
 so a deleted page or person takes its pins with it.
 
 Revision ID: 0296_artifact_pins
-Revises: 0295_tool_approval_consent
+Revises: 0299_merge_personal_composio
 Create Date: 2026-11-08
 """
 
@@ -17,7 +17,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0296_artifact_pins"
-down_revision: str | None = "0295_tool_approval_consent"
+down_revision: str | None = "0299_merge_personal_composio"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
