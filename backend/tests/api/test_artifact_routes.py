@@ -241,6 +241,35 @@ class TestPinning:
         assert response.status_code == 404
         pin.assert_not_called()
 
+    @pytest.mark.security
+    async def test_a_page_the_caller_cannot_open_cannot_be_unpinned(self, client: OpenClient) -> None:
+        """Unpinning an app that does not exist or cannot be opened returns 404."""
+        unpin = AsyncMock()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=None)),
+            patch(f"{PATH}.artifact_repo.unpin", new=unpin),
+        ):
+            async with client() as http:
+                response = await http.delete(_url(f"/{uuid.uuid4()}/pin"))
+        assert response.status_code == 404
+        unpin.assert_not_called()
+
+    async def test_unpinning_an_app_that_is_not_pinned_answers_cleanly(self, client: OpenClient) -> None:
+        """Unpinning an app that is not currently pinned succeeds and reports pinned=False."""
+        row = _artifact()
+        unpin = AsyncMock()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=row)),
+            patch(f"{PATH}.artifact_repo.latest_version", new=AsyncMock(return_value=None)),
+            patch(f"{PATH}.artifact_repo.unpin", new=unpin),
+            patch(f"{PATH}.artifact_repo.is_pinned", new=AsyncMock(return_value=False)),
+        ):
+            async with client() as http:
+                response = await http.delete(_url(f"/{row.id}/pin"))
+        assert response.status_code == 200
+        assert response.json()["pinned"] is False
+        assert unpin.await_args.kwargs["artifact_id"] == row.id
+
     async def test_pinned_apps_list_in_the_order_they_were_pinned(self, client: OpenClient) -> None:
         first, second = _artifact(), _artifact()
         with (
