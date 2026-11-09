@@ -1,5 +1,5 @@
 ---
-source_sha: "7a4618e328b7"
+source_sha: "c5fb177443aa"
 ---
 
 # MCP — las herramientas que aquí nadie tiene que escribir { #mcp-the-tools-nobody-here-has-to-write }
@@ -11,8 +11,9 @@ Una organización apunta a un servidor, sus herramientas aparecen en el Builder,
 no cambia ni una línea de código de nuestro lado.
 
 Todo lo que hay en el [catálogo de capabilities](reference/capabilities.md) es
-código que escribimos nosotros y que mantenemos al 100% de cobertura. Todo lo que
-hay aquí es una URL que alguien pegó.
+código que escribimos nosotros y que mantenemos al 100% de cobertura. Las
+conexiones MCP acceden a herramientas mediante una URL de servidor o una
+conexión administrada a una aplicación.
 
 !!! info "Las dos cosas no son alternativas"
 
@@ -23,6 +24,27 @@ hay aquí es una URL que alguien pegó.
     **MCP** es la forma correcta para las decenas de productos SaaS que una empresa
     usa por casualidad, donde la única garantía que importa es «las herramientas son
     las que publicó el proveedor».
+
+## Conectar una aplicación mediante Composio { #connect-an-app-through-composio }
+
+En T3OS, **Connectors → Apps** permite elegir una primera tarea y conectar Gmail,
+Outlook, Google Calendar, Google Drive, Slack, Notion o GitHub cuando el operador
+los habilita. Cada cuenta requiere su propio consentimiento con el proveedor.
+Tras la verificación del backend, puede iniciar una tarea real de lectura con
+su asistente.
+
+Sus cuentas le pertenecen y se resuelven para el autor de cada mensaje. Las
+acciones iniciales leen datos; no envían mensajes ni modifican registros.
+Composio custodia las credenciales del proveedor y transmite solicitudes y
+resultados. Conectar una aplicación no la convierte automáticamente en una
+fuente de conocimiento sincronizada. Las conexiones MCP personales y de la
+organización siguen disponibles en **Advanced**.
+
+El operador configura una clave de proyecto, las configuraciones de
+autenticación y la verificación de identidad en la devolución de llamada.
+Consulte la
+[guía de configuración de Composio](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+para conocer el tratamiento de datos y las comprobaciones reales requeridas.
 
 ## Una conexión { #a-connection }
 

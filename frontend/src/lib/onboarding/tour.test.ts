@@ -34,6 +34,7 @@ const UNGATED_LAUNCH = [
   "dashboard-filters",
   "chat-start",
   "chat-agent-picker",
+  "app-connections",
   "finish",
 ];
 
@@ -112,6 +113,10 @@ describe("pageKey", () => {
   it("collapses each settings tab and each workspace onto one identity", () => {
     expect(pageKey(ROUTES.SETTINGS_PROFILE)).toBe(SETTINGS_DETAIL);
     expect(pageKey(ROUTES.SETTINGS_SLASH_COMMANDS)).toBe(SETTINGS_DETAIL);
+    expect(pageKey(ROUTES.SETTINGS_AI_CONNECTIONS)).toBe(ROUTES.SETTINGS_AI_CONNECTIONS);
+    expect(stepsForPage(ROUTES.SETTINGS_AI_CONNECTIONS, () => true).map((step) => step.id)).toEqual(
+      ["personal-model-connections", "claude-subscription-connect"],
+    );
     expect(pageKey("/documents/abc-123")).toBe(WORKSPACE_DETAIL);
     expect(pageKey("/projects/abc-123")).toBe(PROJECT_DETAIL);
   });
@@ -217,7 +222,7 @@ describe("visibleTourSteps", () => {
       "agent-availability",
       "agent-history",
       "kb-documents",
-      "mcp-catalog",
+      "app-connections",
       "finish",
     ]);
   });
@@ -251,6 +256,7 @@ describe("stepsForPage", () => {
       "chat-voice-call",
       "chat-approval-mode",
       "chat-your-connections",
+      "chat-subscription-model",
     ]);
   });
 
@@ -443,6 +449,7 @@ describe("stepsForPage", () => {
 
   it("deepens the MCP page component by component", () => {
     expect(stepsForPage(ROUTES.MCP_SERVERS, () => true).map((step) => step.id)).toEqual([
+      "app-connections",
       "mcp-catalog",
       "mcp-filter",
       "mcp-add",

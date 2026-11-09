@@ -6,7 +6,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 import ContextPage from "@/app/[locale]/(dashboard)/context/page";
 import SkillsPage from "@/app/[locale]/(dashboard)/skills/page";
-import VaultPage from "@/app/[locale]/(dashboard)/vault/page";
+import VaultPage from "@/app/[locale]/(dashboard)/connectors/vault/page";
 import { apiClient } from "@/lib/api-client";
 
 const permissions = vi.hoisted(() => ({ create: false }));

@@ -1,5 +1,5 @@
 ---
-source_sha: "3af7676c8020"
+source_sha: "8d2e6a7f5851"
 ---
 
 # Katalog capability { #the-capability-catalog }
@@ -87,6 +87,7 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `monitor` | Obserwuj polecenie | analiza | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | przekazana |
 | `subagents` | Subagenci | rozumowanie | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | przekazana |
 | `background_tasks` | Tematy w tle | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | przekazywane |
+| `agent_messages` | Wiadomości agentów | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | bez zmian |
 | `planning` | Planowanie | rozumowanie | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | bez zmian |
 | `thinking` | Myślenie | rozumowanie | brak, celowo | — | — | odwzorowana |
 | `system_reminders` | Przypomnienia instrukcji | rozumowanie | brak, celowo | — | — | bez efektu |
@@ -494,6 +495,10 @@ jego przyborniku, obok capability.
 ## Tematy w tle { #background-tasks }
 
 Jawne zadanie w nowym temacie, które trwa dłużej niż odpowiedź źródłowa. Agent źródłowy podsumowuje wynik z aktualną historią, bez narzędzi. [Tematy w tle](../console.pl.md#background-topics) opisują limity, zgody, zatrzymanie i przerwaną pracę. To mechanizm oddzielny od tymczasowego `background_tools` i asynchronicznych subagentów jednego uruchomienia.
+
+## Wiadomości agentów { #agent-messages }
+
+Bezpośrednie wiadomości między dwoma agentami, w wątku widocznym w konsoli. Jeden wątek na parę agentów, w jednej organizacji; wiadomość jest zapisywana, nigdy dostarczana jako uruchomienie. Wysłanie wymaga `agents:run` dla obu agentów, odczyt dla jednego z nich, a oba muszą być opublikowane. Zobacz [Wiadomości agentów](../agent-messages.pl.md), gdzie są odpowiedzi, reakcje, pliki i to, czego to nie robi. To otwarta wersja delegowania: tam, gdzie delegowanie ukrywa wymianę wewnątrz agenta nadrzędnego, wątek może przeczytać każdy, kto może uruchomić któregokolwiek z agentów.
 
 ## Poprzednie rozmowy { #conversation-search }
 

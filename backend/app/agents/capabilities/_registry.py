@@ -720,6 +720,7 @@ def load_builtins() -> None:
         return
 
     from app.agents.capabilities import (  # noqa: F401 - imported for side effects
+        agent_messages,
         artifacts,
         ask_user,
         background_tasks,

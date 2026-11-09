@@ -1,5 +1,5 @@
 ---
-source_sha: "16c4d20b0422"
+source_sha: "573be813d5ed"
 ---
 
 # Glosario { #glossary }
@@ -90,6 +90,7 @@ se describe en [Capabilities](capabilities.md).
 | Planning | `planning` |
 | Work while tools run | `background_tools` |
 | Temas en segundo plano | `background_tasks` |
+| Mensajes de agentes | `agent_messages` |
 | Watch a command | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |

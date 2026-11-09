@@ -324,6 +324,7 @@ nav:
           - concepts.md
           - console.md
           - projects.md
+          - agent-messages.md
           - screens.md
       - Build the agent:
           - choosing-models.md

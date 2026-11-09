@@ -10,6 +10,9 @@ import type { LogQuery, RunHistoryQuery } from "@/lib/workflows/types";
 import type { SharingResourceType } from "@/types/sharing";
 
 export const qk = {
+  personalSubscriptions: {
+    claude: (scope: string) => ["personal-subscriptions", "claude", scope] as const,
+  },
   codingAccounts: {
     all: () => ["coding-accounts"] as const,
     mine: (scope: string) => ["coding-accounts", scope] as const,
@@ -598,6 +601,10 @@ export const qk = {
     // org switch would paint the previous tenant's names onto the new one's
     // dashboard for as long as the refetch took.
     syncSources: (orgId: string) => ["rag", "sync", orgId, "sources"] as const,
+    // One level of a connected account's Drive. Keyed on the organization for the
+    // same reason: the account belongs to one tenant.
+    driveFolders: (orgId: string | null, account: string, parent: string) =>
+      ["rag", "sync", orgId, "gdrive", account, "folders", parent] as const,
   },
   integrations: {
     all: () => ["integrations"] as const,
@@ -634,6 +641,28 @@ export const qk = {
       ["notifications", "destinations", organizationId] as const,
     inbox: () => ["notifications", "inbox"] as const,
     unreadCount: () => ["notifications", "unread-count"] as const,
+  },
+  agentMessages: {
+    all: () => ["agent-messages"] as const,
+    // Called with nothing it is the prefix over every page, which is what a
+    // mutation invalidates: a send lands in whatever page holds the thread.
+    // A `(skip, limit)` variant stays a sub-key of that prefix, so a caller
+    // that ever reads one server page is invalidated by the same bare `list()`.
+    list: (skip?: number, limit?: number) =>
+      skip === undefined
+        ? (["agent-messages", "list"] as const)
+        : (["agent-messages", "list", skip, limit] as const),
+    detail: (threadId: string) => ["agent-messages", threadId] as const,
+    messages: (threadId: string) => ["agent-messages", threadId, "messages"] as const,
+    recipients: () => ["agent-messages", "recipients"] as const,
+  },
+  appConnections: {
+    all: () => ["app-connections"] as const,
+    scope: (userId: string, orgId: string | null) => ["app-connections", userId, orgId] as const,
+    catalog: (userId: string, orgId: string | null) =>
+      ["app-connections", userId, orgId, "catalog"] as const,
+    list: (userId: string, orgId: string | null) =>
+      ["app-connections", userId, orgId, "list"] as const,
   },
   connectedAccounts: {
     all: () => ["connected-accounts"] as const,

@@ -1,5 +1,5 @@
 ---
-source_sha: "16c4d20b0422"
+source_sha: "573be813d5ed"
 ---
 
 # Glossar { #glossary }
@@ -89,6 +89,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Planung | `planning` |
 | Weiterarbeiten, während Tools laufen | `background_tools` |
 | Hintergrundthemen | `background_tasks` |
+| Agentennachrichten | `agent_messages` |
 | Einen Befehl beobachten | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |

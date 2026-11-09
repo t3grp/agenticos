@@ -715,6 +715,31 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "stoppingBackgroundTask",
     displayNameKey: "backgroundTaskStopped",
   },
+  // agent_messages - one agent writing to another, in a thread the console shows.
+  agent_send_message: {
+    kind: "delegate",
+    render: "generic",
+    captionKey: "sendingAgentMessage",
+    displayNameKey: "sendAgentMessage",
+  },
+  agent_read_messages: {
+    kind: "delegate",
+    render: "generic",
+    captionKey: "readingAgentMessages",
+    displayNameKey: "readAgentMessages",
+  },
+  agent_list_threads: {
+    kind: "delegate",
+    render: "generic",
+    captionKey: "listingAgentThreads",
+    displayNameKey: "agentThreads",
+  },
+  agent_react: {
+    kind: "delegate",
+    render: "generic",
+    captionKey: "reactingToAgentMessage",
+    displayNameKey: "reactToAgentMessage",
+  },
   task: { kind: "delegate", render: "delegation", captionKey: "handingWork" },
   check_task: { kind: "delegate", render: "generic", captionKey: "checkingDelegate" },
   wait_tasks: { kind: "delegate", render: "generic", captionKey: "waitingDelegates" },
