@@ -44,7 +44,11 @@ from app.services.app_connections import (
     is_configured,
 )
 from app.services.app_connections import _service as lifecycle
-from app.services.app_connections._client import ComposioCompletedAuth, ComposioLink
+from app.services.app_connections._client import (
+    ComposioCompletedAuth,
+    ComposioLink,
+    ComposioToolkitMetadata,
+)
 from app.services.mcp_catalog import CatalogAuth, get_entry
 
 pytestmark = pytest.mark.anyio
@@ -89,6 +93,7 @@ def row(user_id, **values):
 @pytest.fixture
 def harness(monkeypatch):
     monkeypatch.setattr(settings, "COMPOSIO_API_KEY", SecretStr("synthetic-server-key"))
+    monkeypatch.setattr(settings, "COMPOSIO_CATALOG_API_KEY", None)
     monkeypatch.setattr(
         settings, "COMPOSIO_AUTH_CONFIGS", {app.toolkit: f"ac_{app.toolkit}" for app in APPS}
     )
@@ -200,15 +205,113 @@ async def finish(harness, attempt, **values):
     )
 
 
-def test_curated_catalog_is_shared_with_binding_validation(harness):
-    catalog = harness.service.catalog()
+async def test_curated_catalog_is_shared_with_binding_validation(harness):
+    catalog = await harness.service.catalog()
     assert catalog.configured and len(catalog.apps) == 7
+    assert not catalog.catalog_available and catalog.next_cursor is None
     for catalog_app in APPS:
         assert get_entry(catalog_app.catalog_key).auth is CatalogAuth.COMPOSIO
         assert all(action.read_only for action in catalog_app.actions)
         assert len({action.name for action in catalog_app.actions}) == len(catalog_app.actions)
+        entry = next(item for item in catalog.apps if item.toolkit == catalog_app.toolkit)
+        assert entry.configured and entry.availability == "ready"
+        assert not entry.approval_required and entry.action_count == len(catalog_app.actions)
     assert "synthetic-server-key" not in catalog.model_dump_json()
     assert "ac_gmail" not in catalog.model_dump_json()
+
+
+async def test_full_catalog_marks_managed_custom_and_meta_toolkits_by_policy(harness, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "COMPOSIO_AUTH_CONFIGS",
+        {
+            key: value
+            for key, value in settings.COMPOSIO_AUTH_CONFIGS.items()
+            if key not in {"slack", "github"}
+        },
+    )
+
+    class CatalogStub:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def list_toolkits(self, *, search, cursor, limit):
+            assert search == "CRM" and cursor == "Y3Vyc29y" and limit == 24
+            return SimpleNamespace(
+                items=[
+                    ComposioToolkitMetadata.model_validate(
+                        {
+                            "slug": "salesforce",
+                            "name": "Salesforce",
+                            "composio_managed_auth_schemes": ["OAUTH2"],
+                            "meta": {
+                                "description": "Customer records.",
+                                "categories": [{"id": "crm", "name": "CRM"}],
+                                "tools_count": 300,
+                            },
+                        }
+                    ),
+                    ComposioToolkitMetadata.model_validate(
+                        {
+                            "slug": "airtable",
+                            "name": "Airtable",
+                            "auth_schemes": ["API_KEY"],
+                            "meta": {"tools_count": 12},
+                        }
+                    ),
+                    ComposioToolkitMetadata.model_validate(
+                        {
+                            "slug": "composio",
+                            "name": "Composio",
+                            "no_auth": True,
+                            "meta": {"tools_count": 50},
+                        }
+                    ),
+                    ComposioToolkitMetadata.model_validate(
+                        {
+                            "slug": "slack",
+                            "name": "Slack",
+                            "composio_managed_auth_schemes": ["OAUTH2"],
+                            "meta": {"tools_count": 200},
+                        }
+                    ),
+                ],
+                next_cursor="bmV4dA==",
+            )
+
+    monkeypatch.setattr(lifecycle, "ComposioCatalogClient", CatalogStub)
+    catalog = await harness.service.catalog(search="CRM", cursor="Y3Vyc29y", limit=24)
+    assert catalog.catalog_available and catalog.next_cursor == "bmV4dA=="
+    assert catalog.configured
+    by_slug = {app.toolkit: app for app in catalog.apps}
+    assert by_slug["salesforce"].configured
+    assert by_slug["salesforce"].approval_required and by_slug["salesforce"].action_count == 300
+    assert by_slug["salesforce"].actions == []
+    assert by_slug["airtable"].availability == "setup_required"
+    assert not by_slug["airtable"].configured
+    assert by_slug["composio"].availability == "unavailable"
+    assert by_slug["slack"].availability == "setup_required"
+
+
+async def test_empty_successful_catalog_keeps_global_setup_state(harness, monkeypatch):
+    class EmptyCatalog:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def list_toolkits(self, *, search, cursor, limit):
+            assert search == "no matching app" and cursor is None and limit == 24
+            return SimpleNamespace(items=[], next_cursor=None)
+
+    monkeypatch.setattr(lifecycle, "ComposioCatalogClient", EmptyCatalog)
+    catalog = await harness.service.catalog(search="no matching app")
+    assert catalog.catalog_available and catalog.configured
+    assert catalog.apps == [] and catalog.next_cursor is None
 
 
 @pytest.mark.parametrize(
@@ -220,7 +323,7 @@ async def test_missing_operator_settings_disable_catalog_and_connect(
     monkeypatch.setattr(settings, "COMPOSIO_API_KEY", key)
     monkeypatch.setattr(settings, "COMPOSIO_AUTH_CONFIGS", {"gmail": config})
     assert not is_configured("gmail")
-    assert not harness.service.catalog().configured
+    assert not (await harness.service.catalog()).configured
     with pytest.raises(ConfigurationError):
         await start(harness)
     harness.provider.link.assert_not_awaited()
@@ -245,6 +348,196 @@ async def test_start_stores_owner_bound_attempt_not_provider_credentials(harness
         callback_url=f"https://t3os.example/connectors?connection_attempt={response.attempt_id}",
     )
     assert not (await harness.service.list_for_user(user_id=harness.user_id)).items[0].authorized
+
+
+async def test_dynamic_managed_app_stores_an_exact_tool_ceiling_and_owner_bound_session(
+    harness, monkeypatch
+):
+    monkeypatch.setattr(settings, "COMPOSIO_CATALOG_API_KEY", SecretStr("catalog-read-only-key"))
+    metadata = ComposioToolkitMetadata.model_validate(
+        {
+            "slug": "salesforce",
+            "name": "Salesforce",
+            "composio_managed_auth_schemes": ["OAUTH2"],
+            "composio_managed_auth": {"scheme": "OAUTH2", "scopes": ["read"]},
+            "description": "Search your customer records.",
+            "categories": [{"slug": "crm", "name": "CRM"}],
+            "tools_count": 2,
+        }
+    )
+
+    class CatalogStub:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get_toolkit(self, slug):
+            assert slug == "salesforce"
+            return metadata
+
+        async def direct_tool_names(self, *, toolkit):
+            assert toolkit == "salesforce"
+            return ["SALESFORCE_SEARCH_RECORDS", "SALESFORCE_GET_RECORD"]
+
+    monkeypatch.setattr(lifecycle, "ComposioCatalogClient", CatalogStub)
+    harness.provider.create_link_session.return_value = "trs_salesforce_1"
+    harness.provider.link_session.return_value = ComposioLink(
+        connected_account_id="ca_salesforce_1",
+        redirect_url="https://connect.composio.dev/link/salesforce",
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
+    )
+    attempt = await harness.service.connect(
+        user_id=harness.user_id, data=AppConnectionCreate(toolkit="salesforce")
+    )
+    connection = harness.store[attempt.connection_id]
+    pending = lifecycle._pending(connection, user_id=harness.user_id)
+    assert connection.catalog_key == "composio-salesforce"
+    assert connection.url == "https://backend.composio.dev/api/v3.1/toolkits/salesforce"
+    assert connection.allowed_tools == ["SALESFORCE_SEARCH_RECORDS", "SALESFORCE_GET_RECORD"]
+    assert connection.composio_auth_config_id is None
+    assert pending.dynamic and pending.session_id == "trs_salesforce_1"
+    assert pending.auth_config_id is None
+    assert pending.session_id not in (connection.oauth_pending_payload or "")
+    harness.provider.create_link_session.assert_awaited_once_with(
+        user_id=composio_user_id(harness.user_id),
+        toolkit="salesforce",
+        tools=connection.allowed_tools,
+    )
+    harness.provider.link_session.assert_awaited_once_with(
+        session_id="trs_salesforce_1", toolkit="salesforce"
+    )
+
+    harness.provider.complete_auth.return_value = ComposioCompletedAuth(
+        connected_account_id="ca_salesforce_1", toolkit_slug="salesforce"
+    )
+    harness.provider.discover_account_auth_config.return_value = ComposioAccount.model_validate(
+        {
+            "id": "ca_salesforce_1",
+            "toolkit": {"slug": "salesforce"},
+            "auth_config": {"id": "ac_salesforce_managed"},
+            "user_id": composio_user_id(harness.user_id),
+            "status": "ACTIVE",
+            "is_disabled": False,
+        }
+    )
+    result = await finish(harness, attempt, connected_account_id="ca_salesforce_1")
+    assert result.authorized and result.status == "connected"
+    assert result.app.configured and result.app.approval_required
+    assert result.app.action_count == 2
+    assert connection.composio_auth_config_id == "ac_salesforce_managed"
+    assert connection.composio_account_id == "ca_salesforce_1"
+    assert connection.oauth_pending_payload is None and connection.oauth_state is None
+    harness.provider.discover_account_auth_config.assert_awaited_once_with(
+        user_id=composio_user_id(harness.user_id),
+        toolkit="salesforce",
+        account_id="ca_salesforce_1",
+    )
+    harness.provider.verify_account.assert_awaited_once_with(
+        user_id=composio_user_id(harness.user_id),
+        toolkit="salesforce",
+        account_id="ca_salesforce_1",
+        auth_config_id="ac_salesforce_managed",
+    )
+    assert "trs_salesforce_1" not in result.model_dump_json()
+
+
+async def test_dynamic_app_can_use_explicit_operator_auth_without_managed_auth(
+    harness, monkeypatch
+):
+    monkeypatch.setattr(settings, "COMPOSIO_CATALOG_API_KEY", SecretStr("catalog-read-only-key"))
+    monkeypatch.setattr(
+        settings,
+        "COMPOSIO_AUTH_CONFIGS",
+        {**settings.COMPOSIO_AUTH_CONFIGS, "salesforce": "ac_salesforce_operator"},
+    )
+    metadata = ComposioToolkitMetadata.model_validate(
+        {
+            "slug": "salesforce",
+            "name": "Salesforce",
+            "auth_schemes": ["API_KEY"],
+            "tools_count": 1,
+        }
+    )
+
+    class CatalogStub:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get_toolkit(self, slug):
+            assert slug == "salesforce"
+            return metadata
+
+        async def direct_tool_names(self, *, toolkit):
+            assert toolkit == "salesforce"
+            return ["SALESFORCE_SEARCH_RECORDS"]
+
+    monkeypatch.setattr(lifecycle, "ComposioCatalogClient", CatalogStub)
+    attempt = await harness.service.connect(
+        user_id=harness.user_id, data=AppConnectionCreate(toolkit="salesforce")
+    )
+    connection = harness.store[attempt.connection_id]
+    assert connection.allowed_tools == ["SALESFORCE_SEARCH_RECORDS"]
+    assert connection.composio_auth_config_id == "ac_salesforce_operator"
+    harness.provider.link.assert_awaited_once_with(
+        user_id=composio_user_id(harness.user_id),
+        auth_config_id="ac_salesforce_operator",
+        callback_url=f"https://t3os.example/connectors?connection_attempt={attempt.attempt_id}",
+    )
+    harness.provider.create_link_session.assert_not_awaited()
+
+    harness.provider.complete_auth.return_value = ComposioCompletedAuth(
+        connected_account_id="ca_attempt_1", toolkit_slug="salesforce"
+    )
+    connected = await finish(harness, attempt, connected_account_id="ca_attempt_1")
+    assert connected.authorized and connected.app.approval_required
+    assert connected.app.action_count == 1
+    harness.provider.verify_account.assert_awaited_once_with(
+        user_id=composio_user_id(harness.user_id),
+        toolkit="salesforce",
+        account_id="ca_attempt_1",
+        auth_config_id="ac_salesforce_operator",
+    )
+
+    reconnect = await harness.service.reconnect(
+        user_id=harness.user_id, connection_id=connection.id
+    )
+    assert reconnect.attempt_id != attempt.attempt_id
+    assert harness.provider.link.await_count == 2
+    harness.provider.link.assert_awaited_with(
+        user_id=composio_user_id(harness.user_id),
+        auth_config_id="ac_salesforce_operator",
+        callback_url=f"https://t3os.example/connectors?connection_attempt={reconnect.attempt_id}",
+    )
+    assert connection.composio_account_id == "ca_attempt_1" and connection.account_authorized
+
+
+async def test_dynamic_account_list_uses_saved_descriptor_without_catalog_requests(
+    harness, monkeypatch
+):
+    connection = row(
+        harness.user_id,
+        catalog_key="composio-salesforce",
+        url="https://backend.composio.dev/api/v3.1/toolkits/salesforce",
+        allowed_tools=["SALESFORCE_SEARCH_RECORDS"],
+        composio_auth_config_id="ac_salesforce_managed",
+    )
+    harness.store[connection.id] = connection
+
+    class CatalogMustNotBeRead:
+        def __init__(self):
+            raise AssertionError("account listing must not depend on catalog availability")
+
+    monkeypatch.setattr(lifecycle, "ComposioCatalogClient", CatalogMustNotBeRead)
+    result = await harness.service.list_for_user(user_id=harness.user_id)
+    assert result.total == 1
+    assert result.items[0].app.toolkit == "salesforce"
+    assert result.items[0].app.configured and result.items[0].app.approval_required
+    assert result.items[0].app.action_count == 1
 
 
 async def test_multiple_accounts_have_separate_attempts_and_default(harness):
@@ -633,7 +926,7 @@ async def test_refresh_cannot_promote_pending_grant_while_impersonating(harness)
 
 
 async def test_catalog_rejects_unknown_toolkit_and_limits_abandoned_rows(harness, monkeypatch):
-    with pytest.raises(BadRequestError):
+    with pytest.raises(ConfigurationError, match="COMPOSIO_CATALOG_API_KEY"):
         await harness.service.connect(
             user_id=harness.user_id, data=AppConnectionCreate(toolkit="unreviewed")
         )

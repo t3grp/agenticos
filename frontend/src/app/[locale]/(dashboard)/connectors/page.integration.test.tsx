@@ -15,8 +15,14 @@ import { Perm } from "@/types/permissions";
 
 const state = vi.hoisted(() => ({
   granted: new Set<string>(),
-  tab: null as string | null,
+  search: "",
+  tab: undefined as string | null | undefined,
   setTab: vi.fn(),
+}));
+
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useSearchParams: () => new URLSearchParams(state.search),
 }));
 
 vi.mock("./apps-tab", () => ({
@@ -32,14 +38,18 @@ vi.mock("@/hooks", async (importOriginal) => ({
     can: (permission: string) => state.granted.has(permission),
     isLoading: false,
   }),
-  useUrlState: () => [state.tab, state.setTab],
+  useUrlState: () => [
+    state.tab === undefined ? new URLSearchParams(state.search).get("tab") : state.tab,
+    state.setTab,
+  ],
   useMcpOAuthOutcome: () => undefined,
 }));
 
 describe("ConnectorsPage", () => {
   beforeEach(() => {
     state.granted = new Set([Perm.agentsView, Perm.secretsView, Perm.connectionsView]);
-    state.tab = null;
+    state.search = "";
+    state.tab = undefined;
     state.setTab.mockReset();
   });
 
@@ -50,8 +60,53 @@ describe("ConnectorsPage", () => {
     expect(screen.queryByRole("link", { name: "Vault" })).not.toBeInTheDocument();
   });
 
-  it("lists every advanced connection a caller may read, each linking under /connectors", async () => {
-    state.tab = "advanced";
+  it("shows the MCP catalog as a first-class tab", () => {
+    state.search = "?tab=mcp";
+    render(<ConnectorsPage />);
+
+    expect(screen.getByRole("tab", { name: "MCP servers" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("manual-connections-body")).toBeVisible();
+  });
+
+  it.each(["?server=googlecalendar", "?connect=googlecalendar"])(
+    "opens manual MCP links on MCP (%s)",
+    (query) => {
+      state.search = query;
+      render(<ConnectorsPage />);
+
+      expect(screen.getByRole("tab", { name: "MCP servers" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      expect(screen.getByText("manual-connections-body")).toBeVisible();
+    },
+  );
+
+  it("maps the legacy advanced tab to MCP and writes canonical tab values", async () => {
+    state.search = "?tab=advanced";
+    const { unmount } = render(<ConnectorsPage />);
+
+    expect(screen.getByRole("tab", { name: "MCP servers" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("manual-connections-body")).toBeVisible();
+    await userEvent.click(screen.getByRole("tab", { name: "More" }));
+    expect(state.setTab).toHaveBeenLastCalledWith("more");
+    unmount();
+
+    state.search = "";
+    state.setTab.mockClear();
+    render(<ConnectorsPage />);
+    await userEvent.click(screen.getByRole("tab", { name: "MCP servers" }));
+    expect(state.setTab).toHaveBeenLastCalledWith("mcp");
+  });
+
+  it("lists every More connection a caller may read, each linking under /connectors", async () => {
+    state.search = "?tab=more";
     render(<ConnectorsPage />);
 
     const channels = screen.getByRole("link", { name: /Channels/ });
@@ -65,8 +120,8 @@ describe("ConnectorsPage", () => {
     expect(sandboxes).toHaveAttribute("href", "/connectors/sandboxes");
   });
 
-  it("hides an advanced card whose page the caller cannot read", () => {
-    state.tab = "advanced";
+  it("hides a More card whose page the caller cannot read", () => {
+    state.search = "?tab=more";
     state.granted = new Set([Perm.agentsView]);
     render(<ConnectorsPage />);
 
@@ -77,10 +132,10 @@ describe("ConnectorsPage", () => {
     expect(within(list).queryByRole("link", { name: /Sandboxes/ })).not.toBeInTheDocument();
   });
 
-  it("gates each advanced card on the permission its page read before the move", () => {
+  it("gates each More card on the permission its page read before the move", () => {
     // Vault and Sandboxes were nav entries of their own, each gated by its own
-    // permission. Moving them behind a tab must not widen or narrow either gate.
-    state.tab = "advanced";
+    // permission. Moving them under More must not widen or narrow either gate.
+    state.search = "?tab=more";
     state.granted = new Set([Perm.secretsView]);
     const { unmount } = render(<ConnectorsPage />);
     expect(
@@ -103,12 +158,12 @@ describe("ConnectorsPage", () => {
 
   it("writes the tab to the URL, clearing it when going back to the default tab", async () => {
     const { unmount } = render(<ConnectorsPage />);
-    await userEvent.click(screen.getByRole("tab", { name: "Advanced" }));
-    expect(state.setTab).toHaveBeenLastCalledWith("advanced");
+    await userEvent.click(screen.getByRole("tab", { name: "More" }));
+    expect(state.setTab).toHaveBeenLastCalledWith("more");
     unmount();
 
     state.setTab.mockClear();
-    state.tab = "advanced";
+    state.search = "?tab=more";
     render(<ConnectorsPage />);
     await userEvent.click(screen.getByRole("tab", { name: "Apps" }));
     expect(state.setTab).toHaveBeenLastCalledWith(null);

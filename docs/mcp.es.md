@@ -1,5 +1,5 @@
 ---
-source_sha: "c5fb177443aa"
+source_sha: "ea2cb6df8b65"
 ---
 
 # MCP — las herramientas que aquí nadie tiene que escribir { #mcp-the-tools-nobody-here-has-to-write }
@@ -27,24 +27,38 @@ conexión administrada a una aplicación.
 
 ## Conectar una aplicación mediante Composio { #connect-an-app-through-composio }
 
-En T3OS, **Connectors → Apps** permite elegir una primera tarea y conectar Gmail,
-Outlook, Google Calendar, Google Drive, Slack, Notion o GitHub cuando el operador
-los habilita. Cada cuenta requiere su propio consentimiento con el proveedor.
-Tras la verificación del backend, puede iniciar una tarea real de lectura con
-su asistente.
+En T3OS, **Connections → Apps** permite buscar y explorar el catálogo de
+aplicaciones de Composio. El objetivo elegido destaca las sugerencias sin ocultar
+otras aplicaciones. La autenticación gestionada está disponible cuando la admite
+el proveedor; las aplicaciones que necesitan una configuración de autenticación
+del operador muestran **Setup required**. Usted autoriza cada cuenta por separado
+y el backend verifica que la cuenta devuelta le pertenece.
 
-Sus cuentas le pertenecen y se resuelven para el autor de cada mensaje. Las
-acciones iniciales leen datos; no envían mensajes ni modifican registros.
+Sus cuentas se asocian al autor de cada mensaje. Las siete integraciones
+originales conservan sus acciones de lectura revisadas. Para las demás apps
+compatibles, al conectar se guarda una lista explícita de herramientas y cada
+acción requiere su aprobación. Una actualización posterior del catálogo no puede
+ampliar silenciosamente el acceso a herramientas de esa cuenta.
+
+**Connections → MCP servers** gestiona los servidores MCP personales, de la
+organización y personalizados que ya existen. Ambos tipos de conexión usan la
+misma infraestructura de propiedad de cuentas, límites de herramientas y
+aprobaciones. Los canales de chat, agentes remotos, el vault y los sandboxes
+están en **More**. Los enlaces existentes `?tab=advanced` siguen abriendo MCP
+servers.
+
 Composio custodia las credenciales del proveedor y transmite solicitudes y
-resultados. Conectar una aplicación no la convierte automáticamente en una
-fuente de conocimiento sincronizada. Las conexiones MCP personales y de la
-organización siguen disponibles en **Advanced**.
+resultados. Conectar una aplicación no la sincroniza automáticamente como fuente
+de conocimiento. La configuración opcional sigue disponible en `/onboarding` y
+en el menú de la cuenta.
 
-El operador configura una clave de proyecto, las configuraciones de
-autenticación y la verificación de identidad en la devolución de llamada.
-Consulte la
+El operador configura una clave de proyecto de runtime, otra clave independiente
+para los metadatos del catálogo, las configuraciones de autenticación de toolkit
+personalizadas que necesite y la verificación de identidad al volver del
+proveedor. Consulte la
 [guía de configuración de Composio](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
-para conocer el tratamiento de datos y las comprobaciones reales requeridas.
+para ver la configuración, el tratamiento de datos y las pruebas de aceptación
+reales requeridas.
 
 ## Una conexión { #a-connection }
 

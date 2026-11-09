@@ -5,7 +5,7 @@
     "title": "Verbinde deine Apps",
     "description": "Nutze deine vertrauten Werkzeuge in T3OS. Beginne mit einer nützlichen Aufgabe.",
     "unconfiguredTitle": "App-Verbindungen sind noch nicht eingerichtet",
-    "unconfiguredDescription": "Dein Administrator muss den Verbindungsdienst aktivieren. Bestehende und eigene MCP-Verbindungen bleiben unter Erweitert verfügbar.",
+    "unconfiguredDescription": "Dein Administrator muss den App-Verbindungsdienst aktivieren. Bestehende und eigene Verbindungen bleiben im Tab MCP-Server verfügbar.",
     "progress": "Fortschritt der Verbindungseinrichtung",
     "steps": {
       "1": "1 · Dein Ziel",
@@ -32,7 +32,17 @@
       }
     },
     "catalogTitle": "Wähle deine Apps",
-    "catalogHint": "Jede App benötigt eine eigene Autorisierung. Ein Konto reicht für den Anfang.",
+    "catalogHint": "Durchsuche den Composio-App-Katalog oder suche nach einer App. Die Empfehlungen richten sich nach deinem Ziel; jede App benötigt eine eigene Autorisierung.",
+    "searchApps": "Alle Apps durchsuchen",
+    "recommended": "Für dein Ziel empfohlen",
+    "loadMore": "Weitere Apps laden",
+    "noSearchResults": "Keine Apps entsprechen dieser Suche. Versuche einen anderen Namen.",
+    "catalogUnavailable": "Der vollständige App-Katalog ist vorübergehend nicht verfügbar. Deine bestehenden Konten und eingerichteten Apps bleiben zugänglich.",
+    "setupRequiredHint": "Ein Administrator muss diese App einrichten, bevor du sie verbinden kannst.",
+    "approvalRequired": "Jede Aktion braucht deine Freigabe",
+    "approvalRequiredHint": "Diese App kann Daten lesen und Änderungen vornehmen. T3OS fragt vor jeder Aktion nach deiner Freigabe.",
+    "exploreApp": "Diese App mit meinem Assistenten erkunden",
+    "exploreAppPrompt": "Hilf mir, mit meinem verbundenen {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}) loszulegen. Beschreibe einige nützliche Aufgaben mit den verfügbaren Werkzeugen und frage mich, welche ich ausprobieren möchte. Rufe keine App-Werkzeuge auf, bevor ich eine Aufgabe ausgewählt habe. Verwende nur dieses Konto.",
     "toolkits": {
       "googlecalendar": "Anstehende Termine und Besprechungsdetails lesen.",
       "gmail": "Nachrichten zu deiner Anfrage finden und lesen.",
@@ -45,8 +55,9 @@
     "connectNamed": "{name} verbinden",
     "addAccount": "Konto hinzufügen",
     "connect": "Verbinden",
-    "notConfigured": "Nicht eingerichtet",
-    "browseAll": "Alle Apps ansehen",
+    "notConfigured": "Einrichtung erforderlich",
+    "unavailableApp": "Nicht verfügbar",
+    "unavailableAppHint": "Bei dieser Integration kannst du hier kein Konto verbinden.",
     "noApps": "In dieser Bereitstellung sind keine Apps verfügbar.",
     "yourAccounts": "Deine verbundenen Konten",
     "personalHint": "Dein Konto bleibt persönlich. Agents nutzen es nur über Werkzeuge, die für dein eigenes Konto eingerichtet sind.",
@@ -4379,7 +4390,7 @@
     "whatsNewDescription": "Änderungen in der verwendeten Version.",
     "whatsNewDone": "Verstanden",
     "backgroundWork": "Arbeit im Hintergrund",
-    "connectors": "Konnektoren",
+    "connectors": "Verbindungen",
     "onboarding": "Einführung"
   },
   "navigation": {
@@ -4842,7 +4853,7 @@
       },
       "app-connections": {
         "title": "Deine Apps verbinden",
-        "body": "Beginne mit einem Ziel und verbinde nur die benötigten Apps. Jeder Anbieter fragt nach einer eigenen Autorisierung. Eigene MCP- und gemeinsame Verbindungen bleiben unter Erweitert verfügbar."
+        "body": "Beginne mit einem Ziel und verbinde nur die benötigten Apps. Jeder Anbieter fragt nach einer eigenen Autorisierung. Eigene Server findest du im Tab MCP-Server; unter Mehr liegen Kanäle, Remote-Agenten, Vault und Sandboxes."
       },
       "mcp-catalog": {
         "title": "Tools anstecken",
@@ -4851,6 +4862,10 @@
       "mcp-connect": {
         "title": "Verbinden, dann Tools wählen",
         "body": "Einen Server zu verbinden fragt, wie die Anmeldung erfolgt, und lässt Sie dann genau auswählen, welche seiner Tools Ihre Agents aufrufen dürfen."
+      },
+      "connections-more": {
+        "title": "Weitere Verbindungen",
+        "body": "Der Tab Mehr enthält Kanäle, Remote-Agenten sowie Vault- und Sandbox-Einstellungen, die für deine Rolle verfügbar sind."
       },
       "mcp-filter": {
         "title": "Einen Server finden",
@@ -7774,11 +7789,12 @@
       "operationsHint": "Anwendungsupdates und Bereitstellungsdiagnose."
     },
     "connectors": {
-      "title": "Konnektoren",
-      "description": "Alles, womit sich deine Agenten verbinden, an einem Ort.",
+      "title": "Verbindungen",
+      "description": "Verwalte deine App-Konten und MCP-Server an einem Ort.",
       "apps": "Apps",
-      "advanced": "Erweitert",
-      "advancedDescription": "Die Verbindungen auf niedrigerer Ebene: Chat-Kanäle, Remote-Agenten, der Tresor und Sandboxes.",
+      "mcp": "MCP-Server",
+      "more": "Mehr",
+      "advancedDescription": "Chat-Kanäle, Remote-Agenten, Vault und Sandboxes.",
       "channelsDescription": "Chat-Plattformen, über die deine Organisation erreichbar ist.",
       "remoteAgentsDescription": "Agenten anderer Anbieter, an die deine Agenten delegieren können.",
       "vaultDescription": "Schlüssel und Geheimnisse, die deine Verbindungen verwenden.",
@@ -13476,7 +13492,7 @@
     "appsDescription": "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
     "connectApps": "Apps verbinden",
     "opensNewTab": "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
-    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Konnektoren → Apps nachholen.",
+    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen.",
     "continueToWorkspace": "Weiter zum Workspace"
   }
 }

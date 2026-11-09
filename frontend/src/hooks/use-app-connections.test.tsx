@@ -6,12 +6,30 @@ import { apiClient } from "@/lib/api-client";
 import { qk } from "@/lib/query-keys";
 import { useAuthStore, useOrgStore } from "@/stores";
 import { useAppConnections } from "./use-app-connections";
-import type { AppConnectionAuthorization } from "@/types/app-connections";
+import type {
+  AppConnectionAuthorization,
+  ConnectedAppDefinition,
+} from "@/types/app-connections";
 
 vi.mock("@/lib/api-client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), delete: vi.fn(), patch: vi.fn() },
 }));
 const scope = { userId: "user-1", orgId: "org-1" };
+
+function app(toolkit: string): ConnectedAppDefinition {
+  return {
+    key: `composio-${toolkit}`,
+    toolkit,
+    name: toolkit,
+    description: `${toolkit} app`,
+    category: "productivity",
+    configured: true,
+    availability: "ready",
+    approval_required: false,
+    action_count: 2,
+    actions: [],
+  };
+}
 
 function setup() {
   const client = new QueryClient({
@@ -34,7 +52,9 @@ beforeEach(() => {
   });
   useOrgStore.setState({ activeOrgId: scope.orgId });
   vi.mocked(apiClient.get).mockImplementation(async (url) =>
-    url.endsWith("/catalog") ? { configured: true, apps: [] } : { items: [], total: 0 },
+    url.endsWith("/catalog")
+      ? { configured: true, catalog_available: true, apps: [], next_cursor: null }
+      : { items: [], total: 0 },
   );
 });
 
@@ -122,10 +142,69 @@ describe("useAppConnections", () => {
     },
   );
 
+  it("searches and paginates catalog pages while deduplicating apps by key", async () => {
+    const gmail = app("gmail");
+    const linear = app("linear");
+    let catalogCalls = 0;
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (!url.endsWith("/catalog")) return { items: [], total: 0 };
+      catalogCalls += 1;
+      return catalogCalls === 1
+        ? {
+            configured: true,
+            catalog_available: true,
+            apps: [gmail],
+            next_cursor: "catalog-page-2",
+          }
+        : {
+            configured: true,
+            catalog_available: true,
+            apps: [gmail, linear],
+            next_cursor: null,
+          };
+    });
+
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useAppConnections(scope, "linear"), { wrapper });
+    await waitFor(() => expect(result.current.catalog.data?.apps).toEqual([gmail]));
+    expect(result.current.catalog.hasNextPage).toBe(true);
+    await act(async () => {
+      await result.current.catalog.fetchNextPage();
+    });
+
+    await waitFor(() => expect(result.current.catalog.data?.apps).toEqual([gmail, linear]));
+    expect(result.current.catalog.data?.next_cursor).toBeNull();
+    expect(result.current.catalog.hasNextPage).toBe(false);
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/me/app-connections/catalog",
+      expect.objectContaining({ params: { limit: "24", search: "linear" } }),
+    );
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/me/app-connections/catalog",
+      expect.objectContaining({
+        params: { limit: "24", search: "linear", cursor: "catalog-page-2" },
+      }),
+    );
+  });
+
+  it("keeps account loading independent when the app catalog fails", async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (url.endsWith("/catalog")) throw new Error("catalog unavailable");
+      return { items: [{ id: "existing-account" }], total: 1 };
+    });
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useAppConnections(scope), { wrapper });
+
+    await waitFor(() => expect(result.current.catalog.isError).toBe(true));
+    await waitFor(() => expect(result.current.connections.isSuccess).toBe(true));
+    expect(result.current.connections.data).toEqual([{ id: "existing-account" }]);
+  });
+
   it("does not publish a previous workspace's late account list", async () => {
     let resolve!: (value: unknown) => void;
     vi.mocked(apiClient.get).mockImplementation(async (url) => {
-      if (url.endsWith("/catalog")) return { configured: true, apps: [] };
+      if (url.endsWith("/catalog"))
+        return { configured: true, catalog_available: true, apps: [], next_cursor: null };
       return new Promise((done) => {
         resolve = done;
       });

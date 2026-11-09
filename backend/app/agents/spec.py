@@ -1030,7 +1030,7 @@ class PersonalMcpServerRef(BaseModel):
     catalog_key: str = Field(
         min_length=1,
         max_length=64,
-        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        pattern=r"^[a-z0-9][a-z0-9_-]*$",
         description=(
             "Which service, as the MCP catalog names it. A person's own connection "
             "to it is found by this key when the turn runs."

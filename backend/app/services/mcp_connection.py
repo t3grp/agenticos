@@ -987,8 +987,10 @@ def account_source_organization(account: McpConnection) -> UUID | None:
 
 def _refuse_managed_app(catalog_key: str | None) -> None:
     entry = get_entry(catalog_key) if catalog_key is not None else None
-    if entry is not None and entry.auth == "composio":
-        raise BadRequestError(message="Connect this personal app from Apps")
+    if (catalog_key is not None and catalog_key.lower().startswith("composio-")) or (
+        entry is not None and entry.auth == "composio"
+    ):
+        raise BadRequestError(message="Connect this personal app from Connections → Apps")
 
 
 def _org_app_organization(connection: McpConnection, payload: McpOAuthPayload) -> UUID | None:

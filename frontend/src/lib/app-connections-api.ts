@@ -8,8 +8,15 @@ import type {
 
 const ROOT = "/me/app-connections";
 
-export function getAppConnectionCatalog(signal?: AbortSignal) {
-  return apiClient.get<AppConnectionCatalog>(`${ROOT}/catalog`, { signal });
+export function getAppConnectionCatalog(
+  signal?: AbortSignal,
+  search = "",
+  cursor: string | null = null,
+) {
+  return apiClient.get<AppConnectionCatalog>(`${ROOT}/catalog`, {
+    signal,
+    params: { limit: "24", ...(search ? { search } : {}), ...(cursor ? { cursor } : {}) },
+  });
 }
 
 export async function listAppConnections(signal?: AbortSignal): Promise<AppConnection[]> {
