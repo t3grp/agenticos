@@ -91,6 +91,7 @@ const EMPTY_FORM: SyncSourceCreate = {
   collection_name: null,
   config: {},
   secret_id: null,
+  connected_account_id: null,
   organizational_unit: null,
   sync_mode: "full",
   schedule_minutes: null,
@@ -237,7 +238,11 @@ export function SyncSourceWizard({
       // needs a kind will not sync without it, so the wizard asks here rather
       // than letting the source be created and fail in a worker.
       if (!selectedConnector) return false;
-      return selectedConnector.secret_kind === "none" || Boolean(form.secret_id);
+      return (
+        selectedConnector.secret_kind === "none" ||
+        Boolean(form.secret_id) ||
+        Boolean(form.connected_account_id)
+      );
     }
     // An edit that changes nothing has nothing to save.
     if (step === "schedule") return changes === null || Object.keys(changes).length > 0;

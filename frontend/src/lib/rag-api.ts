@@ -115,6 +115,8 @@ export interface SyncSourceCreate {
    * field names this replaced (#937).
    */
   secret_id?: string | null;
+  /** Organization-owned connected Google account used for Drive OAuth. */
+  connected_account_id?: string | null;
   /**
    * Which part of the organization this source's documents belong to.
    *
@@ -137,7 +139,13 @@ export interface SyncSourceCreate {
 export type SyncSourceUpdate = Partial<
   Pick<
     SyncSourceCreate,
-    "name" | "config" | "secret_id" | "organizational_unit" | "sync_mode" | "schedule_minutes"
+    | "name"
+    | "config"
+    | "secret_id"
+    | "connected_account_id"
+    | "organizational_unit"
+    | "sync_mode"
+    | "schedule_minutes"
   >
 >;
 
@@ -151,6 +159,7 @@ export interface SyncSourceRead {
   /** Unmasked, because the credential is not in here - it is `secret_id` (#937). */
   config: Record<string, unknown>;
   secret_id: string | null;
+  connected_account_id?: string | null;
   /** The vault's four-character hint, so a reader can tell which credential. */
   secret_hint?: string | null;
   /** The per-source default stamped on every chunk this source ingests (#1777). */

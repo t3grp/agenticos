@@ -9,6 +9,7 @@ grant it replaces, and what a run is handed.
 import hashlib
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
 import httpx
@@ -161,7 +162,10 @@ async def test_connecting_asks_google_for_every_service_with_the_orgs_client(
 
     assert url.startswith(google_oauth.AUTHORIZE_ENDPOINT)
     assert "client_id=org-client" in url and "org-secret" not in url
-    assert "drive" in url and "gmail.modify" in url and "access_type=offline" in url
+    requested_scopes = set(parse_qs(urlparse(url).query)["scope"][0].split())
+    assert google_oauth.DRIVE_READONLY in requested_scopes
+    assert google_oauth.DRIVE not in requested_scopes
+    assert google_oauth.GMAIL in requested_scopes and "access_type=offline" in url
     create = repo.create_org_scoped if for_organization else repo.create
     written = create.await_args.kwargs
     assert written["purpose"] == "account" and written["catalog_key"] == "google"
