@@ -175,7 +175,7 @@ describe("personal model connections", () => {
     expect(screen.queryByRole("button", { name: /Connect API key|Choose model/ })).toBeNull();
     expect(screen.getByRole("link", { name: /Manage or disconnect/ })).toHaveAttribute(
       "href",
-      "/vault",
+      "/connectors/vault",
     );
   });
 

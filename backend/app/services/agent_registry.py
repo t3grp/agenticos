@@ -202,6 +202,7 @@ DEFAULT_GRANTED_SCOPES = frozenset(
         "code:execute",
         "sandbox:execute",
         "agents:delegate",
+        "agents:message",
         "tables:read",
         "tables:write",
         "workflows:run",
@@ -3872,7 +3873,7 @@ class AgentRegistryService:
         return agent, AgentSpec.model_validate(version.spec), version.id
 
     async def with_assistant_guidance(self, agent: Agent, spec: AgentSpec) -> AgentSpec:
-        """Add current Projects guidance only to the registered Architect's runtime copy.
+        """Add current guidance and personal apps to the registered assistant's runtime copy.
 
         Existing installations keep their customized stored specs. Other agents
         and external MCP clients keep their own workflow, even with platform tools.
@@ -3886,6 +3887,8 @@ class AgentRegistryService:
         assistant = await organization_assistant_repo.for_agent(self.db, agent.id)
         if assistant is None or assistant.organization_id != agent.organization_id:
             return spec
+        from app.services.app_connections.runtime import with_app_connection_bindings
+
         guidance = (
             (agent_templates.TEMPLATES_ROOT / "general/platform-assistant/PROJECTS.md")
             .read_text()
@@ -3914,8 +3917,10 @@ class AgentRegistryService:
                 instructions,
             )
         if not additions and instructions == spec.instructions:
-            return spec
-        return spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+            return with_app_connection_bindings(spec)
+        return with_app_connection_bindings(
+            spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+        )
 
     async def refuse_a_switched_off_assistant(self, agent_id: UUID) -> None:
         """Refuse running - or continuing a run of - an assistant somebody switched off (#2063).

@@ -882,11 +882,19 @@ export const TOUR_STEPS: readonly TourStep[] = [
   { id: "vault-keys", page: ROUTES.VAULT, target: "vault-keys", permission: Perm.secretsView },
 
   {
+    id: "app-connections",
+    page: ROUTES.CONNECTORS,
+    activate: "connectors-apps",
+    target: "app-connections",
+    inTour: true,
+    optional: true,
+  },
+  {
     id: "mcp-catalog",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-catalog",
     permission: Perm.agentsView,
-    inTour: true,
   },
   // The catalog controls — filter, custom-add, connect — render only inside the
   // list, which the page swaps for an empty-state card when the catalog has no
@@ -896,6 +904,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-filter",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-filter",
     permission: Perm.agentsView,
     optional: true,
@@ -903,6 +912,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-add",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-add",
     permission: Perm.connectionsManage,
     optional: true,
@@ -910,6 +920,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-connect",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-connect",
     permission: Perm.agentsView,
     optional: true,
@@ -1064,6 +1075,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // What the platform brought the reader on its own (#2301). "?"-only, like the
   // routines stop: the launch walk does not take a first login here.
   { id: "inbox-filters", page: ROUTES.INBOX, target: "inbox-filters" },
+
+  // The threads between the reader's agents. "?"-only, gated on running agents:
+  // the walk does not take a first login here either.
+  {
+    id: "agent-messages",
+    page: ROUTES.AGENT_MESSAGES,
+    target: "agent-messages-list",
+    permission: Perm.agentsRun,
+  },
 
   { id: "workspaces-browser", page: ROUTES.DOCUMENTS, target: "workspaces-browser" },
   // The detail a workspace opens onto — the file tree. "?"-only and shown in

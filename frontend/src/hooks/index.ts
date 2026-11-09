@@ -29,12 +29,22 @@ export { useKnowledgeBaseFor, useKnowledgeBases, useKBDetail } from "./use-knowl
 export { useSlashCommands, isBuiltinEnabled, BUILTIN_COMMAND_LIST } from "./use-slash-commands";
 export { useNotificationPreferences } from "./use-notification-preferences";
 export { useNotificationInbox, useUnreadNotificationCount } from "./use-notifications";
+export {
+  useAgentMessageRecipients,
+  useAgentMessages,
+  useAgentMessageThread,
+  useAgentMessageThreads,
+  useMarkAgentMessageThreadRead,
+  useReactToAgentMessage,
+  useSendAgentMessage,
+} from "./use-agent-messages";
 export { useDashboardLayout } from "./use-dashboard-layout";
 export { useDashboardPresets } from "./use-dashboard-presets";
 export { useReusableIntegrations } from "./use-reusable-integrations";
 export { useLocalServices } from "./use-local-services";
 export { useExternalAgents } from "./use-external-agents";
 export { useMcpConnections } from "./use-mcp-connections";
+export { useAppConnections } from "./use-app-connections";
 export { useOrgMcpConnections, useOrgMcpToolCalls } from "./use-org-mcp-connections";
 export { useUsableMcpConnections } from "./use-usable-mcp-connections";
 export { useMcpToolServers } from "./use-mcp-tool-servers";
@@ -76,6 +86,7 @@ export {
   type McpServerRow,
 } from "./use-mcp-servers";
 export { useMcpOAuthOutcome } from "./use-mcp-oauth-outcome";
+export { useDriveFolders } from "./use-drive-folders";
 export {
   usePortalCatalog,
   usePortals,

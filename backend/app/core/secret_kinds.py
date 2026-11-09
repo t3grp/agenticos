@@ -88,6 +88,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.config import settings
 from app.core.exceptions import BadRequestError
 from app.core.vault import SealedSecret, VaultScope, seal, unseal
 
@@ -870,13 +871,28 @@ def describe_kind(kind: SecretKind) -> str:
     return _KIND_LABELS[kind][0]
 
 
+def _description(kind: SecretKind) -> str:
+    """A kind's description, plus what the deployment needs the provider to hold.
+
+    A Google client is registered by the organization in its own console, and Google
+    refuses the consent unless the exact redirect URL is listed there - so the setup
+    screen names it, read off this deployment's own address rather than left for an
+    administrator to construct.
+    """
+    description = _KIND_LABELS[kind][1]
+    if kind is SecretKind.GOOGLE_OAUTH_APP:
+        redirect = f"{settings.FRONTEND_URL.rstrip('/')}/api/me/mcp-connections/oauth/callback"
+        description += f" Add this redirect URL to the client in Google Cloud: {redirect}"
+    return description
+
+
 def describe_kinds() -> list[SecretKindInfo]:
     """Every storable kind with the schema its form is generated from."""
     return [
         SecretKindInfo(
             kind=kind,
             name=_KIND_LABELS[kind][0],
-            description=_KIND_LABELS[kind][1],
+            description=_description(kind),
             json_schema=model.model_json_schema(),
         )
         for kind, model in _KIND_MODELS.items()

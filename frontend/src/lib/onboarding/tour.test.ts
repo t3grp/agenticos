@@ -34,6 +34,7 @@ const UNGATED_LAUNCH = [
   "dashboard-filters",
   "chat-start",
   "chat-agent-picker",
+  "app-connections",
   "finish",
 ];
 
@@ -221,7 +222,7 @@ describe("visibleTourSteps", () => {
       "agent-availability",
       "agent-history",
       "kb-documents",
-      "mcp-catalog",
+      "app-connections",
       "finish",
     ]);
   });
@@ -448,6 +449,7 @@ describe("stepsForPage", () => {
 
   it("deepens the MCP page component by component", () => {
     expect(stepsForPage(ROUTES.MCP_SERVERS, () => true).map((step) => step.id)).toEqual([
+      "app-connections",
       "mcp-catalog",
       "mcp-filter",
       "mcp-add",

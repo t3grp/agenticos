@@ -7,6 +7,7 @@ import { AgentAvatar } from "@/components/agents/agent-avatar";
 import type { ChatPrompt } from "@/components/chat/chat-container";
 import type { IncomingFiles } from "@/components/chat/chat-input";
 import { useArchitectAskStore } from "@/stores/architect-ask-store";
+import { useAuthStore, useOrgStore } from "@/stores";
 import { useArchitectMarkStore } from "@/stores/architect-mark-store";
 import type { AssistantState } from "@/types/assistant";
 
@@ -110,6 +111,11 @@ const chat = () => screen.getByTestId("chat");
 
 beforeEach(() => {
   vi.useFakeTimers();
+  useAuthStore.setState({
+    user: { id: "user-1", email: "one@example.test", is_active: true, created_at: "2026-01-01" },
+  });
+  useOrgStore.setState({ activeOrgId: "org-1" });
+  useArchitectAskStore.setState({ request: null });
   state.assistant = assistant();
   state.pathname = "/agents";
   state.signals = { pendingApprovals: 0, noAgents: false, failedRunId: null, stuckIn: null };
@@ -250,6 +256,51 @@ describe("the Architect widget", () => {
     act(() => useArchitectAskStore.getState().ask("And another"));
     expect(chat()).toHaveAttribute("data-prompt", "And another");
   });
+
+  it("drops an account-scoped ask queued before a workspace change", async () => {
+    state.assistant = assistant({ status: "disabled" });
+    const { rerender } = render(<AssistantWidget />);
+    act(() =>
+      useArchitectAskStore
+        .getState()
+        .ask("Private account task", { userId: "user-1", orgId: "org-1" }),
+    );
+    act(() => useOrgStore.setState({ activeOrgId: "org-2" }));
+    state.assistant = assistant();
+    await act(async () => {
+      rerender(<AssistantWidget />);
+    });
+    expect(useArchitectAskStore.getState().request).toBeNull();
+    expect(screen.queryByTestId("chat")).toBeNull();
+  });
+
+  it.each(["organization", "user"] as const)(
+    "clears a consumed prompt when its %s changes before sending",
+    (kind) => {
+      render(<AssistantWidget />);
+      act(() =>
+        useArchitectAskStore
+          .getState()
+          .ask("Private account task", { userId: "user-1", orgId: "org-1" }),
+      );
+      expect(chat()).toHaveAttribute("data-prompt", "Private account task");
+      act(() => {
+        if (kind === "organization") useOrgStore.setState({ activeOrgId: "org-2" });
+        else
+          useAuthStore.setState({
+            user: {
+              id: "user-2",
+              email: "two@example.test",
+              is_active: true,
+              created_at: "2026-01-01",
+            },
+          });
+      });
+      expect(screen.queryByTestId("chat")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Open Architect" }));
+      expect(chat()).toHaveAttribute("data-prompt", "");
+    },
+  );
 
   it("lets a bubble fade when nobody answers it, and holds it while the pointer rests on it", () => {
     render(<AssistantWidget />);

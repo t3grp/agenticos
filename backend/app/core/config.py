@@ -461,6 +461,14 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     PUBLIC_BASE_URL: str = "http://localhost:8000"
 
+    # Supplied by the operator's secret store. End users authorize their own apps;
+    # the project key and auth-config selection never come from their browser.
+    COMPOSIO_API_KEY: SecretStr | None = None
+    COMPOSIO_AUTH_CONFIGS: dict[str, str] = Field(default_factory=dict)
+    COMPOSIO_USER_NAMESPACE: str = Field(
+        default="t3os", min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"
+    )
+
     # How long a phone number stays linked to an account before it has to be linked again.
     # A number is a claim of identity that outlives the person's hold on it - reassigned,
     # ported, taken over - so an SMS link lapses (#2082). 0 keeps links for ever.

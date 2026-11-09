@@ -329,7 +329,11 @@ async def test_inference_is_bounded_and_carries_no_provider_credentials(configur
     assert len(requests) == 1
 
 
-@pytest.mark.parametrize("body", [b"not JSON", b"{}", b"x" * (4 * 1024 * 1024 + 1)])
+@pytest.mark.parametrize(
+    "body",
+    [b"not JSON", b"{}", b"x" * (4 * 1024 * 1024 + 1)],
+    ids=["invalid-json", "invalid-shape", "oversized"],
+)
 async def test_inference_rejects_malformed_and_oversized_replies(configured, body):
     runtime = ClaudeSubscriptionRuntime(
         transport=httpx.MockTransport(lambda request: httpx.Response(200, content=body))
