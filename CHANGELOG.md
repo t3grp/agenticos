@@ -60,6 +60,8 @@ Two things are versioned separately from this file and worth knowing about:
   changing applied migrations, resetting their state, or replacing stored accounts.
 - Redact Composio's single-use `session_uri` verifier from application logs and
   exported traces, alongside the existing OAuth callback credentials.
+- Match agent-message timestamp types and message/Drive index metadata to their
+  applied migrations so model writes and schema verification use the same types.
 
 ## [1.52.0] - 2026-11-06
 
