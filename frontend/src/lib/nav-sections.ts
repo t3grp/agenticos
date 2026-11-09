@@ -43,6 +43,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Hidden unless the caller holds this. Omitted means always shown. */
   permission?: Permission;
+  /** Hidden unless the caller holds at least one of these: for an entry that opens to several areas. */
+  permissions?: readonly Permission[];
   /** A `data-tour` anchor the onboarding coach points at — only where a flow returns here. */
   dataTour?: string;
   /**
@@ -186,7 +188,9 @@ export const NAV_GROUPS: NavGroup[] = [
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
         icon: Plug,
-        permission: Perm.agentsView,
+        // Each area of the page keeps its own gate; the entry shows to anyone
+        // who can reach one of them.
+        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView],
       },
     ],
   },
@@ -269,4 +273,10 @@ export function navSectionFor(
     }
   }
   return null;
+}
+
+/** Whether a nav entry shows for a caller, given their permission check. */
+export function navItemVisible(item: NavItem, can: (permission: Permission) => boolean): boolean {
+  if (item.permissions) return item.permissions.some(can);
+  return !item.permission || can(item.permission);
 }

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { NAV_GROUPS, navSectionFor } from "./nav-sections";
+import { NAV_GROUPS, navItemVisible, navSectionFor } from "./nav-sections";
 import { ROUTES } from "./constants";
 import { Perm } from "@/types/permissions";
+import type { Permission } from "@/types/permissions";
 
 describe("navSectionFor", () => {
   it("names the entry and its group's hue, and says when the path is the section's own page", () => {
@@ -40,15 +41,39 @@ describe("navSectionFor", () => {
 });
 
 describe("the Connectors nav entry", () => {
-  it("is the one entry in the connections group, at the MCP servers' old permission", () => {
+  const connectors = () => {
+    const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
+    return group?.items.find((item) => item.labelKey === "connectors");
+  };
+  const holding =
+    (...granted: Permission[]) =>
+    (permission: Permission) =>
+      granted.includes(permission);
+
+  it("is the one entry in the connections group, opening to any of the three areas", () => {
     const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
     expect(group?.items).toEqual([
       expect.objectContaining({
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
-        permission: Perm.agentsView,
+        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView],
       }),
     ]);
   });
-});
 
+  it("shows to a role that can see only the vault", () => {
+    expect(navItemVisible(connectors()!, holding(Perm.secretsView))).toBe(true);
+  });
+
+  it("shows to a role that can see only the connections", () => {
+    expect(navItemVisible(connectors()!, holding(Perm.connectionsView))).toBe(true);
+  });
+
+  it("shows to a role that can see only agents", () => {
+    expect(navItemVisible(connectors()!, holding(Perm.agentsView))).toBe(true);
+  });
+
+  it("stays hidden from a role with none of the three", () => {
+    expect(navItemVisible(connectors()!, holding(Perm.workflowsView))).toBe(false);
+  });
+});

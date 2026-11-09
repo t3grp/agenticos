@@ -116,25 +116,25 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "agents" })).toBeInTheDocument();
   });
 
-  it("shows the Vault to anyone who can view secrets, without connections:manage", () => {
-    // The backend gates the Vault's listing on secrets:view; a Member holds it
-    // at OWN scope but never holds connections:manage. Gating the nav on the
-    // latter hid the Vault from everyone below admin.
+  it("shows Connectors to anyone who can view secrets, without connections:manage", () => {
+    // The Vault lives behind Connectors' Advanced tab now, so the entry shows to
+    // anyone who can reach one of its areas. A Member holds secrets:view at OWN
+    // scope but never connections:manage, and must still see the entry.
     can.mockImplementation((permission) => permission === "secrets:view");
     sidebar.openGroups = ["connections"];
 
     renderNav();
 
-    expect(screen.getByRole("link", { name: "vault" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "connectors" })).toBeInTheDocument();
   });
 
-  it("hides the Vault when the caller cannot even list secrets", () => {
+  it("hides Connectors when the caller holds none of the areas it opens to", () => {
     can.mockImplementation((permission) => permission === "connections:manage");
     sidebar.openGroups = ["connections"];
 
     renderNav();
 
-    expect(screen.queryByRole("link", { name: "vault" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "connectors" })).not.toBeInTheDocument();
   });
 
   it("reveals nothing while permissions are still loading", () => {
@@ -197,12 +197,15 @@ describe("SidebarNav", () => {
 
   it("never folds the group holding the page you are on", () => {
     can.mockReturnValue(true);
-    currentPath.mockReturnValue("/channels");
+    currentPath.mockReturnValue("/connectors");
     sidebar.openGroups = [];
 
     renderNav();
 
-    expect(screen.getByRole("link", { name: "channels" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "connectors" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(screen.getByRole("button", { name: "connections" })).toBeDisabled();
   });
 
@@ -352,7 +355,7 @@ describe("the navigation definition", () => {
     ]);
     const unguarded = NAV_GROUPS.filter((group) => !group.adminOnly)
       .flatMap((group) => group.items)
-      .filter((item) => !item.permission && !open.has(item.labelKey));
+      .filter((item) => !item.permission && !item.permissions && !open.has(item.labelKey));
 
     expect(unguarded).toEqual([]);
   });
