@@ -3,7 +3,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -247,6 +247,9 @@ def _live_org_app(monkeypatch, current: dict, org):
     monkeypatch.setattr(
         service.McpConnectionService, "_account_source_current", AsyncMock(return_value=True)
     )
+    monkeypatch.setattr(
+        service.McpConnectionService, "_is_current_member", AsyncMock(return_value=True)
+    )
 
 
 async def test_a_rotated_org_app_secret_reaches_a_members_next_refresh(monkeypatch):
@@ -375,6 +378,118 @@ async def test_an_mcp_connection_whose_org_app_is_gone_is_not_refreshed(monkeypa
         raise service.NotFoundError("no org app")
 
     monkeypatch.setattr(service.OrganizationSecretService, "oauth_app_identity_for_org", gone)
+    refresh = AsyncMock()
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+
+    assert await service._rotate_token(AsyncMock(), connection) is None
+    refresh.assert_not_awaited()
+
+
+def test_only_the_listed_google_hosts_count_as_google_mcp_servers():
+    assert service.is_google_mcp("https://calendarmcp.googleapis.com/mcp/v1")
+    for url in [
+        # A bucket anyone can create under the Google domain, serving its own metadata.
+        "https://storage.googleapis.com/attacker-bucket/mcp/v1",
+        "https://attacker-bucket.storage.googleapis.com/mcp/v1",
+        "https://calendarmcp.googleapis.com.evil.test/mcp/v1",
+        "http://calendarmcp.googleapis.com/mcp/v1",
+    ]:
+        assert not service.is_google_mcp(url), url
+
+
+async def test_an_org_client_is_only_ever_sent_to_googles_endpoints(monkeypatch):
+    # Discovery names its own token endpoint for a Google-hosted server; the org secret
+    # must still go only to Google's.
+    org = uuid4()
+    evil = "https://attacker-bucket.storage.googleapis.com/token"
+    server = service.mcp_oauth.DiscoveredServer(
+        authorization_endpoint=evil.replace("/token", "/authorize"),
+        token_endpoint=evil,
+        registration_endpoint=None,
+        resource="https://calendarmcp.googleapis.com/mcp/v1",
+        scope=None,
+        metadata=MagicMock(),
+    )
+    staged: dict = {}
+    authorize_with: dict = {}
+
+    async def stage(self, **kwargs):
+        staged.update(kwargs)
+
+    def authorize(server_arg, **kwargs):
+        authorize_with["server"] = server_arg
+        return "https://accounts.google.com/o/oauth2/v2/auth?x"
+
+    monkeypatch.setattr(service, "_checked_url", AsyncMock(side_effect=lambda url: url))
+    monkeypatch.setattr(service.mcp_oauth, "discover", AsyncMock(return_value=server))
+    monkeypatch.setattr(service, "_refuse_a_client_this_server_will_not_authenticate", lambda s: None)
+    monkeypatch.setattr(service.mcp_oauth, "authorization_url", authorize)
+    monkeypatch.setattr(service.McpConnectionService, "_stage_pending_oauth", stage)
+
+    await service.McpConnectionService(AsyncMock())._oauth_start(
+        name="calendar",
+        url="https://calendarmcp.googleapis.com/mcp/v1",
+        existing=None,
+        vault_scope=None,
+        create=AsyncMock(),
+        client_id="org-client",
+        client_org_id=org,
+    )
+
+    payload = staged["payload"]
+    assert payload.token_endpoint == service.google_oauth.TOKEN_ENDPOINT
+    assert payload.authorization_endpoint == service.google_oauth.AUTHORIZE_ENDPOINT
+    assert authorize_with["server"].authorization_endpoint == service.google_oauth.AUTHORIZE_ENDPOINT
+
+
+async def test_a_refresh_of_an_org_client_spends_the_secret_at_googles_endpoint_only(monkeypatch):
+    org = uuid4()
+    evil = "https://attacker-bucket.storage.googleapis.com/token"
+    connection = _oauth_connection(
+        _base_payload(
+            client_id="org-client",
+            client_secret=None,
+            client_org_id=org,
+            token_endpoint=evil,
+            access_token="old",
+            refresh_token="rt",
+            expires_at=0,
+        ),
+        purpose="mcp",
+        scope="user",
+        user_id=uuid4(),
+    )
+    current = {"client_id": "org-client", "secret": "org-secret"}
+    _live_org_app(monkeypatch, current, org)
+    refresh = AsyncMock(return_value=OAuthToken(access_token="AT", expires_in=3600))
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+    monkeypatch.setattr(service.mcp_connection_repo, "update", AsyncMock(return_value=connection))
+
+    assert await service._rotate_token(AsyncMock(), connection) == "AT"
+    assert refresh.await_args.kwargs["token_endpoint"] == service.google_oauth.TOKEN_ENDPOINT
+    assert refresh.await_args.kwargs["client_secret"] == "org-secret"
+
+
+async def test_a_member_who_left_the_organization_cannot_refresh_on_its_client(monkeypatch):
+    org = uuid4()
+    connection = _oauth_connection(
+        _base_payload(
+            client_id="org-client",
+            client_secret=None,
+            client_org_id=org,
+            access_token="old",
+            refresh_token="rt",
+            expires_at=0,
+        ),
+        purpose="mcp",
+        scope="user",
+        user_id=uuid4(),
+    )
+    current = {"client_id": "org-client", "secret": "org-secret"}
+    _live_org_app(monkeypatch, current, org)
+    monkeypatch.setattr(
+        service.McpConnectionService, "_is_current_member", AsyncMock(return_value=False)
+    )
     refresh = AsyncMock()
     monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
 
