@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { Button, Label } from "@/components/ui";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/app-connection-journey";
 import { useArchitectAskStore } from "@/stores/architect-ask-store";
 import type { AppConnection, AppConnectionScope } from "@/types/app-connections";
+import { ROUTES } from "@/lib/constants";
 
 export function ConnectionFirstTask({
   goal,
@@ -62,9 +64,14 @@ export function ConnectionFirstTask({
       {!selected ? (
         <div className="space-y-3">
           <p className="text-muted-foreground text-sm">{t("firstTaskNeedsAccount")}</p>
-          <Button variant="outline" onClick={onConnect}>
-            {t("chooseApps")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={onConnect}>
+              {t("chooseApps")}
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href={ROUTES.CHAT}>{t("continueWithoutApps")}</Link>
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

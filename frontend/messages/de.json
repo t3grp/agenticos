@@ -9,7 +9,7 @@
     "progress": "Fortschritt der Verbindungseinrichtung",
     "steps": {
       "1": "1 · Dein Ziel",
-      "2": "2 · Apps verbinden",
+      "2": "2 · Apps verbinden (optional)",
       "3": "3 · Erste Aufgabe"
     },
     "chooseGoal": "Beginne mit etwas Nützlichem.",
@@ -95,7 +95,8 @@
     "retryVerification": "Erneut prüfen",
     "connectionChecked": "Kontostatus aktualisiert.",
     "defaultChanged": "Standardkonto aktualisiert.",
-    "disconnected": "Konto getrennt."
+    "disconnected": "Konto getrennt.",
+    "continueWithoutApps": "Ohne Apps fortfahren"
   },
   "admin": {
     "actions": "Aktionen",
@@ -4371,7 +4372,8 @@
     "whatsNewDescription": "Änderungen in der verwendeten Version.",
     "whatsNewDone": "Verstanden",
     "backgroundWork": "Arbeit im Hintergrund",
-    "connectors": "Konnektoren"
+    "connectors": "Konnektoren",
+    "onboarding": "Einführung"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -6202,10 +6204,8 @@
       "noMessagesYet": "Diese Unterhaltung hat noch keine Nachrichten.",
       "ogBadge": "Selbst gehostet",
       "ogHeadline": "<lead>Agents, die Ihnen</lead><mark>gehören.</mark>",
-      "onboardingDescription": "Richten Sie Ihre Organisation ein.",
-      "onboardingRebuilt": "Der Einrichtungsassistent wird neu gebaut. Nichts hält Sie auf – gehen Sie in die Konsole und beginnen Sie dort.",
+      "onboardingDescription": "Loslegen und bei Bedarf deine Apps verbinden.",
       "onboardingTitle": "Loslegen",
-      "onboardingUnderConstruction": "Das Onboarding ist im Aufbau",
       "pageError": "Seitenfehler:",
       "sectionFailed": "Dieser Abschnitt konnte nicht geladen werden",
       "shareLinkExpired": "Dieser Freigabelink ist möglicherweise abgelaufen oder widerrufen worden.",
@@ -13432,5 +13432,16 @@
     "manageConnection": "Claude-Abonnement verwalten",
     "chooseApiModel": "API-Modell wählen",
     "disconnected": "Getrennt"
+  },
+  "onboardingSetup": {
+    "title": "Willkommen bei {appName}",
+    "description": "Starte in deinem eigenen Tempo. Verbinde jetzt eine App oder öffne direkt deinen Workspace.",
+    "appsTitle": "Verbinde deine Apps",
+    "optional": "Optional",
+    "appsDescription": "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
+    "connectApps": "Apps verbinden",
+    "opensNewTab": "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
+    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Konnektoren → Apps nachholen.",
+    "continueToWorkspace": "Weiter zum Workspace"
   }
 }

@@ -296,7 +296,8 @@
     "viewRelease": "Sürümü görüntüle",
     "whatsNewTitle": "{version} sürümündeki yenilikler",
     "whatsNewDescription": "Kullandığınız sürümdeki son değişiklikler.",
-    "whatsNewDone": "Anladım"
+    "whatsNewDone": "Anladım",
+    "onboarding": "Başlangıç"
   },
   "layout": {
     "breadcrumb": "Gezinme yolu",
@@ -2395,10 +2396,8 @@
       "noMessagesYet": "Bu konuşmada henüz mesaj yok.",
       "ogBadge": "Kendi sunucunuzda barındırılır",
       "ogHeadline": "<lead>Sahibi olduğunuz</lead><mark>agentlar.</mark>",
-      "onboardingDescription": "Kuruluşunuzu ayarlayın.",
-      "onboardingRebuilt": "Kurulum sihirbazı yeniden hazırlanıyor. Başlamanıza engel yok; konsola geçip oradan devam edin.",
+      "onboardingDescription": "Başlayın ve isterseniz uygulamalarınızı bağlayın.",
       "onboardingTitle": "Başlayın",
-      "onboardingUnderConstruction": "İlk kurulum üzerinde çalışılıyor",
       "pageError": "Sayfa hatası:",
       "sectionFailed": "Bu bölüm yüklenemedi",
       "shareLinkExpired": "Bu paylaşım bağlantısının süresi dolmuş veya bağlantı iptal edilmiş olabilir.",
@@ -12887,5 +12886,16 @@
     "manageConnection": "Claude aboneliğini yönet",
     "chooseApiModel": "API modeli seç",
     "disconnected": "Bağlantı kesildi"
+  },
+  "onboardingSetup": {
+    "title": "{appName} uygulamasına hoş geldiniz",
+    "description": "Kendi hızınızda başlayın. Şimdi bir uygulama bağlayın veya doğrudan workspace alanınıza geçin.",
+    "appsTitle": "Uygulamalarınızı bağlayın",
+    "optional": "İsteğe bağlı",
+    "appsDescription": "Kullandığınız araçları Composio üzerinden bağlayın. Her uygulamayı seçin ve erişim izni vermeden önce istediği izinleri inceleyin.",
+    "connectApps": "Uygulamaları bağla",
+    "opensNewTab": "Yeni bir sekmede açılır. Hazır olduğunuzda buraya dönün.",
+    "skipHint": "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Connectors → Apps bölümünden yapabilirsiniz.",
+    "continueToWorkspace": "Workspace alanına geç"
   }
 }

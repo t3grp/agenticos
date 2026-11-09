@@ -21,6 +21,9 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- A usable `/onboarding` page, linked from the account menu, with optional
+  Composio app connections and a direct path into the workspace. App consent
+  opens separately so setup can be skipped or resumed without blocking access.
 - T3OS app onboarding through Composio: choose a goal, connect Gmail, Outlook,
   Google Calendar, Google Drive, Slack, Notion, or GitHub, then start a real read
   task in the assistant. Personal accounts retain member ownership across

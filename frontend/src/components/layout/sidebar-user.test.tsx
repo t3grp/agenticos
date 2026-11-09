@@ -113,3 +113,16 @@ it("opens the setup checklist from the account menu without navigating", async (
     window.removeEventListener("agenticos:open-desktop-setup", open);
   }
 });
+
+it.each([false, true])(
+  "lets a signed-in member reopen onboarding (compact: %s)",
+  async (compact) => {
+    currentUser.mockReturnValue(OWNER);
+    render(<SidebarUser compact={compact} />);
+    await userEvent.click(screen.getByRole("button"));
+    expect(await screen.findByRole("menuitem", { name: "onboarding" })).toHaveAttribute(
+      "href",
+      "/onboarding",
+    );
+  },
+);
