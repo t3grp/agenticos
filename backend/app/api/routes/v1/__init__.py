@@ -85,6 +85,7 @@ from app.api.routes.v1.invitations import (
     token_router as invitations_token_router,
 )
 from app.api.routes.v1 import knowledge_bases
+from app.api.routes.v1 import sync_source_gdrive
 from app.api.routes.v1 import me_slash_commands
 from app.api.routes.v1 import me_dashboard_layout
 from app.api.routes.v1 import me_personal_data
@@ -313,6 +314,9 @@ v1_router.include_router(invitations_org_router, prefix="/orgs", tags=["invitati
 v1_router.include_router(invitations_token_router, tags=["invitations"])
 
 v1_router.include_router(knowledge_bases.router, prefix="/kb", tags=["knowledge-bases"])
+v1_router.include_router(
+    sync_source_gdrive.router, prefix="/sync-sources", tags=["sync-sources"]
+)
 v1_router.include_router(
     me_slash_commands.router, prefix="/me/slash-commands", tags=["me:slash-commands"]
 )

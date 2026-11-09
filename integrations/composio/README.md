@@ -52,11 +52,11 @@ verifier is not configured, leave the integration unavailable until configuratio
 and a real consent flow have been checked.
 
 Migration `0298_composio_connections` adds managed account metadata to existing
-`McpConnection` rows. The release head, `0299_merge_personal_composio`, also retains
-the already-deployed `0296_personal_model_connections` branch. Run the normal
-upgrade to the current head; either predecessor advances without rewriting an
-applied migration or stamping over it. Existing MCP credentials and personal
-model accounts remain in place.
+`McpConnection` rows. The release head, `0299_merge_personal_composio`, joins this
+path with `0296_personal_model_connections` and `0296_gdrive_oauth`. Run the normal
+upgrade to the current head; each predecessor advances without rewriting an
+applied migration or stamping over it. Existing MCP credentials, personal model
+accounts, and Google Drive sync sources remain in place.
 
 ## Connection and execution boundaries
 

@@ -56,8 +56,8 @@ Two things are versioned separately from this file and worth knowing about:
 
 - Preserve existing personal API and Claude subscription connections when
   deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
-  the personal-model and Composio migration branches without changing applied
-  migrations, resetting their state, or replacing stored accounts.
+  the personal-model, Google Drive OAuth, and Composio migration branches without
+  changing applied migrations, resetting their state, or replacing stored accounts.
 - Redact Composio's single-use `session_uri` verifier from application logs and
   exported traces, alongside the existing OAuth callback credentials.
 

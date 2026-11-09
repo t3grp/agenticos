@@ -601,6 +601,10 @@ export const qk = {
     // org switch would paint the previous tenant's names onto the new one's
     // dashboard for as long as the refetch took.
     syncSources: (orgId: string) => ["rag", "sync", orgId, "sources"] as const,
+    // One level of a connected account's Drive. Keyed on the organization for the
+    // same reason: the account belongs to one tenant.
+    driveFolders: (orgId: string | null, account: string, parent: string) =>
+      ["rag", "sync", orgId, "gdrive", account, "folders", parent] as const,
   },
   integrations: {
     all: () => ["integrations"] as const,
