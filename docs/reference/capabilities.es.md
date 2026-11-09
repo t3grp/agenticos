@@ -1,5 +1,5 @@
 ---
-source_sha: "fa87a235553d"
+source_sha: "fe652977b769"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -86,7 +86,6 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | delegada |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | delegada |
 | `background_tasks` | Temas en segundo plano | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | delegado |
-| `agent_messages` | Mensajes de agentes | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | tal cual |
 | `planning` | Planificación | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | tal cual |
 | `thinking` | Razonamiento | reasoning | ninguna, a propósito | — | — | mapeada |
 | `system_reminders` | Recordatorio de instrucciones | reasoning | ninguna, a propósito | — | — | sin efecto |
@@ -283,18 +282,14 @@ skill cada vez — la alternativa sería un campo de instrucciones que crece has
 cada run paga por cada procedimiento. Consulta [Skills](../skills.md) para saber
 qué es un skill y cómo llega a una organización.
 
-**Cada skill vinculado es una capability propia.** Su nombre y su descripción están
-en el catálogo que el modelo lee en cada turno, y el modelo trae el cuerpo con
-`load_capability`, la herramienta del propio framework de agents: por eso no está
-en la lista de arriba y por eso un spec no puede concederla, ni controlarla, ni
-renombrarla. `read_skill_resource` es la única herramienta que aporta esta
-capability, y solo aparece cuando al menos un skill vinculado trae un archivo junto
-a sus instrucciones.
-
-La herramienta viene de `pydantic-ai-skills`, así que su nombre y su redacción los
-cambia otra persona. Un test de deriva compara lo que declara el registro con las
-herramientas que realmente se le ofrecen al modelo, y eso es lo que avisa el día
-que ocurra.
+**Cada skill vinculado sigue siendo una capability diferida nativa.** El modelo
+ve un catálogo de skills disponibles y abre el contenido con `read_skill`. El
+adaptador de la plataforma conserva el estado de carga nativo, las aprobaciones
+y la reproducción de conversaciones, incluidas las antiguas. Las políticas de
+aprobación mantienen la clave estable `load_capability`; los overrides habituales
+no renombran este cargador del framework. `read_skill_resource` lee archivos
+auxiliares y aparece solo si un skill vinculado incluye alguno. Un test de deriva
+compara la herramienta de archivos de la biblioteca con el registro.
 
 `run_skill_script` está apagada en lugar de expuesta: los archivos de un skill
 llegan a un run bajo `/workspace/skills/`, donde los ejecuta el propio `execute`
@@ -501,10 +496,6 @@ puede hacerlo por otra; ambos borran las notas de aquí y los claims registrados
 ## Temas en segundo plano { #background-tasks }
 
 Trabajo explícito en un tema nuevo que dura más que la respuesta de origen. El agente original resume el resultado con el historial actual, sin herramientas. [Temas en segundo plano](../console.es.md#background-topics) explica límites, aprobaciones, detención e interrupciones. Es independiente de `background_tools` y los subagentes asíncronos temporales de una ejecución.
-
-## Mensajes de agentes { #agent-messages }
-
-Mensajes directos entre dos agentes, en un hilo que muestra la consola. Un hilo por pareja de agentes, en una organización; un mensaje se guarda, nunca se entrega como una ejecución. Enviar necesita `agents:run` en ambos agentes, leer en uno de ellos, y ambos deben estar publicados. Véase [Mensajes de agentes](../agent-messages.es.md) para respuestas, reacciones, archivos y lo que no hace. Esta es la versión abierta de la delegación: donde una delegación esconde el intercambio dentro del agente principal, un hilo lo puede leer cualquiera que pueda ejecutar a uno de los dos agentes.
 
 ## Conversaciones anteriores { #conversation-search }
 
@@ -2551,6 +2542,11 @@ La versión 14 de la especificación elimina las conexiones `virtual_tables` gua
 
 ## Workflows { #workflows }
 
+El descubrimiento con `list_workflows` se limita a 32 KiB de JSON codificado,
+incluidos los contratos de entrada. Las respuestas mayores devuelven un rechazo
+en lugar de una lista parcial. Elige menos workflows o contratos más pequeños
+para el vínculo, o consulta el endpoint HTTP del esquema fuera del contexto del agente.
+
 Permite al agente iniciar los [workflows](../workflows.md) publicados que nombra su
 binding, y leer cómo fueron. El panel del Builder lista los workflows de la
 organización, una fila por cada uno, y una fila marcada es uno que el agente puede
@@ -2809,6 +2805,11 @@ esquema que el modelo paga en cada turno, la llame alguna vez o no.
 |---|---|---|
 | `strategy` | `auto` | `auto`, `keywords`, `local_bm25`, `bm25`, `regex` |
 | `max_results` | 10 | 1–50, ignorado por la búsqueda nativa |
+| `defer_capabilities` | `false` | diferir herramientas de función aptas de las capabilities habilitadas |
+| `defer_mcp_servers` | `true` | diferir herramientas de los servidores MCP vinculados |
+| `exclude_capabilities` | `[]` | identificadores de capabilities cuyas herramientas siguen visibles |
+| `exclude_mcp_servers` | `[]` | prefijos normalizados de herramientas MCP cuyas herramientas siguen visibles |
+| `exclude_tools` | `[]` | nombres expuestos de herramientas que siguen visibles, tras añadir el prefijo y renombrar |
 
 **`local_bm25`** ordena localmente identificadores, descripciones y esquemas de argumentos en cualquier proveedor. Usa rareza de términos y normalización de longitud, favorece identificadores y devuelve solo herramientas autorizadas coincidentes. No llama a modelos ni embeddings. Sigue aplicándose el límite de resultados.
 
@@ -2822,20 +2823,38 @@ esquema que el modelo paga en cada turno, la llame alguna vez o no.
   coste en tiempo de ejecución que el autor acepta al nombrar uno; `auto` no falla
   nunca así.
 
-**Activarla es lo que difiere los toolsets MCP.** La capability y el diferido son las
-dos mitades de una sola decisión: el `ToolSearch` de la biblioteca es inerte si no hay
-nada diferido, y una herramienta diferida sin una búsqueda que la encuentre es una
-herramienta que el modelo no puede llamar nunca. Así que vincular `tool_search` es lo
-que marca los toolsets de los servidores conectados para carga diferida; las
-herramientas propias del registro siguen visibles, por ser pocas y elegidas por agent.
-Un agent que no la vincule no paga nada y ve todas las herramientas como antes.
+**Elige qué grupos de herramientas diferir.** Los valores predeterminados
+conservan el comportamiento de los specs existentes: las herramientas MCP se
+difieren y las de capabilities siguen visibles. Activa `defer_capabilities` para
+diferir también las herramientas de función aptas de las capabilities
+habilitadas. Desactiva `defer_mcp_servers` para diferir solo las herramientas de
+capabilities, o activa ambos grupos juntos. Un agent sin búsqueda de herramientas
+ve sus herramientas como antes.
+
+**Las exclusiones mantienen herramientas visibles desde la primera petición.**
+Indica identificadores de capabilities en `exclude_capabilities`, espacios de
+nombres completos de herramientas MCP en `exclude_mcp_servers`, o nombres finales
+expuestos en `exclude_tools`. Una conexión llamada `github-work` usa el espacio
+de nombres `github_work`; una vinculación personal usa el espacio de nombres real
+de la cuenta, normalmente la clave del catálogo, como `notion`. Varias cuentas
+personales pueden tener espacios de nombres distintos. Para una herramienta MCP
+individual, incluye su prefijo, como `github_work_search`, y usa el nombre que
+aplique el renombrado de la vinculación. Las exclusiones afectan a la visibilidad;
+las listas permitidas de conexión y vinculación siguen controlando el acceso.
+
+Las herramientas nativas del provider y los hooks de capabilities siguen activos.
+Los skills conservan su propio descubrimiento mediante `read_skill`. La voz
+en tiempo real no usa el diferido de la búsqueda de herramientas. Si todas las
+herramientas siguen visibles, la búsqueda no tiene un catálogo diferido que descubrir.
 
 **El Builder avisa cuando merece la pena.** En cuanto las vinculaciones MCP de un
 agent suman más de 30 herramientas - según la lista permitida de cada vinculación o,
 si no la tiene, según lo que su servidor listó en la última comprobación -, la
-pestaña MCP muestra un aviso con una estimación aproximada de tokens y un botón que
-vincula la búsqueda de herramientas. Nunca la vincula por sí solo: el diferido cambia
-lo que ve el modelo, así que la decisión es de quien edita.
+pestaña MCP muestra un aviso con una estimación aproximada de tokens y un botón
+que activa la búsqueda de herramientas MCP. Añade la búsqueda de herramientas o
+activa el diferido MCP en la configuración existente, conservando las exclusiones
+y los ajustes de capabilities. Nunca activa el diferido por sí solo: cambia lo
+que ve el modelo, así que la decisión es de quien edita.
 
 **El diferido cambia lo que ve el modelo, nunca la identidad de una herramienta.** Una
 herramienta MCP descubierta llega con su nombre real con prefijo, así que la
@@ -2843,7 +2862,7 @@ herramienta MCP descubierta llega con su nombre real con prefijo, así que la
 renombrado de una vinculación sigue alcanzándola; `ToolSearch` se sitúa en la capa más
 externa, leyendo los nombres que un renombrado ya aplicó.
 
-**No necesita contabilización.** Las dos estrategias locales se ejecutan en Python y
+**No necesita contabilización.** Las estrategias locales se ejecutan en Python y
 no gastan tokens; la búsqueda nativa se ejecuta dentro de la propia petición del
 provider, cuyo uso ya contabiliza el [guardián de budget](../governance.md); y las
 idas y vueltas del descubrimiento son peticiones corrientes al modelo que envuelve ese
@@ -2908,8 +2927,31 @@ lo nuevo de su propio turno, así que el historial de un turno posterior no repr
 el mensaje de un run `guardrail_blocked`, sea cual sea la comprobación que lo detuvo.
 En su lugar, el modelo lee una nota breve de que un guardrail detuvo ese turno, sin
 el texto del mensaje ni lo que añadieron los archivos enviados con él. La
-conversación sigue mostrando a la persona lo que escribió. La búsqueda en
-conversaciones anteriores (`conversation_search`) todavía no filtra estos mensajes.
+conversación sigue mostrando a la persona lo que escribió. El rechazo de un paso
+de agent en un workflow también marca el mensaje exacto del chat de origen. La
+búsqueda en conversaciones anteriores (`conversation_search`) omite los mensajes
+rechazados en coincidencias, fragmentos y lecturas de transcripciones. Estas
+herramientas no reciben el título de una conversación con un turno rechazado,
+incluso si el título ya estaba guardado.
+
+Los reintentos y los workflows llamados conservan este vínculo del rechazo con
+su origen. No heredan un destino de respuesta ni acceso al workspace del chat original.
+Si un turno recién rechazado ya estaba compactado, se descarta el resumen guardado
+que lo incluye para reconstruir el historial posterior con la nota de rechazo.
+Las menciones de conversaciones usan la misma lista filtrada para que sus etiquetas
+no repitan a un modelo el texto de un turno rechazado.
+
+Una compactación ya iniciada no puede devolver a la caché un turno rechazado
+después. La actualización reconstruye una vez los resúmenes guardados; los
+mensajes originales se conservan.
+
+Cada ejecución comprueba su historial antes de cada petición al modelo, también después de llamadas a herramientas. Los pasos de agente, modelo y decisión de un workflow también comprueban la fuente de chat compartida antes de empezar; los pasos en cola no pueden reutilizar una fuente rechazada o eliminada. Los resúmenes de voz y las nuevas sesiones realtime usan la misma comprobación de revisión.
+
+Los harnesses de código comprueban el mismo contexto antes de iniciarse y antes de cada prompt ACP, también después de una corrección de la tarea.
+
+Si se rechaza un turno anterior mientras un run espera aprobación o una respuesta,
+el run se detiene antes de volver a ejecutar herramientas o llamar a un modelo.
+Inicia un turno nuevo para continuar con el historial actual y filtrado.
 
 **Una comprobación de salida filtra la respuesta antes de que nadie la vea.** Todas
 las superficies transmiten en streaming: el chat web y el widget incrustado envían la
@@ -3047,17 +3089,24 @@ persona no quiso responder, y sigue.
 
 La herramienta y su esquema vienen de `AskUser` de pydantic-ai-harness. Está activa
 por defecto en cada agent nuevo y en cada plantilla, y el autor puede desactivarla.
-Donde todavía nadie puede responder — una programación, un webhook, la API — el
-agent recibe que la persona no quiso responder.
+Un run independiente de agent sin canal de preguntas — desde una programación,
+un webhook o la API — recibe que la persona no quiso responder.
 
-Una pregunta sin respuesta no detiene para siempre el trabajo del agent. Si la
-persona se va con la tarjeta abierta, el run se aparca en ella — **Waiting for an
-answer** en el historial de runs — y la tarjeta vuelve cuando reabre la
-conversación, en cualquier dispositivo. Responder continúa el run desde donde se
-detuvo. Solo la persona a quien se preguntó puede responder, mediante
-`POST /runs/{run_id}/answers`; `GET /runs/{run_id}/questions` vuelve a leer la
-tarjeta. Pasado un día (`QUESTION_EXPIRY_HOURS`, 24) el run termina como
+En el chat de la consola, el run guarda sus preguntas y se pausa antes de mostrar
+la tarjeta — **Waiting for an answer** en el historial de runs. Cambiar de chat,
+recargar la página o abrir la conversación en otro dispositivo restaura la
+tarjeta sin responder. La consola envía las respuestas por su conexión activa
+del chat, para que un delegado pueda hacer preguntas de seguimiento durante la
+continuación. Una tarjeta sin conexión espera a que se restablezca.
+
+Solo la persona a quien se preguntó puede responder. Los clientes de la API
+pueden usar `POST /runs/{run_id}/answers`; `GET /runs/{run_id}/questions` vuelve
+a leer la tarjeta. Pasado un día (`QUESTION_EXPIRY_HOURS`, 24) el run termina como
 cancelado y el paso registra que la persona no respondió a tiempo.
+
+Dentro de un paso de agent de un workflow, la misma herramienta guarda la conversación y pausa el workflow con **Esperando al usuario**. Responde en la vista del run del workflow o en el chat de origen. La respuesta se guarda y el worker del workflow reanuda el mismo run del agent, conservando su presupuesto y los resultados anteriores de las herramientas. Los clientes de workflow leen `GET /workflow-runs/{run_id}/questions` y envían `POST /workflow-runs/{run_id}/nodes/{node_run_id}/answers` con el objeto habitual `responses`. Cada entrada indica el `workflow_run_id` propietario; usa ese identificador al responder a una pregunta de un workflow llamado de forma síncrona.
+
+Las tarjetas de preguntas aparecen solo mientras conservas permiso para ejecutar el workflow propietario. Un permiso **use** sobre ese workflow también permite responder; otra persona con acceso de lectura no puede responder en tu nombre.
 
 ## Borradores { #drafts }
 

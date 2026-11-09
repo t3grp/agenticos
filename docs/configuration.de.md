@@ -1,5 +1,5 @@
 ---
-source_sha: "a8f6e6ca4073"
+source_sha: "0f3dca8ab414"
 ---
 
 # Konfiguration { #configuration }
@@ -691,13 +691,17 @@ bevor man sich darauf verlässt: das
 Anheften dieser Instrumentierung ist Best Effort, ein Fehlschlag wird
 protokolliert und der Run läuft weiter.
 
-Mit `ENVIRONMENT=production` wird kein Span auf die Konsole geschrieben. Der
-Konsolen-Exporter von Logfire schreibt eine Zeile pro SQL- und Redis-Aufruf, etwa
-vierzig pro Anfrage, in ein Container-Log, das niemand abfragen kann. In der
-Produktion existiert ein Span also nur dort, wohin das Token ihn schickt, und ohne
-Token hinterlässt eine langsame Anfrage gar keine Spur. `agenticos cmd doctor`
-meldet das in seiner Zeile `tracing`. Anderswo schreibt die Konsole weiter Spans
-für den, der den Server beobachtet.
+Anwendungslogs von API, Worker, Ingestionsprozessen und CLI gehen mit
+Zeitstempel, Level und Loggername an stderr. Sie funktionieren ohne Logfire-Token
+und sind über `docker compose logs -f` sichtbar. `LOG_LEVEL` ist standardmäßig
+`INFO`; mit `DEBUG`, `WARNING`, `ERROR` oder `CRITICAL` änderst du die Ausführlichkeit.
+Die Schwärzung personenbezogener Daten und Zugangsdaten umfasst auch Tracebacks.
+
+SQL-Abfragen werden erst mit `DB_ECHO=true` protokolliert. INFO/DEBUG-Meldungen
+des HTTP-Transports sind unterdrückt. Logfire-Spans erscheinen standardmäßig in
+keiner Umgebung auf der Konsole; aktiviere `LOGFIRE_CONSOLE=true` zum Debuggen.
+Der Trace-Export zu Logfire bleibt davon unabhängig. Ohne Token werden keine
+Spans exportiert; `agenticos cmd doctor` meldet das in seiner Zeile `tracing`.
 
 Gib jedem Deployment sein eigenes `LOGFIRE_ENVIRONMENT`, etwa `local` auf dem
 Laptop und `production` auf dem Server. Ein Projekt kann dann beide aufnehmen und
@@ -705,35 +709,14 @@ sie trotzdem auseinanderhalten.
 
 | Variable | Standard | Beschreibung |
 |----------|---------|-------------|
+| `LOG_LEVEL` | `INFO` | Log-Level der Anwendung: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `LOGFIRE_CONSOLE` | `false` | Logfire-Spans zum Debuggen auf die Konsole schreiben |
 | `LOGFIRE_TOKEN` | (none) | Token für Pydantic Logfire. Erhältlich unter https://logfire.pydantic.dev |
 | `LOGFIRE_SERVICE_NAME` | `agenticos` | Name des Dienstes im Logfire-Dashboard |
 | `LOGFIRE_ENVIRONMENT` | `development` | Kennzeichnung der Umgebung |
 | `LOGFIRE_ORGANIZATION` | (none) | Slug der Organisation, um einen Link **in** einen gespeicherten Trace zu bauen. Das Token ist eine *schreibende* Zugangsinformation und trägt keinen der beiden Slugs |
 | `LOGFIRE_PROJECT` | (none) | Slug des Projekts, neben dem der Organisation. Ist eines von beiden nicht gesetzt, wird die `logfire_trace_id` eines Runs weiterhin aufgezeichnet und kein Link angeboten |
 | `LOGFIRE_BASE_URL` | `https://logfire-us.pydantic.dev` | Zu welchem Logfire-Deployment diese Slugs gehören. `logfire-eu` ist ein anderer Host, und ein für den falschen gebauter Link antwortet mit 404 |
-
-## Composio-App-Verbindungen { #composio-app-connections }
-
-Das Verzeichnis **Verbindungen → Apps (Connections → Apps)** nutzt Composio,
-um persönliche App-Konten zu verbinden. Konfigurieren Sie für API und Worker
-dieselben Projekteinstellungen. Bewahren Sie beide Schlüssel auf dem Server auf;
-das Frontend erhält nur Katalogmetadaten und Autorisierungs-URLs.
-
-| Variable | Standard | Beschreibung |
-|----------|---------|-------------|
-| `COMPOSIO_API_KEY` | (none) | Laufzeitschlüssel des Projekts für Tool-Router-Sitzungen und die Verwaltung verbundener Konten. Ein leerer Schlüssel deaktiviert verwaltete App-Verbindungen. |
-| `COMPOSIO_CATALOG_API_KEY` | (none) | Separater Projektschlüssel ausschließlich mit den Berechtigungen **Toolkits: Read** und **Tools: Read**. Aktiviert das durchsuchbare, paginierte App-Verzeichnis und explizite Tool-Snapshots für neue Apps. Ohne ihn zeigt das Verzeichnis nur die ursprünglichen, geprüften Integrationen. |
-| `COMPOSIO_AUTH_CONFIGS` | `{}` | JSON-Zuordnung von Toolkit-Slugs zu Projekt-Auth-Config-IDs. Die ursprünglichen sieben Integrationen benötigen einen expliziten Eintrag; weitere Apps verwenden einen konfigurierten Eintrag oder die Composio-verwaltete Authentifizierung, sofern verfügbar. Apps, die eine eigene Auth-Konfiguration benötigen, zeigen **Einrichtung erforderlich (Setup required)**. |
-| `COMPOSIO_USER_NAMESPACE` | `t3os` | Stabiler Präfix für die Composio-Identität pro Benutzer. Verwenden Sie denselben Wert für API und Worker und ändern Sie ihn für bestehende Konten nicht. Verwenden Sie für ein separates Deployment einen eigenen Namespace. |
-
-Die ursprünglichen Integrationen behalten ihre geprüften Leseaktionen. Andere
-unterstützte Apps speichern beim Verbinden des Kontos eine begrenzte Liste
-direkter Tool-Namen und verlangen für jede Aktion eine Freigabe. Eine erneute
-Verbindung erhält diese Liste; eine neue Verbindung erfasst die aktuell
-verfügbaren Tools. Bestehende MCP-Server bleiben im Tab **MCP-Server (MCP servers)**.
-Siehe [App-Verbindungen](mcp.md#connect-an-app-through-composio) und die
-[Composio-Einrichtungsanleitung](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
-zu Rückrufprüfung, Anbietereinwilligung und Deployment-Checks.
 
 ## Websuche { #web-search }
 

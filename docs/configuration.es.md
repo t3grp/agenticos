@@ -1,5 +1,5 @@
 ---
-source_sha: "a8f6e6ca4073"
+source_sha: "0f3dca8ab414"
 ---
 
 # Configuración { #configuration }
@@ -675,13 +675,17 @@ del run por el modelo — hereda el modo. Un límite antes de confiar en ello:
 fijar esa instrumentación es best-effort y un fallo se
 registra mientras el run sigue.
 
-Con `ENVIRONMENT=production` ningún span se imprime en la consola. El exportador
-de consola de Logfire escribe una línea por cada llamada a SQL y a Redis, unas
-cuarenta por petición, en un log de contenedor que nadie puede consultar. En
-producción un span existe, por tanto, solo donde lo envía el token, y sin token
-una petición lenta no deja rastro alguno. `agenticos cmd doctor` lo informa en
-su línea `tracing`. En los demás entornos la consola sigue imprimiendo spans para
-quien esté mirando el servidor.
+Los logs de la API, el worker, los procesos de ingesta y la CLI se escriben en
+stderr con fecha, nivel y nombre del logger. Funcionan sin token de Logfire y se
+ven con `docker compose logs -f`. `LOG_LEVEL` es `INFO` por defecto; usa `DEBUG`,
+`WARNING`, `ERROR` o `CRITICAL` para ajustar el detalle. La ocultación de datos
+personales y credenciales también cubre los tracebacks de las excepciones.
+
+Las consultas SQL solo se registran con `DB_ECHO=true`. Los mensajes INFO/DEBUG
+del transporte HTTP se suprimen. Los spans de Logfire no se imprimen en la consola
+por defecto en ningún entorno; activa `LOGFIRE_CONSOLE=true` para depurar.
+Esto no cambia la exportación de trazas a Logfire. Sin token no se exportan spans;
+`agenticos cmd doctor` lo indica en su línea `tracing`.
 
 Da a cada despliegue su propio `LOGFIRE_ENVIRONMENT`, por ejemplo `local` en un
 portátil y `production` en el servidor. Un mismo proyecto puede entonces guardar
@@ -689,37 +693,14 @@ ambos y seguir distinguiéndolos.
 
 | Variable | Por defecto | Descripción |
 |----------|---------|-------------|
+| `LOG_LEVEL` | `INFO` | Nivel de logs: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `LOGFIRE_CONSOLE` | `false` | Imprimir spans de Logfire en la consola para depurar |
 | `LOGFIRE_TOKEN` | (none) | Token de Pydantic Logfire. Consigue uno en https://logfire.pydantic.dev |
 | `LOGFIRE_SERVICE_NAME` | `agenticos` | Nombre del servicio en el dashboard de Logfire |
 | `LOGFIRE_ENVIRONMENT` | `development` | Etiqueta de entorno |
 | `LOGFIRE_ORGANIZATION` | (none) | Slug de la organización, para construir un enlace **hacia dentro** de una traza guardada. El token es una credencial de *escritura* y no lleva ninguno de los dos slugs |
 | `LOGFIRE_PROJECT` | (none) | Slug del proyecto, junto al de la organización. Con cualquiera de los dos sin fijar, el `logfire_trace_id` de un run se sigue registrando y no se ofrece enlace |
 | `LOGFIRE_BASE_URL` | `https://logfire-us.pydantic.dev` | A qué despliegue de Logfire pertenecen esos slugs. `logfire-eu` es otro host, y un enlace construido para el equivocado da 404 |
-
-## Conexiones de aplicaciones con Composio { #composio-app-connections }
-
-El directorio **Connections → Apps** usa Composio para conectar cuentas
-personales de aplicaciones. Configure los mismos ajustes de proyecto para la API
-y el worker. Mantenga ambas claves en el servidor; el frontend solo recibe
-metadatos del catálogo y URL de autorización.
-
-| Variable | Por defecto | Descripción |
-|----------|---------|-------------|
-| `COMPOSIO_API_KEY` | (none) | Clave de proyecto de runtime para las sesiones de tool-router y la gestión de cuentas conectadas. Una clave vacía desactiva las conexiones gestionadas de aplicaciones. |
-| `COMPOSIO_CATALOG_API_KEY` | (none) | Clave de proyecto independiente con permisos **Toolkits: Read** y **Tools: Read** únicamente. Activa el directorio de aplicaciones buscable y paginado, además de snapshots explícitos de herramientas para apps nuevas. Sin ella, el directorio solo muestra las integraciones originales revisadas. |
-| `COMPOSIO_AUTH_CONFIGS` | `{}` | Mapa JSON de slugs de toolkit a IDs de configuración de autenticación del proyecto. Las siete integraciones originales requieren una entrada explícita; otras apps usan una entrada configurada o la autenticación gestionada por Composio cuando está disponible. Las apps que necesitan una configuración de autenticación propia muestran **Setup required**. |
-| `COMPOSIO_USER_NAMESPACE` | `t3os` | Prefijo estable para la identidad de cada usuario en Composio. Manténgalo igual en la API y el worker y no lo cambie para las cuentas existentes. Use un namespace distinto para otro deployment. |
-
-Las integraciones originales conservan sus acciones de lectura revisadas. Las
-demás apps compatibles guardan una lista acotada de nombres de herramientas
-directas al conectar la cuenta y requieren aprobación para cada acción. Volver a
-conectar conserva esa lista; una conexión nueva captura las herramientas
-disponibles en ese momento. Los servidores MCP existentes siguen en la pestaña
-**MCP servers**.
-Consulte [conexiones de aplicaciones](mcp.md#connect-an-app-through-composio) y
-la [guía de configuración de Composio](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
-para la verificación de la devolución de llamada, el consentimiento del proveedor
-y las comprobaciones de despliegue.
 
 ## Búsqueda web { #web-search }
 

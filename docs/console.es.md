@@ -1,5 +1,5 @@
 ---
-source_sha: "95cf2c67136d"
+source_sha: "c7783da0b195"
 ---
 
 # La consola { #the-console }
@@ -181,7 +181,9 @@ Routines tiene dos pestañas. **Tareas de agentes** ejecuta un agente elegido po
 horario o evento con sus herramientas; las ejecuciones aparecen en Activity.
 **Mis seguimientos** solo consulta cuentas personales conectadas y envía hallazgos
 a la bandeja privada. Cada pestaña tiene sus acciones de creación.
-`/routines?tab=watches` abre los seguimientos.
+`/routines?tab=watches` abre los seguimientos. Cada comprobación hace como máximo
+30 solicitudes al modelo y recorta los resultados largos, así que seguir un
+workspace grande sigue siendo barato.
 
 Organización → Proactividad separa sugerencias, seguimiento, límites compartidos, horarios de entrega y mensajes de bienvenida. Los cambios sin guardar se pueden descartar. Los servicios en segundo plano muestran estado y consumo; los ajustes de modelo y presupuesto se despliegan por servicio.
 
@@ -218,6 +220,13 @@ mañana: a la hora que mantiene la proactividad de la organización, una
 notificación y un mensaje directo de cada uno de sus bots de Slack, Teams y
 Mattermost que te conoce enumeran lo nuevo. Cada hallazgo entra en un solo
 briefing.
+
+El selector de organización está debajo del logotipo, en la parte superior de la
+barra lateral, y muestra el nombre y el avatar de la organización activa. Ábrelo
+para cambiar de organización, gestionar organizaciones o crear una nueva. En la
+barra lateral contraída, el avatar sigue siendo el selector; el menú del teléfono
+ofrece el mismo control. Los ajustes de cuenta permanecen en el menú de cuenta
+de la parte inferior.
 
 La búsqueda está encima de los destinos de navegación, con su atajo de teclado
 visible en el ordenador. Las notificaciones y el menú de cuenta permanecen debajo
@@ -323,22 +332,9 @@ En un teléfono no hay bocadillo - taparía la página de la que habla - y el bo
 lleva el punto en su lugar. Las aprobaciones que ya mencionó siguen mencionadas
 durante el resto de la pestaña, aunque un enlace recargue la consola.
 
-La ventana usa el chat de la consola y empieza con el asistente principal
-seleccionado. Usa el selector de agents de la cabecera para elegir un agent
-publicado que tengas permiso para ejecutar. Cambiar de agent conserva la
-conversación actual; la cabecera y el historial siguen la selección. Los mosaicos
-de bienvenida del Architect aparecen solo cuando está seleccionado el asistente
-principal. En un teléfono la ventana ocupa toda la pantalla.
-
-Cada pregunta nueva incluye contexto estructurado actualizado sobre la página
-actual de la consola mientras esté activado el uso compartido de la página. La
-ventana muestra qué página se compartirá y permite desactivar esta función.
-
-Una pregunta en cola o el reintento de un envío rechazado conserva el contexto
-de la página y el agent seleccionado al enviarla. Una pregunta nueva o una
-respuesta regenerada usa la página y el agent actuales. Cambiar de cuenta u
-organización restablece la conversación, la selección de agent y el ajuste para
-compartir la página en la ventana.
+Su ventana es el propio chat de la consola, no una página dentro de la página, y
+se abre con cuatro mosaicos, para que el primer mensaje sea un clic; guarda su
+propio historial de conversaciones. En un teléfono ocupa toda la pantalla.
 
 Cuando nombra una página, el enlace la abre en la consola detrás de la ventana y
 señala el control al que se refiere — el botón que crea un agent, la pestaña de
@@ -346,7 +342,7 @@ aprobaciones. La cámara de su cabecera le muestra la página en la que estás: 
 navegador pregunta qué pestaña compartir y una imagen se adjunta a tu próximo
 mensaje.
 
-El Architect planifica los trabajos largos como una lista que puedes seguir, guarda
+Planifica los trabajos largos como una lista que puedes seguir, guarda
 notas sobre ti entre conversaciones, te dice cuánto cuestan tus agents y solo
 borra un borrador de agent que creó por error y una rutina que le pidas quitar.
 Además de las
@@ -438,6 +434,19 @@ misma puerta de aprobación, mismo rastro de auditoría, porque
 lleva; uno con una respuesta que no has visto desde la última vez que lo abriste
 lleva un punto, que abrirlo borra - solo para ti, porque cada lector de un hilo
 compartido lo lee por separado.
+
+Las conversaciones que otras personas compartieron contigo están en **Compartidas
+contigo**, debajo de tus favoritas. Renombrarlas, compartirlas, archivarlas o
+borrarlas corresponde a sus propietarios. Su menú permite añadirlas a favoritas o quitarlas, o elegir **Quitar de mis chats**, que termina tu acceso y deja la conversación igual para los demás. Una
+compartida contigo para leer no tiene cuadro de mensaje. Cuando alguien comparte
+una conversación contigo, recibes una notificación que la abre. Las conversaciones compartidas no leídas y favoritas aparecen en sus secciones habituales.
+
+En **Compartir**, cada persona con quien está compartida la conversación tiene
+junto a su nombre un selector **Ver** o **Editar**, para cambiar lo que puede
+hacer sin revocar y volver a compartir. Un enlace compartido sigue siendo de
+solo lectura.
+
+Las comparticiones directas se limitan por minuto a 100 intentos por organización, 20 por remitente, 20 por destinatario y cinco por pareja remitente–destinatario dentro de la organización. Una conversación nueva no reinicia los límites. Un rechazo devuelve `429` con el tiempo de espera y no crea ni la compartición ni su notificación. Las listas compartidas y el acceso efectivo se actualizan cada 15 segundos mientras la página está activa.
 
 Tres cosas del compositor que conviene saber.
 
@@ -823,6 +832,22 @@ que se reconectó sigue siendo una fila, con el tiempo y el coste de todas sus
 conexiones sumados. La tarjeta de panel **Voice minutes**, en la banda de Uso
 para quien tenga `runs:view`, muestra los minutos de llamada y las llamadas del
 periodo y los tres agents principales.
+
+### Bifurcar una conversación { #forking }
+
+Para probar otro enfoque, o para llevar una pregunta lateral a un sitio donde no sature el hilo principal, elija **Bifurcar en una nueva conversación** bajo una de las respuestas del agent. Obtiene una conversación nueva y propia, en el mismo proyecto, con todo hasta esa respuesta incluida. El siguiente mensaje continúa desde ahí con el mismo historial; el original no cambia.
+
+Solo el propietario de la conversación puede bifurcarla: quien la tiene compartida, para ver o para editar, no ve la acción. Una bifurcación copia los mensajes y las llamadas a herramientas, no los archivos de los adjuntos, los archivos que el agent escribió en su workspace, las imágenes que generaron los agents, el coste ni los registros de runs. El agent sigue teniendo el texto de un adjunto, pero la bifurcación no muestra su tarjeta; una imagen generada por un agent es la del original y deja de cargarse cuando el original se borra. Mientras un run de ese historial siga escribiendo, o espere una aprobación o una pregunta, la conversación no se puede bifurcar.
+
+Arriba de una bifurcación aparece **Bifurcada de** con un enlace al original. Esa línea solo la ve usted: si comparte la bifurcación, la otra persona ve una conversación normal.
+
+Cada bifurcación admite hasta 2000 mensajes, 10 000 llamadas a herramientas y 20 MiB de texto y datos estructurados copiados, con un máximo de diez solicitudes por minuto por miembro y organización. Una conversación que se está actualizando puede rechazar temporalmente la bifurcación; vuelve a intentarlo cuando termine la actualización. Los historiales que superen los límites deben acortarse antes de copiarlos.
+
+Las bifurcaciones conservadas tienen una cuota separada de 100 MiB por miembro dentro de una organización y 1 GiB para toda la organización. Cada copia reserva sus datos más 4 KiB por conversación y 1 KiB por mensaje o llamada a herramienta. PostgreSQL serializa la admisión para impedir que solicitudes simultáneas superen la cuota. Solo eliminar la copia libera su reserva; archivar o eliminar el original no la libera. Actualmente no se pueden bifurcar dibujos con archivos de imagen guardados. Elige una respuesta anterior; la solicitud se rechaza antes de crear una copia dañada.
+
+El texto y los medios externalizados de un resumen válido se restauran dentro de la copia, por lo que eliminar el original no elimina ese contexto. El contenido restaurado cuenta para el límite de 20 MiB. La restauración admite hasta 100 referencias externas y diez segundos. Si falta contenido o se supera un límite, se rechaza la operación sin crear una copia parcial.
+
+Una conversación con una lista de tareas guardada solo puede bifurcarse en su último mensaje, que debe ser una respuesta del asistente. La copia conserva esa lista, incluidos los identificadores de tareas y las dependencias. No se guardan versiones anteriores de la lista, por lo que se rechaza una bifurcación anterior para evitar copiar tareas posteriores en un historial más antiguo.
 
 ### Temas en segundo plano { #background-topics }
 
