@@ -3380,6 +3380,7 @@ class TestParking:
                 "subject_is_publisher_fallback": False,
                 "public_origin": False,
                 "impersonated": False,
+                "is_workflow": False,
             },
         }
 
@@ -6185,7 +6186,7 @@ class TestTellingTheAgentWhatItCannotReach:
         text = self._briefed("not_connected")
 
         assert "has not connected their own Notion" in text
-        assert "the MCP servers page" in text
+        assert "Connectors" in text
         assert self._SERVERS not in text
 
     def test_an_expired_grant_is_sent_to_authorize_again(self):
@@ -6194,7 +6195,7 @@ class TestTellingTheAgentWhatItCannotReach:
         text = self._briefed("unauthorized")
 
         assert "no longer authorizes" in text
-        assert "the MCP servers page" in text
+        assert "Connectors" in text
         assert self._SERVERS not in text
 
     @pytest.mark.parametrize(
@@ -7181,6 +7182,47 @@ class TestParkedQuestions:
         assert run.paused_state["messages"] == messages
         assert run.status == RunStatus.AWAITING_ANSWER.value
         kept.assert_awaited_once()
+
+    @pytest.mark.anyio
+    async def test_a_wrapped_harness_answer_keeps_the_durable_state_json_serializable(self):
+        import json
+
+        from pydantic_ai import ToolReturn
+
+        run = _parked_run(
+            status=RunStatus.AWAITING_ANSWER.value,
+            paused_state=_asked_state(),
+            user_id=_THE_ASKER,
+        )
+        with patch(
+            "app.services.agent_runner.ask_user_result",
+            return_value=ToolReturn(return_value={"Tone": ["Casual"]}, content="SDK context"),
+        ):
+            accepted, _kept = await self._accept(run, {"ask-1": [{"selected": ["Casual"]}]})
+        assert accepted is run
+        assert run.paused_state["question_results"] == {"ask-1": {"Tone": ["Casual"]}}
+        assert json.loads(json.dumps(run.paused_state))["question_results"] == {
+            "ask-1": {"Tone": ["Casual"]}
+        }
+
+    def test_an_invalid_wrapped_harness_answer_is_not_saved(self):
+        from pydantic import ValidationError
+        from pydantic_ai import ToolReturn
+
+        run = _parked_run(
+            status=RunStatus.AWAITING_ANSWER.value, paused_state=_asked_state(), user_id=_THE_ASKER
+        )
+        with (
+            patch(
+                "app.services.agent_runner.ask_user_result",
+                return_value=ToolReturn(return_value={"Tone": 3}),
+            ),
+            pytest.raises(ValidationError),
+        ):
+            AgentRunnerService._question_results(
+                self._asker(), run, {"ask-1": [{"selected": ["Casual"]}]}
+            )
+        assert "question_results" not in run.paused_state
 
     @pytest.mark.anyio
     async def test_an_identical_answer_retry_keeps_the_first_saved_result(self) -> None:

@@ -19,6 +19,24 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Changed
+
+- Update Pydantic AI, its harness and skills integration, pricing data and
+  Logfire to the versions locked by the agent-framework dependency update.
+  Normalize wrapped question answers before saving a parked run so the
+  durable answer remains JSON data.
+
+## [1.60.1] - 2026-11-09
+
+### Fixed
+
+- Probe the readiness endpoint after production deploys; the old health URL returned 404 despite a healthy deployment.
+
+- Paused knowledge sources refuse manual API synchronization, and workers
+  recheck the pause before downloading or indexing queued or CLI runs.
+  Knowledge-base collection-name lookups break creation-date ties by ID,
+  keeping the selected base stable (#2744).
+
 ## [1.60.0] - 2026-11-09
 
 ### Added
@@ -20716,7 +20734,8 @@ installed hook did nothing.
   codebase has diverged from the generator past the point where a 3-way merge
   helps.
 
-[Unreleased]: https://github.com/vstorm-co/agenticos/compare/v1.60.0...HEAD
+[Unreleased]: https://github.com/vstorm-co/agenticos/compare/v1.60.1...HEAD
+[1.60.1]: https://github.com/vstorm-co/agenticos/compare/v1.60.0...v1.60.1
 [1.60.0]: https://github.com/vstorm-co/agenticos/compare/v1.59.1...v1.60.0
 [1.59.1]: https://github.com/vstorm-co/agenticos/compare/v1.59.0...v1.59.1
 [1.59.0]: https://github.com/vstorm-co/agenticos/compare/v1.58.3...v1.59.0
