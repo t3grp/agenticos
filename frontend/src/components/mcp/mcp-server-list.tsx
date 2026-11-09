@@ -37,7 +37,8 @@ import {
   useMcpServerEntry,
 } from "@/hooks/use-mcp-servers";
 import { apiClient } from "@/lib/api-client";
-import { getErrorMessage } from "@/lib/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api-error";
+import type { SecretList } from "@/types/secrets";
 import type { McpConnectionRecord } from "@/lib/mcp-connections-api";
 import { startMcpOAuth } from "@/lib/mcp-connections-api";
 import {
@@ -149,6 +150,34 @@ interface McpServerListProps {
 /** Whether `scope` already holds an account on this server. */
 function hasAccount(scope: Scope, row: McpServerRow): boolean {
   return (scope === "organization" ? row.organizations : row.personals).length > 0;
+}
+
+
+const ORG_GOOGLE_APP_NAME = "google-oauth-app";
+
+/**
+ * Saves the organization's Google client. A second save rotates the app that the
+ * first one made, rather than adding a second secret with the same name (the
+ * server refuses that with ALREADY_EXISTS).
+ */
+async function saveOrgGoogleApp(clientId: string, clientSecret: string): Promise<void> {
+  const value = { kind: "google_oauth_app", client_id: clientId, client_secret: clientSecret };
+  try {
+    await apiClient.post("/secrets", {
+      name: ORG_GOOGLE_APP_NAME,
+      description: "Google OAuth client for connected accounts",
+      value,
+      visibility: "org",
+    });
+  } catch (caught) {
+    if (!(caught instanceof ApiError) || caught.code !== "ALREADY_EXISTS") throw caught;
+    const list = await apiClient.get<SecretList>("/secrets");
+    const existing = list.items.find(
+      (secret) => secret.name === ORG_GOOGLE_APP_NAME && secret.kind === "google_oauth_app",
+    );
+    if (!existing) throw caught;
+    await apiClient.patch(`/secrets/${existing.id}`, { value });
+  }
 }
 
 export function McpServerList({
@@ -537,16 +566,7 @@ export function McpServerList({
         needsGoogleOAuthClient(url);
       if (adminSavesOrgApp) {
         try {
-          await apiClient.post("/secrets", {
-            name: "google-oauth-app",
-            description: "Google OAuth client for connected accounts",
-            value: {
-              kind: "google_oauth_app",
-              client_id: values.clientId.trim(),
-              client_secret: values.clientSecret.trim(),
-            },
-            visibility: "org",
-          });
+          await saveOrgGoogleApp(values.clientId.trim(), values.clientSecret.trim());
         } catch (caught) {
           toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign")));
           return;

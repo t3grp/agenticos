@@ -302,3 +302,81 @@ async def test_a_switched_org_client_is_not_refreshed_with_the_old_grant(monkeyp
 
     assert grant is None
     refresh.assert_not_awaited()
+
+
+async def test_a_public_client_refreshes_without_a_secret(monkeypatch):
+    # No org app and no secret: the client is public, and a refresh with no
+    # client secret is the normal case, not a refusal.
+    connection = _oauth_connection(
+        _base_payload(
+            client_id="public-client",
+            client_secret=None,
+            access_token="old",
+            refresh_token="rt",
+            expires_at=0,
+        )
+    )
+    refresh = AsyncMock(return_value=OAuthToken(access_token="AT", expires_in=3600))
+    update = AsyncMock(return_value=connection)
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+    monkeypatch.setattr(service.mcp_connection_repo, "update", update)
+
+    assert await service._rotate_token(AsyncMock(), connection) == "AT"
+    assert refresh.await_args.kwargs["client_id"] == "public-client"
+    assert refresh.await_args.kwargs["client_secret"] is None
+
+
+async def test_an_mcp_connection_on_an_org_client_reads_the_rotated_secret(monkeypatch):
+    org = uuid4()
+    connection = _oauth_connection(
+        _base_payload(
+            client_id="org-client",
+            client_secret=None,
+            client_org_id=org,
+            access_token="old",
+            refresh_token="rt",
+            expires_at=0,
+        ),
+        purpose="mcp",
+        scope="org",
+        organization_id=org,
+    )
+    current = {"client_id": "org-client", "secret": "first"}
+    _live_org_app(monkeypatch, current, org)
+    refresh = AsyncMock(return_value=OAuthToken(access_token="AT", expires_in=3600))
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+    monkeypatch.setattr(service.mcp_connection_repo, "update", AsyncMock(return_value=connection))
+
+    await service._rotate_token(AsyncMock(), connection)
+    current["secret"] = "rotated"
+    await service._rotate_token(AsyncMock(), connection)
+
+    secrets_spent = [call.kwargs["client_secret"] for call in refresh.await_args_list]
+    assert secrets_spent == ["first", "rotated"]
+
+
+async def test_an_mcp_connection_whose_org_app_is_gone_is_not_refreshed(monkeypatch):
+    org = uuid4()
+    connection = _oauth_connection(
+        _base_payload(
+            client_id="org-client",
+            client_secret=None,
+            client_org_id=org,
+            access_token="old",
+            refresh_token="rt",
+            expires_at=0,
+        ),
+        purpose="mcp",
+        scope="org",
+        organization_id=org,
+    )
+
+    async def gone(self, organization_id, *, kind):
+        raise service.NotFoundError("no org app")
+
+    monkeypatch.setattr(service.OrganizationSecretService, "oauth_app_identity_for_org", gone)
+    refresh = AsyncMock()
+    monkeypatch.setattr(service.mcp_oauth, "refresh_tokens", refresh)
+
+    assert await service._rotate_token(AsyncMock(), connection) is None
+    refresh.assert_not_awaited()

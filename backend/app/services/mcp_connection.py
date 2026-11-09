@@ -604,7 +604,9 @@ async def _rotate_token(
     if not payload.refresh_token:
         return None
     client_secret = await McpConnectionService(db)._refresh_client_secret(locked, payload)
-    if client_secret is None:
+    # A public client has no secret to spend, so None is only a refusal when the
+    # client came from an organization app that is gone or switched.
+    if client_secret is None and _org_app_organization(locked, payload) is not None:
         return None
     try:
         token = await mcp_oauth.refresh_tokens(

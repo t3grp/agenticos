@@ -518,6 +518,69 @@ describe("McpServerList", () => {
     expect(restart).not.toHaveProperty("client_secret");
   });
 
+  it("rotates the org's Google app in place when an admin saves it again", async () => {
+    // The first save made the app; a second save must not add a second secret
+    // with the same name, the server refuses that. It patches the one there is.
+    catalogEntries = [
+      ...CATALOG.items,
+      {
+        ...CATALOG.items[1]!,
+        key: "google-calendar",
+        name: "Google Calendar",
+        url: "https://calendarmcp.googleapis.com/mcp/v1",
+        docs_url:
+          "https://developers.google.com/workspace/calendar/api/guides/configure-mcp-server",
+      },
+    ];
+    let startCalls = 0;
+    vi.mocked(apiClient.post).mockImplementation(async (path: string) => {
+      if (path === "/secrets") {
+        throw new ApiError(409, "A secret named 'google-oauth-app' already exists", {
+          error: {
+            code: "ALREADY_EXISTS",
+            message: "A secret named 'google-oauth-app' already exists",
+          },
+        });
+      }
+      startCalls += 1;
+      if (startCalls === 1) {
+        throw Object.assign(new ApiError(404, "No Google app"), {
+          details: { kind: "google_oauth_app" },
+        });
+      }
+      return { authorization_url: "https://consent.example" };
+    });
+    vi.mocked(apiClient.patch).mockResolvedValue({});
+    await mount();
+    // `serve` routes the other GETs; the secrets list is the one this save reads.
+    const served = vi.mocked(apiClient.get).getMockImplementation();
+    vi.mocked(apiClient.get).mockImplementation(async (path: string) => {
+      if (path !== "/secrets") return served!(path);
+      return {
+        items: [
+          { id: "other", name: "slack", kind: "api_key" },
+          { id: "org-app-1", name: "google-oauth-app", kind: "google_oauth_app" },
+        ],
+        total: 2,
+      };
+    });
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Google Calendar" })).getByRole("button", {
+        name: "Connect",
+      }),
+    );
+    await userEvent.type(await screen.findByLabelText("Client ID"), "org-app-2");
+    await userEvent.type(screen.getByLabelText("Client secret"), "rotated");
+    await userEvent.click(screen.getByRole("button", { name: "Connect & check" }));
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/secrets/org-app-1", {
+        value: { kind: "google_oauth_app", client_id: "org-app-2", client_secret: "rotated" },
+      }),
+    );
+    expect(apiClient.get).toHaveBeenCalledWith("/secrets");
+  });
+
   it("keeps a member's own client on their personal connection, not the org's", async () => {
     // A member without mcp:manage cannot write the org's app, so the client they
     // type is spent for their own connection only, as it was before.
