@@ -1,5 +1,5 @@
 ---
-source_sha: "bfe431b65940"
+source_sha: "1991069bf88d"
 ---
 
 # Modelle und Provider { #models-and-providers }
@@ -431,6 +431,7 @@ zurückfallen könnte, und nichts, womit man authentifizieren könnte.
 | AWS Bedrock | `bedrock` | Access Key Id, Secret Key, Region, optionales Session-Token |
 | Google Vertex AI | `google_cloud` | Service-Account-JSON |
 | ChatGPT (Codex-Abonnement) | `openai_codex` | eine ChatGPT-Anmeldung, gespeichert durch Anmelden statt durch Eintippen |
+| [Claude-Abonnement](https://github.com/t3grp/agenticos/blob/t3/integrations/claude-subscription/README.md) | `claude-subscription` | persönliches Claude-Konto, angemeldet über den offiziellen Client; Aliase `sonnet`, `opus`, `haiku` |
 
 Die ersten drei sind der Grund, warum ein Secret überhaupt eine *Art* hat. Ein
 Formular, das für Azure ein einzelnes undurchsichtiges Token einsammelte, würde

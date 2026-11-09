@@ -257,6 +257,64 @@ async def list_visible(
     return items, total
 
 
+async def list_visible_ids(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    user_id: UUID,
+    see_all: bool,
+    shared_ids: list[UUID],
+    statuses: tuple[str, ...] = (),
+) -> set[UUID]:
+    """The ids of the agents this member may list, without the rows.
+
+    The same visibility as `list_visible` - the role's scope plus explicit
+    grants - for a caller that needs the set to filter something else by,
+    such as the threads one of those agents is in. `statuses` narrows to
+    agents in those states; empty means every state the visibility allows,
+    which for an archived agent is none, since visibility already excludes
+    them.
+    """
+    where = _visible_clauses(
+        organization_id=organization_id,
+        user_id=user_id,
+        see_all=see_all,
+        shared_ids=shared_ids,
+        shared_with_me=False,
+        include_archived=False,
+    )
+    if statuses:
+        where.append(Agent.status.in_(list(statuses)))
+    result = await db.execute(select(Agent.id).where(*where))
+    return set(result.scalars().all())
+
+
+async def list_by_ids(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    agent_ids: set[UUID] | None,
+    skip: int = 0,
+    limit: int = 50,
+) -> tuple[list[Agent], int]:
+    """Agents by id in this organization, most recently created first.
+
+    `None` means every agent in the organization; an empty set means none.
+    The caller already decided these ids may be read - this is a lookup for
+    names and slugs, not an authorization.
+    """
+    where = [Agent.organization_id == organization_id]
+    if agent_ids is not None:
+        if not agent_ids:
+            return [], 0
+        where.append(Agent.id.in_(agent_ids))
+    query = select(Agent).where(*where).order_by(Agent.created_at.desc()).offset(skip).limit(limit)
+    count_query = select(func.count(Agent.id)).where(*where)
+    items = list((await db.execute(query)).scalars().all())
+    total = (await db.execute(count_query)).scalar() or 0
+    return items, total
+
+
 async def list_visible_labels(
     db: AsyncSession,
     *,

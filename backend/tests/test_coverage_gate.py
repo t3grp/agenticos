@@ -46,6 +46,11 @@ PLATFORM_PACKAGES = ("app/agents",)
 PLATFORM_MODULES = (
     "app/commands/bootstrap.py",
     "app/core/permissions.py",
+    "app/core/claude_subscription.py",
+    "app/schemas/claude_subscription.py",
+    "app/api/routes/v1/personal_subscriptions.py",
+    "app/services/claude_subscription/_client.py",
+    "app/services/claude_subscription/_service.py",
     "app/core/secret_kinds.py",
     "app/core/vault.py",
     "app/core/background.py",

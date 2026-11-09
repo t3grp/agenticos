@@ -44,6 +44,13 @@ function renderTable(secrets: Secret[]) {
 }
 
 describe("the keys", () => {
+  it("keeps personal credentials unshareable while offering rotation and disconnect", () => {
+    renderTable([secret({ name: "My API account", can_edit: true, usage_scope: "personal" })]);
+    expect(screen.getByText("Personal")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /access.*My API account/i })).toBeNull();
+    expect(screen.getByRole("button", { name: "Rotate My API account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete My API account" })).toBeInTheDocument();
+  });
   it("lists every key, each named by the service it is for", () => {
     renderTable([
       secret({ name: "Main OpenAI", purpose: "openai" }),

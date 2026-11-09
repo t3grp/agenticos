@@ -79,6 +79,7 @@ browser is pointed at the deployment's browser service
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | handed off |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | handed off |
 | `background_tasks` | Background topics | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | handed off |
+| `agent_messages` | Agent messages | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | as-is |
 | `planning` | Planning | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | as-is |
 | `thinking` | Thinking | reasoning | none, by design | — | — | mapped |
 | `system_reminders` | Instruction reminders | reasoning | none, by design | — | — | no effect |
@@ -463,6 +464,10 @@ its toolbox, beside the capability.
 ## Background topics { #background-tasks }
 
 Explicit work in a fresh topic that outlives its source reply. The source agent summarizes completion using current history, without tools. See [Background topics](../console.md#background-topics) for limits, approvals, stopping and interrupted work. This is separate from a run’s temporary `background_tools` or async subagents.
+
+## Agent messages { #agent-messages }
+
+Direct messages between two agents, in a thread the console shows. One thread per pair of agents, in one organization; a message is stored, never delivered as a run. Sending needs `agents:run` on both agents, reading on either one, and both must be published. See [Agent messages](../agent-messages.md) for replies, reactions, files, and what it does not do. This is the open version of delegation: where a delegation hides the exchange inside the parent, a thread is readable by anyone who may run either agent.
 
 ## Past conversations { #conversation-search }
 

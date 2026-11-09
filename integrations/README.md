@@ -4,9 +4,10 @@ Build integrations against AgenticOS's supported extension interfaces and the
 connected application's own APIs. Keep the platform diff small so upstream
 security fixes and improvements remain practical to adopt.
 
-This directory currently contains design guidance and the selected
-[upstream baseline](upstream.json). No adapter implementation or runtime
-compatibility result is claimed.
+This directory contains extension guidance, the selected
+[upstream baseline](upstream.json), and deployment instructions for the native
+[Composio app connection journey](composio/README.md). Each integration records
+its own validation and live acceptance requirements.
 
 ## Choose the extension interface
 

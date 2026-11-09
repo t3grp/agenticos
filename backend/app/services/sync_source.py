@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.updates import writable
 from app.core.audit import record_audit
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.field_errors import refused_field
 from app.core.permissions import AuthContext, Perm
 from app.db.base import Base
@@ -41,7 +41,14 @@ from app.worker.jobs import SYNC_SOURCE, Priority, SyncConnectorSource, sync_sou
 # Kept as a list so a caller posting the old shape is told what to do instead of
 # having the value silently dropped (#937).
 _RETIRED_CREDENTIAL_FIELDS = frozenset(
-    {"service_account_json", "access_key_id", "secret_access_key"}
+    {
+        "service_account_json",
+        "access_key_id",
+        "secret_access_key",
+        "refresh_token",
+        "access_token",
+        "client_secret",
+    }
 )
 
 
@@ -150,6 +157,9 @@ class SyncSourceService:
             # `secret_id` and what it points at never leaves the vault (#937).
             config=_raw_config(s),
             secret_id=str(s.secret_id) if s.secret_id else None,
+            connected_account_id=(
+                str(s.connected_account_id) if getattr(s, "connected_account_id", None) else None
+            ),
             secret_hint=secret_hint,
             organizational_unit=s.organizational_unit,
             sync_mode=s.sync_mode,
@@ -265,7 +275,10 @@ class SyncSourceService:
 
         await _refuse_a_credential_in_the_config(data.config, data.connector_type)
         await _refuse_an_invalid_config(data.config, data.connector_type)
+        if data.secret_id is not None and data.connected_account_id is not None:
+            raise refused_field("connected_account_id", "Choose one Google Drive credential")
         hint = await self._checked_secret(data.secret_id, data.connector_type, ctx)
+        await self._checked_google_account(data.connected_account_id, data.connector_type, ctx)
 
         source = await sync_source_repo.create(
             self.db,
@@ -275,6 +288,7 @@ class SyncSourceService:
             collection_name=data.collection_name,
             config=data.config,
             secret_id=data.secret_id,
+            connected_account_id=data.connected_account_id,
             organizational_unit=data.organizational_unit,
             sync_mode=data.sync_mode,
             schedule_minutes=data.schedule_minutes,
@@ -312,6 +326,7 @@ class SyncSourceService:
         all. The action is what tells such an entry from the approval expiry
         sweep's, the other writer that names nobody.
         """
+        connected_account_id = getattr(source, "connected_account_id", None)
         await record_audit(
             self.db,
             actor_user_id=ctx.user_id,
@@ -324,6 +339,9 @@ class SyncSourceService:
                 "connector_type": source.connector_type,
                 "collection_name": source.collection_name,
                 "secret_id": str(source.secret_id) if source.secret_id else None,
+                "connected_account_id": (
+                    str(connected_account_id) if connected_account_id else None
+                ),
                 **(extra or {}),
             },
         )
@@ -376,6 +394,8 @@ class SyncSourceService:
             self.db, ctx, row, Perm.SECRETS_VIEW, resource_type=SECRET
         ):
             raise missing
+        if row.usage_scope == "personal":
+            raise refused_field("secret_id", "A sync source cannot use a personal model connection")
         required = CONNECTOR_REGISTRY[connector_type].SECRET_KIND
         if row.kind != required.value:
             raise refused_field(
@@ -384,6 +404,43 @@ class SyncSourceService:
                 f"{required.value} credential, and that one is {row.kind}",
             )
         return row.hint
+
+    async def _checked_google_account(
+        self, account_id: UUID | None, connector_type: str, ctx: AuthContext
+    ) -> None:
+        if account_id is None:
+            return
+        if connector_type != "gdrive":
+            raise refused_field(
+                "connected_account_id", "Only Google Drive sources use connected accounts"
+            )
+        if not ctx.has(Perm.CONNECTIONS_VIEW):
+            raise AuthorizationError(
+                message="Viewing organization connections is required to use a Google account",
+                details={},
+            )
+        from app.repositories import mcp_connection as mcp_connection_repo
+
+        account = await mcp_connection_repo.get_account(self.db, account_id)
+        missing = refused_field(
+            "connected_account_id", "No such Google account is connected to this organization"
+        )
+        if (
+            account is None
+            or account.scope != "org"
+            or account.organization_id != ctx.organization_id
+            or account.catalog_key != "google"
+            or account.oauth_payload is None
+        ):
+            raise missing
+        from app.services.mcp_connection import McpConnectionService
+        from app.services.portals.google_oauth import DRIVE_GRANT_SCOPES
+
+        grant = await McpConnectionService(self.db).account_grant(
+            account, organization_id=ctx.organization_id
+        )
+        if grant is None or not DRIVE_GRANT_SCOPES.intersection(grant.scopes):
+            raise missing
 
     async def clone_source(
         self, source_id: str, data: SyncSourceClone, *, ctx: AuthContext
@@ -404,11 +461,15 @@ class SyncSourceService:
         raw = _raw_config(existing)
         # A clone copies a config somebody else's row already holds, and rows
         # predating this check exist. Judged again rather than trusted.
+        await _refuse_a_credential_in_the_config(raw, existing.connector_type)
         await _refuse_an_invalid_config(raw, existing.connector_type)
         # And the credential, which is lent to the new collection's readers: the
         # caller must be one who may bind it, as on create - a member's private
         # secret behind somebody else's source is not theirs to lend.
         await self._checked_secret(existing.secret_id, existing.connector_type, ctx)
+        await self._checked_google_account(
+            getattr(existing, "connected_account_id", None), existing.connector_type, ctx
+        )
 
         source = await sync_source_repo.create(
             self.db,
@@ -418,6 +479,7 @@ class SyncSourceService:
             collection_name=data.collection_name,
             config=raw,
             secret_id=existing.secret_id,
+            connected_account_id=getattr(existing, "connected_account_id", None),
             organizational_unit=existing.organizational_unit,
             sync_mode=existing.sync_mode,
             schedule_minutes=existing.schedule_minutes,
@@ -447,6 +509,13 @@ class SyncSourceService:
 
         if "secret_id" in updates:
             hint = await self._checked_secret(updates["secret_id"], existing.connector_type, ctx)
+        target_secret = updates.get("secret_id", existing.secret_id)
+        target_account = updates.get(
+            "connected_account_id", getattr(existing, "connected_account_id", None)
+        )
+        await self._checked_google_account(target_account, existing.connector_type, ctx)
+        if target_secret is not None and target_account is not None:
+            raise refused_field("connected_account_id", "Choose one Google Drive credential")
 
         if "config" in updates and updates["config"] is not None:
             raw_existing = _raw_config(existing)
