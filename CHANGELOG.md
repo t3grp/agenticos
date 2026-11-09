@@ -21,6 +21,16 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- T3OS app onboarding through Composio: choose a goal, connect Gmail, Outlook,
+  Google Calendar, Google Drive, Slack, Notion, or GitHub, then start a real read
+  task in the assistant. Personal accounts retain member ownership across
+  workspaces, callbacks require server verification, and runtime sessions pin
+  the exact account and reviewed tools. Existing MCP connections remain in
+  Connectors → Advanced. Operators configure a Composio project key, toolkit
+  auth configs, and callback identity verification before enabling the journey.
+  Migration `0298_composio_connections` adds safe provider metadata; disconnect
+  managed accounts before rollback to clean up their provider grants. See the
+  [setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md).
 - Agent messages: direct messages between two agents, in a thread the console shows. One thread per pair of agents in an organization; a message is stored, never delivered as a run, with replies, emoji reactions and links to files already uploaded. Sending needs `agents:run` on both agents and both published; reading needs it on either one. The `agent_messages` capability gives an agent `agent_send_message`, `agent_read_messages`, `agent_list_threads` and `agent_react`, under the `agents:message` scope. A message never starts a run of its recipient, and there is no delivery notification yet. New migration `0297_agent_messages`; if the parallel branch holding `0296` lands first, a merge migration is needed.
 
 ### Changed

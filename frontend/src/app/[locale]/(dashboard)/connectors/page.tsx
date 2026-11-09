@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Boxes,
@@ -13,12 +14,13 @@ import { useTranslations } from "next-intl";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
-import { usePermissions, useUrlState } from "@/hooks";
+import { useMcpOAuthOutcome, usePermissions, useUrlState } from "@/hooks";
 import { ROUTES } from "@/lib/constants";
 import type { Permission } from "@/types/permissions";
 import { Perm } from "@/types/permissions";
 
 import { AppsTab } from "./apps-tab";
+import { ManualConnections } from "./manual-connections";
 
 type AdvancedEntry = {
   labelKey: "channels" | "remoteAgents" | "vault" | "sandboxes";
@@ -78,20 +80,32 @@ export default function ConnectorsPage() {
   const t = useTranslations("pages.connectors");
   const tNav = useTranslations("nav");
   const { can } = usePermissions();
+  useMcpOAuthOutcome();
   const [tabParam, setTab] = useUrlState("tab");
+  const search = useSearchParams();
+  const manualRequest = search.has("server") || search.has("connect");
   const tab: Tab = (TABS as readonly string[]).includes(tabParam ?? "")
     ? (tabParam as Tab)
-    : "apps";
+    : manualRequest
+      ? "advanced"
+      : "apps";
   const advanced = ADVANCED.filter((entry) => can(entry.permission));
 
   return (
     <div className="flex flex-1 flex-col space-y-4">
       <PageHeader title={t("title")} description={t("description")} />
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value === "apps" ? null : value)}>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value === "apps" && !manualRequest ? null : value)}
+      >
         <TabsList>
-          <TabsTrigger value="apps">{t("apps")}</TabsTrigger>
-          <TabsTrigger value="advanced">{t("advanced")}</TabsTrigger>
+          <TabsTrigger value="apps" data-tour="connectors-apps">
+            {t("apps")}
+          </TabsTrigger>
+          <TabsTrigger value="advanced" data-tour="connectors-advanced">
+            {t("advanced")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="apps" className="mt-4">
@@ -120,6 +134,9 @@ export default function ConnectorsPage() {
               </li>
             ))}
           </ul>
+          <div className="mt-6">
+            <ManualConnections />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

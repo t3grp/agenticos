@@ -2348,7 +2348,7 @@ def _servers_pointer(surface: RunSurface, *, connect_key: str | None = None) -> 
     """
     if surface in _CHANNEL_SURFACES:
         return f"point them at {mcp_servers_link(connect_key)}"
-    return "send them to the MCP servers page"
+    return "send them to Connectors"
 
 
 def _personal_gap_briefing(

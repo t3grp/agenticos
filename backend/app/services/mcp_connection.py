@@ -821,6 +821,10 @@ async def _record_run_reachability(observed: list[tuple[UUID, bool]]) -> None:
 async def resolve_auth_headers(connection: McpConnection) -> dict[str, str] | None:
     """Auth headers to reach *connection*, or None if it can't be used right now
     (OAuth not authorized / expired, or an undecryptable bearer token)."""
+    if connection.auth_type == "composio":
+        # A managed account is resolved through an account-pinned session, never
+        # by turning its metadata-only URL into an ordinary bearer connection.
+        return None
     if connection.auth_type == "oauth":
         token = await _oauth_access_token(connection)
         return {"Authorization": f"Bearer {token}"} if token else None
@@ -876,6 +880,12 @@ def account_source_organization(account: McpConnection) -> UUID | None:
     return None if payload is None else payload.account_source_organization_id
 
 
+def _refuse_managed_app(catalog_key: str | None) -> None:
+    entry = get_entry(catalog_key) if catalog_key is not None else None
+    if entry is not None and entry.auth == "composio":
+        raise BadRequestError(message="Connect this personal app from Apps")
+
+
 class McpConnectionService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
@@ -900,6 +910,7 @@ class McpConnectionService:
                 bounded to, and stand recorded against the target (#1492); refused,
                 not audited.
         """
+        _refuse_managed_app(data.catalog_key)
         if data.catalog_key is not None and not await self._known_catalog_key(data.catalog_key):
             raise BadRequestError(
                 message=f"Unknown catalog server: {data.catalog_key}",
@@ -966,6 +977,29 @@ class McpConnectionService:
         update_data: dict[str, Any] = writable(
             data, over=McpConnection, exclude={"clear_allowed_tools"}
         )
+
+        if db_connection.auth_type == "composio":
+            # The managed lifecycle owns the endpoint and credential. These
+            # familiar controls still apply, but a generic MCP patch cannot
+            # turn a curated app into a token server or widen its action ceiling.
+            if (
+                set(update_data) - {"name", "label", "is_enabled", "is_default", "allowed_tools"}
+                or data.clear_allowed_tools
+                or (
+                    "allowed_tools" in update_data
+                    and (
+                        update_data["allowed_tools"] is None
+                        or not set(update_data["allowed_tools"]).issubset(
+                            db_connection.allowed_tools or []
+                        )
+                    )
+                )
+            ):
+                raise BadRequestError(
+                    message="Manage this app's authorization from Apps; its allowed actions may only be narrowed"
+                )
+            if "allowed_tools" in update_data or "is_enabled" in update_data:
+                update_data["authorization_generation"] = uuid4()
 
         if "url" in update_data:
             update_data["url"] = await _checked_url(update_data["url"])
@@ -1063,6 +1097,8 @@ class McpConnectionService:
 
     async def delete(self, *, user_id: UUID, connection_id: UUID) -> None:
         db_connection = await self._get_owned(user_id=user_id, connection_id=connection_id)
+        if db_connection.auth_type == "composio":
+            raise BadRequestError(message="Disconnect this account from Apps")
         await mcp_connection_repo.delete(self.db, db_connection=db_connection)
 
     async def test(
@@ -1070,6 +1106,8 @@ class McpConnectionService:
     ) -> tuple[McpConnection, list[McpToolInfo], str | None]:
         """Probe the server, persist the result, and return discovered tools."""
         db_connection = await self._get_owned(user_id=user_id, connection_id=connection_id)
+        if db_connection.auth_type == "composio":
+            raise BadRequestError(message="Check this account from Apps")
         return await self._probe(db_connection)
 
     async def _probe(
@@ -1151,6 +1189,7 @@ class McpConnectionService:
                 refusal #1438 made for personal connections (#1490).
         """
         refuse_binding_while_impersonating("Connecting an integration")
+        _refuse_managed_app(catalog_key)
         chosen = audience or AudienceChoice()
         existing = await mcp_connection_repo.get_org_scoped_by_name(
             self.db, organization_id=ctx.organization_id, name=name
@@ -1218,12 +1257,15 @@ class McpConnectionService:
                 audited.
         """
         refuse_binding_while_impersonating("Connecting an integration")
+        _refuse_managed_app(catalog_key)
         if catalog_key is not None and not await self._known_catalog_key(catalog_key):
             raise BadRequestError(
                 message=f"Unknown catalog server: {catalog_key}",
                 details={"catalog_key": catalog_key},
             )
         existing = await mcp_connection_repo.get_by_name(self.db, user_id=user_id, name=name)
+        if existing is not None and existing.auth_type == "composio":
+            raise BadRequestError(message="Reconnect this account from Apps")
         # Only a new row: authorizing an existing account again is not a second one.
         if existing is None and catalog_key is not None:
             _refuse_an_unnamed_second_account(
@@ -2181,6 +2223,8 @@ class McpConnectionService:
         connection = await mcp_connection_repo.get_by_oauth_state(self.db, state)
         if connection is None or not connection.oauth_pending_payload:
             raise NotFoundError(message="OAuth session not found or already completed")
+        if connection.auth_type == "composio":
+            raise OAuthError("Complete this authorization through Apps while signed in.")
         if connection.purpose == "account":
             await mcp_connection_repo.lock_account_owner(
                 self.db,
@@ -2439,6 +2483,7 @@ class McpConnectionService:
                 The name becomes the agent's tool prefix, so two servers sharing
                 one is two sets of tools nobody can tell apart.
         """
+        _refuse_managed_app(data.catalog_key)
         if data.catalog_key is not None and not await self._known_catalog_key(data.catalog_key):
             raise BadRequestError(
                 message=f"Unknown catalog server: {data.catalog_key}",
@@ -3193,7 +3238,7 @@ async def build_toolsets_for_agent(
         origins=origins,
         sources={
             spec.source_connection_id: McpSourceIdentity(
-                endpoint_hash=hashlib.sha256(spec.url.encode()).hexdigest(),
+                endpoint_hash=hashlib.sha256((spec.source_url or spec.url).encode()).hexdigest(),
                 authorization_generation=spec.authorization_generation,
                 tool_prefix=tool_prefix(spec.name),
             )
@@ -3264,14 +3309,6 @@ async def _own_specs(
     accounts: list[_OwnAccount] = []
     taken: set[str] = set()
     for account in [primary, *(other for other in owned if other is not primary)]:
-        headers = await resolve_auth_headers(account)
-        if headers is None:
-            logger.info(
-                "Skipping one of the sender's own %r connections for this run: "
-                "no usable credentials",
-                ref.catalog_key,
-            )
-            continue
         name = ref.catalog_key if account is primary else _extra_prefix(ref.catalog_key, account)
         reviewed_prefix = (
             None if approved_sources is None else approved_sources[account.id].tool_prefix
@@ -3282,6 +3319,32 @@ async def _own_specs(
             # Two labels that read the same as a tool name (`Sales US`, `Sales-US`)
             # would share one prefix, and the resolver keeps only the first.
             name = f"{name[:55]}-{account.id.hex[:8]}"
+        if account.auth_type == "composio":
+            from app.services.app_connections.runtime import managed_connection_spec
+
+            managed = await managed_connection_spec(
+                account,
+                name=name,
+                allowed_tools=_narrowed_tools(ref.allowed_tools, account.allowed_tools),
+                approval=ref.approval,
+            )
+            if managed is not None:
+                taken.add(name)
+                accounts.append(
+                    _OwnAccount(
+                        spec=managed,
+                        label=f"{managed.account or _account_name(account)} (connection {account.id})",
+                    )
+                )
+            continue
+        headers = await resolve_auth_headers(account)
+        if headers is None:
+            logger.info(
+                "Skipping one of the sender's own %r connections for this run: "
+                "no usable credentials",
+                ref.catalog_key,
+            )
+            continue
         taken.add(name)
         spec = McpServerSpec(
             name=name,
@@ -3307,6 +3370,15 @@ async def watched_connection_spec(connection: McpConnection) -> McpServerSpec | 
     listed; the watch keeps only the tools the server marks read-only, so the
     approval policy here never comes into play.
     """
+    if connection.auth_type == "composio":
+        from app.services.app_connections.runtime import managed_connection_spec
+
+        return await managed_connection_spec(
+            connection,
+            name=connection.catalog_key or connection.name,
+            allowed_tools=connection.allowed_tools,
+            approval="writes",
+        )
     headers = await resolve_auth_headers(connection)
     if headers is None:
         return None

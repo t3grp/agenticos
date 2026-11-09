@@ -22,6 +22,9 @@ const state = vi.hoisted(() => ({
 vi.mock("./apps-tab", () => ({
   AppsTab: () => <div>apps-tab-body</div>,
 }));
+vi.mock("./manual-connections", () => ({
+  ManualConnections: () => <div>manual-connections-body</div>,
+}));
 
 vi.mock("@/hooks", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks")>()),
@@ -30,6 +33,7 @@ vi.mock("@/hooks", async (importOriginal) => ({
     isLoading: false,
   }),
   useUrlState: () => [state.tab, state.setTab],
+  useMcpOAuthOutcome: () => undefined,
 }));
 
 describe("ConnectorsPage", () => {
@@ -79,7 +83,9 @@ describe("ConnectorsPage", () => {
     state.tab = "advanced";
     state.granted = new Set([Perm.secretsView]);
     const { unmount } = render(<ConnectorsPage />);
-    expect(within(screen.getByRole("list")).getByRole("link", { name: /Vault/ })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).getByRole("link", { name: /Vault/ }),
+    ).toBeInTheDocument();
     expect(
       within(screen.getByRole("list")).queryByRole("link", { name: /Sandboxes/ }),
     ).not.toBeInTheDocument();
@@ -90,7 +96,9 @@ describe("ConnectorsPage", () => {
     expect(
       within(screen.getByRole("list")).getByRole("link", { name: /Sandboxes/ }),
     ).toBeInTheDocument();
-    expect(within(screen.getByRole("list")).queryByRole("link", { name: /Vault/ })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).queryByRole("link", { name: /Vault/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("writes the tab to the URL, clearing it when going back to the default tab", async () => {

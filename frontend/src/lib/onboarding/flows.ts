@@ -33,6 +33,7 @@ export type FlowId =
   | "create-skill"
   | "create-kb"
   | "create-mcp"
+  | "connect-app"
   | "create-org"
   | "create-group"
   | "create-project-tracker"
@@ -824,6 +825,20 @@ export const FLOWS: Record<FlowId, CreationFlow> = {
       ...tableDialogSteps(ROUTES.TABLES),
     ],
   },
+  "connect-app": {
+    id: "connect-app",
+    // The inline journey owns its transitions and verified authorization state.
+    // A saved pending MCP row must never complete this guide as a successful connection.
+    steps: [
+      { id: "flow-app-goal", page: ROUTES.CONNECTORS, activate: "connectors-apps", roam: true },
+      {
+        id: "flow-app-authorize",
+        page: ROUTES.CONNECTORS,
+        activate: "connectors-apps",
+        roam: true,
+      },
+    ],
+  },
   "create-mcp": {
     id: "create-mcp",
     permission: Perm.connectionsManage,
@@ -833,6 +848,7 @@ export const FLOWS: Record<FlowId, CreationFlow> = {
       {
         id: "flow-mcp-field-pick",
         page: ROUTES.MCP_SERVERS,
+        activate: "connectors-advanced",
         permission: Perm.connectionsManage,
         // The catalog is the whole page here; the reader picks any server, and its
         // Connect opens the form. No spotlight — a hole over one card would lock
@@ -1012,7 +1028,7 @@ export function flowForPage(pageId: string): FlowId | null {
     case TABLE_DETAIL:
       return "create-table";
     case ROUTES.MCP_SERVERS:
-      return "create-mcp";
+      return "connect-app";
     case PROJECT_DETAIL:
       return "create-project-tracker";
     case ROUTES.ROUTINES:

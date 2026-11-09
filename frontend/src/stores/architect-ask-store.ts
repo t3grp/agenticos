@@ -2,16 +2,23 @@
 
 import { create } from "zustand";
 
+export interface ArchitectAskScope {
+  userId: string;
+  orgId: string | null;
+}
+
 interface ArchitectAsk {
   /** Increments with every ask, so the same words asked twice are two asks. */
   id: number;
   text: string;
+  /** Optional for existing callers; account-derived requests must name their context. */
+  scope?: ArchitectAskScope;
 }
 
 interface ArchitectAskState {
   /** The last thing somewhere else in the console asked the Architect, or null. */
   request: ArchitectAsk | null;
-  ask: (text: string) => void;
+  ask: (text: string, scope?: ArchitectAskScope) => void;
   /** Taken by the widget once asked, so a widget mounted later does not ask it again. */
   answered: (id: number) => void;
 }
@@ -26,6 +33,18 @@ let asks = 0;
  */
 export const useArchitectAskStore = create<ArchitectAskState>((set) => ({
   request: null,
-  ask: (text) => set({ request: { id: ++asks, text } }),
+  ask: (text, scope) => set({ request: { id: ++asks, text, ...(scope ? { scope } : {}) } }),
   answered: (id) => set((state) => (state.request?.id === id ? { request: null } : state)),
 }));
+
+export function architectAskMatchesScope(
+  request: ArchitectAsk,
+  scope: {
+    userId: string | null;
+    orgId: string | null;
+  },
+): boolean {
+  return (
+    !request.scope || (request.scope.userId === scope.userId && request.scope.orgId === scope.orgId)
+  );
+}

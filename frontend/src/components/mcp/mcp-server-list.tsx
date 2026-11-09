@@ -61,6 +61,7 @@ import {
 import type { McpServerRow } from "@/lib/mcp-servers";
 import { setUrlParam } from "@/lib/utils";
 import type { McpAuthKind, McpServerStateFilter } from "@/types/mcp";
+import { managedAppToolkit, useManagedAppConnect } from "@/hooks/use-managed-app-connect";
 import type { AudiencePayload } from "@/types/sharing";
 import { useTranslations } from "next-intl";
 
@@ -158,6 +159,7 @@ export function McpServerList({
   const tErrors = useTranslations("errors");
   const { organization, personal, recordTools } = useMcpServers();
   const createdToast = useCreatedToast();
+  const managedConnect = useManagedAppConnect();
   // The whole curated catalog, for the category filter alone - see below.
   const catalog = useMcpCatalog();
   const [category, setCategory] = useState<string>("all");
@@ -231,9 +233,18 @@ export function McpServerList({
         : new URL(window.location.href).searchParams.get(SERVER_PARAM)),
   );
   const manage = (key: string | null) => {
+    if (key && managedAppToolkit(key)) {
+      managedConnect(key, { sameTab: true });
+      return;
+    }
     setManagingKey(key);
     if (persistSelection) setUrlParam(SERVER_PARAM, key);
   };
+  useEffect(() => {
+    if (persistSelection && managingKey && managedAppToolkit(managingKey)) {
+      managedConnect(managingKey, { sameTab: true });
+    }
+  }, [managedConnect, managingKey, persistSelection]);
   // A bookmarked custom or registry server may sit beyond the current page.
   // Resolve that one key, while page entries continue to supply live metadata.
   const { entry: bookmarkedEntry } = useMcpServerEntry(
@@ -281,6 +292,10 @@ export function McpServerList({
   const api = (scope: Scope) => (scope === "organization" ? organization : personal);
 
   const openDraft = (scope: Scope, row: McpServerRow, existing: McpConnectionRecord | null) => {
+    if (managedAppToolkit(row.key)) {
+      managedConnect(row.key, { sameTab: true });
+      return;
+    }
     // The dialog seeds its own fields from this - name, url and auth type off
     // the row and any connection being edited.
     setDraft({
@@ -299,6 +314,10 @@ export function McpServerList({
    * is the way to that form for the first kind.
    */
   const connect = (scope: Scope, row: McpServerRow) => {
+    if (managedAppToolkit(row.key)) {
+      managedConnect(row.key, { sameTab: true });
+      return;
+    }
     const name = freeName(row, takenNames(scope));
     // A second account goes through the form, where it is named.
     if (
@@ -414,6 +433,7 @@ export function McpServerList({
   const requestedDraft: DraftState | null =
     draft === null &&
     requestedRow !== null &&
+    !managedAppToolkit(requestedRow.key) &&
     (requestedRow.auth !== "oauth" || needsGoogleOAuthClient(requestedRow.url ?? ""))
       ? {
           scope: "personal",
@@ -444,6 +464,10 @@ export function McpServerList({
       toast.error(t("noSuchServerToConnect", { key: connectKey }));
       return;
     }
+    if (managedAppToolkit(requestedRow.key)) {
+      managedConnect(requestedRow.key, { sameTab: true });
+      return;
+    }
     if (requestedRow.auth !== "oauth" || needsGoogleOAuthClient(requestedRow.url ?? "")) return;
     const taken = new Set(personal.connections.map((connection) => connection.name));
     const name = freeName(requestedRow, taken) ?? slugForPrefix(connectKey);
@@ -455,7 +479,7 @@ export function McpServerList({
       .catch((caught: unknown) =>
         toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign"))),
       );
-  }, [connectKey, catalogLoaded, requestedRow, personal.connections, t, tErrors]);
+  }, [connectKey, catalogLoaded, requestedRow, personal.connections, t, tErrors, managedConnect]);
 
   const handleSubmit = async (values: ConnectionFormValues) => {
     if (!activeDraft) return;
@@ -777,7 +801,7 @@ export function McpServerList({
       </ListCard>
 
       <ServerConnectionsDialog
-        row={managing}
+        row={managing && managedAppToolkit(managing.key) ? null : managing}
         canManageOrganization={canManageOrganization}
         busyId={busyId}
         onClose={() => manage(null)}

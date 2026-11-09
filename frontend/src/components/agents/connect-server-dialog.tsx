@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui";
+import { ManagedAppConnectButton } from "@/components/connections/managed-app-connect-button";
+import { managedAppToolkit, useManagedAppConnect } from "@/hooks/use-managed-app-connect";
 import { McpConnectionDialog } from "@/components/mcp/mcp-connection-dialog";
 import type { AudiencePayload } from "@/types/sharing";
 import type {
@@ -290,7 +292,8 @@ function useConsent(scope: Scope, { returnTo, keepThisTab }: ConsentOptions) {
       const { authorization_url } = await startMcpOAuth(input, scope);
       // The other tab lands on this server's accounts, where the new one shows.
       const back =
-        returnTo ?? (input.catalog_key ? `${ROUTES.CONNECTORS}?server=${input.catalog_key}` : undefined);
+        returnTo ??
+        (input.catalog_key ? `${ROUTES.CONNECTORS}?server=${input.catalog_key}` : undefined);
       if (back !== undefined) rememberMcpOAuthReturn(back);
       if (tab) {
         // Back in this tab, the connection made in the other is fetched: focus
@@ -348,7 +351,15 @@ export function useConnectEntry(
   },
 ) {
   const consent = useConsent(scope, options);
+  const managedConnect = useManagedAppConnect();
   return (entry: McpCatalogEntry) => {
+    if (managedAppToolkit(entry.key)) {
+      managedConnect(entry.key, {
+        keepThisTab: options.keepThisTab,
+        sameTab: options.returnTo !== undefined,
+      });
+      return;
+    }
     if (entry.auth !== "oauth" || entry.url === null || heldOn(held, entry)) {
       openForm(entry);
       return;
@@ -388,6 +399,15 @@ export function ConnectOwnButton({
     keepThisTab,
     openForm: () => setFormOpen(true),
   });
+  if (managedAppToolkit(entry.key))
+    return (
+      <ManagedAppConnectButton
+        catalogKey={entry.key}
+        label={label}
+        disabled={disabled}
+        keepThisTab={keepThisTab}
+      />
+    );
   return (
     <>
       <span className="flex shrink-0 items-center gap-0.5">
@@ -425,7 +445,15 @@ export function ConnectOwnButton({
  */
 export function useSignInOwn(options: ConsentOptions) {
   const consent = useConsent("personal", options);
+  const managedConnect = useManagedAppConnect();
   return (connection: McpConnectionRecord) => {
+    if (connection.catalog_key && managedAppToolkit(connection.catalog_key)) {
+      managedConnect(connection.catalog_key, {
+        keepThisTab: options.keepThisTab,
+        sameTab: options.returnTo !== undefined,
+      });
+      return;
+    }
     void consent({
       name: connection.name,
       url: connection.url,

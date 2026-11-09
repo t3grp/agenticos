@@ -1,4 +1,102 @@
 {
+  "appConnections": {
+    "enable": "Aktivieren",
+    "enabled": "Konto aktiviert.",
+    "title": "Verbinde deine Apps",
+    "description": "Nutze deine vertrauten Werkzeuge in T3OS. Beginne mit einer nützlichen Aufgabe.",
+    "unconfiguredTitle": "App-Verbindungen sind noch nicht eingerichtet",
+    "unconfiguredDescription": "Dein Administrator muss den Verbindungsdienst aktivieren. Bestehende und eigene MCP-Verbindungen bleiben unter Erweitert verfügbar.",
+    "progress": "Fortschritt der Verbindungseinrichtung",
+    "steps": {
+      "1": "1 · Dein Ziel",
+      "2": "2 · Apps verbinden",
+      "3": "3 · Erste Aufgabe"
+    },
+    "chooseGoal": "Beginne mit etwas Nützlichem.",
+    "goalHint": "Wähle einen Einstieg. Weitere Apps kannst du später verbinden.",
+    "goals": {
+      "day": {
+        "title": "Meinen Tag vorbereiten",
+        "description": "Eine hilfreiche Übersicht vor dem ersten Termin.",
+        "prompt": "Nutze ausschließlich mein verbundenes {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}), um die heutigen anstehenden Termine und nötigen Vorbereitungen zusammenzufassen. Nur lesen: nichts erstellen, ändern oder senden. Wechsle nicht zu einem anderen Konto. Füge verfügbare Quellenlinks hinzu und erkläre fehlenden Zugriff, statt ein Ergebnis zu erfinden."
+      },
+      "inbox": {
+        "title": "Mein Postfach durchsehen",
+        "description": "Finde Nachrichten, die deine Aufmerksamkeit brauchen.",
+        "prompt": "Nutze ausschließlich mein verbundenes {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}), um eine kleine Auswahl neuer Nachrichten zusammenzufassen, die Aufmerksamkeit erfordern, und nächste Schritte vorzuschlagen. Nur lesen: nichts senden, löschen, archivieren oder ändern. Wechsle nicht das Konto. Füge verfügbare Quellenlinks hinzu und erkläre fehlenden Zugriff, statt ein Ergebnis zu erfinden."
+      },
+      "answers": {
+        "title": "Projektantworten finden",
+        "description": "Mache aus Projektnotizen klare nächste Schritte.",
+        "prompt": "Nutze ausschließlich mein verbundenes {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}), um eine kleine Auswahl aktueller Projektnotizen zu finden und Prioritäten, Entscheidungen sowie offene Fragen zusammenzufassen. Nur lesen: nichts ändern. Wechsle nicht das Konto. Nenne die verwendeten Quellen und bitte um eine Eingrenzung des Projekts, falls der Kontext mehrdeutig ist."
+      }
+    },
+    "catalogTitle": "Wähle deine Apps",
+    "catalogHint": "Jede App benötigt eine eigene Autorisierung. Ein Konto reicht für den Anfang.",
+    "toolkits": {
+      "googlecalendar": "Anstehende Termine und Besprechungsdetails lesen.",
+      "gmail": "Nachrichten zu deiner Anfrage finden und lesen.",
+      "outlook": "Relevante Nachrichten und anstehende Besprechungen lesen.",
+      "googledrive": "Relevante Projektdokumente finden und lesen.",
+      "notion": "Von dir freigegebene Projektseiten lesen.",
+      "slack": "Relevante Gespräche und Projektaktualisierungen finden.",
+      "github": "Repository-Aktivität, Issues und Pull Requests prüfen."
+    },
+    "connectNamed": "{name} verbinden",
+    "addAccount": "Konto hinzufügen",
+    "connect": "Verbinden",
+    "notConfigured": "Nicht eingerichtet",
+    "browseAll": "Alle Apps ansehen",
+    "noApps": "In dieser Bereitstellung sind keine Apps verfügbar.",
+    "yourAccounts": "Deine verbundenen Konten",
+    "personalHint": "Dein Konto bleibt persönlich. Agents nutzen es nur über Werkzeuge, die für dein eigenes Konto eingerichtet sind.",
+    "statuses": {
+      "pending": "Wartet auf Autorisierung",
+      "connected": "Verbunden",
+      "expired": "Erneute Verbindung nötig",
+      "failed": "Verbindung fehlgeschlagen",
+      "disabled": "Deaktiviert"
+    },
+    "defaultAccount": "Standardkonto",
+    "authorizationVerified": "Autorisierung bestätigt. Der App-Zugriff wird beim Werkzeugaufruf erneut geprüft.",
+    "checkFailed": "Die letzte Prüfung konnte den Zugriff nicht bestätigen. Verbinde das Konto erneut oder wiederhole die Prüfung.",
+    "reconnect": "Erneut verbinden",
+    "checkConnection": "Zugriff prüfen",
+    "makeDefault": "Als Standard festlegen",
+    "disconnect": "Trennen",
+    "defaultHint": "Ohne Kontoangabe wird das Standardkonto verwendet. Andere verbundene Konten bleiben verfügbar.",
+    "consentHint": "Autorisiere diese App und kehre danach zur Prüfung der Verbindung zurück.",
+    "accountLabel": "Kontobezeichnung (optional)",
+    "accountLabelPlaceholder": "Zum Beispiel Arbeit oder Privat",
+    "intendedAccess": "So kann dein Assistent diese App nutzen",
+    "providerPermissions": "Prüfe die genauen Berechtigungen auf der Zustimmungsseite des Anbieters. Die Aktionsregeln von T3OS gelten davon getrennt.",
+    "cancel": "Abbrechen",
+    "continueToApp": "Weiter zur App",
+    "disconnectTitle": "Dieses Konto trennen?",
+    "disconnectHint": "Entferne {account} aus T3OS. Agents und Routinen, die diese Verbindung nutzen, benötigen danach ein anderes Konto oder eine neue Verbindung.",
+    "firstTaskTitle": "Nutze deine Verbindung.",
+    "firstTaskHint": "Wähle ein Konto und lass deinen Assistenten eine echte Aufgabe ausführen. Das Ergebnis erscheint im Gespräch mit dem Assistenten.",
+    "firstTaskNeedsAccount": "Verbinde und bestätige zuerst eine App für diese Aufgabe. Du kannst die Einrichtung auch überspringen und T3OS erkunden.",
+    "useAccount": "Dieses Konto verwenden",
+    "assistantUnavailable": "Dein Assistent kann diese Aufgabe noch nicht ausführen. Deine Verbindungen sind gespeichert; ein Administrator kann Modell und Zugriffseinstellungen prüfen.",
+    "retry": "Erneut versuchen",
+    "taskSent": "Anfrage an deinen Assistenten gesendet. Folge dem Fortschritt und möglichen Zugriffsfragen im Gespräch.",
+    "callbackVerified": "Deine App-Autorisierung wurde bestätigt.",
+    "callbackPending": "Die Autorisierung ist noch nicht bereit. Prüfe das Konto unten oder verbinde es erneut.",
+    "callbackFailed": "Die App-Verbindung konnte nicht bestätigt werden. Versuche es erneut oder verbinde das Konto neu.",
+    "invalidAuthorizationUrl": "Die App hat eine ungültige Autorisierungsadresse zurückgegeben. Versuche es erneut.",
+    "connectFailed": "Die Autorisierung konnte nicht gestartet werden. Versuche es erneut.",
+    "permissionHint": "Deine erste Aufgabe fordert Lesezugriff an. Andere Aktionen folgen den Freigaberegeln des Agents.",
+    "back": "Zurück",
+    "skip": "Vorerst überspringen",
+    "continue": "Weiter",
+    "chooseApps": "Apps auswählen",
+    "verifying": "Verbindung wird geprüft…",
+    "retryVerification": "Erneut prüfen",
+    "connectionChecked": "Kontostatus aktualisiert.",
+    "defaultChanged": "Standardkonto aktualisiert.",
+    "disconnected": "Konto getrennt."
+  },
   "admin": {
     "actions": "Aktionen",
     "active": "Aktiv",
@@ -4305,6 +4403,10 @@
         "title": "Eine Wissensdatenbank erstellen?",
         "body": "Eine Wissensdatenbank lässt Ihre Agents Ihre Dokumente durchsuchen. Wollen Sie jetzt eine einrichten? Wir führen Sie hindurch."
       },
+      "connect-app": {
+        "title": "Eine App verbinden?",
+        "body": "Wähle eine erste hilfreiche Aufgabe, autorisiere eine App und bitte deinen Assistenten, sie zu verwenden. Du kannst jeden Schritt überspringen."
+      },
       "create-mcp": {
         "title": "Einen MCP-Server verbinden?",
         "body": "MCP-Server geben Agents Tools aus anderen Systemen. Wollen Sie jetzt eine Verbindung hinzufügen? Wir führen Sie hindurch."
@@ -4651,6 +4753,14 @@
         "title": "Füllen Sie die Verbindung aus",
         "body": "Benennen Sie ihn - der Name geht seinen Tool-Namen voran —, behalten Sie Organisation, damit Ihre Agents ihn nutzen können, und fügen Sie ein Token ein, falls dieser Server eines verlangt. Wählen Sie dann Weiter."
       },
+      "flow-app-goal": {
+        "title": "Wähle deine erste Aufgabe",
+        "body": "Wähle Meinen Tag vorbereiten, Meinen Posteingang prüfen oder Projektantworten finden und danach die Apps. Ein verbundenes Konto reicht für den Anfang. Du kannst das Ziel ändern oder die Einrichtung überspringen."
+      },
+      "flow-app-authorize": {
+        "title": "Autorisieren und ausprobieren",
+        "body": "Verbinde eine App und prüfe ihre Berechtigungen beim Anbieter. Nach deiner Rückkehr überprüft T3OS das Konto. Gehe zur ersten Aufgabe, wähle das Konto und frage deinen Assistenten. Du kannst diese Anleitung jederzeit beenden; dadurch wird keine App autorisiert."
+      },
       "flow-mcp-field-pick": {
         "title": "Wählen Sie einen Server",
         "body": "Das ist der Katalog der Systeme, aus denen Ihre Agents Tools beziehen können. Finden Sie den gewünschten und wählen Sie dort Verbinden."
@@ -4718,6 +4828,10 @@
       "mcp-add": {
         "title": "Bringen Sie Ihren eigenen mit",
         "body": "Nicht im Katalog? Fügen Sie einen eigenen Server hinzu, indem Sie seine URL einfügen - für die ganze Organisation oder nur für Sie."
+      },
+      "app-connections": {
+        "title": "Deine Apps verbinden",
+        "body": "Beginne mit einem Ziel und verbinde nur die benötigten Apps. Jeder Anbieter fragt nach einer eigenen Autorisierung. Eigene MCP- und gemeinsame Verbindungen bleiben unter Erweitert verfügbar."
       },
       "mcp-catalog": {
         "title": "Tools anstecken",
