@@ -19,23 +19,68 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- A usable `/onboarding` page, linked from the account menu, with optional
+  Composio app connections and a direct path into the workspace. App consent
+  opens separately so setup can be skipped or resumed without blocking access.
+- T3OS app onboarding through Composio: choose a goal, connect Gmail, Outlook,
+  Google Calendar, Google Drive, Slack, Notion, or GitHub, then start a real read
+  task in the assistant. Personal accounts retain member ownership across
+  workspaces, callbacks require server verification, and runtime sessions pin
+  the exact account and reviewed tools. Existing MCP connections remain in
+  Connectors → Advanced. Operators configure a Composio project key, toolkit
+  auth configs, and callback identity verification before enabling the journey.
+  Migration `0298_composio_connections` adds safe provider metadata; disconnect
+  managed accounts before rollback to clean up their provider grants. See the
+  [setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md).
+- Agent messages: direct messages between two agents, in a thread the console shows. One thread per pair of agents in an organization; a message is stored, never delivered as a run, with replies, emoji reactions and links to files already uploaded. Sending needs `agents:run` on both agents and both published; reading needs it on either one. The `agent_messages` capability gives an agent `agent_send_message`, `agent_read_messages`, `agent_list_threads` and `agent_react`, under the `agents:message` scope. A message never starts a run of its recipient, and there is no delivery notification yet. New migration `0297_agent_messages`; `0299_merge_personal_composio` joins its migration path with existing personal model connections.
+- Personal Anthropic and OpenAI API connections can power existing agents. The
+  AI connections settings page stores an owner-bound vault credential and lets
+  the person choose its model explicitly. Personal credentials are excluded from
+  other users' runs, shared integrations and unattended jobs. Existing credentials
+  retain their organization usage. Anthropic's eligible subscription API credits
+  can fund the connected Console account.
+- Claude subscription sign-in uses the official native client's browser link
+  and returned code from Settings → AI connections. Sonnet, Opus and Haiku
+  personal models power the existing agent loop through a private native
+  runtime, preserving tools, approvals and owner restrictions. The initial
+  adapter supports text and application tools with buffered step responses.
+- The floating assistant includes a previewable current-page context with each
+  question, an option to turn page sharing off, and a picker for published agents
+  the user can run. Queued questions keep their submitted page and agent. Apps
+  can register bounded view details through their existing sandbox bridge.
+- Added an opt-in Docker image retention operator helper with a dry-run default,
+  explicit current and previous successful release pins, protection for images
+  referenced by any container, and a pre-deployment disk-space check. Installation
+  and deployment-lock coordination are explicit; this does not enable a cleanup
+  schedule or change Coolify settings automatically.
+- Added opt-in systemd units for daily removal of Docker build cache unused for
+  24 hours, independent of disk usage. This separate cache-only job leaves images,
+  containers, volumes and networks intact.
+
 ### Changed
 
 - Update Pydantic AI, its harness and skills integration, pricing data and
   Logfire to the versions locked by the agent-framework dependency update.
   Normalize wrapped question answers before saving a parked run so the
   durable answer remains JSON data.
-
-## [1.60.1] - 2026-11-09
+- Redesigned all 22 email templates with Geist typography, t3UI colors and
+  clearer account, invitation, agent activity and billing layouts. HTML and
+  plain-text versions share their copy, action links include a copyable fallback,
+  and the deployment's frontend serves the licensed fonts with system-font
+  fallbacks for email clients that do not load them.
 
 ### Fixed
 
-- Probe the readiness endpoint after production deploys; the old health URL returned 404 despite a healthy deployment.
-
-- Paused knowledge sources refuse manual API synchronization, and workers
-  recheck the pause before downloading or indexing queued or CLI runs.
-  Knowledge-base collection-name lookups break creation-date ties by ID,
-  keeping the selected base stable (#2744).
+- Preserve existing personal API and Claude subscription connections when
+  deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
+  the personal-model, Google Drive OAuth, and Composio migration branches without
+  changing applied migrations, resetting their state, or replacing stored accounts.
+- Redact Composio's single-use `session_uri` verifier from application logs and
+  exported traces, alongside the existing OAuth callback credentials.
+- Match agent-message timestamp types and message/Drive index metadata to their
+  applied migrations so model writes and schema verification use the same types.
 
 ## [1.60.0] - 2026-11-09
 

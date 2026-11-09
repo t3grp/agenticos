@@ -24,6 +24,7 @@ import * as invalidation from "@/lib/coalesced-invalidation";
 import {
   useAgentSelectionStore,
   useChatBandsStore,
+  useChatSidebarStore,
   useConversationStore,
   useWorkingStore,
   useOrgStore,
@@ -56,14 +57,13 @@ vi.mock("@/components/triggers/new-event-trigger-dialog", () => ({
 }));
 
 let urlParams = new URLSearchParams();
+/** What `/conversations/shared-with-me` answers with: nothing, unless a test shares something. */
+let shared: Conversation[] = [];
 vi.mock("next/navigation", () => ({
   useSearchParams: () => urlParams,
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/chat",
 }));
-
-/** What `/conversations/shared-with-me` answers with: nothing, unless a test shares something. */
-let shared: Conversation[] = [];
 
 function conversation(id: string, title: string, favourite = false): Conversation {
   return {
@@ -125,6 +125,7 @@ beforeEach(() => {
   window.history.replaceState({}, "", "/chat");
   useConversationStore.getState().reset();
   useWorkingStore.getState().reset();
+  useChatSidebarStore.getState().close();
   useChatBandsStore.setState({ folded: [], opened: [] });
   shared = [];
   mockAgents = [{ id: "a-1", name: "Analyst", status: "published", can_run: true }];
@@ -480,29 +481,22 @@ describe("what the sidebar says about the list", () => {
     // Rename, share, archive and delete are the owner's; leaving is the reader's own.
     const row = within(list()).getByText("Their pricing plan").closest(".group") as HTMLElement;
     await userEvent.click(within(row).getByRole("button", { name: "Conversation actions" }));
-    expect(within(row).getByRole("button", { name: "Remove from my chats" })).toBeInTheDocument();
-    // Above the next row's agent faces, which stack up to z-30.
-    expect(row).toHaveClass("z-40");
-    expect(within(row).queryByRole("button", { name: "Rename" })).toBeNull();
-    expect(within(row).queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Remove from my chats" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Rename" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
   });
 
   it("opens no conversation when its menu is opened, or closed by clicking away", async () => {
     serve([conversation("c-1", "Quarterly numbers")]);
     mount();
     await screen.findAllByText("Quarterly numbers");
-    const row = within(list()).getByText("Quarterly numbers").closest(".group") as HTMLElement;
 
-    await userEvent.click(within(row).getByRole("button", { name: "Conversation actions" }));
-    // The layer that closes the menu covers the page; a click anywhere lands on it.
-    await userEvent.click(row.querySelector(".fixed.inset-0") as HTMLElement);
-
-    expect(within(row).queryByRole("button", { name: "Rename" })).toBeNull();
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
     expect(useConversationStore.getState().currentConversationId).toBeNull();
 
-    // Nor a click on the menu itself, between its items.
-    await userEvent.click(within(row).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(row).getByRole("button", { name: "Rename" }).parentElement!);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menuitem", { name: "Rename" })).toBeNull());
     expect(useConversationStore.getState().currentConversationId).toBeNull();
   });
 
@@ -518,7 +512,7 @@ describe("what the sidebar says about the list", () => {
 
     const row = within(list()).getByText("Their pricing plan").closest(".group") as HTMLElement;
     await userEvent.click(within(row).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(row).getByRole("button", { name: "Remove from my chats" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Remove from my chats" }));
 
     expect(apiClient.delete).toHaveBeenCalledWith("/conversations/c-shared/shared-with-me");
     await waitFor(() => expect(within(list()).queryByText("Their pricing plan")).toBeNull());
@@ -535,7 +529,7 @@ describe("what the sidebar says about the list", () => {
 
     const row = within(list()).getByText("Their pricing plan").closest(".group") as HTMLElement;
     await userEvent.click(within(row).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(row).getByRole("button", { name: "Remove from my chats" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Remove from my chats" }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("Failed to remove the conversation"),
@@ -565,6 +559,7 @@ describe("what the sidebar says about the list", () => {
       "/conversations/shared-with-me?skip=0&limit=50&include_archived=false",
     );
   });
+
 
   it("keeps one run, without days, in an order that is not by date", async () => {
     urlParams = new URLSearchParams("sort=title:asc");
@@ -815,7 +810,7 @@ describe("the favourites band", () => {
     expect(within(list()).queryByRole("button", { name: "Favourite" })).toBeNull();
 
     await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(list()).getByRole("button", { name: "Favourite" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Favourite" }));
 
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith("/conversations/c-1/favourite", {}),
@@ -834,9 +829,10 @@ describe("the favourites band", () => {
       name: "Conversation actions",
     });
     await userEvent.click(inProject!);
-    expect(within(list()).queryByRole("button", { name: "Share" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Share" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(ownChat!);
-    expect(within(list()).getByRole("button", { name: "Share" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Share" })).toBeInTheDocument();
   });
 
   it("draws no star on a starred row, since the band it sits in says so", async () => {
@@ -855,7 +851,7 @@ describe("the favourites band", () => {
     await within(list()).findByText("Rota cover");
 
     await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
-    await userEvent.click(within(list()).getByRole("button", { name: /Remove from favourites/ }));
+    await userEvent.click(screen.getByRole("menuitem", { name: /Remove from favourites/ }));
 
     await waitFor(() =>
       expect(apiClient.delete).toHaveBeenCalledWith("/conversations/c-1/favourite"),
@@ -1069,15 +1065,14 @@ it("lets a reader favourite and unfavourite a shared conversation", async () => 
   });
   mount();
   await within(list()).findByText("Team pricing");
-  const row = () => within(list()).getByText("Team pricing").closest(".group") as HTMLElement;
-  await userEvent.click(within(row()).getByRole("button", { name: "Conversation actions" }));
-  await userEvent.click(within(row()).getByRole("button", { name: "Favourite" }));
+  await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Favourite" }));
   await waitFor(() =>
     expect(apiClient.post).toHaveBeenCalledWith("/conversations/shared-favourite/favourite", {}),
   );
-  await userEvent.click(within(row()).getByRole("button", { name: "Conversation actions" }));
+  await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
   await userEvent.click(
-    await within(row()).findByRole("button", { name: "Remove from favourites" }),
+    await screen.findByRole("menuitem", { name: "Remove from favourites" }),
   );
   await waitFor(() =>
     expect(apiClient.delete).toHaveBeenCalledWith("/conversations/shared-favourite/favourite"),
@@ -1098,8 +1093,142 @@ it("uses the usual favourite band for a starred shared thread while retaining it
   serve([]);
   mount();
   expect(await within(list()).findByRole("button", { name: "Favourites" })).toBeVisible();
-  const row = within(list()).getByText("Shared favourite").closest(".group") as HTMLElement;
-  await userEvent.click(within(row).getByRole("button", { name: "Conversation actions" }));
-  expect(within(row).getByRole("button", { name: "Remove from my chats" })).toBeVisible();
-  expect(within(row).queryByRole("button", { name: "Rename" })).not.toBeInTheDocument();
+  await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+  expect(await screen.findByRole("menuitem", { name: "Remove from my chats" })).toBeVisible();
+  expect(screen.queryByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument();
+});
+
+
+describe("conversation row keyboard access and actions", () => {
+  it.each(["{Enter}", " "])(
+    "opens a thread with %s and identifies the current row",
+    async (key) => {
+      mount();
+      const row = await within(list()).findByRole("button", { name: "Quarterly numbers" });
+      expect(row).not.toHaveAttribute("aria-current");
+
+      row.focus();
+      await userEvent.keyboard(key);
+
+      await waitFor(() =>
+        expect(useConversationStore.getState().currentConversationId).toBe("c-1"),
+      );
+      expect(row).toHaveAttribute("aria-current", "true");
+    },
+  );
+
+  it("opens its portalled actions by keyboard and returns focus on Escape without selecting the thread", async () => {
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+    const trigger = within(list()).getByRole("button", { name: "Conversation actions" });
+
+    trigger.focus();
+    await userEvent.keyboard("{ArrowDown}");
+
+    const menu = await screen.findByRole("menu");
+    expect(list()).not.toContainElement(menu);
+    await waitFor(() =>
+      expect(within(menu).getByRole("menuitem", { name: "Rename" })).toHaveFocus(),
+    );
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(trigger).toHaveFocus();
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+  });
+
+  it("keeps focus in Rename, saves once with Enter, and returns to the thread control", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({});
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const input = within(list()).getByRole("textbox", { name: "Rename" });
+    await waitFor(() => expect(input).toHaveFocus());
+    await userEvent.clear(input);
+    await userEvent.type(input, "Revised quarterly numbers");
+    await userEvent.keyboard("{Enter}");
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", {
+        title: "Revised quarterly numbers",
+      }),
+    );
+    expect(apiClient.patch).toHaveBeenCalledTimes(1);
+    expect(within(list()).getByRole("button", { name: "Quarterly numbers" })).toHaveFocus();
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+  });
+
+  it("cancels Rename with Escape and discards its draft before reopening", async () => {
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+    const trigger = within(list()).getByRole("button", { name: "Conversation actions" });
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const input = within(list()).getByRole("textbox", { name: "Rename" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Cancelled title");
+    await userEvent.keyboard("{Escape}");
+
+    expect(apiClient.patch).not.toHaveBeenCalled();
+    expect(within(list()).getByRole("button", { name: "Quarterly numbers" })).toHaveFocus();
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    expect(within(list()).getByRole("textbox", { name: "Rename" })).toHaveValue(
+      "Quarterly numbers",
+    );
+  });
+
+  it.each([
+    { action: "Archive", archived: false },
+    { action: "Restore", archived: true },
+  ])("preserves $action from the row menu", async ({ action, archived }) => {
+    if (archived) urlParams = new URLSearchParams("view=archived");
+    serve([{ ...conversation("c-1", "Quarterly numbers"), is_archived: archived }]);
+    vi.mocked(apiClient.patch).mockResolvedValue({});
+    mount();
+    await within(list()).findByText("Quarterly numbers");
+
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: action }));
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", {
+        is_archived: !archived,
+      }),
+    );
+    expect(useConversationStore.getState().currentConversationId).toBeNull();
+  });
+
+  it("deletes the selected thread through its menu and clears the open conversation", async () => {
+    vi.mocked(apiClient.delete).mockResolvedValue({});
+    mount();
+    await userEvent.click(await within(list()).findByRole("button", { name: "Quarterly numbers" }));
+    expect(useConversationStore.getState().currentConversationId).toBe("c-1");
+
+    await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/conversations/c-1"));
+    await waitFor(() => expect(useConversationStore.getState().currentConversationId).toBeNull());
+  });
+});
+
+it("keeps the small-screen chat sheet available after collapsing the desktop sidebar", async () => {
+  mount();
+  await within(list()).findByText("Quarterly numbers");
+  await userEvent.click(
+    within(list()).getByRole("button", { name: "Collapse conversations sidebar" }),
+  );
+
+  act(() => useChatSidebarStore.getState().open());
+  const sheet = await screen.findByRole("dialog", { name: "Chats" });
+  await userEvent.click(within(sheet).getByRole("button", { name: "Quarterly numbers" }));
+
+  await waitFor(() => expect(useConversationStore.getState().currentConversationId).toBe("c-1"));
+  expect(useChatSidebarStore.getState().isOpen).toBe(false);
 });
