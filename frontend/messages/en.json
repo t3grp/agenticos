@@ -6935,7 +6935,6 @@
       "errorId": "Error ID: {id}",
       "errorOccurredWhileLoading": "An error occurred while loading this page. Please try again.",
       "goBack": "Go back",
-      "goToDashboard": "Go to dashboard",
       "noMessagesYet": "This conversation has no messages yet.",
       "ogBadge": "Self-hosted",
       "ogHeadline": "<lead>Agents you</lead><mark>own.</mark>",
@@ -6950,7 +6949,6 @@
       "sharedConversationViewEdit": "Shared conversation - view & edit",
       "signInFailedRedirecting": "Sign-in failed. Redirecting…",
       "somethingWentWrong": "Something went wrong",
-      "startAChat": "Start a chat",
       "tryAgain": "Try again",
       "unexpectedWhileLoading": "An unexpected error occurred while loading this view. Please try again.",
       "unexpectedWithDigest": "An unexpected error occurred. Error ID: {digest}"

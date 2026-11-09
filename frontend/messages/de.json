@@ -6200,7 +6200,6 @@
       "errorId": "Fehler-ID: {id}",
       "errorOccurredWhileLoading": "Beim Laden dieser Seite ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
       "goBack": "Zurück",
-      "goToDashboard": "Zum Dashboard",
       "noMessagesYet": "Diese Unterhaltung hat noch keine Nachrichten.",
       "ogBadge": "Selbst gehostet",
       "ogHeadline": "<lead>Agents, die Ihnen</lead><mark>gehören.</mark>",
@@ -6215,7 +6214,6 @@
       "sharedConversationViewEdit": "Geteilte Unterhaltung – ansehen & bearbeiten",
       "signInFailedRedirecting": "Anmeldung fehlgeschlagen. Weiterleitung …",
       "somethingWentWrong": "Etwas ist schiefgelaufen",
-      "startAChat": "Einen Chat beginnen",
       "tryAgain": "Erneut versuchen",
       "unexpectedWhileLoading": "Beim Laden dieser Ansicht ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es erneut.",
       "unexpectedWithDigest": "Ein unerwarteter Fehler ist aufgetreten. Fehler-ID: {digest}"

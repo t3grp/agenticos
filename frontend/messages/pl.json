@@ -2895,7 +2895,6 @@
       "errorId": "ID błędu: {id}",
       "errorOccurredWhileLoading": "Podczas wczytywania tej strony wystąpił błąd. Spróbuj ponownie.",
       "goBack": "Wróć",
-      "goToDashboard": "Przejdź do dashboardu",
       "noMessagesYet": "Ta rozmowa nie ma jeszcze wiadomości.",
       "ogBadge": "Self-hosted",
       "ogHeadline": "<lead>Agenci, których</lead><mark>posiadasz.</mark>",
@@ -2910,7 +2909,6 @@
       "sharedConversationViewEdit": "Udostępniona rozmowa - podgląd i edycja",
       "signInFailedRedirecting": "Logowanie się nie powiodło. Przekierowanie…",
       "somethingWentWrong": "Coś poszło nie tak",
-      "startAChat": "Zacznij czat",
       "tryAgain": "Spróbuj ponownie",
       "unexpectedWhileLoading": "Podczas wczytywania tego widoku wystąpił nieoczekiwany błąd. Spróbuj ponownie.",
       "unexpectedWithDigest": "Wystąpił nieoczekiwany błąd. ID błędu: {digest}"
