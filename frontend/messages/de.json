@@ -4244,6 +4244,8 @@
     "expandSidebar": "Seitenleiste ausklappen",
     "workflows": "Workflows",
     "artifacts": "Apps",
+    "apps": "Apps",
+    "allApps": "Alle Apps",
     "assistant": "Assistent",
     "groups": "Gruppen",
     "api": "API",

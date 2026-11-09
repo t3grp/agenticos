@@ -157,11 +157,15 @@ def _visible(
     shared_with_me: bool,
     include_archived: bool = False,
     archived_reach: ColumnElement[bool] = false(),
+    team_visible: bool = False,
 ) -> list[Any]:
     """Which rows one member may see - the predicate the list and its filters share.
 
     Archived pages only when asked for, and then only those `archived_reach` admits:
     none of them serves anything, and one exists only for the members who can edit it.
+
+    `team_visible` adds the team-visible rows, for a caller whose role reaches them
+    (the same rule `access.resolve_access` applies when opening one).
     """
     where: list[Any] = [Artifact.organization_id == organization_id]
     if not include_archived:
@@ -183,6 +187,7 @@ def _visible(
             or_(
                 Artifact.owner_user_id == user_id,
                 Artifact.visibility == Visibility.ORG.value,
+                and_(team_visible, Artifact.visibility == Visibility.TEAM.value),
                 Artifact.id.in_(shared_ids) if shared_ids else false(),
             )
         )
@@ -198,6 +203,7 @@ async def list_visible(
     shared_ids: list[UUID],
     shared_with_me: bool = False,
     include_archived: bool = False,
+    team_visible: bool = False,
     edit_scope: Scope = Scope.NONE,
     edit_ids: list[UUID] | None = None,
     search: str | None = None,
@@ -214,6 +220,7 @@ async def list_visible(
         shared_ids: Artifact ids explicitly shared with this member.
         shared_with_me: Narrow to rows shared with the caller and not their own.
         include_archived: List archived pages too; they are left out otherwise.
+        team_visible: Also list the team-visible pages, for a caller whose role reaches them.
         edit_scope: The scope of the caller's `artifacts:edit`, and `edit_ids` the pages
             an edit grant gives them: of the archived pages only those they may edit are
             listed.
@@ -230,6 +237,7 @@ async def list_visible(
         shared_with_me=shared_with_me,
         include_archived=include_archived,
         archived_reach=_editable(user_id=user_id, scope=edit_scope, grant_ids=edit_ids or []),
+        team_visible=team_visible,
     )
     if search:
         where.append(or_(contains_ci(Artifact.title, search), contains_ci(Artifact.name, search)))
@@ -252,7 +260,7 @@ async def list_visible(
     items = await db.execute(
         select(Artifact)
         .where(*where)
-        .order_by(Artifact.published_at.desc(), Artifact.name.asc())
+        .order_by(Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc())
         .offset(skip)
         .limit(limit)
     )

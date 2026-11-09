@@ -4362,6 +4362,8 @@
     "expandSidebar": "Expand the sidebar",
     "workflows": "Workflows",
     "artifacts": "Apps",
+    "apps": "Apps",
+    "allApps": "All apps",
     "assistant": "Assistant",
     "groups": "Groups",
     "api": "API",
