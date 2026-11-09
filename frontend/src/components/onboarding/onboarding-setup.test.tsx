@@ -34,6 +34,8 @@ describe("onboarding setup", () => {
     const open = vi.spyOn(window, "open");
     render(<OnboardingSetup />);
 
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main");
+    expect(screen.getByRole("main")).toHaveAttribute("tabindex", "-1");
     expect(screen.getByRole("heading", { name: "Welcome to Northwind AI" })).toBeInTheDocument();
     expect(screen.getByText("Optional")).toBeInTheDocument();
 

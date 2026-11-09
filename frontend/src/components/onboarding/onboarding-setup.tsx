@@ -26,7 +26,11 @@ export function OnboardingSetup() {
           </div>
         </header>
 
-        <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-10 px-6 py-12">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-10 px-6 py-12"
+        >
           <section className="max-w-2xl space-y-3">
             <h1 className="text-3xl font-semibold tracking-tight">{t("title", { appName })}</h1>
             <p className="text-muted-foreground text-base leading-relaxed">{t("description")}</p>
