@@ -300,6 +300,10 @@ class TestConfig:
         with pytest.raises(ValidationError, match="Codex can only run"):
             HarnessConfig(harness="codex", access="read_only")
 
+    def test_codex_with_default_access_is_refused(self) -> None:
+        with pytest.raises(ValidationError, match="Codex can only run"):
+            HarnessConfig(harness="codex")
+
     def test_a_model_of_the_other_harness_vendor_is_refused(self) -> None:
         with pytest.raises(ValidationError, match="Claude Code runs Claude models"):
             HarnessConfig(harness="codex", access="edit", model="anthropic:claude-sonnet-5-5")
