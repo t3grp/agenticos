@@ -257,7 +257,8 @@
     "whatsNewDone": "Rozumiem",
     "backgroundWork": "Praca w tle",
     "connectors": "Połączenia",
-    "onboarding": "Wprowadzenie"
+    "onboarding": "Wprowadzenie",
+    "pinned": "Przypięte"
   },
   "auth": {
     "agreeToTerms": "Tworząc konto, akceptujesz nasz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>.",
@@ -11112,7 +11113,13 @@
       "blockedLink": "Strona nie ma publicznego linku. Najpierw go włącz."
     },
     "lightTheme": "Użyj jasnego motywu aplikacji",
-    "darkTheme": "Użyj ciemnego motywu aplikacji"
+    "darkTheme": "Użyj ciemnego motywu aplikacji",
+    "pin": "Przypnij",
+    "unpin": "Odepnij",
+    "pinToSidebar": "Przypnij do panelu bocznego",
+    "unpinFromSidebar": "Odepnij z panelu bocznego",
+    "pinned": "Przypięto do panelu bocznego",
+    "unpinned": "Usunięto z panelu bocznego"
   },
   "tables": {
     "cells": {

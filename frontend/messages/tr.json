@@ -408,7 +408,8 @@
     "whatsNewDescription": "Kullandığınız sürümdeki son değişiklikler.",
     "whatsNewDone": "Anladım",
     "connectors": "Bağlantılar",
-    "onboarding": "Başlangıç"
+    "onboarding": "Başlangıç",
+    "pinned": "Sabitlenenler"
   },
   "layout": {
     "breadcrumb": "Gezinme yolu",
@@ -2341,7 +2342,13 @@
       "blockedLink": "Sayfanın herkese açık bağlantısı yok. Önce bağlantı oluşturun."
     },
     "lightTheme": "Açık uygulama temasını kullan",
-    "darkTheme": "Koyu uygulama temasını kullan"
+    "darkTheme": "Koyu uygulama temasını kullan",
+    "pin": "Sabitle",
+    "unpin": "Sabitlemeyi kaldır",
+    "pinToSidebar": "Kenar çubuğuna sabitle",
+    "unpinFromSidebar": "Kenar çubuğundan kaldır",
+    "pinned": "Kenar çubuğunuza sabitlendi",
+    "unpinned": "Kenar çubuğunuzdan kaldırıldı"
   },
   "mcpOauth": {
     "title": "{client} sizin adınıza işlem yapmak istiyor",

@@ -4384,7 +4384,8 @@
     "whatsNewDone": "Verstanden",
     "backgroundWork": "Arbeit im Hintergrund",
     "connectors": "Verbindungen",
-    "onboarding": "Einführung"
+    "onboarding": "Einführung",
+    "pinned": "Angepinnt"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -10266,7 +10267,13 @@
       "blockedLink": "Die Seite hat keinen öffentlichen Link. Schalten Sie ihn zuerst ein."
     },
     "lightTheme": "Helles App-Design verwenden",
-    "darkTheme": "Dunkles App-Design verwenden"
+    "darkTheme": "Dunkles App-Design verwenden",
+    "pin": "Anpinnen",
+    "unpin": "Lösen",
+    "pinToSidebar": "An Seitenleiste anpinnen",
+    "unpinFromSidebar": "Aus Seitenleiste lösen",
+    "pinned": "An deine Seitenleiste angepinnt",
+    "unpinned": "Aus deiner Seitenleiste entfernt"
   },
   "tables": {
     "cells": {
