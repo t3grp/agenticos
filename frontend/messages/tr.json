@@ -2392,7 +2392,6 @@
       "errorId": "Hata kimliği: {id}",
       "errorOccurredWhileLoading": "Bu sayfa yüklenirken bir hata oluştu. Lütfen yeniden deneyin.",
       "goBack": "Geri dön",
-      "goToDashboard": "Kontrol paneline git",
       "noMessagesYet": "Bu konuşmada henüz mesaj yok.",
       "ogBadge": "Kendi sunucunuzda barındırılır",
       "ogHeadline": "<lead>Sahibi olduğunuz</lead><mark>agentlar.</mark>",
@@ -2407,7 +2406,6 @@
       "sharedConversationViewEdit": "Paylaşılan konuşma · görüntüleme ve düzenleme",
       "signInFailedRedirecting": "Oturum açılamadı. Yönlendiriliyor…",
       "somethingWentWrong": "Bir şeyler ters gitti",
-      "startAChat": "Sohbet başlat",
       "tryAgain": "Yeniden dene",
       "unexpectedWhileLoading": "Bu görünüm yüklenirken beklenmeyen bir hata oluştu. Lütfen yeniden deneyin.",
       "unexpectedWithDigest": "Beklenmeyen bir hata oluştu. Hata kimliği: {digest}"
