@@ -99,10 +99,12 @@ the publisher's or a previous speaker's personal account.
 
 The registered assistant receives runtime bindings for the configured starter
 apps and for the current sender's connected dynamic apps. Dynamic refs exist only
-in that assistant's runtime copy; app slugs from the full directory are not
-publishable MCP catalog entries. Other published agents must explicitly bind a
-reviewed `composio-<toolkit>` personal catalog entry. Stored agent versions are
-not rewritten by onboarding.
+in that assistant's runtime copy; inline specialists such as `explore` do not
+inherit those connections. The assistant should handle account-backed reads with
+its own tools, or use a published agent with its own explicit app binding. App
+slugs from the full directory are not publishable MCP catalog entries. Other
+published agents must explicitly bind a reviewed `composio-<toolkit>` personal
+catalog entry. Stored agent versions are not rewritten by onboarding.
 
 ```mermaid
 flowchart TD

@@ -27,13 +27,17 @@ logger = logging.getLogger(__name__)
 
 _ORIGIN = "https://backend.composio.dev"
 _GUIDANCE = (
-    "Connected apps belong to the person sending this message. Use only the account "
-    "they name for the task; if several accounts fit, ask which one before reading. "
-    "Identify the app and account when presenting results. An unavailable app is not "
-    "an empty search result: explain what could not be checked. Offer connect_account "
-    "only when their request needs that app. Some connected apps can change account "
-    "data; follow the approval step for every such action and report completion only "
-    "after the tool confirms it."
+    "Connected apps belong to the person sending this message. Use the connected-app "
+    "tools available on this assistant for account-backed tasks. Inline specialists "
+    "such as Explore do not inherit connected apps; do not delegate an account read "
+    "to an unbound specialist. Before reporting that app access is missing, check "
+    "whether your own tools expose the app and use them directly when they do. Use "
+    "only the account they name for the task; if several accounts fit, ask which one "
+    "before reading. Identify the app and account when presenting results. An "
+    "unavailable app is not an empty search result: explain what could not be checked. "
+    "Offer connect_account only when their request needs that app. Some connected "
+    "apps can change account data; follow the approval step for every such action and "
+    "report completion only after the tool confirms it."
 )
 
 
