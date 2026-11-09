@@ -14,6 +14,7 @@ export interface AppConnection {
   last_checked_at: string | null;
   last_error: string | null;
   created_at: string;
+  app: ConnectedAppDefinition;
 }
 
 export interface ConnectedAppDefinition {
@@ -23,12 +24,17 @@ export interface ConnectedAppDefinition {
   description: string;
   category: string;
   configured: boolean;
+  availability: "ready" | "setup_required" | "unavailable";
+  approval_required: boolean;
+  action_count: number;
   actions: { name: string; label: string; read_only: boolean }[];
 }
 
 export interface AppConnectionCatalog {
   configured: boolean;
+  catalog_available: boolean;
   apps: ConnectedAppDefinition[];
+  next_cursor: string | null;
 }
 
 export interface AppConnectionAuthorization {

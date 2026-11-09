@@ -12,7 +12,7 @@ const BRANDS: Record<string, string> = {
 };
 
 export function AppConnectionIcon({ toolkit }: { toolkit: string }) {
-  const brand = BRANDS[toolkit];
+  const brand = BRANDS[toolkit] ?? toolkit;
   return brand && isBrandName(brand) ? (
     <BrandIcon name={brand} className="size-6 shrink-0" />
   ) : (
