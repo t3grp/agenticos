@@ -464,6 +464,9 @@ class Settings(BaseSettings):
     # Supplied by the operator's secret store. End users authorize their own apps;
     # the project key and auth-config selection never come from their browser.
     COMPOSIO_API_KEY: SecretStr | None = None
+    # Read-only metadata key for the official toolkit and tool directory. Keep
+    # its permissions separate from the runtime key used to create sessions.
+    COMPOSIO_CATALOG_API_KEY: SecretStr | None = None
     COMPOSIO_AUTH_CONFIGS: dict[str, str] = Field(default_factory=dict)
     COMPOSIO_USER_NAMESPACE: str = Field(
         default="t3os", min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"

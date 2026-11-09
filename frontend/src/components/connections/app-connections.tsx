@@ -23,9 +23,8 @@ export function AppConnections({ scope }: { scope: AppConnectionScope }) {
   const apps = journey.catalog.data?.apps ?? [];
   const connections = journey.connections.data ?? [];
   const requestedToolkit = search.get("app");
-  const error = journey.catalog.error ?? journey.connections.error;
-  if (journey.catalog.isLoading || journey.connections.isLoading)
-    return <Skeleton className="h-64 rounded-xl" />;
+  const error = journey.connections.error;
+  if (journey.connections.isLoading) return <Skeleton className="h-64 rounded-xl" />;
   if (error)
     return (
       <div className="space-y-3">
@@ -42,7 +41,7 @@ export function AppConnections({ scope }: { scope: AppConnectionScope }) {
           <h2 className="text-xl font-medium">{t("title")}</h2>
           <p className="text-muted-foreground text-sm">{t("description")}</p>
         </header>
-        {!journey.catalog.data?.configured && (
+        {journey.catalog.data && !journey.catalog.data.configured && (
           <div role="status" className="bg-muted rounded-lg p-4 text-sm">
             <p className="font-medium">{t("unconfiguredTitle")}</p>
             <p className="text-muted-foreground mt-1">{t("unconfiguredDescription")}</p>
@@ -72,6 +71,15 @@ export function AppConnections({ scope }: { scope: AppConnectionScope }) {
             goal={journey.goal}
             requestedToolkit={requestedToolkit}
             busy={journey.busy}
+            search={journey.catalogSearch}
+            onSearch={journey.setCatalogSearch}
+            loading={journey.catalog.isLoading}
+            loadingMore={journey.catalog.isFetchingNextPage}
+            hasMore={journey.catalog.hasNextPage}
+            catalogAvailable={journey.catalog.data?.catalog_available ?? false}
+            error={journey.catalog.error ? getErrorMessage(journey.catalog.error, tErrors) : null}
+            onLoadMore={() => void journey.catalog.fetchNextPage()}
+            onRetry={() => void journey.catalog.refetch()}
             onConnect={(app) => {
               journey.setError(null);
               journey.setAuthorization({ app });
@@ -144,13 +152,12 @@ export function AppConnections({ scope }: { scope: AppConnectionScope }) {
       </section>
       <ConnectionAccounts
         connections={connections}
-        apps={apps}
         busy={journey.busy}
         onEnable={(connection) =>
           void journey.perform(() => journey.enable.mutateAsync(connection.id), t("enabled"))
         }
         onReconnect={(connection) => {
-          const app = apps.find((item) => item.toolkit === connection.toolkit);
+          const app = connection.app;
           if (app) {
             journey.setError(null);
             journey.setAuthorization({ app, connection });

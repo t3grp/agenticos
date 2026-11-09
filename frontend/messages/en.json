@@ -5,7 +5,7 @@
     "title": "Connect your apps",
     "description": "Bring the tools you already use into T3OS. Start with one useful task.",
     "unconfiguredTitle": "App connections are not configured yet",
-    "unconfiguredDescription": "Your administrator needs to enable the app connection service. Existing and custom MCP connections remain available in Advanced.",
+    "unconfiguredDescription": "Your administrator needs to enable the app connection service. Existing and custom connections remain available in MCP servers.",
     "progress": "Connection setup progress",
     "steps": {
       "1": "1 · Your goal",
@@ -32,7 +32,17 @@
       }
     },
     "catalogTitle": "Choose the apps you use",
-    "catalogHint": "Each app asks for its own authorization. One account is enough to start.",
+    "catalogHint": "Browse the Composio app catalog or search for an app. Recommendations are based on your goal; every app asks for its own authorization.",
+    "searchApps": "Search all apps",
+    "recommended": "Suggested for your goal",
+    "loadMore": "Load more apps",
+    "noSearchResults": "No apps match this search. Try another name.",
+    "catalogUnavailable": "The full app catalog is temporarily unavailable. Your existing accounts and configured apps remain accessible.",
+    "setupRequiredHint": "An administrator needs to configure this app before you can connect.",
+    "approvalRequired": "Every action requires your approval",
+    "approvalRequiredHint": "This app may support reading and making changes. T3OS asks for your approval before every action.",
+    "exploreApp": "Explore this app with my assistant",
+    "exploreAppPrompt": "Help me get started with my connected {toolkit} account {account} (connection {connection}; service {catalog}). Describe a few useful tasks using the available tools and ask which I want to try. Do not call app tools until I choose a task. Use only this account.",
     "toolkits": {
       "googlecalendar": "Read upcoming events and meeting details.",
       "gmail": "Find and read messages relevant to your request.",
@@ -45,8 +55,9 @@
     "connectNamed": "Connect {name}",
     "addAccount": "Add account",
     "connect": "Connect",
-    "notConfigured": "Not configured",
-    "browseAll": "Browse all apps",
+    "notConfigured": "Setup required",
+    "unavailableApp": "Unavailable",
+    "unavailableAppHint": "This integration does not support connecting an account here.",
     "noApps": "No apps are available on this deployment.",
     "yourAccounts": "Your connected accounts",
     "personalHint": "Your account stays personal. Agents use it only through tools configured for your own account.",
@@ -4497,7 +4508,7 @@
     "whatsNewDescription": "Recent changes in the version you are using.",
     "whatsNewDone": "Got it",
     "backgroundWork": "Background work",
-    "connectors": "Connectors",
+    "connectors": "Connections",
     "onboarding": "Onboarding"
   },
   "navigation": {
@@ -4972,7 +4983,7 @@
       },
       "app-connections": {
         "title": "Connect your apps",
-        "body": "Start with a goal and connect only the apps you need. Each provider asks for its own authorization. Advanced keeps custom MCP and shared connections available."
+        "body": "Start with a goal and connect only the apps you need. Each provider asks for its own authorization. The MCP servers tab includes custom servers; More has channels, remote agents, the vault and sandboxes."
       },
       "mcp-catalog": {
         "title": "Plug in tools",
@@ -4981,6 +4992,10 @@
       "mcp-connect": {
         "title": "Connect, then pick tools",
         "body": "Connecting a server asks how to sign in, then lets you choose exactly which of its tools your agents are allowed to call."
+      },
+      "connections-more": {
+        "title": "More connections",
+        "body": "The More tab holds channels, remote agents, vault and sandbox settings available to your role."
       },
       "mcp-filter": {
         "title": "Find a server",
@@ -7912,11 +7927,12 @@
       "operationsHint": "Application updates and deployment diagnostics."
     },
     "connectors": {
-      "title": "Connectors",
-      "description": "Everything your agents connect to, in one place.",
+      "title": "Connections",
+      "description": "Connect app accounts and MCP servers, and manage them in one place.",
       "apps": "Apps",
-      "advanced": "Advanced",
-      "advancedDescription": "The lower-level connections: chat channels, remote agents, the vault and sandboxes.",
+      "mcp": "MCP servers",
+      "more": "More",
+      "advancedDescription": "Manage chat channels, remote agents, the vault and sandboxes.",
       "channelsDescription": "Chat platforms your organization is reachable on.",
       "remoteAgentsDescription": "Other vendors' agents your agents can delegate to.",
       "vaultDescription": "Keys and secrets your connections use.",
@@ -13857,7 +13873,7 @@
     "appsDescription": "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
     "connectApps": "Connect apps",
     "opensNewTab": "Opens in a new tab. Return here when you're ready.",
-    "skipHint": "No app connection is required. You can connect later from Connectors → Apps.",
+    "skipHint": "No app connection is required. You can connect later from Connections → Apps.",
     "continueToWorkspace": "Continue to workspace"
   }
 }

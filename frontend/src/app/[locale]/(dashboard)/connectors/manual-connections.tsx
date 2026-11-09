@@ -11,7 +11,7 @@ import { useMcpServers, usePermissions } from "@/hooks";
 import { Perm } from "@/types/permissions";
 
 /**
- * The Advanced tab of Connectors: the catalog of servers an agent can use, and a
+ * The MCP tab of Connections: the catalog of servers an agent can use, and a
  * person's or the organization's connections to them.
  *
  * Three layers, only one of them shown as a list: a **catalog entry** is a

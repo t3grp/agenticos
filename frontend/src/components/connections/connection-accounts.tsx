@@ -3,12 +3,11 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui";
 import { appConnectionLabel, appConnectionUsable } from "@/lib/app-connection-journey";
-import type { AppConnection, ConnectedAppDefinition } from "@/types/app-connections";
+import type { AppConnection } from "@/types/app-connections";
 import { AppConnectionIcon } from "./app-connection-icon";
 
 export function ConnectionAccounts({
   connections,
-  apps,
   busy,
   onReconnect,
   onRefresh,
@@ -17,7 +16,6 @@ export function ConnectionAccounts({
   onEnable,
 }: {
   connections: AppConnection[];
-  apps: ConnectedAppDefinition[];
   busy: boolean;
   onReconnect: (connection: AppConnection) => void;
   onRefresh: (connection: AppConnection) => void;
@@ -35,7 +33,7 @@ export function ConnectionAccounts({
       </div>
       <ul className="divide-border divide-y rounded-xl border px-4">
         {connections.map((connection) => {
-          const app = apps.find((item) => item.toolkit === connection.toolkit);
+          const app = connection.app;
           const usable = appConnectionUsable(connection);
           return (
             <li key={connection.id} className="flex flex-wrap items-start gap-3 py-4">

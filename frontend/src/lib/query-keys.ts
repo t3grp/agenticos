@@ -659,8 +659,8 @@ export const qk = {
   appConnections: {
     all: () => ["app-connections"] as const,
     scope: (userId: string, orgId: string | null) => ["app-connections", userId, orgId] as const,
-    catalog: (userId: string, orgId: string | null) =>
-      ["app-connections", userId, orgId, "catalog"] as const,
+    catalog: (userId: string, orgId: string | null, search = "") =>
+      ["app-connections", userId, orgId, "catalog", search] as const,
     list: (userId: string, orgId: string | null) =>
       ["app-connections", userId, orgId, "list"] as const,
   },

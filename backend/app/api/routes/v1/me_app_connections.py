@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from app.api.deps import AppConnectionSvc, CurrentUser
 from app.schemas.app_connection import (
@@ -19,9 +19,15 @@ router = APIRouter()
 
 
 @router.get("/catalog", response_model=AppCatalogRead)
-async def app_catalog(service: AppConnectionSvc, user: CurrentUser) -> Any:
-    """Only operator-configured apps can initiate consent; no credentials are returned."""
-    return service.catalog()
+async def app_catalog(
+    service: AppConnectionSvc,
+    user: CurrentUser,
+    search: str = Query(default="", max_length=200),
+    cursor: str | None = Query(default=None, max_length=512),
+    limit: int = Query(default=24, ge=1, le=100),
+) -> Any:
+    """Page the official directory; only ready entries can initiate consent."""
+    return await service.catalog(search=search, cursor=cursor, limit=limit)
 
 
 @router.get("", response_model=AppConnectionList)

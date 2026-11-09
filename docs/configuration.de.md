@@ -1,5 +1,5 @@
 ---
-source_sha: "c3061d36ef27"
+source_sha: "a8f6e6ca4073"
 ---
 
 # Konfiguration { #configuration }
@@ -711,6 +711,29 @@ sie trotzdem auseinanderhalten.
 | `LOGFIRE_ORGANIZATION` | (none) | Slug der Organisation, um einen Link **in** einen gespeicherten Trace zu bauen. Das Token ist eine *schreibende* Zugangsinformation und trägt keinen der beiden Slugs |
 | `LOGFIRE_PROJECT` | (none) | Slug des Projekts, neben dem der Organisation. Ist eines von beiden nicht gesetzt, wird die `logfire_trace_id` eines Runs weiterhin aufgezeichnet und kein Link angeboten |
 | `LOGFIRE_BASE_URL` | `https://logfire-us.pydantic.dev` | Zu welchem Logfire-Deployment diese Slugs gehören. `logfire-eu` ist ein anderer Host, und ein für den falschen gebauter Link antwortet mit 404 |
+
+## Composio-App-Verbindungen { #composio-app-connections }
+
+Das Verzeichnis **Verbindungen → Apps (Connections → Apps)** nutzt Composio,
+um persönliche App-Konten zu verbinden. Konfigurieren Sie für API und Worker
+dieselben Projekteinstellungen. Bewahren Sie beide Schlüssel auf dem Server auf;
+das Frontend erhält nur Katalogmetadaten und Autorisierungs-URLs.
+
+| Variable | Standard | Beschreibung |
+|----------|---------|-------------|
+| `COMPOSIO_API_KEY` | (none) | Laufzeitschlüssel des Projekts für Tool-Router-Sitzungen und die Verwaltung verbundener Konten. Ein leerer Schlüssel deaktiviert verwaltete App-Verbindungen. |
+| `COMPOSIO_CATALOG_API_KEY` | (none) | Separater Projektschlüssel ausschließlich mit den Berechtigungen **Toolkits: Read** und **Tools: Read**. Aktiviert das durchsuchbare, paginierte App-Verzeichnis und explizite Tool-Snapshots für neue Apps. Ohne ihn zeigt das Verzeichnis nur die ursprünglichen, geprüften Integrationen. |
+| `COMPOSIO_AUTH_CONFIGS` | `{}` | JSON-Zuordnung von Toolkit-Slugs zu Projekt-Auth-Config-IDs. Die ursprünglichen sieben Integrationen benötigen einen expliziten Eintrag; weitere Apps verwenden einen konfigurierten Eintrag oder die Composio-verwaltete Authentifizierung, sofern verfügbar. Apps, die eine eigene Auth-Konfiguration benötigen, zeigen **Einrichtung erforderlich (Setup required)**. |
+| `COMPOSIO_USER_NAMESPACE` | `t3os` | Stabiler Präfix für die Composio-Identität pro Benutzer. Verwenden Sie denselben Wert für API und Worker und ändern Sie ihn für bestehende Konten nicht. Verwenden Sie für ein separates Deployment einen eigenen Namespace. |
+
+Die ursprünglichen Integrationen behalten ihre geprüften Leseaktionen. Andere
+unterstützte Apps speichern beim Verbinden des Kontos eine begrenzte Liste
+direkter Tool-Namen und verlangen für jede Aktion eine Freigabe. Eine erneute
+Verbindung erhält diese Liste; eine neue Verbindung erfasst die aktuell
+verfügbaren Tools. Bestehende MCP-Server bleiben im Tab **MCP-Server (MCP servers)**.
+Siehe [App-Verbindungen](mcp.md#connect-an-app-through-composio) und die
+[Composio-Einrichtungsanleitung](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+zu Rückrufprüfung, Anbietereinwilligung und Deployment-Checks.
 
 ## Websuche { #web-search }
 

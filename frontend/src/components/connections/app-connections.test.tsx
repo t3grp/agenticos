@@ -33,6 +33,9 @@ const apps: ConnectedAppDefinition[] = [
     description: "Meetings",
     category: "calendar",
     configured: true,
+    availability: "ready",
+    approval_required: false,
+    action_count: 4,
     actions: [],
   },
   {
@@ -42,6 +45,9 @@ const apps: ConnectedAppDefinition[] = [
     description: "Mail",
     category: "email",
     configured: true,
+    availability: "ready",
+    approval_required: false,
+    action_count: 6,
     actions: [],
   },
   {
@@ -51,15 +57,32 @@ const apps: ConnectedAppDefinition[] = [
     description: "Mail and meetings",
     category: "email",
     configured: true,
+    availability: "ready",
+    approval_required: false,
+    action_count: 8,
+    actions: [],
+  },
+  {
+    key: "composio-linear",
+    toolkit: "linear",
+    name: "Linear",
+    description: "Issues and projects",
+    category: "developer-tools",
+    configured: true,
+    availability: "ready",
+    approval_required: true,
+    action_count: 12,
     actions: [],
   },
 ];
 function account(overrides: Partial<AppConnection> = {}): AppConnection {
+  const toolkit = overrides.toolkit ?? "googlecalendar";
+  const app = apps.find((candidate) => candidate.toolkit === toolkit)!;
   return {
     id: "calendar-1",
-    catalog_key: "composio-googlecalendar",
-    toolkit: "googlecalendar",
-    name: "Google Calendar",
+    catalog_key: app.key,
+    toolkit,
+    name: app.name,
     label: "Work",
     identity: "one@example.test",
     status: "connected",
@@ -70,13 +93,23 @@ function account(overrides: Partial<AppConnection> = {}): AppConnection {
     last_checked_at: null,
     last_error: null,
     created_at: "2026-01-01",
+    app,
     ...overrides,
   };
 }
 function data(connections: AppConnection[] = [], configured = true) {
   vi.mocked(apiClient.get).mockImplementation(async (url) =>
     url.endsWith("/catalog")
-      ? { configured, apps: apps.map((app) => ({ ...app, configured })) }
+      ? {
+          configured,
+          catalog_available: true,
+          apps: apps.map((app) => ({
+            ...app,
+            configured,
+            availability: configured ? app.availability : "setup_required",
+          })),
+          next_cursor: null,
+        }
       : { items: connections, total: connections.length },
   );
 }
@@ -127,7 +160,7 @@ describe("real app connection journey", () => {
     mount();
     await userEvent.click(await screen.findByRole("button", { name: /Review my inbox/ }));
     await userEvent.click(screen.getByRole("button", { name: "Choose apps" }));
-    expect(screen.queryByRole("button", { name: "Connect Google Calendar" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Connect Google Calendar" })).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Connect Gmail" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/Review the exact permissions/)).toBeVisible();
@@ -138,6 +171,119 @@ describe("real app connection journey", () => {
     expect(screen.getByRole("button", { name: /Review my inbox/ })).toHaveAttribute(
       "aria-pressed",
       "true",
+    );
+  });
+
+  it("shows every-action approval for an unapproved app before starting authorization", async () => {
+    mount();
+    await userEvent.click(await screen.findByRole("button", { name: "Choose apps" }));
+    expect(screen.getByRole("button", { name: "Connect Linear" })).toBeVisible();
+    expect(screen.getByText("Every action requires your approval")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Connect Linear" }));
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(/This app may support reading and making changes/),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText(/Review the exact permissions on the provider's consent screen/),
+    ).toBeVisible();
+    expect(apiClient.post).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("debounces catalog search before requesting matching apps", async () => {
+    mount();
+    await userEvent.click(await screen.findByRole("button", { name: "Choose apps" }));
+    const initialCatalogCalls = vi
+      .mocked(apiClient.get)
+      .mock.calls.filter(([url]) => url.endsWith("/catalog")).length;
+    fireEvent.change(screen.getByPlaceholderText("Search all apps"), {
+      target: { value: "linear" },
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(
+      vi.mocked(apiClient.get).mock.calls.filter(([url]) => url.endsWith("/catalog")),
+    ).toHaveLength(initialCatalogCalls);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    await waitFor(() =>
+      expect(apiClient.get).toHaveBeenCalledWith(
+        "/me/app-connections/catalog",
+        expect.objectContaining({ params: { limit: "24", search: "linear" } }),
+      ),
+    );
+  });
+
+  it("loads the next catalog page from the visible load-more control", async () => {
+    let catalogCalls = 0;
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (!url.endsWith("/catalog")) return { items: [], total: 0 };
+      catalogCalls += 1;
+      return catalogCalls === 1
+        ? {
+            configured: true,
+            catalog_available: true,
+            apps: [apps[0]],
+            next_cursor: "catalog-page-2",
+          }
+        : {
+            configured: true,
+            catalog_available: true,
+            apps: [apps[1]],
+            next_cursor: null,
+          };
+    });
+    mount();
+    await userEvent.click(await screen.findByRole("button", { name: "Choose apps" }));
+    expect(screen.getByRole("button", { name: "Connect Google Calendar" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Connect Gmail" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Load more apps" }));
+    expect(await screen.findByRole("button", { name: "Connect Gmail" })).toBeVisible();
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/me/app-connections/catalog",
+      expect.objectContaining({
+        params: expect.objectContaining({ cursor: "catalog-page-2" }),
+      }),
+    );
+  });
+
+  it("keeps existing accounts usable when the catalog request fails", async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (url.endsWith("/catalog")) throw new Error("catalog unavailable");
+      return { items: [account()], total: 1 };
+    });
+    mount();
+    expect(await screen.findByText("Google Calendar")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Your connected accounts" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Choose apps" }));
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+  });
+
+  it("offers an explore prompt for a usable app outside the selected goal", async () => {
+    data([
+      account({
+        id: "linear-1",
+        catalog_key: "composio-linear",
+        toolkit: "linear",
+        name: "Linear",
+        identity: "team@example.test",
+      }),
+    ]);
+    mount();
+    await userEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
+    const exploreButton = screen.getByRole("button", {
+      name: "Explore this app with my assistant",
+    });
+    expect(exploreButton).toBeVisible();
+    await userEvent.click(exploreButton);
+    expect(useArchitectAskStore.getState().request?.text).toContain("connected linear account");
+    expect(useArchitectAskStore.getState().request?.text).toContain(
+      "Do not call app tools until I choose a task.",
     );
   });
 

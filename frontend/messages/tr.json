@@ -1,4 +1,114 @@
 {
+  "appConnections": {
+    "enable": "Etkinleştir",
+    "enabled": "Hesap etkinleştirildi.",
+    "title": "Uygulamalarınızı bağlayın",
+    "description": "T3OS'ta zaten kullandığınız araçları kullanın. Yararlı tek bir görevle başlayın.",
+    "unconfiguredTitle": "Uygulama bağlantıları henüz yapılandırılmadı",
+    "unconfiguredDescription": "Yöneticiniz uygulama bağlantısı hizmetini etkinleştirmeli. Mevcut ve özel bağlantılar MCP sunucuları sekmesinde kullanılabilir.",
+    "progress": "Bağlantı kurulumunun ilerlemesi",
+    "steps": {
+      "1": "1 · Hedefiniz",
+      "2": "2 · Uygulamaları bağlayın (isteğe bağlı)",
+      "3": "3 · İlk görev"
+    },
+    "chooseGoal": "Yararlı bir şeyle başlayın.",
+    "goalHint": "Bir başlangıç noktası seçin. Daha sonra başka uygulamalar da bağlayabilirsiniz.",
+    "goals": {
+      "day": {
+        "title": "Günümü hazırla",
+        "description": "İlk toplantınızdan önce faydalı bir özet.",
+        "prompt": "Bugünkü yaklaşan toplantıları ve hazırlıkları özetlemek için yalnızca bağlı {toolkit} hesabınızı {account} (bağlantı {connection}; hizmet {catalog}) kullanın. Yalnızca okuyun; hiçbir şey oluşturmayın, değiştirmeyin veya göndermeyin. Başka bir hesaba geçmeyin. Uygun olduğunda kaynak bağlantılarını ekleyin ve sonuç uydurmak yerine eksik erişimi açıklayın."
+      },
+      "inbox": {
+        "title": "Gelen kutumu gözden geçir",
+        "description": "Dikkat etmeniz gereken iletileri bulun.",
+        "prompt": "Dikkat gerektiren son iletilerden küçük bir grubu özetleyip sonraki adımları önermek için yalnızca bağlı {toolkit} hesabınızı {account} (bağlantı {connection}; hizmet {catalog}) kullanın. Yalnızca okuyun; hiçbir şey göndermeyin, silmeyin, arşivlemeyin veya değiştirmeyin. Başka bir hesaba geçmeyin. Uygun olduğunda kaynak bağlantılarını ekleyin ve sonuç uydurmak yerine eksik erişimi açıklayın."
+      },
+      "answers": {
+        "title": "Proje yanıtlarını bul",
+        "description": "Proje notlarını açık sonraki adımlara dönüştürün.",
+        "prompt": "Öncelikleri, kararları ve açık soruları özetlemek için son proje notlarından küçük bir grubu bulurken yalnızca bağlı {toolkit} hesabınızı {account} (bağlantı {connection}; hizmet {catalog}) kullanın. Yalnızca okuyun; hiçbir şeyi değiştirmeyin. Başka bir hesaba geçmeyin. Kullandığınız kaynakları belirtin ve mevcut bağlam belirsizse projeyi daraltmamı isteyin."
+      }
+    },
+    "catalogTitle": "Kullandığınız uygulamaları seçin",
+    "catalogHint": "Composio uygulama kataloğuna göz atın veya bir uygulama arayın. Öneriler hedefinize göre sunulur; her uygulama için ayrı yetkilendirme gerekir.",
+    "searchApps": "Tüm uygulamalarda ara",
+    "recommended": "Hedefiniz için önerilenler",
+    "loadMore": "Daha fazla uygulama yükle",
+    "noSearchResults": "Bu aramayla eşleşen uygulama yok. Başka bir ad deneyin.",
+    "catalogUnavailable": "Tam uygulama kataloğu geçici olarak kullanılamıyor. Mevcut hesaplarınıza ve yapılandırılmış uygulamalara erişebilirsiniz.",
+    "setupRequiredHint": "Bu uygulamayı bağlayabilmeniz için bir yöneticinin yapılandırması gerekir.",
+    "approvalRequired": "Her işlem için onayınız gerekir",
+    "approvalRequiredHint": "Bu uygulama okuma ve değişiklik yapma özelliklerini destekleyebilir. T3OS her işlemden önce onayınızı ister.",
+    "exploreApp": "Bu uygulamayı asistanımla keşfet",
+    "exploreAppPrompt": "Bağlı {toolkit} hesabınız {account} (bağlantı {connection}; hizmet {catalog}) ile başlamama yardımcı olun. Kullanılabilir araçlarla yapılabilecek birkaç yararlı görevi açıklayın ve hangisini denemek istediğimi sorun. Ben bir görev seçene kadar uygulama araçlarını çağırmayın. Yalnızca bu hesabı kullanın.",
+    "toolkits": {
+      "googlecalendar": "Yaklaşan etkinlikleri ve toplantı ayrıntılarını okuyun.",
+      "gmail": "İsteğinizle ilgili iletileri bulun ve okuyun.",
+      "outlook": "İlgili iletileri ve yaklaşan toplantıları okuyun.",
+      "googledrive": "İlgili proje belgelerini bulun ve okuyun.",
+      "notion": "Erişime açtığınız proje sayfalarını okuyun.",
+      "slack": "İlgili konuşmaları ve proje güncellemelerini bulun.",
+      "github": "Depo etkinliğini, issue'ları ve pull request'leri inceleyin."
+    },
+    "connectNamed": "{name} uygulamasını bağla",
+    "addAccount": "Hesap ekle",
+    "connect": "Bağlan",
+    "notConfigured": "Kurulum gerekli",
+    "unavailableApp": "Kullanılamıyor",
+    "unavailableAppHint": "Bu entegrasyon burada bir hesap bağlamayı desteklemiyor.",
+    "noApps": "Bu dağıtımda kullanılabilir uygulama yok.",
+    "yourAccounts": "Bağlı hesaplarınız",
+    "personalHint": "Hesabınız kişisel kalır. Agent'lar bu hesabı yalnızca kendi hesabınız için yapılandırılmış araçlar üzerinden kullanabilir.",
+    "statuses": {
+      "pending": "Yetkilendirme bekleniyor",
+      "connected": "Bağlandı",
+      "expired": "Yeniden bağlanma gerekli",
+      "failed": "Bağlantı başarısız",
+      "disabled": "Devre dışı"
+    },
+    "defaultAccount": "Varsayılan hesap",
+    "authorizationVerified": "Yetkilendirme doğrulandı. Uygulamaya erişim, araç çalıştığında yeniden denetlenir.",
+    "checkFailed": "Son denetimde erişim doğrulanamadı. Yeniden bağlanın veya tekrar denetleyin.",
+    "reconnect": "Yeniden bağlan",
+    "checkConnection": "Erişimi denetle",
+    "makeDefault": "Varsayılan yap",
+    "disconnect": "Bağlantıyı kes",
+    "defaultHint": "Hesap belirtilmediğinde varsayılan hesap kullanılır. Bağlı diğer hesaplar kullanılabilir durumda kalır.",
+    "consentHint": "Bu uygulamaya yetki verin, ardından bağlantıyı doğrulamak için buraya dönün.",
+    "accountLabel": "Hesap etiketi (isteğe bağlı)",
+    "accountLabelPlaceholder": "Örneğin İş veya Kişisel",
+    "intendedAccess": "Asistanınız bu uygulamayı nasıl kullanabilir",
+    "providerPermissions": "Sağlayıcının onay ekranındaki izinleri inceleyin. T3OS işlem ilkeleri bu izinlerden ayrıdır.",
+    "cancel": "İptal",
+    "continueToApp": "Uygulamaya geç",
+    "disconnectTitle": "Bu hesabın bağlantısı kesilsin mi?",
+    "disconnectHint": "{account} hesabını T3OS'tan kaldırın. Bu bağlantıyı kullanan agent'lar ve rutinler başka bir hesaba veya yeni bir bağlantıya ihtiyaç duyar.",
+    "firstTaskTitle": "Bağlantınızı kullanmaya başlayın.",
+    "firstTaskHint": "Bir hesap seçip asistanınızdan gerçek bir görevi tamamlamasını isteyin. Sonuç asistan konuşmanızda açılır.",
+    "firstTaskNeedsAccount": "Önce bu görev için bir uygulamayı bağlayıp doğrulayın. İsterseniz kurulumu atlayıp T3OS'u keşfedebilirsiniz.",
+    "useAccount": "Bu hesabı kullan",
+    "assistantUnavailable": "Asistanınız bu görevi çalıştırmaya hazır değil. Bağlantılarınız kaydedildi; yönetici model ve erişim ayarlarını denetleyebilir.",
+    "retry": "Tekrar deneyin",
+    "taskSent": "İstek asistanınıza gönderildi. İlerlemeyi ve erişimle ilgili soruları konuşmada takip edin.",
+    "callbackVerified": "Uygulama yetkilendirmeniz doğrulandı.",
+    "callbackPending": "Yetkilendirme henüz hazır değil. Aşağıdaki hesabı denetleyin veya yeniden bağlanın.",
+    "callbackFailed": "Uygulama bağlantısı doğrulanamadı. Tekrar deneyin veya hesabı yeniden bağlayın.",
+    "invalidAuthorizationUrl": "Uygulama geçersiz bir yetkilendirme adresi döndürdü. Lütfen tekrar deneyin.",
+    "connectFailed": "Yetkilendirme başlatılamadı. Lütfen tekrar deneyin.",
+    "permissionHint": "İlk göreviniz okuma erişimi ister. Diğer işlemler agent'ın onay ilkesine tabidir.",
+    "back": "Geri",
+    "skip": "Şimdilik atla",
+    "continue": "Devam et",
+    "chooseApps": "Uygulamaları seçin",
+    "verifying": "Bağlantınız doğrulanıyor…",
+    "retryVerification": "Yeniden doğrula",
+    "connectionChecked": "Hesap durumu yenilendi.",
+    "defaultChanged": "Varsayılan hesap güncellendi.",
+    "disconnected": "Hesap bağlantısı kesildi.",
+    "continueWithoutApps": "Uygulamaları bağlamadan devam et"
+  },
   "auth": {
     "agreeToTerms": "Hesap oluşturarak <terms>Kullanım Koşulları</terms> ve <privacy>Gizlilik Politikası</privacy> metinlerimizi kabul etmiş olursunuz.",
     "atLeast8Characters": "En az 8 karakter",
@@ -297,6 +407,7 @@
     "whatsNewTitle": "{version} sürümündeki yenilikler",
     "whatsNewDescription": "Kullandığınız sürümdeki son değişiklikler.",
     "whatsNewDone": "Anladım",
+    "connectors": "Bağlantılar",
     "onboarding": "Başlangıç"
   },
   "layout": {
@@ -4500,6 +4611,18 @@
       "servicesHint": "Ses kaydı tercihleri ve mobil uygulama anlık bildirimleri.",
       "operations": "Bakım",
       "operationsHint": "Uygulama güncellemeleri ve dağıtım tanılaması."
+    },
+    "connectors": {
+      "title": "Bağlantılar",
+      "description": "Uygulama hesaplarınızı ve MCP sunucularınızı tek bir yerde yönetin.",
+      "apps": "Uygulamalar",
+      "mcp": "MCP sunucuları",
+      "more": "Daha fazla",
+      "advancedDescription": "Sohbet kanalları, uzak agent'lar, Vault ve sandbox'lar.",
+      "channelsDescription": "Kuruluşunuzun erişilebilir olduğu sohbet platformları.",
+      "remoteAgentsDescription": "Agent'larınızın görev devredebileceği diğer sağlayıcıların agent'ları.",
+      "vaultDescription": "Bağlantılarınızın kullandığı anahtarlar ve gizli bilgiler.",
+      "sandboxesDescription": "Agent'ların kod çalıştırdığı ortamlar ve her host için belirlenen sınırlar."
     }
   },
   "mcp": {
@@ -8044,6 +8167,10 @@
       "mcp-connect": {
         "title": "Bağlanın, ardından araçları seçin",
         "body": "Sunucuya bağlanırken nasıl oturum açacağınız sorulur. Sonra agent’larınızın çağırmasına izin verilecek araçları tek tek seçebilirsiniz."
+      },
+      "connections-more": {
+        "title": "Diğer bağlantılar",
+        "body": "Daha fazla sekmesi, rolünüz için kullanılabilir sohbet kanallarını, uzak agent'ları, Vault ve sandbox ayarlarını içerir."
       },
       "mcp-filter": {
         "title": "Sunucu bulun",
@@ -12893,7 +13020,7 @@
     "appsDescription": "Kullandığınız araçları Composio üzerinden bağlayın. Her uygulamayı seçin ve erişim izni vermeden önce istediği izinleri inceleyin.",
     "connectApps": "Uygulamaları bağla",
     "opensNewTab": "Yeni bir sekmede açılır. Hazır olduğunuzda buraya dönün.",
-    "skipHint": "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Connectors → Apps bölümünden yapabilirsiniz.",
+    "skipHint": "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Bağlantılar → Uygulamalar bölümünden yapabilirsiniz.",
     "continueToWorkspace": "Workspace alanına geç"
   }
 }

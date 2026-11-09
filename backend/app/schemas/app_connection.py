@@ -22,16 +22,21 @@ class AppCatalogEntry(BaseSchema):
     description: str
     category: str
     configured: bool
+    availability: Literal["ready", "setup_required", "unavailable"]
+    approval_required: bool = False
+    action_count: int = Field(ge=0)
     actions: list[AppActionRead]
 
 
 class AppCatalogRead(BaseSchema):
     configured: bool
+    catalog_available: bool
     apps: list[AppCatalogEntry]
+    next_cursor: str | None = None
 
 
 class AppConnectionCreate(BaseSchema):
-    toolkit: str = Field(min_length=1, max_length=64, pattern=r"^[a-z]+$")
+    toolkit: str = Field(min_length=1, max_length=55, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     label: str | None = Field(default=None, min_length=1, max_length=64)
 
 
@@ -66,6 +71,7 @@ class AppConnectionRead(BaseSchema):
     is_default: bool
     authorized: bool
     readiness: Literal["authorization_required", "authorization_verified", "unavailable"]
+    app: AppCatalogEntry
     last_checked_at: datetime | None
     last_error: str | None
     created_at: datetime

@@ -20,8 +20,9 @@ from app.agents import mcp
 from app.agents.mcp import McpSourceIdentity, tool_origin, tool_prefix
 from app.agents.spec import AgentSpec, PersonalMcpServerRef, PlatformMcpServerRef
 from app.core.config import settings
-from app.core.exceptions import ExternalServiceError
+from app.core.exceptions import BadRequestError, ExternalServiceError
 from app.db.models.mcp_connection import McpConnection
+from app.schemas.mcp_connection import McpConnectionCreate
 from app.services import agent_registry, mcp_connection
 from app.services.app_connections import composio_user_id, runtime
 
@@ -32,6 +33,7 @@ _DETAIL = "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"
 _THREAD = "GMAIL_FETCH_MESSAGE_BY_THREAD_ID"
 _WRITE = "GMAIL_SEND_EMAIL"
 _ROUTER = "COMPOSIO_MULTI_EXECUTE_TOOL"
+_DYNAMIC_TOOLS = ["GOOGLESHEETS_GET_SPREADSHEET", "GOOGLESHEETS_FIND_SPREADSHEET"]
 _ORIGIN = "https://backend.composio.dev"
 
 
@@ -88,10 +90,22 @@ def _connection(**overrides) -> McpConnection:
     return McpConnection(**values)
 
 
-async def _spec(connection, *, allowed_tools=None, approval="writes"):
+async def _spec(connection, *, name="composio-gmail", allowed_tools=None, approval="writes"):
     return await runtime.managed_connection_spec(
-        connection, name="composio-gmail", allowed_tools=allowed_tools, approval=approval
+        connection, name=name, allowed_tools=allowed_tools, approval=approval
     )
+
+
+def _dynamic_connection(**overrides) -> McpConnection:
+    values = {
+        "name": "google_sheets-account",
+        "catalog_key": "composio-google_sheets",
+        "url": f"{_ORIGIN}/api/v3.1/toolkits/google_sheets",
+        "allowed_tools": list(_DYNAMIC_TOOLS),
+        "composio_auth_config_id": "ac_google_sheets",
+    }
+    values.update(overrides)
+    return _connection(**values)
 
 
 async def test_a_session_pins_the_member_account_config_and_reviewed_actions(provider):
@@ -120,6 +134,103 @@ async def test_a_session_pins_the_member_account_config_and_reviewed_actions(pro
     assert spec.credential_origin == _ORIGIN
     assert spec.include_instructions is False
     assert "runtime-provider-key" not in repr(spec)
+
+
+async def test_dynamic_session_freezes_direct_tools_and_requires_approval_for_every_call(
+    monkeypatch, provider
+):
+    monkeypatch.setattr(settings, "COMPOSIO_AUTH_CONFIGS", {})
+    connection = _dynamic_connection()
+
+    spec = await _spec(
+        connection,
+        name="composio-google_sheets",
+        allowed_tools=[_DYNAMIC_TOOLS[1], "TOOL_NOT_GRANTED"],
+        approval="none",
+    )
+
+    assert spec is not None
+    pinned = {
+        "user_id": composio_user_id(connection.user_id),
+        "toolkit": "google_sheets",
+        "account_id": connection.composio_account_id,
+        "auth_config_id": "ac_google_sheets",
+    }
+    assert provider.verify_account.await_args.kwargs == pinned
+    assert provider.create_session.await_args.kwargs == {
+        **pinned,
+        "tools": [_DYNAMIC_TOOLS[1]],
+    }
+    assert spec.allowed_tools == [_DYNAMIC_TOOLS[1]]
+    assert spec.approval == "all"
+    assert spec.source_connection_id == connection.id
+    assert spec.authorization_generation == connection.authorization_generation
+    assert spec.source_url == connection.url
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"allowed_tools": None},
+        {"allowed_tools": []},
+        {"allowed_tools": ["COMPOSIO_MULTI_EXECUTE_TOOL"]},
+        {"allowed_tools": ["not a tool name"]},
+        {"allowed_tools": ["DUPLICATE", "DUPLICATE"]},
+        {"allowed_tools": [f"TOOL_{index}" for index in range(1001)]},
+        {"url": f"{_ORIGIN}/api/v3.1/toolkits/another_toolkit"},
+    ],
+)
+async def test_dynamic_connection_needs_its_frozen_safe_action_list_and_stable_source_url(
+    provider, changes
+):
+    assert (
+        await _spec(_dynamic_connection(**changes), name="composio-google_sheets", approval="all")
+        is None
+    )
+    provider.verify_account.assert_not_awaited()
+    provider.create_session.assert_not_awaited()
+
+
+async def test_dynamic_sender_accounts_stay_user_scoped_and_keep_source_identity(
+    monkeypatch, provider
+):
+    first = _dynamic_connection()
+    second = _dynamic_connection(user_id=uuid4(), composio_account_id="ca_second")
+    accounts = {first.user_id: first, second.user_id: second}
+
+    async def owned(_db, *, user_id, catalog_key):
+        assert catalog_key == "composio-google_sheets"
+        return [accounts[user_id]]
+
+    monkeypatch.setattr(
+        mcp_connection.mcp_connection_repo, "list_user_scoped_by_catalog_key", owned
+    )
+    provider.create_session.side_effect = [
+        f"{_ORIGIN}/tool_router/trs_first/mcp",
+        f"{_ORIGIN}/tool_router/trs_second/mcp",
+    ]
+    ref = PersonalMcpServerRef(
+        account="personal",
+        catalog_key="composio-google_sheets",
+        allowed_tools=[_DYNAMIC_TOOLS[1]],
+        approval="all",
+    )
+    resolved = [
+        await mcp_connection._own_specs(AsyncMock(), ref, user_id=account.user_id)
+        for account in (first, second)
+    ]
+
+    assert all(isinstance(own, list) and len(own) == 1 for own in resolved)
+    assert [own[0].spec.source_connection_id for own in resolved] == [first.id, second.id]
+    assert [call.kwargs["user_id"] for call in provider.create_session.await_args_list] == [
+        composio_user_id(first.user_id),
+        composio_user_id(second.user_id),
+    ]
+    assert [call.kwargs["account_id"] for call in provider.create_session.await_args_list] == [
+        first.composio_account_id,
+        second.composio_account_id,
+    ]
+    assert all(own[0].spec.allowed_tools == [_DYNAMIC_TOOLS[1]] for own in resolved)
 
 
 @pytest.mark.parametrize(
@@ -441,6 +552,27 @@ async def test_actual_toolset_filters_router_tools_and_retains_approval_and_sour
     assert origins[0].identity.authorization_generation == connection.authorization_generation
 
 
+async def test_dynamic_read_only_looking_actions_still_require_approval(monkeypatch, provider):
+    spec = await _spec(_dynamic_connection(), name="composio-google_sheets", approval="none")
+    assert spec is not None and spec.approval == "all"
+
+    def result() -> str:
+        return "read"
+
+    inner = FunctionToolset(
+        [Tool(result, name=_DYNAMIC_TOOLS[0], metadata={"annotations": {"readOnlyHint": True}})]
+    )
+    monkeypatch.setattr(mcp, "MCPToolset", MagicMock(return_value=inner))
+    monkeypatch.setattr(mcp, "_origin_bound_client", MagicMock(return_value=object()))
+    ctx = RunContext(deps=object(), model=TestModel(), usage=RunUsage())
+
+    tools = await mcp._make_toolset(spec).get_tools(ctx)
+
+    assert list(tools) == [f"{tool_prefix(spec.name)}_{_DYNAMIC_TOOLS[0]}"]
+    tool = next(iter(tools.values())).tool_def
+    assert tool.metadata[mcp.NEEDS_APPROVAL] is True
+
+
 async def test_managed_metadata_cannot_fall_through_to_generic_bearer_transport():
     assert await mcp_connection.resolve_auth_headers(_connection()) is None
 
@@ -662,6 +794,40 @@ async def test_assistant_app_bindings_preserve_explicit_ceilings_and_only_add_co
     assert runtime.with_app_connection_bindings(updated) is updated
 
 
+def test_dynamic_assistant_bindings_are_sender_catalog_only_and_require_all_approvals():
+    explicit = PersonalMcpServerRef(
+        account="personal",
+        catalog_key="composio-google_sheets",
+        allowed_tools=[_DYNAMIC_TOOLS[1]],
+        approval="none",
+    )
+    spec = AgentSpec(name="Assistant", mcp_servers=[explicit])
+
+    updated = runtime.with_app_connection_bindings(
+        spec,
+        dynamic_catalog_keys=[
+            "composio-google_sheets",
+            "composio-gmail",
+            "composio-invalid toolkit",
+        ],
+    )
+
+    dynamic = [
+        ref
+        for ref in updated.mcp_servers
+        if isinstance(ref, PersonalMcpServerRef) and ref.catalog_key == "composio-google_sheets"
+    ]
+    assert len(dynamic) == 1
+    assert dynamic[0].allowed_tools == [_DYNAMIC_TOOLS[1]]
+    # The runtime tightens a legacy ref to require approval while retaining its
+    # explicit per-agent tool ceiling.
+    assert dynamic[0].approval == "all"
+    assert not any(
+        isinstance(ref, PersonalMcpServerRef) and ref.catalog_key == "composio-invalid toolkit"
+        for ref in updated.mcp_servers
+    )
+
+
 @pytest.mark.parametrize("missing", ["key", "blank_key", "configs", "blank_config", "reviewed_app"])
 async def test_unconfigured_managed_apps_leave_assistant_specs_unchanged(monkeypatch, missing):
     if missing in {"key", "blank_key"}:
@@ -687,6 +853,7 @@ async def test_only_the_organizations_registered_assistant_receives_auto_binding
     monkeypatch, identity
 ):
     organization_id = uuid4()
+    sender_id = uuid4()
     agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
     assistant = (
         None
@@ -698,17 +865,112 @@ async def test_only_the_organizations_registered_assistant_receives_auto_binding
     monkeypatch.setattr(
         agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=assistant)
     )
+    dynamic_lookup = AsyncMock(return_value=[_dynamic_connection(user_id=sender_id)])
+    monkeypatch.setattr(
+        agent_registry.mcp_connection_repo, "list_composio_for_user", dynamic_lookup
+    )
     spec = AgentSpec(
         name="Assistant", mcp_servers=[PlatformMcpServerRef(account="platform", allowed_tools=[])]
     )
-    actual = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(
-        agent, spec
+    db = AsyncMock()
+    actual = await agent_registry.AgentRegistryService(db).with_assistant_guidance(
+        agent, spec, sender_user_id=sender_id
     )
     personal = [ref for ref in actual.mcp_servers if isinstance(ref, PersonalMcpServerRef)]
 
     assert spec.mcp_servers == [PlatformMcpServerRef(account="platform", allowed_tools=[])]
     if identity == "registered":
-        assert {ref.catalog_key for ref in personal} == {"composio-gmail", "composio-slack"}
+        assert {ref.catalog_key for ref in personal} == {
+            "composio-gmail",
+            "composio-slack",
+            "composio-google_sheets",
+        }
+        dynamic_lookup.assert_awaited_once_with(db, user_id=sender_id)
     else:
         assert actual is spec
         assert personal == []
+        dynamic_lookup.assert_not_awaited()
+
+
+async def test_registered_assistant_without_a_sender_does_not_discover_dynamic_apps(monkeypatch):
+    organization_id = uuid4()
+    agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
+    assistant = SimpleNamespace(organization_id=organization_id)
+    monkeypatch.setattr(
+        agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=assistant)
+    )
+    lookup = AsyncMock(return_value=[_dynamic_connection()])
+    monkeypatch.setattr(agent_registry.mcp_connection_repo, "list_composio_for_user", lookup)
+    spec = AgentSpec(
+        name="Assistant", mcp_servers=[PlatformMcpServerRef(account="platform", allowed_tools=[])]
+    )
+
+    actual = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(
+        agent, spec
+    )
+
+    lookup.assert_not_awaited()
+    assert "composio-google_sheets" not in {
+        ref.catalog_key for ref in actual.mcp_servers if isinstance(ref, PersonalMcpServerRef)
+    }
+
+
+async def test_registered_assistant_discovers_only_active_dynamic_apps_of_the_sender(monkeypatch):
+    organization_id = uuid4()
+    sender_id = uuid4()
+    agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
+    assistant = SimpleNamespace(organization_id=organization_id)
+    monkeypatch.setattr(
+        agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=assistant)
+    )
+    dynamic = _dynamic_connection(user_id=sender_id)
+    inactive = _dynamic_connection(
+        user_id=sender_id,
+        catalog_key="composio-dropbox",
+        name="dropbox-account",
+        url=f"{_ORIGIN}/api/v3.1/toolkits/dropbox",
+        is_enabled=False,
+    )
+    not_active = _dynamic_connection(
+        user_id=sender_id,
+        catalog_key="composio-linear",
+        name="linear-account",
+        url=f"{_ORIGIN}/api/v3.1/toolkits/linear",
+        composio_status="INITIATED",
+    )
+    lookup = AsyncMock(return_value=[dynamic, inactive, not_active])
+    monkeypatch.setattr(agent_registry.mcp_connection_repo, "list_composio_for_user", lookup)
+    spec = AgentSpec(
+        name="Assistant", mcp_servers=[PlatformMcpServerRef(account="platform", allowed_tools=[])]
+    )
+
+    actual = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(
+        agent, spec, sender_user_id=sender_id
+    )
+
+    lookup.assert_awaited_once()
+    assert lookup.await_args.kwargs == {"user_id": sender_id}
+    dynamic_refs = [
+        ref
+        for ref in actual.mcp_servers
+        if isinstance(ref, PersonalMcpServerRef)
+        and ref.catalog_key.startswith("composio-")
+        and ref.catalog_key not in {"composio-gmail", "composio-slack"}
+    ]
+    assert [(ref.catalog_key, ref.allowed_tools, ref.approval) for ref in dynamic_refs] == [
+        ("composio-google_sheets", None, "all")
+    ]
+
+
+async def test_generic_mcp_create_cannot_forge_dynamic_composio_keys():
+    service = mcp_connection.McpConnectionService(AsyncMock())
+
+    with pytest.raises(BadRequestError, match="from Connections"):
+        await service.create(
+            user_id=uuid4(),
+            data=McpConnectionCreate(
+                name="forged-app",
+                url="https://backend.composio.dev/api/v3.1/toolkits/private",
+                catalog_key="Composio-private_toolkit",
+            ),
+        )
