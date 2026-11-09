@@ -5,9 +5,11 @@ connected application's own APIs. Keep the platform diff small so upstream
 security fixes and improvements remain practical to adopt.
 
 This directory contains extension guidance, the selected
-[upstream baseline](upstream.json), and deployment instructions for the native
-[Composio app connection journey](composio/README.md). Each integration records
-its own validation and live acceptance requirements.
+[upstream baseline](upstream.json), deployment instructions for the native
+[Composio app connection journey](composio/README.md), and the
+[Docker image retention operator helper](docker-image-retention/README.md).
+The helper is separate from application integrations; no adapter implementation
+or runtime compatibility result is claimed.
 
 ## Choose the extension interface
 

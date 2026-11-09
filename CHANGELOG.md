@@ -47,6 +47,14 @@ Two things are versioned separately from this file and worth knowing about:
   adds it under a Pinned heading in the left navigation, in the order it was
   pinned; unpinning removes it. Pins are per person, and a pinned app the
   reader can no longer open simply is not listed.
+- Added an opt-in Docker image retention operator helper with a dry-run default,
+  explicit current and previous successful release pins, protection for images
+  referenced by any container, and a pre-deployment disk-space check. Installation
+  and deployment-lock coordination are explicit; this does not enable a cleanup
+  schedule or change Coolify settings automatically.
+- Added opt-in systemd units for daily removal of Docker build cache unused for
+  24 hours, independent of disk usage. This separate cache-only job leaves images,
+  containers, volumes and networks intact.
 
 ### Changed
 
