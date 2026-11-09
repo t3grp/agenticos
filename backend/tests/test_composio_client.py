@@ -96,6 +96,58 @@ async def test_deprecated_user_response_can_be_absent_but_query_is_owner_scoped(
     assert result.user_id is None
 
 
+async def test_auth_config_discovery_is_exact_and_owner_scoped():
+    def handler(request):
+        assert request.method == "GET"
+        assert str(request.url.copy_with(query=None)) == (
+            "https://backend.composio.dev/api/v3.1/connected_accounts"
+        )
+        assert dict(request.url.params) == {
+            "user_ids": "member-1",
+            "toolkit_slugs": "microsoft_teams",
+            "connected_account_ids": "ca_expected",
+            "limit": "2",
+            "account_type": "PRIVATE",
+        }
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    account(
+                        toolkit={"slug": "microsoft_teams"},
+                        auth_config={"id": "ac_resolved"},
+                    )
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        result = await ComposioClient(http).discover_account_auth_config(
+            user_id="member-1", toolkit="microsoft_teams", account_id="ca_expected"
+        )
+    assert result.auth_config.id == "ac_resolved"
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"id": "ca_other"},
+        {"user_id": "another-member"},
+        {"toolkit": {"slug": "slack"}},
+    ],
+)
+async def test_auth_config_discovery_rejects_wrong_account_owner_or_toolkit(override):
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"items": [account(**override)]})
+        )
+    ) as http:
+        with pytest.raises(ExternalServiceError, match="did not match"):
+            await ComposioClient(http).discover_account_auth_config(
+                user_id="member-1", toolkit="gmail", account_id="ca_expected"
+            )
+
+
 @pytest.mark.parametrize(
     "override",
     [
@@ -186,6 +238,109 @@ async def test_link_uses_server_user_and_returns_only_safe_link_fields():
         )
     assert result.connected_account_id == "ca_expected"
     assert "internal-link-secret" not in result.model_dump_json()
+
+
+async def test_managed_link_session_is_single_toolkit_and_excludes_credentials():
+    def handler(request):
+        assert request.method == "POST"
+        assert str(request.url) == "https://backend.composio.dev/api/v3.1/tool_router/session"
+        assert request.headers["x-api-key"] == "synthetic-project-secret"
+        assert json.loads(request.content) == {
+            "user_id": "member-1",
+            "toolkits": {"enable": ["microsoft_teams"]},
+            "tools": {"microsoft_teams": {"enable": ["MICROSOFT_TEAMS_SEARCH_MESSAGES"]}},
+            "manage_connections": {"enable": False},
+            "workbench": {"enable": False},
+            "preload": {"tools": "all"},
+            "search": {"enable": False},
+            "execute": {"enable_multi_execute": False},
+            "proxy_execute": {"enable": False},
+            "instant": False,
+        }
+        return httpx.Response(
+            201,
+            json={
+                "session_id": "trs_synthetic_1",
+                "mcp": {"url": "https://backend.composio.dev/tool_router/session/synthetic/mcp"},
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        result = await ComposioClient(http).create_link_session(
+            user_id="member-1",
+            toolkit="microsoft_teams",
+            tools=["MICROSOFT_TEAMS_SEARCH_MESSAGES"],
+        )
+    assert result == "trs_synthetic_1"
+
+
+@pytest.mark.parametrize(
+    "tools",
+    [[], ["COMPOSIO_EXECUTE"], ["SEARCH", "bad/name"], ["SEARCH"] * 1001],
+)
+async def test_managed_link_session_rejects_unsafe_or_unbounded_tools_before_request(tools):
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: pytest.fail("must not call provider"))
+    ) as http:
+        with pytest.raises(ValueError, match="bounded explicit tool list"):
+            await ComposioClient(http).create_link_session(
+                user_id="member-1", toolkit="microsoft_teams", tools=tools
+            )
+
+
+async def test_managed_link_uses_saved_session_and_checks_redirect_origin():
+    def handler(request):
+        assert request.method == "POST"
+        assert str(request.url) == (
+            "https://backend.composio.dev/api/v3.1/tool_router/session/trs_synthetic_1/link"
+        )
+        assert json.loads(request.content) == {"toolkit": "microsoft_teams"}
+        return httpx.Response(
+            201,
+            json={
+                "link_token": "internal-link-secret",
+                "connected_account_id": "ca_expected",
+                "redirect_url": "https://connect.composio.dev/link/synthetic",
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        before = datetime.now(UTC)
+        result = await ComposioClient(http).link_session(
+            session_id="trs_synthetic_1", toolkit="microsoft_teams"
+        )
+    assert result.connected_account_id == "ca_expected"
+    assert before + timedelta(minutes=29) < result.expires_at < before + timedelta(minutes=31)
+    assert "internal-link-secret" not in result.model_dump_json()
+
+
+@pytest.mark.parametrize(
+    "status,url", [(201, "https://evil.example/link"), (302, "https://connect.composio.dev/link")]
+)
+async def test_managed_link_does_not_follow_or_accept_foreign_redirects(status, url):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if status == 302:
+            return httpx.Response(status, headers={"location": url})
+        return httpx.Response(
+            status,
+            json={
+                "link_token": "internal-link-secret",
+                "connected_account_id": "ca_expected",
+                "redirect_url": url,
+            },
+        )
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), follow_redirects=True
+    ) as http:
+        with pytest.raises(ExternalServiceError):
+            await ComposioClient(http).link_session(
+                session_id="trs_synthetic_1", toolkit="microsoft_teams"
+            )
+    assert len(requests) == 1
 
 
 @pytest.mark.parametrize(

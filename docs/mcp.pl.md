@@ -1,5 +1,5 @@
 ---
-source_sha: "c5fb177443aa"
+source_sha: "ea2cb6df8b65"
 ---
 
 # MCP — narzędzia, których nikt tutaj nie musi pisać { #mcp-the-tools-nobody-here-has-to-write }
@@ -26,23 +26,37 @@ przez adres serwera lub zarządzane połączenie z aplikacją.
 
 ## Połącz aplikację przez Composio { #connect-an-app-through-composio }
 
-W T3OS wybierz **Connectors → Apps**, określ pierwsze zadanie i połącz Gmail,
-Outlook, Google Calendar, Google Drive, Slack, Notion lub GitHub, jeśli operator
-włączył daną aplikację. Każde konto wymaga osobnej zgody u dostawcy. Po
-weryfikacji konta przez backend możesz uruchomić rzeczywiste zadanie odczytu
-w swoim asystencie.
+W T3OS **Połączenia → Aplikacje (Connections → Apps)** pozwalają wyszukiwać i
+przeglądać katalog aplikacji Composio. Wybrany cel wyróżnia sugerowane aplikacje,
+nie ukrywając pozostałych. Zarządzane uwierzytelnianie jest dostępne, jeśli
+obsługuje je dostawca; aplikacje wymagające konfiguracji uwierzytelniania
+operatora mają status **Wymagana konfiguracja (Setup required)**. Każde konto
+autoryzujesz osobno, a backend sprawdza, czy zwrócone konto należy do Ciebie.
 
-Konta należą do Ciebie, a ich użycie zależy od autora bieżącej wiadomości.
-Początkowy zestaw akcji odczytuje dane; nie wysyła wiadomości ani nie zmienia
-rekordów. Composio przechowuje poświadczenia dostawcy i pośredniczy w żądaniach
-oraz wynikach. Połączona aplikacja nie staje się automatycznie synchronizowanym
-źródłem wiedzy. Istniejące osobiste i organizacyjne połączenia MCP pozostają
-dostępne w **Advanced**.
+Dostęp do kont jest dopasowywany do autora każdej wiadomości. Pierwotnych siedem
+integracji zachowuje sprawdzone akcje odczytu. Dla innych obsługiwanych aplikacji
+podczas łączenia zapisuje się jawna lista narzędzi, a każda akcja wymaga Twojej
+zgody. Późniejsza aktualizacja katalogu nie może po cichu rozszerzyć dostępu do
+narzędzi tego konta.
 
-Operator konfiguruje klucz projektu, konfiguracje uwierzytelniania i weryfikację
-tożsamości przy powrocie z logowania. Zobacz
+**Połączenia → Serwery MCP (Connections → MCP servers)** służą do zarządzania
+istniejącymi osobistymi, organizacyjnymi i własnymi serwerami MCP. Oba rodzaje
+połączeń korzystają z tej samej infrastruktury określania właściciela konta,
+limitów narzędzi i zatwierdzania. Kanały czatu, zdalne agenty, vault i sandboxy
+są dostępne na karcie **Więcej (More)**. Istniejące odnośniki `?tab=advanced`
+nadal otwierają Serwery MCP.
+
+Composio przechowuje poświadczenia dostawców i pośredniczy w żądaniach oraz
+wynikach. Połączenie aplikacji nie synchronizuje jej automatycznie jako źródła
+wiedzy. Opcjonalna konfiguracja jest też dostępna pod `/onboarding` i w menu
+konta.
+
+Operator konfiguruje klucz projektu runtime, osobny klucz do odczytu metadanych
+katalogu, ewentualne własne konfiguracje uwierzytelniania toolkitów oraz
+weryfikację tożsamości po powrocie z autoryzacji. Zobacz
 [instrukcję konfiguracji Composio](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
-z opisem przetwarzania danych i wymaganych testów z rzeczywistym dostawcą.
+z informacjami o konfiguracji, przetwarzaniu danych i wymaganych testach
+akceptacyjnych na żywym dostawcy.
 
 ## Połączenie { #a-connection }
 

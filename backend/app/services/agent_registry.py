@@ -3872,11 +3872,19 @@ class AgentRegistryService:
             )
         return agent, AgentSpec.model_validate(version.spec), version.id
 
-    async def with_assistant_guidance(self, agent: Agent, spec: AgentSpec) -> AgentSpec:
+    async def with_assistant_guidance(
+        self,
+        agent: Agent,
+        spec: AgentSpec,
+        *,
+        sender_user_id: UUID | None = None,
+    ) -> AgentSpec:
         """Add current guidance and personal apps to the registered assistant's runtime copy.
 
         Existing installations keep their customized stored specs. Other agents
         and external MCP clients keep their own workflow, even with platform tools.
+        Dynamic personal apps are discovered only from the authenticated sender's
+        own managed rows, and are never added to the stored or publishable spec.
         """
         platform = next(
             (ref for ref in spec.mcp_servers if isinstance(ref, PlatformMcpServerRef)), None
@@ -3887,7 +3895,33 @@ class AgentRegistryService:
         assistant = await organization_assistant_repo.for_agent(self.db, agent.id)
         if assistant is None or assistant.organization_id != agent.organization_id:
             return spec
+        from app.services.app_connections import get_app_by_catalog_key, toolkit_from_catalog_key
         from app.services.app_connections.runtime import with_app_connection_bindings
+
+        dynamic_catalog_keys: set[str] = set()
+        if sender_user_id is not None:
+            for connection in await mcp_connection_repo.list_composio_for_user(
+                self.db, user_id=sender_user_id
+            ):
+                key = connection.catalog_key
+                if (
+                    key is None
+                    or get_app_by_catalog_key(key) is not None
+                    or toolkit_from_catalog_key(key) is None
+                    or connection.user_id != sender_user_id
+                    or connection.organization_id is not None
+                    or connection.scope != "user"
+                    or connection.purpose != "mcp"
+                    or connection.auth_type != "composio"
+                    or not connection.is_enabled
+                    or connection.composio_status != "ACTIVE"
+                    or not connection.composio_account_id
+                    or not connection.composio_auth_config_id
+                    or not connection.allowed_tools
+                    or len(connection.allowed_tools) > 1000
+                ):
+                    continue
+                dynamic_catalog_keys.add(key)
 
         guidance = (
             (agent_templates.TEMPLATES_ROOT / "general/platform-assistant/PROJECTS.md")
@@ -3917,9 +3951,12 @@ class AgentRegistryService:
                 instructions,
             )
         if not additions and instructions == spec.instructions:
-            return with_app_connection_bindings(spec)
+            return with_app_connection_bindings(
+                spec, dynamic_catalog_keys=sorted(dynamic_catalog_keys)
+            )
         return with_app_connection_bindings(
-            spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+            spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])}),
+            dynamic_catalog_keys=sorted(dynamic_catalog_keys),
         )
 
     async def refuse_a_switched_off_assistant(self, agent_id: UUID) -> None:

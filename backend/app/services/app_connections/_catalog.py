@@ -5,6 +5,7 @@ Adding a write requires the corresponding T3OS approval and execution tests.
 Tool names were checked against Composio's official toolkit catalog on 2026-11-09.
 """
 
+import re
 from dataclasses import dataclass
 
 from app.core.exceptions import BadRequestError
@@ -112,6 +113,8 @@ APPS: tuple[ComposioApp, ...] = (
     ),
 )
 
+_TOOLKIT_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,54}$")
+
 
 def get_app(toolkit: str) -> ComposioApp:
     for app in APPS:
@@ -124,3 +127,16 @@ def get_app(toolkit: str) -> ComposioApp:
 
 def get_app_by_catalog_key(key: str | None) -> ComposioApp | None:
     return next((app for app in APPS if app.catalog_key == key), None)
+
+
+def toolkit_from_catalog_key(key: str | None) -> str | None:
+    """Read a syntactically valid Composio key without blessing it for publish.
+
+    Public agent bindings remain validated against the reviewed static catalog.
+    This parser is for rows the managed app service created after checking the
+    official toolkit directory and is not an authorization decision on its own.
+    """
+    if key is None or not key.startswith("composio-"):
+        return None
+    toolkit = key.removeprefix("composio-")
+    return toolkit if _TOOLKIT_SLUG.fullmatch(toolkit) else None

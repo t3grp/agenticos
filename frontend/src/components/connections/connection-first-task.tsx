@@ -32,20 +32,18 @@ export function ConnectionFirstTask({
   const { assistant, isLoading, error, retry } = useAssistant();
   const [selectedId, setSelectedId] = useState("");
   const [sent, setSent] = useState(false);
-  const eligible = connections.filter(
-    (connection) =>
-      appConnectionUsable(connection) && GOAL_TOOLKITS[goal].includes(connection.toolkit),
-  );
+  const eligible = connections.filter(appConnectionUsable);
   const selected =
     eligible.find((connection) => connection.id === selectedId) ??
     eligible.find((connection) => connection.is_default) ??
     eligible[0];
+  const matchesGoal = selected && GOAL_TOOLKITS[goal].includes(selected.toolkit);
   const canAsk =
     !error && assistant?.status === "ready" && assistant.can_use && assistant.agent_id !== null;
   function ask() {
     if (!selected || !canAsk || !isCurrentAppConnectionScope(scope)) return;
     useArchitectAskStore.getState().ask(
-      t(`goals.${goal}.prompt`, {
+      t(matchesGoal ? `goals.${goal}.prompt` : "exploreAppPrompt", {
         toolkit: selected.toolkit,
         account: appConnectionLabel(selected),
         connection: selected.id,
@@ -103,7 +101,7 @@ export function ConnectionFirstTask({
           )}
           {assistant?.can_use && (
             <Button disabled={!canAsk || isLoading || sent} onClick={ask}>
-              {t(`goals.${goal}.title`)}
+              {t(matchesGoal ? `goals.${goal}.title` : "exploreApp")}
               <ArrowRight aria-hidden />
             </Button>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   completeAppConnection,
   connectApp,
@@ -23,7 +23,7 @@ export function isCurrentAppConnectionScope(scope: AppConnectionScope): boolean 
 }
 
 /** Account switches must not publish stale data or follow a previous user's consent URL. */
-export function useAppConnections(scope: AppConnectionScope) {
+export function useAppConnections(scope: AppConnectionScope, search = "") {
   const client = useQueryClient();
   const key = qk.appConnections.scope(scope.userId, scope.orgId);
   async function inScope<T>(run: () => Promise<T>): Promise<T> {
@@ -32,9 +32,13 @@ export function useAppConnections(scope: AppConnectionScope) {
     if (!isCurrentAppConnectionScope(scope)) throw new DOMException("scope_changed", "AbortError");
     return result;
   }
-  const catalog = useQuery({
-    queryKey: qk.appConnections.catalog(scope.userId, scope.orgId),
-    queryFn: ({ signal }) => inScope(() => getAppConnectionCatalog(signal)),
+  const catalog = useInfiniteQuery({
+    queryKey: qk.appConnections.catalog(scope.userId, scope.orgId, search),
+    queryFn: ({ signal, pageParam }) =>
+      inScope(() => getAppConnectionCatalog(signal, search, pageParam)),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last, _pages, _lastParam, params) =>
+      last.next_cursor && !params.includes(last.next_cursor) ? last.next_cursor : undefined,
     retry: false,
   });
   const connections = useQuery({
@@ -84,7 +88,21 @@ export function useAppConnections(scope: AppConnectionScope) {
     onSuccess: invalidate,
   });
   return {
-    catalog,
+    catalog: {
+      ...catalog,
+      data: catalog.data
+        ? {
+            ...catalog.data.pages[0],
+            catalog_available: catalog.data.pages.every((page) => page.catalog_available),
+            apps: [
+              ...new Map(
+                catalog.data.pages.flatMap((page) => page.apps).map((app) => [app.key, app]),
+              ).values(),
+            ],
+            next_cursor: catalog.data.pages.at(-1)?.next_cursor ?? null,
+          }
+        : undefined,
+    },
     connections,
     begin,
     complete,

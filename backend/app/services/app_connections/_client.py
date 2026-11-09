@@ -6,20 +6,24 @@ exception text. The provider hosts account credentials; our vault holds only a
 short-lived, owner-bound record of the consent attempt.
 """
 
-from datetime import datetime
+import re
+from datetime import UTC, datetime, timedelta
 from types import TracebackType
 from typing import Literal
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 from uuid import UUID
 
 import httpx
-from pydantic import BaseModel, Field, SecretStr, ValidationError
+from pydantic import BaseModel, Field, SecretStr, ValidationError, field_validator
 
 from app.core.config import settings
 from app.core.exceptions import ConfigurationError, ExternalServiceError
 
 _BASE_URL = "https://backend.composio.dev/api/v3.1"
 _PROVIDER_ERROR = "The app connection provider could not complete this request. Try again."
+_DIRECT_TOOL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+_TOOLKIT_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,54}$")
+_MAX_DYNAMIC_TOOLS = 1000
 
 
 def composio_user_id(user_id: UUID) -> str:
@@ -29,6 +33,120 @@ def composio_user_id(user_id: UUID) -> str:
 
 class _Toolkit(BaseModel):
     slug: str
+
+
+class _ToolkitCategory(BaseModel):
+    id: str | None = None
+    slug: str | None = None
+    name: str
+
+
+class _ToolkitMeta(BaseModel):
+    description: str = ""
+    categories: list[_ToolkitCategory] = Field(default_factory=list)
+    tools_count: int = Field(default=0, ge=0)
+
+
+class _DeprecatedCompatibility(BaseModel):
+    """Legacy compatibility metadata; only its nested flag carries policy."""
+
+    is_deprecated: bool = False
+
+
+class ComposioToolkitMetadata(BaseModel):
+    """The small public subset needed to list or authorize an official toolkit."""
+
+    slug: str
+    name: str
+    no_auth: bool = False
+    deprecated: bool | _DeprecatedCompatibility | None = None
+    is_deprecated: bool = False
+    enabled: bool = True
+    composio_managed_auth_schemes: list[str] = Field(default_factory=list)
+    managed_auth_schemes: list[str] = Field(default_factory=list)
+    composio_managed_auth: object | None = None
+    description: str = ""
+    categories: list[_ToolkitCategory] = Field(default_factory=list)
+    tools_count: int | None = Field(default=None, ge=0)
+    meta: _ToolkitMeta = Field(default_factory=_ToolkitMeta)
+
+    @field_validator("deprecated", mode="before")
+    @classmethod
+    def parse_legacy_deprecated(cls, value: object) -> object:
+        if value is None or isinstance(value, (bool, dict)):
+            return value
+        return None
+
+    @property
+    def is_deprecated_flag(self) -> bool:
+        return (
+            self.is_deprecated
+            or self.deprecated is True
+            or (
+                isinstance(self.deprecated, _DeprecatedCompatibility)
+                and self.deprecated.is_deprecated
+            )
+        )
+
+    @property
+    def has_managed_auth(self) -> bool:
+        schemes = self.composio_managed_auth_schemes or self.managed_auth_schemes
+        return not self.no_auth and any(scheme.upper() != "NO_AUTH" for scheme in schemes)
+
+    @property
+    def action_count(self) -> int:
+        return self.tools_count if self.tools_count is not None else self.meta.tools_count
+
+    @property
+    def summary(self) -> str:
+        return self.description or self.meta.description
+
+    @property
+    def category_name(self) -> str:
+        categories = self.categories or self.meta.categories
+        return categories[0].name if categories else "apps"
+
+
+class _ToolkitPage(BaseModel):
+    items: list[ComposioToolkitMetadata] = Field(default_factory=list)
+    next_cursor: str | None = None
+
+
+class _ToolMetadata(BaseModel):
+    slug: str
+    toolkit: _Toolkit
+    is_deprecated: bool = False
+    deprecated: bool | _DeprecatedCompatibility | None = None
+    no_auth: bool = False
+
+    @field_validator("deprecated", mode="before")
+    @classmethod
+    def parse_legacy_deprecated(cls, value: object) -> object:
+        if value is None or isinstance(value, (bool, dict)):
+            return value
+        return None
+
+    @property
+    def is_deprecated_flag(self) -> bool:
+        return (
+            self.is_deprecated
+            or self.deprecated is True
+            or (
+                isinstance(self.deprecated, _DeprecatedCompatibility)
+                and self.deprecated.is_deprecated
+            )
+        )
+
+
+class _ToolPage(BaseModel):
+    items: list[_ToolMetadata] = Field(default_factory=list)
+    next_cursor: str | None = None
+
+
+class _SessionLinkResponse(BaseModel):
+    link_token: str = Field(min_length=1, max_length=4096)
+    redirect_url: str
+    connected_account_id: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 class _AuthConfig(BaseModel):
@@ -88,6 +206,7 @@ class _McpEndpoint(BaseModel):
 
 
 class _Session(BaseModel):
+    session_id: str | None = None
     mcp: _McpEndpoint
 
 
@@ -231,6 +350,39 @@ class ComposioClient:
             raise ExternalServiceError(message="The app account did not match the saved connection")
         return account
 
+    async def discover_account_auth_config(
+        self, *, user_id: str, toolkit: str, account_id: str
+    ) -> ComposioAccount:
+        """Resolve auth metadata using an exact, owner-scoped account query."""
+        result = await self._request(
+            "GET",
+            "/connected_accounts",
+            _Accounts,
+            params={
+                "user_ids": user_id,
+                "toolkit_slugs": toolkit,
+                "connected_account_ids": account_id,
+                "limit": "2",
+                "account_type": "PRIVATE",
+            },
+        )
+        if not result.items:
+            raise ComposioAccountMissing()
+        if len(result.items) != 1:
+            raise ExternalServiceError(
+                message="The app account did not match this connection attempt"
+            )
+        account = result.items[0]
+        if (
+            account.id != account_id
+            or account.toolkit.slug != toolkit
+            or account.user_id not in (None, user_id)
+        ):
+            raise ExternalServiceError(
+                message="The app account did not match this connection attempt"
+            )
+        return account
+
     async def complete_auth(self, *, session_uri: str, user_id: str) -> ComposioCompletedAuth:
         # session_uri is opaque input to the fixed provider API, never a URL
         # fetched by this server. The provider checks its signed, single-use
@@ -295,3 +447,168 @@ class ComposioClient:
             },
         )
         return _checked_url(result.mcp.url, host="backend.composio.dev")
+
+    async def create_link_session(self, *, user_id: str, toolkit: str, tools: list[str]) -> str:
+        """Create a session scoped to one toolkit before the account exists."""
+        if (
+            _TOOLKIT_SLUG.fullmatch(toolkit) is None
+            or not tools
+            or len(tools) > _MAX_DYNAMIC_TOOLS
+            or any(
+                _DIRECT_TOOL_NAME.fullmatch(tool) is None or tool.upper().startswith("COMPOSIO_")
+                for tool in tools
+            )
+        ):
+            raise ValueError("A managed app link requires a bounded explicit tool list")
+        result = await self._request(
+            "POST",
+            "/tool_router/session",
+            _Session,
+            body={
+                "user_id": user_id,
+                "toolkits": {"enable": [toolkit]},
+                "tools": {toolkit: {"enable": tools}},
+                "manage_connections": {"enable": False},
+                "workbench": {"enable": False},
+                "preload": {"tools": "all"},
+                "search": {"enable": False},
+                "execute": {"enable_multi_execute": False},
+                "proxy_execute": {"enable": False},
+                "instant": False,
+            },
+        )
+        if result.session_id is None or not re.fullmatch(
+            r"[A-Za-z0-9_-]{1,128}", result.session_id
+        ):
+            raise ExternalServiceError(
+                message="The app connection provider returned an invalid session"
+            )
+        _checked_url(result.mcp.url, host="backend.composio.dev")
+        return result.session_id
+
+    async def link_session(self, *, session_id: str, toolkit: str) -> ComposioLink:
+        """Start managed authentication through a selected-toolkit session."""
+        if (
+            not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", session_id)
+            or _TOOLKIT_SLUG.fullmatch(toolkit) is None
+        ):
+            raise ExternalServiceError(message="The saved app session identifier is invalid")
+        result = await self._request(
+            "POST",
+            f"/tool_router/session/{quote(session_id, safe='')}/link",
+            _SessionLinkResponse,
+            body={"toolkit": toolkit},
+        )
+        _checked_url(result.redirect_url, host="connect.composio.dev")
+        return ComposioLink(
+            connected_account_id=result.connected_account_id,
+            redirect_url=result.redirect_url,
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
+        )
+
+
+class ComposioCatalogClient:
+    """Read-only access to Composio's official toolkit and direct-tool directory."""
+
+    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+        key = settings.COMPOSIO_CATALOG_API_KEY
+        if key is None or not key.get_secret_value().strip():
+            raise ConfigurationError(
+                message="Set COMPOSIO_CATALOG_API_KEY to browse app connections"
+            )
+        self.api_key: SecretStr = key
+        self._client = client or httpx.AsyncClient(timeout=30.0, follow_redirects=False)
+        self._owns_client = client is None
+
+    async def __aenter__(self) -> ComposioCatalogClient:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._owns_client:
+            await self._client.aclose()
+
+    async def _request[T: BaseModel](
+        self,
+        path: str,
+        schema: type[T],
+        *,
+        params: dict[str, str] | None = None,
+    ) -> T:
+        try:
+            response = await self._client.get(
+                f"{_BASE_URL}{path}",
+                headers={"x-api-key": self.api_key.get_secret_value()},
+                params=params,
+                follow_redirects=False,
+            )
+        except httpx.HTTPError:
+            raise ExternalServiceError(message=_PROVIDER_ERROR) from None
+        if not 200 <= response.status_code < 300:
+            raise ExternalServiceError(message=_PROVIDER_ERROR)
+        try:
+            return schema.model_validate_json(response.content)
+        except ValidationError:
+            raise ExternalServiceError(
+                message="The app connection provider returned an invalid catalog response"
+            ) from None
+
+    async def list_toolkits(self, *, search: str, cursor: str | None, limit: int) -> _ToolkitPage:
+        if not 1 <= limit <= 100:
+            raise ValueError("Catalog page size is outside the supported range")
+        params = {
+            "type": "native",
+            "include_deprecated": "false",
+            "sort_by": "usage",
+            "limit": str(limit),
+        }
+        if search.strip():
+            params["search"] = search.strip()[:200]
+        if cursor:
+            params["cursor"] = cursor
+        return await self._request("/toolkits", _ToolkitPage, params=params)
+
+    async def get_toolkit(self, slug: str) -> ComposioToolkitMetadata:
+        """Read the exact toolkit detail row from the official directory."""
+        if _TOOLKIT_SLUG.fullmatch(slug) is None:
+            raise ExternalServiceError(message="The requested app identifier is invalid")
+        return await self._request(
+            f"/toolkits/{quote(slug, safe='')}",
+            ComposioToolkitMetadata,
+            params={"version": "latest"},
+        )
+
+    async def direct_tool_names(self, *, toolkit: str) -> list[str]:
+        """Return a bounded, exact allowlist of non-deprecated direct actions."""
+        result = await self._request(
+            "/tools",
+            _ToolPage,
+            params={
+                "toolkit_slug": toolkit,
+                "toolkit_versions": "latest",
+                "include_deprecated": "false",
+                "limit": str(_MAX_DYNAMIC_TOOLS),
+            },
+        )
+        if result.next_cursor or len(result.items) > _MAX_DYNAMIC_TOOLS:
+            raise ExternalServiceError(
+                message="This app needs operator setup before it can be connected"
+            )
+        names = list(
+            dict.fromkeys(
+                tool.slug
+                for tool in result.items
+                if tool.toolkit.slug == toolkit
+                and not tool.is_deprecated_flag
+                and not tool.no_auth
+                and _DIRECT_TOOL_NAME.fullmatch(tool.slug) is not None
+                and not tool.slug.upper().startswith("COMPOSIO_")
+            )
+        )
+        if not names:
+            raise ExternalServiceError(message="This app has no available direct actions")
+        return names

@@ -22,7 +22,7 @@ import { Perm } from "@/types/permissions";
 import { AppsTab } from "./apps-tab";
 import { ManualConnections } from "./manual-connections";
 
-type AdvancedEntry = {
+type MoreEntry = {
   labelKey: "channels" | "remoteAgents" | "vault" | "sandboxes";
   descriptionKey:
     "channelsDescription" | "remoteAgentsDescription" | "vaultDescription" | "sandboxesDescription";
@@ -33,11 +33,10 @@ type AdvancedEntry = {
 };
 
 /**
- * The lower-level connections, one link each. Each card names the page it opens
- * under `/connectors/…`, not the retired top-level route, so the card never
- * depends on a redirect to work.
+ * The other connection settings, one link each. Each card names the page it opens
+ * under `/connectors/…`, so the card never depends on a redirect to work.
  */
-const ADVANCED: readonly AdvancedEntry[] = [
+const MORE: readonly MoreEntry[] = [
   {
     labelKey: "channels",
     descriptionKey: "channelsDescription",
@@ -68,14 +67,13 @@ const ADVANCED: readonly AdvancedEntry[] = [
   },
 ];
 
-const TABS = ["apps", "advanced"] as const;
+const TABS = ["apps", "mcp", "more"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * Connectors: one place for everything an agent connects to. The Apps tab is
- * what most people need and is not gated here; the page shows it to every
- * caller who reaches it. Advanced links to the lower-level pages, and each card
- * appears only for a caller who holds the permission its page reads.
+ * Connections: one place for everything an agent connects to. Apps and MCP
+ * are first-class tabs; More links to the other connection settings, and each
+ * card appears only for a caller who holds the permission its page reads.
  */
 export default function ConnectorsPage() {
   const t = useTranslations("pages.connectors");
@@ -85,12 +83,14 @@ export default function ConnectorsPage() {
   const [tabParam, setTab] = useUrlState("tab");
   const search = useSearchParams();
   const manualRequest = search.has("server") || search.has("connect");
-  const tab: Tab = (TABS as readonly string[]).includes(tabParam ?? "")
-    ? (tabParam as Tab)
+  // Existing manual links use `advanced`; keep them pointed at the MCP catalog.
+  const normalizedTab = tabParam === "advanced" ? "mcp" : tabParam;
+  const tab: Tab = (TABS as readonly string[]).includes(normalizedTab ?? "")
+    ? (normalizedTab as Tab)
     : manualRequest
-      ? "advanced"
+      ? "mcp"
       : "apps";
-  const advanced = ADVANCED.filter((entry) => can(entry.permission));
+  const more = MORE.filter((entry) => can(entry.permission));
 
   return (
     <div className="flex flex-1 flex-col space-y-4">
@@ -104,8 +104,11 @@ export default function ConnectorsPage() {
           <TabsTrigger value="apps" data-tour="connectors-apps">
             {t("apps")}
           </TabsTrigger>
-          <TabsTrigger value="advanced" data-tour="connectors-advanced">
-            {t("advanced")}
+          <TabsTrigger value="mcp" data-tour="connectors-advanced">
+            {t("mcp")}
+          </TabsTrigger>
+          <TabsTrigger value="more" data-tour="connectors-more">
+            {t("more")}
           </TabsTrigger>
         </TabsList>
 
@@ -113,10 +116,14 @@ export default function ConnectorsPage() {
           <AppsTab />
         </TabsContent>
 
-        <TabsContent value="advanced" className="mt-4">
+        <TabsContent value="mcp" className="mt-4">
+          <ManualConnections />
+        </TabsContent>
+
+        <TabsContent value="more" className="mt-4">
           <p className="text-muted-foreground mb-4 text-sm">{t("advancedDescription")}</p>
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {advanced.map(({ labelKey, descriptionKey, href, icon: Icon }) => (
+            {more.map(({ labelKey, descriptionKey, href, icon: Icon }) => (
               <li key={href}>
                 <Link
                   href={href}
@@ -135,9 +142,6 @@ export default function ConnectorsPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-6">
-            <ManualConnections />
-          </div>
         </TabsContent>
       </Tabs>
     </div>

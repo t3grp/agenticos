@@ -1,5 +1,5 @@
 ---
-source_sha: "c5fb177443aa"
+source_sha: "ea2cb6df8b65"
 ---
 
 # MCP — die Tools, die hier niemand schreiben muss { #mcp-the-tools-nobody-here-has-to-write }
@@ -26,23 +26,37 @@ Tools über eine Server-URL oder eine verwaltete App-Verbindung.
 
 ## Eine App über Composio verbinden { #connect-an-app-through-composio }
 
-Unter **Connectors → Apps** in T3OS wählen Sie eine erste Aufgabe und verbinden
-Gmail, Outlook, Google Calendar, Google Drive, Slack, Notion oder GitHub, sofern
-der Betreiber die App aktiviert hat. Sie erteilen für jedes Anbieterkonto einzeln
-Ihre Zustimmung. Nach der Prüfung durch das Backend starten Sie eine echte
-Leseaufgabe mit Ihrem Assistenten.
+Unter **Verbindungen → Apps (Connections → Apps)** in T3OS können Sie den
+Composio-App-Katalog durchsuchen. Das gewählte Ziel hebt Empfehlungen hervor,
+ohne andere Apps auszublenden. Verwaltete Authentifizierung ist verfügbar, wenn
+der Anbieter sie unterstützt; Apps, die eine Auth-Konfiguration des Betreibers
+erfordern, tragen den Status **Einrichtung erforderlich (Setup required)**. Für
+jedes Konto erteilen Sie separat Ihre Zustimmung; das Backend prüft, ob das
+zurückgegebene Konto Ihnen gehört.
 
-Ihre Konten gehören Ihnen und werden für den Absender der jeweiligen Nachricht
-verwendet. Die ersten Aktionen lesen App-Daten; sie versenden keine Nachrichten
-und ändern keine Datensätze. Composio verwahrt die Anbieterzugangsdaten und
-vermittelt Anfragen und Ergebnisse. Eine verbundene App wird nicht automatisch
-als Wissensquelle synchronisiert. Bestehende persönliche und organisationsweite
-MCP-Verbindungen bleiben unter **Advanced** verfügbar.
+Ihre Konten werden dem Absender jeder Nachricht zugeordnet. Die ursprünglichen
+sieben Integrationen behalten ihre geprüften Leseaktionen. Bei anderen
+unterstützten Apps wird beim Verbinden eine explizite Tool-Liste gespeichert;
+jede Aktion muss von Ihnen bestätigt werden. Eine spätere Katalogaktualisierung
+kann den Tool-Zugriff dieses Kontos nicht unbemerkt erweitern.
 
-Der Betreiber konfiguriert einen Projektschlüssel, Authentifizierungskonfigurationen
-und die Identitätsprüfung beim Rückruf. Die
+**Verbindungen → MCP-Server (Connections → MCP servers)** verwaltet bestehende
+persönliche, organisationsweite und benutzerdefinierte MCP-Server. Beide
+Verbindungstypen nutzen dieselbe Infrastruktur für Kontozuordnung, Tool-Limits
+und Freigaben. Chat-Kanäle, Remote-Agenten, der Vault und Sandboxes stehen unter
+**Mehr (More)**. Bestehende `?tab=advanced`-Links öffnen weiterhin die
+MCP-Server.
+
+Composio verwahrt Anbieterzugangsdaten und vermittelt Anfragen und Ergebnisse.
+Eine verbundene App wird nicht automatisch mit einer Wissensdatenbank
+synchronisiert. Die optionale Einrichtung steht weiterhin unter `/onboarding`
+und im Kontomenü zur Verfügung.
+
+Der Betreiber konfiguriert einen Runtime-Projektschlüssel, einen separaten
+Schlüssel für Katalogmetadaten, etwaige eigene Toolkit-Authentifizierungskonfigurationen
+und die Identitätsprüfung bei der Rückkehr. Die
 [Composio-Einrichtungsanleitung](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
-beschreibt Konfiguration, Datenverarbeitung und erforderliche Praxistests.
+beschreibt Konfiguration, Datenverarbeitung und erforderliche Live-Abnahmetests.
 
 ## Eine Connection { #a-connection }
 

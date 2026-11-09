@@ -1,0 +1,292 @@
+"""Read-only Composio catalog boundary tests."""
+
+import httpx
+import pytest
+from pydantic import SecretStr
+
+from app.core.config import settings
+from app.core.exceptions import ConfigurationError, ExternalServiceError
+from app.services.app_connections._client import ComposioCatalogClient
+
+pytestmark = pytest.mark.anyio
+
+CATALOG_KEY = "synthetic-catalog-secret"
+RUNTIME_KEY = "synthetic-runtime-secret"
+
+
+@pytest.fixture(autouse=True)
+def provider_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "COMPOSIO_API_KEY", SecretStr(RUNTIME_KEY))
+    monkeypatch.setattr(settings, "COMPOSIO_CATALOG_API_KEY", SecretStr(CATALOG_KEY))
+
+
+def toolkit_row() -> dict[str, object]:
+    return {
+        "slug": "microsoft_teams",
+        "name": "Microsoft Teams",
+        "no_auth": False,
+        "deprecated": {
+            "toolkitId": "microsoft_teams",
+            "getCurrentUserEndpoint": "/me",
+            "rawProxyInfoByAuthSchemes": [{"auth_scheme": "OAUTH2"}],
+        },
+        "enabled": True,
+        "composio_managed_auth_schemes": ["OAUTH2"],
+        "composio_managed_auth": [
+            {"mode": "OAUTH2", "scopes": {"available": ["admin", "read", "write"]}}
+        ],
+        "meta": {
+            "description": "Manage channels and messages.",
+            "categories": [{"slug": "productivity", "name": "Productivity"}],
+            "tools_count": 42,
+        },
+        # The provider may return extra fields. They must not cross this metadata boundary.
+        "access_token": "catalog-response-token-must-not-escape",
+    }
+
+
+def direct_tool(
+    slug: str,
+    toolkit: str = "microsoft_teams",
+    *,
+    deprecated: bool = False,
+    legacy_deprecated: bool = False,
+) -> dict[str, object]:
+    return {
+        "slug": slug,
+        "toolkit": {"slug": toolkit, "logo": "https://example.test/toolkit.svg"},
+        "deprecated": {
+            "displayName": "Archive issue",
+            "version": "20261101_00",
+            "available_versions": ["20261101_00"],
+            "is_deprecated": legacy_deprecated,
+        },
+        "is_deprecated": deprecated,
+    }
+
+
+@pytest.mark.parametrize("key", [None, SecretStr(""), SecretStr("   ")])
+def test_catalog_requires_its_separate_nonempty_credential(
+    monkeypatch: pytest.MonkeyPatch, key: SecretStr | None
+) -> None:
+    monkeypatch.setattr(settings, "COMPOSIO_CATALOG_API_KEY", key)
+    with pytest.raises(ConfigurationError, match="COMPOSIO_CATALOG_API_KEY"):
+        ComposioCatalogClient()
+
+
+async def test_toolkit_listing_uses_fixed_origin_catalog_key_and_paging_params() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.method == "GET"
+        assert (
+            str(request.url.copy_with(query=None))
+            == "https://backend.composio.dev/api/v3.1/toolkits"
+        )
+        assert dict(request.url.params) == {
+            "type": "native",
+            "include_deprecated": "false",
+            "sort_by": "usage",
+            "limit": "24",
+            "search": "calendar events",
+            "cursor": "page_2",
+        }
+        assert request.headers["x-api-key"] == CATALOG_KEY
+        assert RUNTIME_KEY not in str(request.headers)
+        assert request.content == b""
+        return httpx.Response(200, json={"items": [toolkit_row()], "next_cursor": "page_3"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        page = await ComposioCatalogClient(http).list_toolkits(
+            search="  calendar events  ", cursor="page_2", limit=24
+        )
+
+    assert len(requests) == 1
+    assert page.next_cursor == "page_3"
+    item = page.items[0]
+    assert item.slug == "microsoft_teams"
+    assert item.has_managed_auth
+    assert item.action_count == 42
+    assert item.summary == "Manage channels and messages."
+    assert item.category_name == "Productivity"
+    serialized = page.model_dump_json()
+    assert "catalog-response-token-must-not-escape" not in serialized
+    assert "getCurrentUserEndpoint" not in serialized
+    assert "rawProxyInfoByAuthSchemes" not in serialized
+
+
+async def test_toolkit_detail_accepts_live_metadata_and_ignores_legacy_compatibility_fields() -> (
+    None
+):
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert str(request.url.copy_with(query=None)) == (
+            "https://backend.composio.dev/api/v3.1/toolkits/microsoft_teams"
+        )
+        assert dict(request.url.params) == {"version": "latest"}
+        assert request.headers["x-api-key"] == CATALOG_KEY
+        return httpx.Response(
+            200,
+            json={
+                "slug": "microsoft_teams",
+                "name": "Microsoft Teams",
+                "description": "Manage channels and messages.",
+                "categories": [{"slug": "productivity", "name": "Productivity"}],
+                "tools_count": 42,
+                "deprecated": {
+                    "toolkitId": "microsoft_teams",
+                    "getCurrentUserEndpoint": "/me",
+                    "rawProxyInfoByAuthSchemes": [{"auth_scheme": "OAUTH2"}],
+                },
+                "enabled": True,
+                "composio_managed_auth_schemes": ["OAUTH2"],
+                "composio_managed_auth": [
+                    {"mode": "OAUTH2", "scopes": {"available": ["admin", "read", "write"]}}
+                ],
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        metadata = await ComposioCatalogClient(http).get_toolkit("microsoft_teams")
+
+    assert metadata.slug == "microsoft_teams"
+    assert metadata.no_auth is False
+    assert metadata.has_managed_auth
+    assert metadata.composio_managed_auth_schemes == ["OAUTH2"]
+    assert metadata.composio_managed_auth == [
+        {"mode": "OAUTH2", "scopes": {"available": ["admin", "read", "write"]}}
+    ]
+    assert metadata.is_deprecated_flag is False
+    assert metadata.action_count == 42
+    assert metadata.summary == "Manage channels and messages."
+    assert metadata.category_name == "Productivity"
+    serialized = metadata.model_dump_json()
+    assert "getCurrentUserEndpoint" not in serialized
+    assert "rawProxyInfoByAuthSchemes" not in serialized
+
+
+async def test_invalid_toolkit_identifier_is_refused_before_provider_request() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: pytest.fail("must not call provider"))
+    ) as http:
+        with pytest.raises(ExternalServiceError, match="identifier"):
+            await ComposioCatalogClient(http).get_toolkit("microsoft_teams/../../other")
+
+
+async def test_direct_actions_keep_underscores_and_use_actual_deprecation_flags() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert (
+            str(request.url.copy_with(query=None)) == "https://backend.composio.dev/api/v3.1/tools"
+        )
+        assert dict(request.url.params) == {
+            "toolkit_slug": "microsoft_teams",
+            "toolkit_versions": "latest",
+            "include_deprecated": "false",
+            "limit": "1000",
+        }
+        assert request.headers["x-api-key"] == CATALOG_KEY
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    direct_tool("MICROSOFT_TEAMS_LIST_MESSAGES"),
+                    direct_tool("MICROSOFT_TEAMS_SEND_MESSAGE"),
+                    direct_tool("MICROSOFT_TEAMS_SEND_MESSAGE"),
+                    direct_tool("MICROSOFT_TEAMS_DELETE_MESSAGE", deprecated=True),
+                    direct_tool("MICROSOFT_TEAMS_ARCHIVE_CHANNEL", legacy_deprecated=True),
+                    direct_tool("COMPOSIO_SEARCH_TOOLS"),
+                    direct_tool("GMAIL_SEARCH_EMAILS", toolkit="gmail"),
+                    direct_tool("INVALID/TOOL"),
+                ],
+                "next_cursor": None,
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        names = await ComposioCatalogClient(http).direct_tool_names(toolkit="microsoft_teams")
+
+    assert names == ["MICROSOFT_TEAMS_LIST_MESSAGES", "MICROSOFT_TEAMS_SEND_MESSAGE"]
+
+
+async def test_direct_actions_refuse_results_that_exceed_the_bounded_page() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3.1/tools"
+        assert request.url.params["limit"] == "1000"
+        return httpx.Response(
+            200,
+            json={
+                "items": [direct_tool(f"MICROSOFT_TEAMS_TOOL_{index}") for index in range(1001)],
+                "next_cursor": None,
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(ExternalServiceError, match="operator setup"):
+            await ComposioCatalogClient(http).direct_tool_names(toolkit="microsoft_teams")
+
+
+async def test_direct_actions_refuse_a_paged_result_instead_of_silently_truncating() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["limit"] == "1000"
+        return httpx.Response(
+            200,
+            json={"items": [direct_tool("MICROSOFT_TEAMS_LIST_MESSAGES")], "next_cursor": "next"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(ExternalServiceError, match="operator setup"):
+            await ComposioCatalogClient(http).direct_tool_names(toolkit="microsoft_teams")
+
+
+@pytest.mark.parametrize("status", [302, 500])
+async def test_catalog_provider_failures_do_not_follow_redirects_or_leak_credentials(
+    status: int,
+) -> None:
+    requests: list[httpx.Request] = []
+    body = f"upstream failure mentions {CATALOG_KEY} and {RUNTIME_KEY}"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.url.host == "backend.composio.dev"
+        assert request.headers["x-api-key"] == CATALOG_KEY
+        return httpx.Response(
+            status, text=body, headers={"location": "https://evil.example/catalog"}
+        )
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), follow_redirects=True
+    ) as http:
+        with pytest.raises(ExternalServiceError) as caught:
+            await ComposioCatalogClient(http).list_toolkits(search="", cursor=None, limit=24)
+
+    assert len(requests) == 1
+    assert body not in str(caught.value)
+    assert CATALOG_KEY not in repr(caught.value)
+    assert RUNTIME_KEY not in repr(caught.value)
+
+
+async def test_missing_toolkit_and_malformed_catalog_response_are_safe_failures() -> None:
+    provider_secret = "provider-private-response"
+    requests = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal requests
+        requests += 1
+        if request.url.path.endswith("/missing_toolkit"):
+            return httpx.Response(404, text=f"{provider_secret}: missing")
+        return httpx.Response(200, text=f"not-json {provider_secret}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        catalog = ComposioCatalogClient(http)
+        with pytest.raises(ExternalServiceError) as missing:
+            await catalog.get_toolkit("missing_toolkit")
+        with pytest.raises(ExternalServiceError, match="invalid catalog response") as malformed:
+            await catalog.list_toolkits(search="", cursor=None, limit=24)
+
+    assert requests == 2
+    assert provider_secret not in str(missing.value)
+    assert provider_secret not in str(malformed.value)
+    assert CATALOG_KEY not in repr(missing.value)
+    assert CATALOG_KEY not in repr(malformed.value)
