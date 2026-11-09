@@ -170,8 +170,26 @@ def is_google_mcp(url: str) -> bool:
 
 
 _GOOGLE_ORG_CLIENT_SCOPE = " ".join(google_oauth.ACCOUNT_SCOPES)
-"""The scopes an organization's Google client asks for, whatever the server's metadata
-says. The same set the organization's Google app already consents to for accounts."""
+"""The fallback scopes for an organization's Google client when the server's metadata
+names none it may ask for. The set the organization's app already consents to."""
+
+_GOOGLE_AUTH_PREFIX = "https://www.googleapis.com/auth/"
+
+
+def _org_client_scope(scope: str | None) -> str:
+    """The scopes an organization's Google client may request, from server metadata.
+
+    Metadata can name only identity scopes and Google's own `googleapis.com/auth/`
+    scopes. Google's consent screen governs what those grant, so the org app's
+    consent is never widened by a server it was pointed at. Anything else is dropped.
+    With nothing left, the fallback is requested.
+    """
+    kept = [
+        item
+        for item in (scope or "").split()
+        if item in {"openid", "email", "profile"} or item.startswith(_GOOGLE_AUTH_PREFIX)
+    ]
+    return " ".join(dict.fromkeys(kept)) or _GOOGLE_ORG_CLIENT_SCOPE
 
 
 def _pinned_to_google(server: DiscoveredServer, client_org_id: UUID | None) -> DiscoveredServer:
@@ -187,7 +205,7 @@ def _pinned_to_google(server: DiscoveredServer, client_org_id: UUID | None) -> D
         server,
         authorization_endpoint=google_oauth.AUTHORIZE_ENDPOINT,
         token_endpoint=google_oauth.TOKEN_ENDPOINT,
-        scope=_GOOGLE_ORG_CLIENT_SCOPE,
+        scope=_org_client_scope(server.scope),
     )
 
 
@@ -205,7 +223,7 @@ def _payload_pinned_to_google(
         update={
             "authorization_endpoint": google_oauth.AUTHORIZE_ENDPOINT,
             "token_endpoint": google_oauth.TOKEN_ENDPOINT,
-            "scope": _GOOGLE_ORG_CLIENT_SCOPE,
+            "scope": _org_client_scope(payload.scope),
         }
     )
 

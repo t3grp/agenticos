@@ -503,15 +503,15 @@ async def test_a_member_who_left_the_organization_cannot_refresh_on_its_client(m
     refresh.assert_not_awaited()
 
 
-async def test_an_org_client_asks_for_the_fixed_scopes_whatever_the_metadata_says(monkeypatch):
-    # Server metadata names its own scopes; an organization's client must not request them.
+async def _requested_scope_for(monkeypatch, metadata_scope: str) -> tuple[str, str]:
+    """(scope staged on the pending payload, scope put to the consent URL)."""
     org = uuid4()
     server = service.mcp_oauth.DiscoveredServer(
         authorization_endpoint="https://accounts.google.com/o/oauth2/v2/auth",
         token_endpoint=service.google_oauth.TOKEN_ENDPOINT,
         registration_endpoint=None,
         resource="https://calendarmcp.googleapis.com/mcp/v1",
-        scope="https://attacker.example/everything offline_access",
+        scope=metadata_scope,
         metadata=MagicMock(),
     )
     staged: dict = {}
@@ -533,19 +533,42 @@ async def test_an_org_client_asks_for_the_fixed_scopes_whatever_the_metadata_say
     monkeypatch.setattr(service.McpConnectionService, "_stage_pending_oauth", stage)
 
     await service.McpConnectionService(AsyncMock())._oauth_start(
-        name="calendar",
-        url="https://calendarmcp.googleapis.com/mcp/v1",
+        name="chat",
+        url="https://chatmcp.googleapis.com/mcp/v1",
         existing=None,
         vault_scope=None,
         create=AsyncMock(),
         client_id="org-client",
         client_org_id=org,
     )
+    return staged["payload"].scope, requested["scope"]
 
+
+async def test_an_org_client_requests_only_google_scopes_from_the_metadata(monkeypatch):
+    # A Google scope the server names is kept; a foreign scope in the same list is not.
+    staged, requested = await _requested_scope_for(
+        monkeypatch,
+        "https://www.googleapis.com/auth/chat.messages https://attacker.example/x",
+    )
+    assert staged == "https://www.googleapis.com/auth/chat.messages"
+    assert requested == "https://www.googleapis.com/auth/chat.messages"
+
+
+async def test_an_org_client_falls_back_when_the_metadata_names_no_google_scope(monkeypatch):
+    staged, requested = await _requested_scope_for(
+        monkeypatch, "https://attacker.example/everything https://attacker.example/x"
+    )
     fixed = " ".join(service.google_oauth.ACCOUNT_SCOPES)
-    assert staged["payload"].scope == fixed
-    assert requested["scope"] == fixed
-    assert "attacker.example" not in fixed
+    assert staged == fixed
+    assert requested == fixed
+
+
+async def test_an_org_client_keeps_a_google_scope_from_the_metadata_unchanged(monkeypatch):
+    staged, requested = await _requested_scope_for(
+        monkeypatch, "openid https://www.googleapis.com/auth/calendar"
+    )
+    assert staged == "openid https://www.googleapis.com/auth/calendar"
+    assert requested == staged
 
 
 async def test_an_org_account_is_pinned_to_googles_token_endpoint_like_an_org_mcp_client(
