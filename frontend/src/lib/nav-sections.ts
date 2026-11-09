@@ -3,6 +3,7 @@ import {
   Activity,
   Building2,
   LayoutDashboard,
+  MessagesSquare,
   Plug,
   ShieldCheck,
   UsersRound,
