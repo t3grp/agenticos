@@ -190,6 +190,29 @@ export async function listSyncSources(collectionName?: string): Promise<SyncSour
   return apiClient.get<SyncSourceList>(`/rag/sync/sources${params}`);
 }
 
+/** A shared drive or a folder. `id` is what `folder_id` takes once it is selected. */
+export interface DriveFolderItem {
+  id: string;
+  name: string;
+}
+
+export interface DriveFolderList {
+  drives: DriveFolderItem[];
+  folders: DriveFolderItem[];
+}
+
+/**
+ * One level of Google Drive, read through a connected account.
+ *
+ * `parent` is `root` (My Drive's top level, with the shared drives beside it),
+ * `drive:<driveId>` (a shared drive's top level), or a folder id.
+ */
+export async function listDriveFolders(account: string, parent: string): Promise<DriveFolderList> {
+  return apiClient.get<DriveFolderList>("/sync-sources/gdrive/folders", {
+    params: { account, parent },
+  });
+}
+
 export interface ConnectorInfo {
   type: string;
   name: string;

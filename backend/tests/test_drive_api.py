@@ -34,6 +34,51 @@ def drive(
 
 
 class TestListing:
+    def test_shared_drive_query_parameters_are_forwarded(self) -> None:
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(200, json={})
+
+        with drive(handler) as client:
+            client.list_page(
+                q="q",
+                fields="f",
+                page_size=100,
+                page_token=None,
+                corpora="drive",
+                drive_id="drive_1",
+            )
+
+        assert seen[0].url.params["supportsAllDrives"] == "true"
+        assert seen[0].url.params["includeItemsFromAllDrives"] == "true"
+        assert seen[0].url.params["corpora"] == "drive"
+        assert seen[0].url.params["driveId"] == "drive_1"
+
+    def test_shared_drives_are_paged(self) -> None:
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(
+                200,
+                json={
+                    "nextPageToken": "p2",
+                    "drives": [{"id": "drive_1", "name": "Shared"}],
+                },
+            )
+
+        with drive(handler) as client:
+            page = client.list_drives_page(
+                fields="nextPageToken, drives(id, name)", page_size=100, page_token="p1"
+            )
+
+        assert page.next_page_token == "p2"
+        assert [(item.id, item.name) for item in page.drives] == [("drive_1", "Shared")]
+        assert seen[0].url.path == "/drive/v3/drives"
+        assert seen[0].url.params["pageToken"] == "p1"
+
     def test_a_page_is_read_from_drives_own_field_names(self) -> None:
         seen: list[httpx.Request] = []
 
