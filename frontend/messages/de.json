@@ -4177,6 +4177,7 @@
     "oauthMissingCode": "Der Provider hat keinen Autorisierungscode gesendet.",
     "googleOAuthClientRequired": "Google benötigt vor dem Verbinden eine Client-ID und ein Client-Secret aus Google Cloud.",
     "googleAppAskAdmin": "Bitte einen Admin, Google für diese Organisation einzurichten.",
+    "googleAppDescription": "Google-OAuth-Client für verbundene Konten",
     "googleOAuthSetupGuide": "Google-Einrichtungsanleitung öffnen",
     "oauthRequiredClient": "OAuth-Client in Google Cloud",
     "googleOAuthClientHint": "Erstelle einen OAuth-Client vom Typ Web application, wähle „Use this client for an AI-powered agent“ und trage die exakte Weiterleitungs-URL unten ein.",

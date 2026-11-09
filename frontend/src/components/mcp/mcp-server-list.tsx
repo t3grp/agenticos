@@ -160,12 +160,16 @@ const ORG_GOOGLE_APP_NAME = "google-oauth-app";
  * first one made, rather than adding a second secret with the same name (the
  * server refuses that with ALREADY_EXISTS).
  */
-async function saveOrgGoogleApp(clientId: string, clientSecret: string): Promise<void> {
+async function saveOrgGoogleApp(
+  clientId: string,
+  clientSecret: string,
+  description: string,
+): Promise<void> {
   const value = { kind: "google_oauth_app", client_id: clientId, client_secret: clientSecret };
   try {
     await apiClient.post("/secrets", {
       name: ORG_GOOGLE_APP_NAME,
-      description: "Google OAuth client for connected accounts",
+      description,
       value,
       visibility: "org",
     });
@@ -592,7 +596,11 @@ export function McpServerList({
         needsGoogleOAuthClient(url);
       if (adminSavesOrgApp) {
         try {
-          await saveOrgGoogleApp(values.clientId.trim(), values.clientSecret.trim());
+          await saveOrgGoogleApp(
+            values.clientId.trim(),
+            values.clientSecret.trim(),
+            t("googleAppDescription"),
+          );
         } catch (caught) {
           toast.error(getErrorMessage(caught, tErrors, t("couldNotStartSign")));
           return;
