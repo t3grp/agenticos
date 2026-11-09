@@ -9,6 +9,19 @@ Composio handles the provider authorization and token refresh. Each provider and
 account still requires its own consent; connecting Composio does not grant access
 to every app. Users do not need a Composio developer account, server URL, or API key.
 
+## Find onboarding
+
+Open **Onboarding** from the account menu at the bottom of the sidebar, or visit
+`/onboarding` directly. Its **Connect your apps** step is optional. **Connect apps**
+opens **Connectors → Apps** in another tab so provider consent can return to the
+existing callback verifier. The onboarding tab stays open, and **Continue to
+workspace** is always available without connecting an account. Skipping does not
+authorize an app or mark the separate product tour as completed.
+
+Accounts can be added later from **Connectors → Apps**. If a person skips the
+connection journey without a verified account, **Continue without apps** opens
+the chat workspace instead of requiring a connection to proceed.
+
 ## Configure the deployment
 
 1. Create a Composio project for this deployment and obtain a project API key.

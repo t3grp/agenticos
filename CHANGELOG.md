@@ -21,6 +21,9 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- A usable `/onboarding` page, linked from the account menu, with optional
+  Composio app connections and a direct path into the workspace. App consent
+  opens separately so setup can be skipped or resumed without blocking access.
 - T3OS app onboarding through Composio: choose a goal, connect Gmail, Outlook,
   Google Calendar, Google Drive, Slack, Notion, or GitHub, then start a real read
   task in the assistant. Personal accounts retain member ownership across
@@ -43,6 +46,14 @@ Two things are versioned separately from this file and worth knowing about:
   personal models power the existing agent loop through a private native
   runtime, preserving tools, approvals and owner restrictions. The initial
   adapter supports text and application tools with buffered step responses.
+- Added an opt-in Docker image retention operator helper with a dry-run default,
+  explicit current and previous successful release pins, protection for images
+  referenced by any container, and a pre-deployment disk-space check. Installation
+  and deployment-lock coordination are explicit; this does not enable a cleanup
+  schedule or change Coolify settings automatically.
+- Added opt-in systemd units for daily removal of Docker build cache unused for
+  24 hours, independent of disk usage. This separate cache-only job leaves images,
+  containers, volumes and networks intact.
 - A harness capability backs an agent with a Claude Code or Codex session in its sandbox, kept open across turns: `harness_start` opens a named session with a first prompt, `harness_prompt` sends it the next one, `harness_stop` closes it and `harness_sessions` lists the open ones. The session is the CLI's own, resumed by an id kept beside the work, and a prompt runs through the same detached execution, live narration, budget ledger and approval as a coding agent's task. A ChatGPT sign-in for Codex is not accepted yet; Codex runs on an OpenAI API key.
 
 ### Changed

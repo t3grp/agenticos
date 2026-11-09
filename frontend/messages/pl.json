@@ -9,7 +9,7 @@
     "progress": "Postęp konfiguracji połączeń",
     "steps": {
       "1": "1 · Twój cel",
-      "2": "2 · Połącz aplikacje",
+      "2": "2 · Połącz aplikacje (opcjonalnie)",
       "3": "3 · Pierwsze zadanie"
     },
     "chooseGoal": "Zacznij od czegoś przydatnego.",
@@ -95,7 +95,8 @@
     "retryVerification": "Zweryfikuj ponownie",
     "connectionChecked": "Status konta odświeżony.",
     "defaultChanged": "Konto domyślne zaktualizowane.",
-    "disconnected": "Konto rozłączone."
+    "disconnected": "Konto rozłączone.",
+    "continueWithoutApps": "Kontynuuj bez aplikacji"
   },
   "common": {
     "archiveNamedConfirm": "Zarchiwizować {name}?",
@@ -244,7 +245,8 @@
     "whatsNewDescription": "Zmiany w wersji, z której korzystasz.",
     "whatsNewDone": "Rozumiem",
     "backgroundWork": "Praca w tle",
-    "connectors": "Łączniki"
+    "connectors": "Łączniki",
+    "onboarding": "Wprowadzenie"
   },
   "auth": {
     "agreeToTerms": "Tworząc konto, akceptujesz nasz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>.",
@@ -2900,14 +2902,11 @@
       "errorId": "ID błędu: {id}",
       "errorOccurredWhileLoading": "Podczas wczytywania tej strony wystąpił błąd. Spróbuj ponownie.",
       "goBack": "Wróć",
-      "goToDashboard": "Przejdź do dashboardu",
       "noMessagesYet": "Ta rozmowa nie ma jeszcze wiadomości.",
       "ogBadge": "Self-hosted",
       "ogHeadline": "<lead>Agenci, których</lead><mark>posiadasz.</mark>",
-      "onboardingDescription": "Skonfiguruj swoją organizację.",
-      "onboardingRebuilt": "Kreator konfiguracji jest przebudowywany. Nic Cię nie blokuje - przejdź do konsoli i zacznij stamtąd.",
+      "onboardingDescription": "Zacznij korzystać i opcjonalnie połącz swoje aplikacje.",
       "onboardingTitle": "Pierwsze kroki",
-      "onboardingUnderConstruction": "Wprowadzenie jest w budowie",
       "pageError": "Błąd strony:",
       "sectionFailed": "Nie udało się wczytać tej sekcji",
       "shareLinkExpired": "Ten link mógł wygasnąć albo zostać unieważniony.",
@@ -2917,7 +2916,6 @@
       "sharedConversationViewEdit": "Udostępniona rozmowa - podgląd i edycja",
       "signInFailedRedirecting": "Logowanie się nie powiodło. Przekierowanie…",
       "somethingWentWrong": "Coś poszło nie tak",
-      "startAChat": "Zacznij czat",
       "tryAgain": "Spróbuj ponownie",
       "unexpectedWhileLoading": "Podczas wczytywania tego widoku wystąpił nieoczekiwany błąd. Spróbuj ponownie.",
       "unexpectedWithDigest": "Wystąpił nieoczekiwany błąd. ID błędu: {digest}"
@@ -13572,5 +13570,16 @@
     "manageConnection": "Zarządzaj subskrypcją Claude",
     "chooseApiModel": "Wybierz model API",
     "disconnected": "Rozłączono"
+  },
+  "onboardingSetup": {
+    "title": "Witaj w {appName}",
+    "description": "Zacznij we własnym tempie. Połącz aplikację teraz lub przejdź od razu do swojego workspace.",
+    "appsTitle": "Połącz swoje aplikacje",
+    "optional": "Opcjonalnie",
+    "appsDescription": "Połącz używane narzędzia przez Composio. Wybierz każdą aplikację i sprawdź jej uprawnienia przed udzieleniem dostępu.",
+    "connectApps": "Połącz aplikacje",
+    "opensNewTab": "Otwiera się w nowej karcie. Wróć tutaj, gdy będziesz gotowy.",
+    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Łączniki → Aplikacje.",
+    "continueToWorkspace": "Przejdź do workspace"
   }
 }

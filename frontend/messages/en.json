@@ -9,7 +9,7 @@
     "progress": "Connection setup progress",
     "steps": {
       "1": "1 · Your goal",
-      "2": "2 · Connect apps",
+      "2": "2 · Connect apps (optional)",
       "3": "3 · First task"
     },
     "chooseGoal": "Start with something useful.",
@@ -95,7 +95,8 @@
     "retryVerification": "Verify again",
     "connectionChecked": "Account status refreshed.",
     "defaultChanged": "Default account updated.",
-    "disconnected": "Account disconnected."
+    "disconnected": "Account disconnected.",
+    "continueWithoutApps": "Continue without apps"
   },
   "admin": {
     "actions": "Actions",
@@ -4501,7 +4502,8 @@
     "whatsNewDescription": "Recent changes in the version you are using.",
     "whatsNewDone": "Got it",
     "backgroundWork": "Background work",
-    "connectors": "Connectors"
+    "connectors": "Connectors",
+    "onboarding": "Onboarding"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -6940,14 +6942,11 @@
       "errorId": "Error ID: {id}",
       "errorOccurredWhileLoading": "An error occurred while loading this page. Please try again.",
       "goBack": "Go back",
-      "goToDashboard": "Go to dashboard",
       "noMessagesYet": "This conversation has no messages yet.",
       "ogBadge": "Self-hosted",
       "ogHeadline": "<lead>Agents you</lead><mark>own.</mark>",
-      "onboardingDescription": "Set up your organization.",
-      "onboardingRebuilt": "The setup wizard is being rebuilt. Nothing is blocking you - head into the console and start from there.",
+      "onboardingDescription": "Get started and optionally connect your apps.",
       "onboardingTitle": "Get started",
-      "onboardingUnderConstruction": "Onboarding is under construction",
       "pageError": "Page error:",
       "sectionFailed": "This section failed to load",
       "shareLinkExpired": "This share link may have expired or been revoked.",
@@ -6957,7 +6956,6 @@
       "sharedConversationViewEdit": "Shared conversation - view & edit",
       "signInFailedRedirecting": "Sign-in failed. Redirecting…",
       "somethingWentWrong": "Something went wrong",
-      "startAChat": "Start a chat",
       "tryAgain": "Try again",
       "unexpectedWhileLoading": "An unexpected error occurred while loading this view. Please try again.",
       "unexpectedWithDigest": "An unexpected error occurred. Error ID: {digest}"
@@ -13866,5 +13864,16 @@
     "manageConnection": "Manage Claude subscription",
     "chooseApiModel": "Choose an API model",
     "disconnected": "Disconnected"
+  },
+  "onboardingSetup": {
+    "title": "Welcome to {appName}",
+    "description": "Get started at your own pace. Connect an app now, or head straight into your workspace.",
+    "appsTitle": "Connect your apps",
+    "optional": "Optional",
+    "appsDescription": "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
+    "connectApps": "Connect apps",
+    "opensNewTab": "Opens in a new tab. Return here when you're ready.",
+    "skipHint": "No app connection is required. You can connect later from Connectors → Apps.",
+    "continueToWorkspace": "Continue to workspace"
   }
 }
