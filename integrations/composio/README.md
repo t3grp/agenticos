@@ -1,9 +1,15 @@
 # App connections through Composio
 
-T3OS provides a native **Connectors → Apps** journey for Gmail, Outlook, Google
-Calendar, Google Drive, Slack, Notion, and GitHub. A person chooses a first task,
-connects the accounts it needs, and starts that task in their assistant. Existing
-personal and organization MCP connections remain under **Advanced**.
+T3OS provides a native **Connections → Apps** journey backed by Composio's official
+native toolkit directory. A person chooses a first task, connects the accounts it
+needs, and starts that task in their assistant. Gmail, Outlook, Google Calendar,
+Google Drive, Notion, Slack, and GitHub keep their reviewed local read-action
+policies; other managed-auth toolkits use an exact direct-action ceiling and ask
+for approval before every tool call. Apps requiring custom credentials remain
+visible as setup-required. Existing personal and organization MCP connections
+remain under **MCP servers** in the same Connections hub. **More** holds chat
+channels, remote agents, the vault and sandboxes. Goals highlight recommendations
+without hiding other apps; search and pagination cover the full directory.
 
 Composio handles the provider authorization and token refresh. Each provider and
 account still requires its own consent; connecting Composio does not grant access
@@ -13,43 +19,56 @@ to every app. Users do not need a Composio developer account, server URL, or API
 
 Open **Onboarding** from the account menu at the bottom of the sidebar, or visit
 `/onboarding` directly. Its **Connect your apps** step is optional. **Connect apps**
-opens **Connectors → Apps** in another tab so provider consent can return to the
+opens **Connections → Apps** in another tab so provider consent can return to the
 existing callback verifier. The onboarding tab stays open, and **Continue to
 workspace** is always available without connecting an account. Skipping does not
 authorize an app or mark the separate product tour as completed.
 
-Accounts can be added later from **Connectors → Apps**. If a person skips the
+Accounts can be added later from **Connections → Apps**. If a person skips the
 connection journey without a verified account, **Continue without apps** opens
 the chat workspace instead of requiring a connection to proceed.
 
 ## Configure the deployment
 
-1. Create a Composio project for this deployment and obtain a project API key.
-   Give it the connected-account operations and session management/execution
-   permissions this integration uses. Store the key in the deployment's approved
-   secret manager and inject it into the backend at runtime.
-2. Create an auth config for each enabled toolkit. Composio managed OAuth can be
-   used where supported; custom OAuth applications give the operator control of
-   branding and requested scopes. Check each provider's consent and app-review
-   requirements before enabling it for users.
-3. Enable Composio's **callback identity verification** on this project. Set its
+1. Create a Composio project for this deployment and obtain a runtime project API
+   key. Give it only the connected-account operations and session management /
+   execution permissions this integration uses. Store it in the deployment's
+   approved secret manager and inject it into the backend at runtime.
+2. Create a separate Composio API key with **Toolkits:Read** and **Tools:Read**
+   only. Set it as `COMPOSIO_CATALOG_API_KEY`. T3OS uses it to page and search
+   toolkit metadata and to discover direct tool names; it never uses it to create
+   sessions or authorize accounts. Without this key the UI falls back to the seven
+   reviewed starter apps.
+3. Configure `COMPOSIO_AUTH_CONFIGS` for the reviewed starter toolkits you intend
+   to offer. Other apps are self-serve when Composio reports a managed auth scheme.
+   An app without managed auth can also be enabled with an explicit operator auth
+   config; it still receives only its saved direct-tool snapshot and every call
+   requires approval. Apps requiring custom credentials stay setup-required until
+   an operator configures them. Do not add Slack, GitHub, or another broad-scope
+   provider to the starter map until its scopes and consent have been reviewed.
+   Check provider app-review requirements before enabling any auth config.
+4. Enable Composio's **callback identity verification** on this project. Set its
    verifier URL to the public T3OS `${FRONTEND_URL}/connectors` page. This is a
    project setting, separate from the ordinary per-request callback URL.
-4. Set the backend variables below, apply the database migration through the
+5. Set the backend variables below, apply the database migration through the
    deployment's normal release process, and restart the backend and frontend.
-5. Complete the live acceptance checks below using synthetic test accounts before
+6. Complete the live acceptance checks below using synthetic test accounts before
    making the feature available to users.
 
 ```dotenv
 # Inject the real value through approved secret storage, never commit it.
 COMPOSIO_API_KEY=replace-with-project-secret
+COMPOSIO_CATALOG_API_KEY=replace-with-toolkits-read-and-tools-read-key
 COMPOSIO_USER_NAMESPACE=t3os-production
-COMPOSIO_AUTH_CONFIGS={"gmail":"ac_gmail","outlook":"ac_outlook","googlecalendar":"ac_calendar","googledrive":"ac_drive","slack":"ac_slack","notion":"ac_notion","github":"ac_github"}
+COMPOSIO_AUTH_CONFIGS={"gmail":"ac_gmail","outlook":"ac_outlook","googlecalendar":"ac_calendar","googledrive":"ac_drive","notion":"ac_notion"}
 ```
 
 The example config identifiers are placeholders. Omit toolkit entries that this
-deployment does not offer. Without the project key or configured toolkit, the UI
-explains that the app is unavailable instead of opening a manual credential form.
+deployment does not offer. Keep the catalog key limited to read-only toolkit and
+tool metadata; do not reuse a setup or runtime key with wider permissions for
+catalog browsing. Without the runtime key, no account can be connected or used.
+Without the catalog key, the UI reports that the wider directory is unavailable
+and offers the seven reviewed starter apps that are explicitly configured.
 
 Keep `COMPOSIO_USER_NAMESPACE` stable. It combines with T3OS's immutable member ID
 to identify the person at Composio, independent of the active organization. Use a
@@ -78,9 +97,13 @@ owned by the member, not the organization currently open in their browser. Agent
 execution resolves them for the author of the current message. It never borrows
 the publisher's or a previous speaker's personal account.
 
-The registered assistant receives runtime bindings for configured apps. An
-explicit binding already present in its spec retains its narrower tool ceiling.
-Other published agents must explicitly bind the `composio-<toolkit>` personal
+The registered assistant receives runtime bindings for the configured starter
+apps and for the current sender's connected dynamic apps. Dynamic refs exist only
+in that assistant's runtime copy; inline specialists such as `explore` do not
+inherit those connections. The assistant should handle account-backed reads with
+its own tools, or use a published agent with its own explicit app binding. App
+slugs from the full directory are not publishable MCP catalog entries. Other
+published agents must explicitly bind a reviewed `composio-<toolkit>` personal
 catalog entry. Stored agent versions are not rewritten by onboarding.
 
 ```mermaid
@@ -96,15 +119,18 @@ flowchart TD
 ```
 
 Every run verifies the saved provider account against its owner, toolkit, and auth
-config before creating a session pinned to that exact account. The final action
-set intersects the curated catalog, the connection's stored ceiling, and the
-agent binding. The initial catalog contains read actions only. Arbitrary proxy
-execution, connection management, search meta-tools, scripts, and batch execution
-are disabled in the provider session and excluded by the local tool filter.
+config before creating a session pinned to that exact account. Starter apps expose
+only their locally reviewed read-action list. A dynamic app stores the discovered
+direct tool names on the connection at authorization time; the runtime intersects
+that exact list with the connection and assistant ceilings and applies approval
+to every call, regardless of provider read-only hints. Arbitrary proxy execution,
+connection management, search meta-tools, scripts, and batch execution are disabled
+in the provider session and excluded by the local tool filter.
 
-The existing T3OS approval wrappers still apply. Managed bindings cannot lower
-approval below `writes`; a tool without an explicit read-only annotation waits
-for approval. Adding write actions later requires a separate review of the action
+The existing T3OS approval wrappers still apply. Starter bindings cannot lower
+approval below `writes`; dynamic bindings wait for approval on every call. Never
+infer that an unfamiliar direct action is read-only from provider metadata. Adding
+reviewed actions to the starter policies requires a separate review of the action
 policy, precise account and payload approval, and uncertain outcomes.
 
 The MCP transport URL is generated on the backend and never returned to the
@@ -116,14 +142,17 @@ URL does not invalidate an unchanged account's previously reviewed identity.
 ## Lifecycle and user experience
 
 The app card distinguishes **authorization verified** from proof that a real
-action succeeded. The first task supplies that useful confirmation by reading the
-chosen account; the UI does not synthesize a sample result.
+action succeeded. Starter apps offer a reviewed first read task. Other apps open
+a conversation about useful tasks and ask the person to choose before calling a
+tool. The UI does not synthesize a sample result.
 
 The user can check access, reconnect, change the default account, or disconnect.
 Separate accounts have explicit labels. Changing the operator's toolkit auth
 config affects new connections and reconnects; an existing verified account
-continues to pin the config it consented to. Removing the toolkit config disables
-its managed runtime access.
+continues to pin the config it consented to. Removing a starter toolkit's config
+disables that starter's runtime access. Dynamic accounts retain their verified
+grant until disabled, disconnected or revoked by the provider. Reconnecting
+retains the saved tool list; a new connection captures the current tools.
 
 A successful reconnect replaces the authorization generation. An unfinished
 reconnect does not replace a working account. Disconnect uses the provider
@@ -131,12 +160,13 @@ lifecycle before removing the local binding; a provider failure is shown and
 does not falsely report that access was removed. Provider-side revocation may
 require the user to revoke the OAuth application's consent in the app itself.
 
-When a chat needs an unconnected app, the existing `connect_account` interaction
+When a chat needs an unconnected starter app, the existing `connect_account` interaction
 waits for the user. Consent opens separately so the original request remains in
 place. The server reads and probes the newly verified account before attaching
 its tools to that same turn. Skipping continues without those tools. Query state,
 pending callbacks, and first-task handoff are scoped to the active user and
-organization.
+organization. Accounts from the wider directory can be connected through the
+Connections hub and become available to the registered assistant on its next turn.
 
 ## Data and permissions
 
@@ -146,7 +176,7 @@ control; it does not move that credential custody into T3OS. T3OS stores safe
 provider identifiers and a short-lived, vault-sealed consent attempt. Its project
 key remains a backend deployment secret.
 
-The initial toolkit actions are read-only, but the OAuth grant may be broader
+The reviewed starter actions are read-only, but the OAuth grant may be broader
 than those actions. Configure each auth config's scopes deliberately and inspect
 the actual provider consent screen. The UI describes T3OS's permitted actions;
 it does not claim that every provider token is read-only.
@@ -156,7 +186,7 @@ Document synchronization and collection audience permissions remain the separate
 knowledge-source journey. Existing Drive connector work is unaffected.
 
 Organization-owned shared Composio credentials are outside this first release.
-Existing organization MCP connections remain available through Advanced.
+Existing organization MCP connections remain available through **MCP servers**.
 
 ## Roll back a deployment
 

@@ -3592,8 +3592,46 @@ class AgentRunnerService:
                             ]
                         }
                     )
+        # Whose own MCP connections a personal binding speaks through, and the
+        # only place the answer is assembled. This must be known before current
+        # assistant bindings are discovered, so an assistant sees only this
+        # message sender's own managed apps.
+        #
+        # `owner_user_id` is who the run belongs to, and it is not always whoever
+        # is calling. A run that parked for approval is resumed by an approver,
+        # so deriving this from `ctx` alone read *their* personal account inside
+        # somebody else's conversation - the resume path passes the recorded
+        # owner and this falls back to the caller only for a run being started.
+        #
+        # But a publisher standing in for an unidentified visitor is not a person
+        # whose own account may be reached for, even though `acts_for_sender` is
+        # set on that surface too: resolving one here would speak to a third-party
+        # MCP server with the owner/publisher's own connected-account credentials
+        # on behalf of an anonymous guest (#1469).
+        subject_is_publisher_fallback = (
+            restored_publisher_fallback
+            if restored_publisher_fallback is not None
+            else ctx.subject_is_publisher_fallback
+        )
+        personal_mcp_user_id = (
+            (owner_user_id or ctx.user_id)
+            if acts_for_sender and not subject_is_publisher_fallback
+            else None
+        )
+        assistant_sender_user_id = personal_mcp_user_id
+        if (
+            routine is not None
+            and routine.routine_kind == "trigger"
+            and not routine.acts_as_creator
+        ):
+            assistant_sender_user_id = None
+        initiated_by_publisher_fallback = (
+            subject_is_publisher_fallback and surface is not RunSurface.SCHEDULE
+        )
         spec = _with_local_capabilities(
-            await self.registry.with_assistant_guidance(agent, spec),
+            await self.registry.with_assistant_guidance(
+                agent, spec, sender_user_id=assistant_sender_user_id
+            ),
             local,
             routine=routine is not None,
         )
@@ -3766,52 +3804,6 @@ class AgentRunnerService:
         # secret may not.
         secrets = await self.secrets.resolve_for_bindings(ctx, _secret_ids(spec))
 
-        # Whose own MCP connections a personal binding speaks through, and the
-        # only place the answer is assembled. Not `ctx.user_id` alone: on a
-        # channel an unlinked sender runs under the binding's publisher, and on
-        # an API key the context is the key holder's - neither of them is the
-        # person talking, so the caller says whether there is one.
-        #
-        # `owner_user_id` is who the run belongs to, and it is not always whoever
-        # is calling. A run that parked for approval is resumed by an approver,
-        # so deriving this from `ctx` alone read *their* personal account inside
-        # somebody else's conversation - the resume path passes the recorded
-        # owner and this falls back to the caller only for a run being started.
-        #
-        # But a publisher standing in for an unidentified visitor is not a person
-        # whose own account may be reached for, even though `acts_for_sender` is
-        # set on that surface too: resolving one here would speak to a third-party
-        # MCP server with the owner/publisher's own connected-account credentials
-        # on behalf of an anonymous guest (#1469). Read from the request on a fresh
-        # run and from the parked terms on a resume, where the approver's context
-        # is not the run's - the same reason `owner_user_id` is passed rather than
-        # taken from `ctx` (#788). It defaults false, so a run parked before this
-        # was recorded resolves as it always did rather than losing its tools.
-        subject_is_publisher_fallback = (
-            restored_publisher_fallback
-            if restored_publisher_fallback is not None
-            else ctx.subject_is_publisher_fallback
-        )
-        # Not the same question as `subject_is_publisher_fallback` above, even
-        # though a schedule or event trigger sets both from one call
-        # (`AgentTriggerService._creator_context`). That flag exists to keep an
-        # unattended fire from reaching a personal MCP connection or store on
-        # its creator's behalf (#1469) - it says nothing about whether
-        # `ctx.user_id` is a real, notifiable person. For `RunSurface.SCHEDULE`
-        # it is: the trigger's own creator, who wants to hear a run they set up
-        # finished or failed. Everywhere else `subject_is_publisher_fallback`
-        # is true, `ctx.user_id` is a publisher standing in for a visitor
-        # nobody can name (`app.services.access.publisher_context`) - not a
-        # person to notify. Conflating the two left every scheduled and
-        # event-triggered run silently unnotified regardless of who made it.
-        initiated_by_publisher_fallback = (
-            subject_is_publisher_fallback and surface is not RunSurface.SCHEDULE
-        )
-        personal_mcp_user_id = (
-            (owner_user_id or ctx.user_id)
-            if acts_for_sender and not subject_is_publisher_fallback
-            else None
-        )
         spec = _with_channel_service_approval(
             spec, surface, linked_sender=personal_mcp_user_id is not None
         )
@@ -5192,7 +5184,9 @@ class AgentRunnerService:
 
         published = AgentSpec.model_validate(version.spec)
         pinned = _with_shared(published, shared)
-        pinned = await self.registry.with_assistant_guidance(delegate, pinned)
+        pinned = await self.registry.with_assistant_guidance(
+            delegate, pinned, sender_user_id=delegation.personal_mcp_user_id
+        )
         delegate_resources = await self._delegate_resources(
             ctx,
             pinned,

@@ -5,7 +5,7 @@
     "title": "Połącz swoje aplikacje",
     "description": "Korzystaj w T3OS z narzędzi, których już używasz. Zacznij od jednego przydatnego zadania.",
     "unconfiguredTitle": "Połączenia z aplikacjami nie są jeszcze skonfigurowane",
-    "unconfiguredDescription": "Administrator musi włączyć usługę połączeń. Dotychczasowe i własne połączenia MCP są nadal dostępne na karcie Zaawansowane.",
+    "unconfiguredDescription": "Administrator musi włączyć usługę połączeń aplikacji. Dotychczasowe i własne połączenia są nadal dostępne na karcie Serwery MCP.",
     "progress": "Postęp konfiguracji połączeń",
     "steps": {
       "1": "1 · Twój cel",
@@ -32,7 +32,17 @@
       }
     },
     "catalogTitle": "Wybierz używane aplikacje",
-    "catalogHint": "Każda aplikacja wymaga osobnej autoryzacji. Na początek wystarczy jedno konto.",
+    "catalogHint": "Przeglądaj katalog aplikacji Composio lub wyszukaj aplikację. Sugestie zależą od wybranego celu; każda aplikacja wymaga osobnej autoryzacji.",
+    "searchApps": "Szukaj wszystkich aplikacji",
+    "recommended": "Polecane do wybranego celu",
+    "loadMore": "Wczytaj więcej aplikacji",
+    "noSearchResults": "Brak aplikacji pasujących do wyszukiwania. Spróbuj wpisać inną nazwę.",
+    "catalogUnavailable": "Pełny katalog aplikacji jest chwilowo niedostępny. Twoje istniejące konta i skonfigurowane aplikacje są nadal dostępne.",
+    "setupRequiredHint": "Administrator musi skonfigurować tę aplikację, zanim będzie można ją połączyć.",
+    "approvalRequired": "Każde działanie wymaga Twojej zgody",
+    "approvalRequiredHint": "Ta aplikacja może odczytywać dane i wprowadzać zmiany. T3OS poprosi Cię o zgodę przed każdym działaniem.",
+    "exploreApp": "Poznaj tę aplikację z moim asystentem",
+    "exploreAppPrompt": "Pomóż mi rozpocząć pracę z połączonym kontem {toolkit} {account} (połączenie {connection}; usługa {catalog}). Opisz kilka przydatnych zadań z użyciem dostępnych narzędzi i zapytaj, które chcę wypróbować. Nie wywołuj narzędzi aplikacji, dopóki nie wybiorę zadania. Używaj tylko tego konta.",
     "toolkits": {
       "googlecalendar": "Odczytuj nadchodzące wydarzenia i szczegóły spotkań.",
       "gmail": "Wyszukuj i odczytuj wiadomości związane z zadaniem.",
@@ -45,8 +55,9 @@
     "connectNamed": "Połącz {name}",
     "addAccount": "Dodaj konto",
     "connect": "Połącz",
-    "notConfigured": "Nieskonfigurowane",
-    "browseAll": "Przeglądaj wszystkie aplikacje",
+    "notConfigured": "Wymagana konfiguracja",
+    "unavailableApp": "Niedostępne",
+    "unavailableAppHint": "Ta integracja nie obsługuje łączenia konta w tym miejscu.",
     "noApps": "W tym wdrożeniu nie ma dostępnych aplikacji.",
     "yourAccounts": "Twoje połączone konta",
     "personalHint": "Konto pozostaje osobiste. Agenci korzystają z niego tylko przez narzędzia skonfigurowane dla Twojego konta.",
@@ -245,7 +256,7 @@
     "whatsNewDescription": "Zmiany w wersji, z której korzystasz.",
     "whatsNewDone": "Rozumiem",
     "backgroundWork": "Praca w tle",
-    "connectors": "Łączniki",
+    "connectors": "Połączenia",
     "onboarding": "Wprowadzenie"
   },
   "auth": {
@@ -4462,11 +4473,12 @@
       "operationsHint": "Aktualizacje aplikacji i diagnostyka wdrożenia."
     },
     "connectors": {
-      "title": "Łączniki",
-      "description": "Wszystko, z czym łączą się twoje agenty, w jednym miejscu.",
+      "title": "Połączenia",
+      "description": "Zarządzaj kontami w aplikacjach i serwerami MCP w jednym miejscu.",
       "apps": "Aplikacje",
-      "advanced": "Zaawansowane",
-      "advancedDescription": "Połączenia niższego poziomu: kanały czatu, zdalne agenty, skarbiec i sandboksy.",
+      "mcp": "Serwery MCP",
+      "more": "Więcej",
+      "advancedDescription": "Kanały czatu, zdalne agenty, vault i sandboxy.",
       "channelsDescription": "Platformy czatu, przez które organizacja jest osiągalna.",
       "remoteAgentsDescription": "Agenty innych dostawców, którym twoje agenty mogą delegować zadania.",
       "vaultDescription": "Klucze i sekrety, których używają twoje połączenia.",
@@ -6558,7 +6570,7 @@
       },
       "app-connections": {
         "title": "Połącz swoje aplikacje",
-        "body": "Zacznij od celu i połącz tylko potrzebne aplikacje. Każdy dostawca prosi o własną autoryzację. Niestandardowe MCP i połączenia współdzielone znajdziesz w sekcji Zaawansowane."
+        "body": "Zacznij od celu i połącz tylko potrzebne aplikacje. Każdy dostawca prosi o własną autoryzację. W zakładce Serwery MCP znajdziesz także serwery niestandardowe; sekcja Więcej zawiera kanały, zdalne agenty, vault i sandboxy."
       },
       "mcp-catalog": {
         "title": "Podłącz narzędzia",
@@ -6567,6 +6579,10 @@
       "mcp-connect": {
         "title": "Połącz, potem wybierz narzędzia",
         "body": "Podłączenie serwera pyta, jak się zalogować, a potem pozwala wybrać dokładnie, które z jego narzędzi mogą wywoływać Twoi agenci."
+      },
+      "connections-more": {
+        "title": "Więcej połączeń",
+        "body": "Karta Więcej zawiera kanały, zdalne agenty, Vault i ustawienia sandboxów dostępne w ramach Twojej roli."
       },
       "mcp-filter": {
         "title": "Znajdź serwer",
@@ -13542,7 +13558,7 @@
     "appsDescription": "Połącz używane narzędzia przez Composio. Wybierz każdą aplikację i sprawdź jej uprawnienia przed udzieleniem dostępu.",
     "connectApps": "Połącz aplikacje",
     "opensNewTab": "Otwiera się w nowej karcie. Wróć tutaj, gdy będziesz gotowy.",
-    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Łączniki → Aplikacje.",
+    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Połączenia → Aplikacje.",
     "continueToWorkspace": "Przejdź do workspace"
   }
 }

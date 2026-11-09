@@ -454,6 +454,7 @@ describe("stepsForPage", () => {
       "mcp-filter",
       "mcp-add",
       "mcp-connect",
+      "connections-more",
     ]);
   });
 

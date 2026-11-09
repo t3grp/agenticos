@@ -934,6 +934,11 @@ export const TOUR_STEPS: readonly TourStep[] = [
     permission: Perm.agentsView,
     optional: true,
   },
+  {
+    id: "connections-more",
+    page: ROUTES.CONNECTORS,
+    target: "connectors-more",
+  },
 
   // The chat platforms the organization is reachable on — beside MCP because it
   // is the same kind of thing, a connection the organization owns. The add button

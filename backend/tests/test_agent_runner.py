@@ -8111,6 +8111,7 @@ async def test_routine_origin_and_live_tool_guard_are_attached_during_preparatio
         acts_as_creator=change == "personal",
         source_policy=source_policy,
     )
+    guidance = AsyncMock(return_value=spec)
     with (
         patch.object(RoutineAuthority, "check", new=check),
         patch.object(
@@ -8118,6 +8119,7 @@ async def test_routine_origin_and_live_tool_guard_are_attached_during_preparatio
             "get_runnable_spec",
             new=AsyncMock(return_value=(agent, spec, agent.current_version_id)),
         ),
+        patch.object(service.registry, "with_assistant_guidance", new=guidance),
         patch(
             "app.services.agent_runner.RoutineAuthority.capture",
             new=AsyncMock(return_value=authority),
@@ -8149,9 +8151,15 @@ async def test_routine_origin_and_live_tool_guard_are_attached_during_preparatio
                 ),
                 pytest.raises(RoutineSourcesRequired),
             ):
-                await service.prepare(ctx, agent.id)
+                await service.prepare(ctx, agent.id, acts_for_sender=True)
+            guidance.assert_awaited_once()
+            assert guidance.await_args.kwargs["sender_user_id"] is None
             return
-        await service.prepare(ctx, agent.id)
+        await service.prepare(ctx, agent.id, acts_for_sender=True)
+    guidance.assert_awaited_once()
+    assert guidance.await_args.kwargs["sender_user_id"] == (
+        ctx.user_id if change == "personal" else None
+    )
     assert create.await_args.kwargs["trigger_id"] == ctx.routine_id
     assert create.await_args.kwargs["routine_policy"]["mcp_sources"] == {}
     guards = [

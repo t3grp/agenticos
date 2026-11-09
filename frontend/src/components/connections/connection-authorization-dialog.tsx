@@ -67,6 +67,7 @@ export function ConnectionAuthorizationDialog({
           )}
           <div>
             <p className="text-sm font-medium">{t("intendedAccess")}</p>
+            {target.app.approval_required && <p className="text-sm">{t("approvalRequiredHint")}</p>}
             <p className="text-muted-foreground mt-1 text-sm">
               {t.has(`toolkits.${target.app.toolkit}`)
                 ? t(`toolkits.${target.app.toolkit}`)

@@ -1,10 +1,11 @@
 """Personal app consent lives on the same records agents already bind to.
 
-An authorization attempt is sealed to its member and expires after ten minutes.
+An authorization attempt is sealed to its member and expires before its provider link does.
 Starting a reconnect never replaces a working grant; only verified completion
 promotes the new account and rotates its authorization generation.
 """
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
@@ -34,11 +35,21 @@ from app.schemas.app_connection import (
 )
 from app.services.impersonation import refuse_binding_while_impersonating
 
-from ._catalog import APPS, ComposioApp, get_app, get_app_by_catalog_key
-from ._client import ComposioAccount, ComposioAccountMissing, ComposioClient, composio_user_id
+from ._catalog import APPS, ComposioApp, get_app_by_catalog_key, toolkit_from_catalog_key
+from ._client import (
+    ComposioAccount,
+    ComposioAccountMissing,
+    ComposioCatalogClient,
+    ComposioClient,
+    ComposioToolkitMetadata,
+    composio_user_id,
+)
 
 _ATTEMPT_TTL = timedelta(minutes=10)
+_DYNAMIC_ATTEMPT_TTL = timedelta(minutes=30)
 _MAX_ACCOUNTS = 50
+_MAX_DYNAMIC_ACTIONS = 1000
+_META_TOOLKITS = frozenset({"composio"})
 _VERIFY_ERROR = "The app authorization could not be checked. Try checking the connection again."
 
 
@@ -46,10 +57,12 @@ class _PendingConsent(BaseModel):
     attempt_id: UUID
     user_id: UUID
     toolkit: str
-    auth_config_id: str
+    auth_config_id: str | None = None
     account_id: str
     expires_at: datetime
     identity_verified: bool = False
+    session_id: str | None = None
+    dynamic: bool = False
 
 
 def is_configured(toolkit: str) -> bool:
@@ -62,6 +75,11 @@ def is_configured(toolkit: str) -> bool:
     )
 
 
+def _runtime_configured() -> bool:
+    key = settings.COMPOSIO_API_KEY
+    return key is not None and bool(key.get_secret_value().strip())
+
+
 def _auth_config(toolkit: str) -> str:
     if not is_configured(toolkit):
         raise ConfigurationError(
@@ -72,9 +90,31 @@ def _auth_config(toolkit: str) -> str:
 
 def _app(connection: McpConnection) -> ComposioApp:
     app = get_app_by_catalog_key(connection.catalog_key)
-    if app is None:
+    if app is not None:
+        return app
+    toolkit = toolkit_from_catalog_key(connection.catalog_key)
+    if (
+        toolkit is None
+        or toolkit in _META_TOOLKITS
+        or connection.url != f"https://backend.composio.dev/api/v3.1/toolkits/{toolkit}"
+        or not isinstance(connection.allowed_tools, list)
+        or not connection.allowed_tools
+        or len(connection.allowed_tools) > _MAX_DYNAMIC_ACTIONS
+        or any(
+            not isinstance(tool, str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", tool) is None
+            or tool.upper().startswith("COMPOSIO_")
+            for tool in connection.allowed_tools
+        )
+    ):
         raise BadRequestError(message="This managed app is no longer in the supported catalog")
-    return app
+    return ComposioApp(
+        toolkit=toolkit,
+        name=toolkit.replace("-", " ").title(),
+        description="Use this connected app account.",
+        category="apps",
+        actions=(),
+    )
 
 
 def _pending(connection: McpConnection, *, user_id: UUID) -> _PendingConsent:
@@ -95,6 +135,11 @@ def _pending(connection: McpConnection, *, user_id: UUID) -> _PendingConsent:
         or str(pending.attempt_id) != connection.oauth_state
         or pending.toolkit != _app(connection).toolkit
         or pending.expires_at.tzinfo is None
+        or (pending.dynamic and pending.session_id is None)
+        or (
+            not pending.dynamic
+            and (pending.session_id is not None or pending.auth_config_id is None)
+        )
     ):
         raise BadRequestError(message="This connection attempt did not match the saved account")
     return pending
@@ -113,7 +158,117 @@ def _sealed_pending(connection: McpConnection, pending: _PendingConsent) -> str:
     ).ciphertext
 
 
-def _read(connection: McpConnection) -> AppConnectionRead:
+def _catalog_entry(
+    app: ComposioApp,
+    *,
+    configured: bool,
+    availability: Literal["ready", "setup_required", "unavailable"],
+    approval_required: bool,
+    action_count: int | None = None,
+) -> AppCatalogEntry:
+    return AppCatalogEntry(
+        key=app.catalog_key,
+        toolkit=app.toolkit,
+        name=_safe_text(app.name, fallback=app.toolkit.replace("-", " ").title(), limit=100),
+        description=_safe_text(app.description, fallback="", limit=500),
+        category=_safe_text(app.category, fallback="apps", limit=64).lower(),
+        configured=configured,
+        availability=availability,
+        approval_required=approval_required,
+        action_count=action_count if action_count is not None else len(app.actions),
+        actions=[
+            AppActionRead(
+                name=action.name,
+                label=_safe_text(action.label, fallback=action.name, limit=100),
+                read_only=action.read_only,
+            )
+            for action in app.actions
+        ],
+    )
+
+
+def _safe_text(value: str, *, fallback: str, limit: int) -> str:
+    cleaned = "".join(char for char in value if char.isprintable()).strip()[:limit]
+    return cleaned or fallback
+
+
+def _static_entry(app: ComposioApp) -> AppCatalogEntry:
+    configured = is_configured(app.toolkit)
+    return _catalog_entry(
+        app,
+        configured=configured,
+        availability="ready" if configured else "setup_required",
+        approval_required=False,
+    )
+
+
+def _dynamic_entry(
+    metadata: ComposioToolkitMetadata,
+    *,
+    runtime_configured: bool,
+) -> AppCatalogEntry:
+    app = ComposioApp(
+        toolkit=metadata.slug,
+        name=metadata.name,
+        description=metadata.summary,
+        category=metadata.category_name,
+        actions=(),
+    )
+    explicit_auth_config = settings.COMPOSIO_AUTH_CONFIGS.get(metadata.slug, "").strip()
+    if (
+        metadata.slug in _META_TOOLKITS
+        or metadata.no_auth
+        or metadata.is_deprecated_flag
+        or not metadata.enabled
+    ):
+        availability: Literal["ready", "setup_required", "unavailable"] = "unavailable"
+    elif not runtime_configured:
+        availability = "unavailable"
+    elif metadata.action_count > _MAX_DYNAMIC_ACTIONS:
+        availability = "setup_required"
+    elif metadata.has_managed_auth or explicit_auth_config:
+        availability = "ready"
+    else:
+        availability = "setup_required"
+    return _catalog_entry(
+        app,
+        configured=availability == "ready",
+        availability=availability,
+        approval_required=True,
+        action_count=metadata.action_count,
+    )
+
+
+def _connection_entry(connection: McpConnection, app: ComposioApp | None = None) -> AppCatalogEntry:
+    resolved = app or _app(connection)
+    if get_app_by_catalog_key(connection.catalog_key) is not None:
+        configured = is_configured(resolved.toolkit)
+        return _catalog_entry(
+            resolved,
+            configured=configured,
+            availability="ready" if configured else "setup_required",
+            approval_required=False,
+        )
+    explicitly_configured = bool(settings.COMPOSIO_AUTH_CONFIGS.get(resolved.toolkit, "").strip())
+    has_verified_or_pending_auth = (
+        connection.composio_auth_config_id is not None
+        or connection.oauth_pending_payload is not None
+    )
+    ready = _runtime_configured() and (explicitly_configured or has_verified_or_pending_auth)
+    return _catalog_entry(
+        resolved,
+        configured=ready,
+        availability=("ready" if ready else "setup_required")
+        if _runtime_configured()
+        else "unavailable",
+        approval_required=True,
+        action_count=len(connection.allowed_tools or []),
+    )
+
+
+def _read(
+    connection: McpConnection, *, app_entry: AppCatalogEntry | None = None
+) -> AppConnectionRead:
     app = _app(connection)
     authorized = connection.account_authorized
     status: Literal["pending", "connected", "expired", "failed", "disabled"] = "pending"
@@ -135,7 +290,11 @@ def _read(connection: McpConnection) -> AppConnectionRead:
             error = "This connection attempt is no longer available. Connect the app again."
     readiness: Literal["authorization_required", "authorization_verified", "unavailable"] = (
         "unavailable"
-        if not is_configured(app.toolkit)
+        if not (
+            is_configured(app.toolkit)
+            if get_app_by_catalog_key(connection.catalog_key) is not None
+            else _runtime_configured()
+        )
         or not connection.is_enabled
         or connection.last_status == "error"
         else "authorization_verified"
@@ -154,6 +313,7 @@ def _read(connection: McpConnection) -> AppConnectionRead:
         is_default=connection.is_default,
         authorized=authorized,
         readiness=readiness,
+        app=app_entry or _connection_entry(connection, app),
         last_checked_at=connection.last_checked_at,
         last_error=error,
         created_at=connection.created_at,
@@ -164,28 +324,55 @@ class AppConnectionService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    def catalog(self) -> AppCatalogRead:
-        apps = [
-            AppCatalogEntry(
-                key=app.catalog_key,
-                toolkit=app.toolkit,
-                name=app.name,
-                description=app.description,
-                category=app.category,
-                configured=is_configured(app.toolkit),
-                actions=[
-                    AppActionRead(name=action.name, label=action.label, read_only=action.read_only)
-                    for action in app.actions
-                ],
+    async def catalog(
+        self, *, search: str = "", cursor: str | None = None, limit: int = 24
+    ) -> AppCatalogRead:
+        """Page official native toolkits; only managed, bounded apps can be connected."""
+        if cursor is not None and (
+            len(cursor) > 512 or re.fullmatch(r"[A-Za-z0-9_+/=-]+", cursor) is None
+        ):
+            raise BadRequestError(message="The app catalog cursor is invalid")
+        try:
+            async with ComposioCatalogClient() as client:
+                page = await client.list_toolkits(search=search, cursor=cursor, limit=limit)
+        except ConfigurationError, ExternalServiceError:
+            apps = [_static_entry(app) for app in APPS]
+            return AppCatalogRead(
+                configured=any(app.configured for app in apps),
+                catalog_available=False,
+                apps=apps,
+                next_cursor=None,
             )
-            for app in APPS
-        ]
-        return AppCatalogRead(configured=any(app.configured for app in apps), apps=apps)
+
+        apps: list[AppCatalogEntry] = []
+        for metadata in page.items:
+            if toolkit_from_catalog_key(f"composio-{metadata.slug}") is None:
+                continue
+            curated = next((app for app in APPS if app.toolkit == metadata.slug), None)
+            apps.append(
+                _static_entry(curated)
+                if curated is not None
+                else _dynamic_entry(metadata, runtime_configured=_runtime_configured())
+            )
+        next_cursor = page.next_cursor
+        if next_cursor is not None and (
+            len(next_cursor) > 512 or re.fullmatch(r"[A-Za-z0-9_+/=-]+", next_cursor) is None
+        ):
+            raise ExternalServiceError(
+                message="The app connection provider returned an invalid catalog cursor"
+            )
+        return AppCatalogRead(
+            configured=_runtime_configured(),
+            catalog_available=True,
+            apps=apps,
+            next_cursor=next_cursor,
+        )
 
     async def list_for_user(self, *, user_id: UUID) -> AppConnectionList:
         connections = await connection_repo.list_composio_for_user(self.db, user_id=user_id)
         return AppConnectionList(
-            items=[_read(connection) for connection in connections], total=len(connections)
+            items=[_read(connection) for connection in connections],
+            total=len(connections),
         )
 
     async def _owned(self, *, user_id: UUID, connection_id: UUID) -> McpConnection:
@@ -204,8 +391,35 @@ class AppConnectionService:
 
     async def connect(self, *, user_id: UUID, data: AppConnectionCreate) -> AppConnectionStartRead:
         refuse_binding_while_impersonating("Connecting an app")
-        app = get_app(data.toolkit)
-        auth_config_id = _auth_config(app.toolkit)
+        curated = next((app for app in APPS if app.toolkit == data.toolkit), None)
+        dynamic = curated is None
+        if curated is not None:
+            app = curated
+            auth_config_id: str | None = _auth_config(app.toolkit)
+            allowed_tools = [action.name for action in app.actions]
+        else:
+            if not _runtime_configured():
+                raise ConfigurationError(message="Set COMPOSIO_API_KEY to enable app connections")
+            async with ComposioCatalogClient() as catalog_client:
+                metadata = await catalog_client.get_toolkit(data.toolkit)
+                if metadata.slug != data.toolkit:
+                    raise BadRequestError(message="This app is not available to connect")
+                entry = _dynamic_entry(metadata, runtime_configured=True)
+                if not entry.configured:
+                    raise BadRequestError(
+                        message="This app requires operator setup before it can be connected"
+                    )
+                allowed_tools = await catalog_client.direct_tool_names(toolkit=data.toolkit)
+                auth_config_id = (
+                    settings.COMPOSIO_AUTH_CONFIGS.get(data.toolkit, "").strip() or None
+                )
+            app = ComposioApp(
+                toolkit=metadata.slug,
+                name=metadata.name,
+                description=metadata.summary,
+                category=metadata.category_name,
+                actions=(),
+            )
         await connection_repo.lock_account_owner(self.db, user_id=user_id)
         connections = await connection_repo.list_composio_for_user(self.db, user_id=user_id)
         if len(connections) >= _MAX_ACCOUNTS:
@@ -216,13 +430,13 @@ class AppConnectionService:
         connection = await connection_repo.create(
             self.db,
             user_id=user_id,
-            name=f"{app.toolkit}-{uuid4().hex[:12]}",
+            name=f"{app.toolkit[:49]}-{uuid4().hex[:12]}",
             # Stable identity only. Runtime creates a separately scoped MCP
             # endpoint after resolving this member's account and agent policy.
             url=f"https://backend.composio.dev/api/v3.1/toolkits/{app.toolkit}",
             auth_token=None,
             secret_key_version=current_key_version(),
-            allowed_tools=[action.name for action in app.actions],
+            allowed_tools=allowed_tools,
             auth_type="composio",
             catalog_key=app.catalog_key,
             label=data.label or (f"Account {len(siblings) + 1}" if siblings else None),
@@ -236,12 +450,25 @@ class AppConnectionService:
                 "is_default": not siblings,
             },
         )
+        if dynamic:
+            if auth_config_id is not None:
+                return await self._start(connection, user_id=user_id, auth_config_id=auth_config_id)
+            return await self._start_dynamic(connection, user_id=user_id)
+        if auth_config_id is None:
+            raise ConfigurationError(message="This app is not configured for managed authorization")
         return await self._start(connection, user_id=user_id, auth_config_id=auth_config_id)
 
     async def reconnect(self, *, user_id: UUID, connection_id: UUID) -> AppConnectionStartRead:
         refuse_binding_while_impersonating("Connecting an app")
         await connection_repo.lock_account_owner(self.db, user_id=user_id)
         connection = await self._owned(user_id=user_id, connection_id=connection_id)
+        if get_app_by_catalog_key(connection.catalog_key) is None:
+            auth_config_id = settings.COMPOSIO_AUTH_CONFIGS.get(
+                _app(connection).toolkit, ""
+            ).strip()
+            if auth_config_id:
+                return await self._start(connection, user_id=user_id, auth_config_id=auth_config_id)
+            return await self._start_dynamic(connection, user_id=user_id)
         return await self._start(
             connection, user_id=user_id, auth_config_id=_auth_config(_app(connection).toolkit)
         )
@@ -277,6 +504,58 @@ class AppConnectionService:
             auth_config_id=auth_config_id,
             account_id=link.connected_account_id,
             expires_at=expires_at,
+        )
+        await connection_repo.update(
+            self.db,
+            db_connection=connection,
+            update_data={
+                "oauth_state": str(attempt_id),
+                "oauth_pending_payload": _sealed_pending(connection, pending),
+            },
+        )
+        return AppConnectionStartRead(
+            connection_id=connection.id,
+            attempt_id=attempt_id,
+            redirect_url=link.redirect_url,
+            expires_at=expires_at,
+        )
+
+    async def _start_dynamic(
+        self, connection: McpConnection, *, user_id: UUID
+    ) -> AppConnectionStartRead:
+        """Open managed authorization with only this app's saved direct tools."""
+        app = _app(connection)
+        tools = connection.allowed_tools
+        if (
+            not tools
+            or len(tools) > _MAX_DYNAMIC_ACTIONS
+            or any(
+                not isinstance(tool, str)
+                or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", tool) is None
+                or tool.upper().startswith("COMPOSIO_")
+                for tool in tools
+            )
+        ):
+            raise BadRequestError(message="This app action list is not available for authorization")
+        attempt_id = uuid4()
+        async with ComposioClient() as client:
+            if connection.oauth_pending_payload:
+                previous = _pending(connection, user_id=user_id)
+                if previous.account_id != connection.composio_account_id:
+                    await client.delete_account(previous.account_id)
+            session_id = await client.create_link_session(
+                user_id=composio_user_id(user_id), toolkit=app.toolkit, tools=tools
+            )
+            link = await client.link_session(session_id=session_id, toolkit=app.toolkit)
+        expires_at = min(link.expires_at, datetime.now(UTC) + _DYNAMIC_ATTEMPT_TTL)
+        pending = _PendingConsent(
+            attempt_id=attempt_id,
+            user_id=user_id,
+            toolkit=app.toolkit,
+            account_id=link.connected_account_id,
+            expires_at=expires_at,
+            session_id=session_id,
+            dynamic=True,
         )
         await connection_repo.update(
             self.db,
@@ -370,6 +649,38 @@ class AppConnectionService:
             )
             return await self._finish(connection, user_id=user_id, client=client)
 
+    async def _verify_pending_account(
+        self,
+        connection: McpConnection,
+        *,
+        user_id: UUID,
+        client: ComposioClient,
+        pending: _PendingConsent,
+    ) -> ComposioAccount:
+        """Resolve managed auth metadata, seal it, then verify this exact owner grant."""
+        if pending.dynamic:
+            if pending.session_id is None:
+                raise ExternalServiceError(message="The linked app session is unavailable")
+            discovered = await client.discover_account_auth_config(
+                user_id=composio_user_id(user_id),
+                toolkit=pending.toolkit,
+                account_id=pending.account_id,
+            )
+            pending.auth_config_id = discovered.auth_config.id
+            await connection_repo.update(
+                self.db,
+                db_connection=connection,
+                update_data={"oauth_pending_payload": _sealed_pending(connection, pending)},
+            )
+        if pending.auth_config_id is None:
+            raise ExternalServiceError(message="The app auth configuration is unavailable")
+        return await client.verify_account(
+            user_id=composio_user_id(user_id),
+            toolkit=pending.toolkit,
+            account_id=pending.account_id,
+            auth_config_id=pending.auth_config_id,
+        )
+
     async def _finish(
         self, connection: McpConnection, *, user_id: UUID, client: ComposioClient
     ) -> AppConnectionRead:
@@ -379,11 +690,11 @@ class AppConnectionService:
         if not pending.identity_verified:
             return _read(connection)
         try:
-            account = await client.verify_account(
-                user_id=composio_user_id(user_id),
-                toolkit=pending.toolkit,
-                account_id=pending.account_id,
-                auth_config_id=pending.auth_config_id,
+            account = await self._verify_pending_account(
+                connection,
+                user_id=user_id,
+                client=client,
+                pending=pending,
             )
         except ExternalServiceError:
             # The identity session is single-use. Preserve its successful

@@ -18,7 +18,6 @@ import type { AppConnection, AppConnectionScope } from "@/types/app-connections"
 import type { ConnectionAuthorizationTarget } from "./connection-authorization-dialog";
 
 export function useConnectionJourney(scope: AppConnectionScope) {
-  const api = useAppConnections(scope);
   const t = useTranslations("appConnections");
   const tErrors = useTranslations("errors");
   const [arrival] = useState(() => {
@@ -28,6 +27,13 @@ export function useConnectionJourney(scope: AppConnectionScope) {
       toolkit: new URLSearchParams(search).get("app"),
     };
   });
+  const [catalogSearch, setCatalogSearch] = useState(arrival.toolkit ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(catalogSearch);
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(catalogSearch.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [catalogSearch]);
+  const api = useAppConnections(scope, debouncedSearch);
   const [goal, setGoal] = useState(() =>
     appConnectionGoalForToolkit(arrival.toolkit, rememberedAppConnectionGoal(scope)),
   );
@@ -114,6 +120,8 @@ export function useConnectionJourney(scope: AppConnectionScope) {
     api.enable.isPending;
   return {
     ...api,
+    catalogSearch,
+    setCatalogSearch,
     goal,
     chooseGoal,
     step,
