@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, status
 from app.agents.model_resolver import PROVIDERS
 from app.api.deps import Auth, ModelProfileSvc, SecretSvc, require
 from app.api.public_api import PUBLIC
+from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.exceptions import AuthorizationError
 from app.core.field_errors import refused_field
 from app.core.permissions import Perm
@@ -65,7 +66,7 @@ router = APIRouter()
     dependencies=[Depends(require(Perm.AGENTS_VIEW))],
 )
 async def list_provider_catalog() -> Any:
-    """Every provider a credential can be stored for, and what it needs.
+    """Every selectable model provider, and the connection shape it needs.
 
     Gated on `agents:view` rather than `connections:manage`: the Builder's
     model picker reads it to label a profile, and knowing that Bedrock takes an
@@ -100,7 +101,7 @@ async def list_model_profiles(service: ModelProfileSvc, ctx: Auth) -> Any:
     Public, so a key - and the Architect, choosing the model a draft publishes
     on - can read which models the organization has (#2301).
     """
-    items = await service.list_profiles(ctx)
+    items = await service.list_profile_views(ctx)
     return ModelProfileList(items=items, total=len(items))
 
 
@@ -114,7 +115,7 @@ async def create_model_profile(
     data: ModelProfileCreate, service: ModelProfileSvc, ctx: Auth
 ) -> Any:
     """Define a selectable model backed by one of the organization's keys."""
-    return await service.create_profile(
+    profile = await service.create_profile(
         ctx,
         label=data.label,
         provider=data.provider,
@@ -126,6 +127,7 @@ async def create_model_profile(
         params=data.params,
         fallback_profile_ids=data.fallback_profile_ids,
     )
+    return await service.profile_view(ctx, profile)
 
 
 @router.patch(
@@ -145,7 +147,8 @@ async def update_model_profile(
     one the caller can see in the vault. Answers with the profile; the key itself
     is never in a response.
     """
-    return await service.update_profile(ctx, profile_id, data)
+    profile = await service.update_profile(ctx, profile_id, data)
+    return await service.profile_view(ctx, profile)
 
 
 @router.delete(
@@ -416,7 +419,13 @@ async def list_provider_models(
                 message="Managing connections is required for a custom endpoint"
             )
         base_url = await validate_endpoint_url(base_url)
-    sends_key = base_url is None or CUSTOM_LISTINGS[provider]
+    if provider == CLAUDE_SUBSCRIPTION_PROVIDER and secret_id is not None:
+        raise refused_field(
+            "secret_id", "Claude subscriptions use the signed-in user's native connection"
+        )
+    sends_key = provider != CLAUDE_SUBSCRIPTION_PROVIDER and (
+        base_url is None or CUSTOM_LISTINGS[provider]
+    )
     if base_url is not None and sends_key and secret_id is None:
         raise refused_field("secret_id", "Choose a vault key before listing this endpoint")
     api_key = (

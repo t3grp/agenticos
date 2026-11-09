@@ -26,6 +26,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+import { AppsRows } from "@/components/layout/apps-rows";
 import { ProjectRows } from "@/components/layout/project-rows";
 
 import { BrandLink } from "@/components/layout/brand-link";
@@ -36,7 +37,13 @@ import { useSuggestions } from "@/hooks/use-suggestions";
 import { usePermissions } from "@/hooks/use-permissions";
 import { cn, isAppAdmin } from "@/lib/utils";
 import { useAuthStore, useSidebarStore } from "@/stores";
-import { NAV_GROUPS, isActive, type NavGroup, type NavItem } from "@/lib/nav-sections";
+import {
+  NAV_GROUPS,
+  isActive,
+  navItemVisible,
+  type NavGroup,
+  type NavItem,
+} from "@/lib/nav-sections";
 
 export { NAV_GROUPS, isActive, navSectionFor, type NavDomain } from "@/lib/nav-sections";
 
@@ -137,7 +144,7 @@ export function SidebarNav({
 
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.permission || can(item.permission)),
+    items: group.items.filter((item) => navItemVisible(item, can)),
   })).filter((group) => group.items.length > 0 && (!group.adminOnly || admin));
 
   return (
@@ -145,14 +152,18 @@ export function SidebarNav({
       aria-label={t("primary")}
       className={cn("flex flex-col gap-3 py-3", collapsed ? "items-center px-2" : "px-3")}
     >
-      {groups.map((group) => (
-        <NavGroupBlock
-          key={group.labelKey ?? "main"}
-          group={group}
-          onNavigate={onNavigate}
-          collapsed={collapsed}
-        />
-      ))}
+      {groups.map((group) =>
+        group.labelKey === "apps" ? (
+          <AppsRows key="apps" onNavigate={onNavigate} collapsed={collapsed} />
+        ) : (
+          <NavGroupBlock
+            key={group.labelKey ?? "main"}
+            group={group}
+            onNavigate={onNavigate}
+            collapsed={collapsed}
+          />
+        ),
+      )}
     </nav>
   );
 }

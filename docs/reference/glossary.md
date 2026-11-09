@@ -84,6 +84,7 @@ in [Capabilities](capabilities.md).
 | Planning | `planning` |
 | Work while tools run | `background_tools` |
 | Background topics | `background_tasks` |
+| Agent messages | `agent_messages` |
 | Watch a command | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |

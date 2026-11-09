@@ -27,9 +27,8 @@ export interface NewModelProfile {
   provider: string;
   model: string;
   /**
-   * The vault secret to key it with. `null` only for a keyless provider that
-   * carries an endpoint - a model server on this network authenticates nothing,
-   * and the service refuses every other combination.
+   * The vault secret to key it with. `null` for a keyless endpoint or a personal
+   * native subscription whose client owns the sign-in outside the vault.
    */
   secret_id: string | null;
   /**

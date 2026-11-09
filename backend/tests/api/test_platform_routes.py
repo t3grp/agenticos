@@ -271,6 +271,22 @@ CALLS: tuple[Call, ...] = (
     ),
     Call("GET", "/agents/mcp-catalog", Perm.AGENTS_VIEW),
     Call("GET", "/agents", Perm.AGENTS_VIEW),
+    # Agent messages: the collection routes gate on `agents:run` - the same
+    # permission the service demands on both agents of a thread - while every
+    # per-thread route resolves access against the agents in that thread, in
+    # the service. The per-thread routes are deliberately absent here.
+    Call("GET", "/agent-messages", Perm.AGENTS_RUN),
+    Call("GET", "/agent-messages/recipients", Perm.AGENTS_RUN),
+    Call(
+        "POST",
+        "/agent-messages",
+        Perm.AGENTS_RUN,
+        body={
+            "sender_agent_id": str(uuid4()),
+            "recipient": str(uuid4()),
+            "body": "hello",
+        },
+    ),
     # How close the organization is to its agent limit: only a caller who can
     # create an agent has a use for it.
     Call("GET", "/agents/ceiling", Perm.AGENTS_EDIT),
@@ -813,6 +829,10 @@ class TestPermissionIntrospectionIsOpenToEveryMember:
 # brought with it authenticates differently and is not this file's business.
 _PLATFORM_PREFIXES = (
     "/agents",
+    # Agent messages: the collection routes gate on `agents:run`, and every
+    # per-thread route resolves `agents:run` against the agents in that thread
+    # inside the service - so the sweep must reach them here.
+    "/agent-messages",
     # Organization API keys. Issuing gates on `api_keys:create`; listing and
     # revoking act on the caller's own keys unless they hold `api_keys:manage`,
     # which the service decides per row.
@@ -989,6 +1009,12 @@ RESOURCE_AWARE_SERVICES = (
     # agent, and which version answers under which name is `agents:publish` on
     # that agent, resolved against its grants.
     deps.get_agent_environment_service,
+    # A thread is between two agents and has no grants of its own: every
+    # per-thread route resolves `agents:run` against the agents in it, inside
+    # the service - sending needs it on both, reading on either - so a viewer
+    # with an explicit run grant on one of them is not refused before the
+    # service can widen their access.
+    deps.get_agent_message_service,
     # A secret is a shared resource: who may edit or delete one is its grants'
     # answer, resolved inside the service exactly as it is for an agent.
     deps.get_secret_service,

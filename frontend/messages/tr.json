@@ -8471,6 +8471,14 @@
       "chat-coding-accounts": {
         "title": "Kodlama hesapların",
         "body": "Sohbetten ayrılmadan Codex veya Claude Code bağla. Bunlar özel bulut hesaplarındır; yerel masaüstü araçları kendi oturumlarını kullanır."
+      },
+      "claude-subscription-connect": {
+        "title": "Claude aboneliğinizi bağlayın",
+        "body": "Claude oturum açma sayfasını açın, kendi hesabınızla işlemi tamamlayın ve dönen kodu yapıştırın. Bağlandıktan sonra bir abonelik modeli ekleyip agent veya sohbette seçin."
+      },
+      "chat-subscription-model": {
+        "title": "Claude aboneliğinizi kullanın",
+        "body": "Bu sohbet için kayıtlı Claude abonelik modellerinizden birini seçin. Bağlantı kişisel kalır; Ayarlar → AI bağlantıları bölümünden yönetin."
       }
     }
   },
@@ -12833,5 +12841,51 @@
     "baseRevision": "Çalışma alanı anlık görüntüsü: {revision}",
     "chatTitle": "{name} hesabın",
     "chatHelp": "Bu agent kodlama görevlerini kendi hesabınla özel bir bulut görevi olarak çalıştırır. Diğer üyeler bu hesabı kullanamaz."
+  },
+  "claudeSubscription": {
+    "title": "Claude aboneliği",
+    "description": "Kişisel agent runlarınızı desteklemek için Claude hesabınızla oturum açın.",
+    "permission": "Claude aboneliğini bağlamak için bu organizasyonda connections:manage izni gerekir.",
+    "ownSessionOnly": "Kişisel aboneliği bağlamak veya kullanmak için kendi hesabınızla oturum açın.",
+    "checking": "Claude bağlantısı kontrol ediliyor…",
+    "notConfigured": "Bu dağıtımda Claude aboneliğiyle oturum açma yapılandırılmamış.",
+    "statusFailed": "Claude bağlantınız kontrol edilemedi. Durumunu okumak için yeniden deneyin.",
+    "requestFailed": "Oturum açma isteği tamamlanamadı. Bağlantıyı kontrol etmek için yeniden deneyin.",
+    "signInFailed": "Claude oturum açma işlemi tamamlanmadı. Yeniden başlayın ve yeni oturum açma sayfasındaki kodu kullanın.",
+    "invalidLink": "Claude oturum açma bağlantısı doğrulanamadı. İptal edip yeniden başlayın.",
+    "connect": "Claude aboneliğini bağla",
+    "connected": "Bağlandı · kişisel",
+    "disconnect": "Claude bağlantısını kes",
+    "starting": "Claude oturum açma işlemi hazırlanıyor…",
+    "verifying": "Claude oturum açma işlemi tamamlanıyor…",
+    "openInstructions": "Claude sayfasını açın, hesabınızla oturum açın ve onay sayfasında gösterilen kodu yapıştırın.",
+    "openClaude": "Claude oturum açma sayfasını aç",
+    "code": "Claude oturum açma kodu",
+    "codeHint": "Claude sayfasındaki kodu yapıştırın. Gönderir göndermez alan temizlenir.",
+    "complete": "Oturum açmayı tamamla",
+    "cancel": "Oturum açmayı iptal et",
+    "expired": "Bu oturum açma işleminin süresi doldu. Yeni bir bağlantı almak için yeniden başlayın.",
+    "startAgain": "Yeniden başla",
+    "expiresIn": "{minutes, plural, =1 {1 dakika} other {# dakika}} içinde süresi dolar.",
+    "retry": "Yeniden dene",
+    "supportedInputs": "Bu bağlantı metin ve agent araçlarını destekler. Görseller ve dosyalar henüz desteklenmiyor.",
+    "modelHint": "Bir Claude modeli seçin. Aboneliğiniz model erişimini ve kullanım sınırlarını belirler.",
+    "model": "Abonelik modeli",
+    "models": {
+      "sonnet": "Claude Sonnet",
+      "opus": "Claude Opus",
+      "haiku": "Claude Haiku"
+    },
+    "connectionLabel": "Claude aboneliği · {person}",
+    "addModel": "Abonelik modeli ekle",
+    "modelAlreadySaved": "Model zaten kaydedildi",
+    "savedModels": "Claude abonelik modelleriniz",
+    "chooseSavedModel": "Claude aboneliğinizi kullanmak için bir agent veya sohbette kayıtlı modeli seçin.",
+    "reconnectModels": "Bu kayıtlı modelleri kullanmak için Claude bağlantısını yeniden kurun.",
+    "modelsUnavailable": "Kayıtlı abonelik modelleriniz okunamadı.",
+    "chooseSaved": "Kayıtlı abonelik modelini seç",
+    "manageConnection": "Claude aboneliğini yönet",
+    "chooseApiModel": "API modeli seç",
+    "disconnected": "Bağlantı kesildi"
   }
 }
