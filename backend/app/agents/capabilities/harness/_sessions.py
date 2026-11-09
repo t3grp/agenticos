@@ -61,6 +61,8 @@ async def remembered_session(ctx: Any, harness: Harness, session: str = MAIN_SES
 
     `None` for a run in no conversation: there is nothing it could continue.
     """
+    if not valid_session_name(session):
+        return None
     conversation_id = ctx.deps.conversation_id
     if conversation_id is None:
         return None
@@ -88,6 +90,8 @@ async def forget_session(ctx: Any, session: str = MAIN_SESSION) -> Harness | Non
     session by that name. The CLI's own session ends with its process, which
     already exited after the prompt; nothing is left running to stop.
     """
+    if not valid_session_name(session):
+        return None
     conversation_id = ctx.deps.conversation_id
     if conversation_id is None:
         return None

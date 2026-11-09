@@ -94,4 +94,13 @@ def test_session_names_are_lower_case_short_names() -> None:
     assert not valid_session_name("Bad Name")
     assert not valid_session_name("a" * 41)
     assert not valid_session_name("")
+    assert not valid_session_name("../x")
+    assert not valid_session_name("a/b")
     assert not valid_session_name("../escape")
+
+
+async def test_forgetting_an_invalid_session_name_is_none() -> None:
+    ctx = _ctx(uuid4(), document_workspace())
+    assert await forget_session(ctx, session="../x") is None
+    assert await forget_session(ctx, session="a/b") is None
+    assert await forget_session(ctx, session="") is None

@@ -138,6 +138,12 @@ def build_harness_toolset(
             `steps`, as `harness_start` returns. Answer the person from
             `answer`.
         """
+        if not valid_session_name(session):
+            return steer(
+                ctx,
+                "Name the session in lower case letters, digits, `-` or `_`, up to 40 "
+                "characters, such as `main` or `api`.",
+            )
         if await remembered_session(ctx, harness, session) is None:
             return steer(
                 ctx,
@@ -161,6 +167,12 @@ def build_harness_toolset(
             JSON with `session` and `stopped` - whether a session by that
             name was open to close.
         """
+        if not valid_session_name(session):
+            return steer(
+                ctx,
+                "Name the session in lower case letters, digits, `-` or `_`, up to 40 "
+                "characters, such as `main` or `api`.",
+            )
         stopped = await forget_session(ctx, session)
         return json.dumps({"session": session, "stopped": stopped is not None, "harness": stopped})
 

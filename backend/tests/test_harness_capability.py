@@ -388,6 +388,20 @@ class TestASession:
         with pytest.raises(ModelRetry, match="lower case letters"):
             await _call(_Shell(), "harness_start", session="Bad Name")
 
+    @pytest.mark.parametrize("invalid", ["../x", "a/b", ""])
+    async def test_stopping_with_an_invalid_name_is_rejected(
+        self, invalid: str
+    ) -> None:
+        with pytest.raises(ModelRetry, match="lower case letters"):
+            await _call(_Shell(), "harness_stop", session=invalid)
+
+    @pytest.mark.parametrize("invalid", ["../x", "a/b", ""])
+    async def test_prompting_with_an_invalid_name_is_rejected(
+        self, invalid: str
+    ) -> None:
+        with pytest.raises(ModelRetry, match="lower case letters"):
+            await _call(_Shell(), "harness_prompt", session=invalid)
+
     async def test_a_finished_prompt_books_what_it_spent(self) -> None:
         shell = _Shell(events=_lines(_claude_stream(result=_CLAUDE_DONE)))
         ledger = SpendLedger()
