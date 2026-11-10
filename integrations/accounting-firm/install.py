@@ -5,8 +5,6 @@ Contract: docs/api.md, app/api/routes/v1/{permissions,skills,agents,model_provid
 and AgentSpec version 14. This is a create-only installer, not an upgrade tool.
 """
 
-from __future__ import annotations
-
 import argparse
 import copy
 import json
@@ -24,7 +22,7 @@ from uuid import UUID
 
 import yaml
 
-type Json = None | bool | int | float | str | list[Json] | dict[str, Json]
+type Json = bool | int | float | str | list[Json] | dict[str, Json] | None
 type JsonObject = dict[str, Json]
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -246,9 +244,18 @@ def read_skill(root: Path, key: str) -> Skill:
 def read_agent(root: Path, key: str) -> Agent:
     folder = catalog_folder(root, "agent_templates", key)
     metadata, body = frontmatter(folder / "AGENT.md")
-    for field in ("mcp_servers", "subagents", "model_profile_id", "skill_ids", "collection_ids", "context_ids"):
+    for field in (
+        "mcp_servers",
+        "subagents",
+        "model_profile_id",
+        "skill_ids",
+        "collection_ids",
+        "context_ids",
+    ):
         if metadata.get(field):
-            raise InstallError(f"{key}: {field} needs organization-specific review and is not installed automatically")
+            raise InstallError(
+                f"{key}: {field} needs organization-specific review and is not installed automatically"
+            )
     capabilities = metadata.get("capabilities", [])
     if not isinstance(capabilities, list):
         raise InstallError(f"{key}.capabilities must be a list")
@@ -272,7 +279,9 @@ def read_agent(root: Path, key: str) -> Agent:
     if skill_keys and "skills" not in ids:
         raise InstallError(f"{key}: bound skills need the skills capability")
     budget = metadata.get("budget_usd")
-    if budget is not None and (isinstance(budget, bool) or not isinstance(budget, int | float) or budget <= 0):
+    if budget is not None and (
+        isinstance(budget, bool) or not isinstance(budget, int | float) or budget <= 0
+    ):
         raise InstallError(f"{key}.budget_usd must be a positive number")
     starters = strings(metadata.get("starters", []), f"{key}.starters")
     if len(starters) > 4 or any(len(starter) > 200 for starter in starters):
@@ -311,7 +320,8 @@ def read_pack(root: Path, manifest: Path, selected_agents: Sequence[str] = ()) -
         missing = set(agent.skills) - set(skill_keys)
         if missing:
             raise InstallError(
-                f"{agent.key}: skill references missing from manifest", details={"keys": sorted(missing)}
+                f"{agent.key}: skill references missing from manifest",
+                details={"keys": sorted(missing)},
             )
     if selected_agents:
         unknown = set(selected_agents) - set(agent_keys)
@@ -345,21 +355,35 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 class ApiClient:
-    def __init__(self, base_url: str, token: str, organization_id: str, *, apply: bool = False) -> None:
+    def __init__(
+        self, base_url: str, token: str, organization_id: str, *, apply: bool = False
+    ) -> None:
         try:
             parsed = urlsplit(base_url)
-            parsed.port
+            _ = parsed.port  # Reading the property validates the port's range and syntax.
         except ValueError as exc:
             raise InstallError("--base-url is not a valid deployment URL") from exc
         local = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
         if parsed.scheme != "https" and not (local and parsed.scheme == "http"):
-            raise InstallError("--base-url must use HTTPS (HTTP is allowed only for loopback development)")
-        if not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise InstallError("--base-url must contain a host and no credentials, query, or fragment")
+            raise InstallError(
+                "--base-url must use HTTPS (HTTP is allowed only for loopback development)"
+            )
+        if (
+            not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise InstallError(
+                "--base-url must contain a host and no credentials, query, or fragment"
+            )
         if parsed.path.rstrip("/").endswith("/api/v1"):
             raise InstallError("--base-url is the deployment URL, without /api/v1")
         if not token.strip() or "\n" in token or "\r" in token:
-            raise InstallError("Set T3OS_API_TOKEN to an organization API key or session access token")
+            raise InstallError(
+                "Set T3OS_API_TOKEN to an organization API key or session access token"
+            )
         self.base_url = base_url.rstrip("/") + "/api/v1"
         self.headers = {
             "Authorization": f"Bearer {token.strip()}",
@@ -380,22 +404,29 @@ class ApiClient:
         if method not in {"GET", "POST"} or not path.startswith("/") or path.startswith("//"):
             raise InstallError("Unsupported installer request")
         if method == "POST" and (
-            not self.apply or not re.fullmatch(r"/(skills|agents|skills/[0-9a-f-]+/resources)", path)
+            not self.apply
+            or not re.fullmatch(r"/(skills|agents|skills/[0-9a-f-]+/resources)", path)
         ):
-            raise InstallError("This installer only creates skills, resources, and draft agents with --apply")
+            raise InstallError(
+                "This installer only creates skills, resources, and draft agents with --apply"
+            )
         url = self.base_url + path + ("?" + urlencode(params) if params else "")
         headers = dict(self.headers)
         body = None
         if payload is not None:
             headers["Content-Type"] = "application/json"
             body = json.dumps(payload, allow_nan=False).encode("utf-8")
-        request = Request(url, data=body, headers=headers, method=method)
+        # __init__ permits only HTTPS or loopback HTTP, and redirects are disabled.
+        request = Request(url, data=body, headers=headers, method=method)  # noqa: S310
         try:
             with self.opener.open(request, timeout=30) as response:
                 result = json.load(response)
         except HTTPError as exc:
             # Do not echo response bodies, request bodies, or credentials into logs.
-            raise InstallError(f"HTTP {exc.code} for {method} {path}; stopped without retrying") from None
+            exc.close()
+            raise InstallError(
+                f"HTTP {exc.code} for {method} {path}; stopped without retrying"
+            ) from None
         except (URLError, TimeoutError, OSError, ValueError) as exc:
             raise InstallError(
                 f"Could not complete {method} {path}; no automatic retry. "
@@ -416,7 +447,9 @@ def all_pages(api: Api, path: str, *, params: Mapping[str, str] | None = None) -
     seen: set[str] = set()
     total: int | None = None
     while total is None or len(result) < total:
-        response = api.request("GET", path, params={**(params or {}), "skip": str(len(result)), "limit": "100"})
+        response = api.request(
+            "GET", path, params={**(params or {}), "skip": str(len(result)), "limit": "100"}
+        )
         count = response.get("total")
         if isinstance(count, bool) or not isinstance(count, int) or count < 0:
             raise InstallError(f"{path}: invalid pagination total")
@@ -441,7 +474,9 @@ def verify_context(api: Api, organization_id: str, *, apply: bool) -> None:
     response = api.request("GET", "/me/permissions")
     actual = uuid_value(response.get("organization_id"), "active organization")
     if actual != organization_id:
-        raise InstallError("Active organization does not match --organization-id", details={"actual": actual})
+        raise InstallError(
+            "Active organization does not match --organization-id", details={"actual": actual}
+        )
     raw = response.get("permissions")
     if not isinstance(raw, list):
         raise InstallError("Cannot verify organization permissions")
@@ -449,7 +484,9 @@ def verify_context(api: Api, organization_id: str, *, apply: bool) -> None:
     scopes = {str(value.get("permission")): value.get("scope") for value in permissions}
     for permission in ("skills:view", "agents:view"):
         if scopes.get(permission) != "all":
-            raise InstallError(f"{permission} with all scope is required to check every possible name collision")
+            raise InstallError(
+                f"{permission} with all scope is required to check every possible name collision"
+            )
     if apply:
         for permission in ("skills:edit", "agents:edit"):
             if scopes.get(permission) not in {"own", "shared", "all"}:
@@ -460,12 +497,16 @@ def verify_model_and_capabilities(api: Api, pack: Pack, model_id: str) -> None:
     profiles = items(api.request("GET", "/providers/model-profiles"), "model profiles")
     matches = [profile for profile in profiles if profile.get("id") == model_id]
     if len(matches) != 1:
-        raise InstallError("The selected model profile is not uniquely available in this organization")
+        raise InstallError(
+            "The selected model profile is not uniquely available in this organization"
+        )
     profile = matches[0]
     if profile.get("chat_capable") is not True or profile.get("missing_key") is not False:
         raise InstallError("The selected model must be chat-capable and have usable authentication")
     if profile.get("usage_scope") != "organization":
-        raise InstallError("Select an organization model profile for these organization-visible drafts")
+        raise InstallError(
+            "Select an organization model profile for these organization-visible drafts"
+        )
     catalog = items(api.request("GET", "/agents/capabilities"), "capabilities")
     ids = {row.get("id") for row in catalog if isinstance(row.get("id"), str)}
     required = {str(binding["id"]) for agent in pack.agents for binding in agent.capabilities}
@@ -499,7 +540,9 @@ def match_row(rows: Sequence[JsonObject], name: str, *, agent: bool = False) -> 
 def assert_fields(actual: JsonObject, expected: JsonObject, label: str) -> None:
     changed = sorted(key for key, value in expected.items() if actual.get(key) != value)
     if changed:
-        raise InstallError(f"Existing {label} differs; no content will be overwritten", details={"fields": changed})
+        raise InstallError(
+            f"Existing {label} differs; no content will be overwritten", details={"fields": changed}
+        )
 
 
 def inspect_skill(api: Api, skill: Skill, skill_id: str) -> tuple[Resource, ...]:
@@ -517,7 +560,8 @@ def inspect_skill(api: Api, skill: Skill, skill_id: str) -> tuple[Resource, ...]
     extra = set(names) - wanted.keys()
     if extra:
         raise InstallError(
-            f"{skill.name}: existing extra resources are a customization", details={"names": sorted(extra)}
+            f"{skill.name}: existing extra resources are a customization",
+            details={"names": sorted(extra)},
         )
     for summary in summaries:
         name = text_value(summary.get("name"), "resource name")
@@ -570,7 +614,9 @@ def reconcile(
     organization_id = uuid_value(organization_id, "organization id")
     model_id = uuid_value(model_id, "model profile id")
     if apply and confirmed_id != organization_id:
-        raise InstallError("--apply requires --confirm-organization-id with the exact organization UUID")
+        raise InstallError(
+            "--apply requires --confirm-organization-id with the exact organization UUID"
+        )
     verify_context(api, organization_id, apply=apply)
     verify_model_and_capabilities(api, pack, model_id)
     skill_rows = all_pages(api, "/skills", params={"sort": "name"})
@@ -590,7 +636,9 @@ def reconcile(
         agent_id = uuid_value(row.get("id"), "agent id") if row is not None else None
         if agent_id:
             if any(key not in skill_ids for key in agent.skills):
-                raise InstallError(f"Existing {agent.name} cannot match: one of its expected skills is missing")
+                raise InstallError(
+                    f"Existing {agent.name} cannot match: one of its expected skills is missing"
+                )
             inspect_agent(api, agent, agent_id, agent.spec(skill_ids, model_id))
         agent_plan.append(PlannedAgent(agent, agent_id))
     report: JsonObject = {
@@ -600,7 +648,11 @@ def reconcile(
         "skills": [
             {
                 "key": item.skill.key,
-                "action": "create" if item.existing_id is None else "add-resources" if item.missing else "unchanged",
+                "action": "create"
+                if item.existing_id is None
+                else "add-resources"
+                if item.missing
+                else "unchanged",
                 "resources_to_create": [resource.name for resource in item.missing],
             }
             for item in skill_plan
@@ -626,8 +678,12 @@ def reconcile(
             item.existing_id = uuid_value(created.get("id"), "created skill id")
         missing = inspect_skill(api, skill, item.existing_id)
         for resource in missing:
-            created = api.request("POST", f"/skills/{item.existing_id}/resources", payload=resource.payload())
-            assert_fields(created, resource.payload(), f"created resource {skill.name}/{resource.name}")
+            created = api.request(
+                "POST", f"/skills/{item.existing_id}/resources", payload=resource.payload()
+            )
+            assert_fields(
+                created, resource.payload(), f"created resource {skill.name}/{resource.name}"
+            )
         skill_ids[skill.key] = item.existing_id
     agent_ids: JsonObject = {}
     for item in agent_plan:
@@ -653,46 +709,61 @@ def reconcile(
     return report
 
 
+def run(args: argparse.Namespace) -> JsonObject:
+    pack = read_pack(args.repo_root, args.manifest, args.agent)
+    if args.check:
+        if args.apply:
+            raise InstallError("--check cannot be combined with --apply")
+        return {
+            "mode": "local-check",
+            "skills": len(pack.skills),
+            "resources": sum(len(skill.resources) for skill in pack.skills),
+            "agents": [agent.key for agent in pack.agents],
+        }
+    if not args.base_url or not args.organization_id or not args.model_profile_id:
+        raise InstallError(
+            "Preview/apply requires --base-url, --organization-id, and --model-profile-id"
+        )
+    api = ApiClient(
+        args.base_url, os.environ.get("T3OS_API_TOKEN", ""), args.organization_id, apply=args.apply
+    )
+    return reconcile(
+        api,
+        pack,
+        args.organization_id,
+        args.model_profile_id,
+        apply=args.apply,
+        confirmed_id=args.confirm_organization_id,
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=ROOT)
     parser.add_argument("--manifest", type=Path, default=MANIFEST)
-    parser.add_argument("--agent", action="append", default=[], help="Install only this manifest key (repeatable)")
-    parser.add_argument("--check", action="store_true", help="Validate local pack files without any network calls")
+    parser.add_argument(
+        "--agent", action="append", default=[], help="Install only this manifest key (repeatable)"
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Validate local pack files without any network calls"
+    )
     parser.add_argument("--base-url", help="Deployment URL, without /api/v1")
     parser.add_argument("--organization-id")
     parser.add_argument("--model-profile-id")
-    parser.add_argument("--apply", action="store_true", help="Create missing content after a full preflight")
-    parser.add_argument("--confirm-organization-id", help="Repeat the exact organization UUID to allow creation")
+    parser.add_argument(
+        "--apply", action="store_true", help="Create missing content after a full preflight"
+    )
+    parser.add_argument(
+        "--confirm-organization-id", help="Repeat the exact organization UUID to allow creation"
+    )
     args = parser.parse_args(argv)
     try:
-        pack = read_pack(args.repo_root, args.manifest, args.agent)
-        if args.check:
-            if args.apply:
-                raise InstallError("--check cannot be combined with --apply")
-            report: JsonObject = {
-                "mode": "local-check",
-                "skills": len(pack.skills),
-                "resources": sum(len(skill.resources) for skill in pack.skills),
-                "agents": [agent.key for agent in pack.agents],
-            }
-        else:
-            if not args.base_url or not args.organization_id or not args.model_profile_id:
-                raise InstallError("Preview/apply requires --base-url, --organization-id, and --model-profile-id")
-            api = ApiClient(args.base_url, os.environ.get("T3OS_API_TOKEN", ""), args.organization_id, apply=args.apply)
-            report = reconcile(
-                api,
-                pack,
-                args.organization_id,
-                args.model_profile_id,
-                apply=args.apply,
-                confirmed_id=args.confirm_organization_id,
-            )
-        print(json.dumps(report, indent=2))
-        return 0
+        report = run(args)
     except InstallError as exc:
-        print(json.dumps({"error": exc.message, "details": exc.details}), file=sys.stderr)
+        sys.stderr.write(json.dumps({"error": exc.message, "details": exc.details}) + "\n")
         return 1
+    sys.stdout.write(json.dumps(report, indent=2) + "\n")
+    return 0
 
 
 if __name__ == "__main__":

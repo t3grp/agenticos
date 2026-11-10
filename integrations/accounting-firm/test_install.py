@@ -1,7 +1,5 @@
 """Create-only installer checks; no backend import, network, or database needed."""
 
-from __future__ import annotations
-
 import copy
 import io
 import json
@@ -26,7 +24,10 @@ def pack_fixture() -> install.Pack:
         "Example reconciliation procedure.",
         "Preserve evidence and report unresolved differences.",
         "finance",
-        (install.Resource("SOURCE.md", "Pinned source."), install.Resource("references/checks.md", "Check totals.")),
+        (
+            install.Resource("SOURCE.md", "Pinned source."),
+            install.Resource("references/checks.md", "Check totals."),
+        ),
     )
     agent = install.Agent(
         key="finance/example-agent",
@@ -130,7 +131,9 @@ class FakeApi:
         if path == "/me/permissions":
             return {
                 "organization_id": self.organization_id,
-                "permissions": [{"permission": key, "scope": scope} for key, scope in self.permissions.items()],
+                "permissions": [
+                    {"permission": key, "scope": scope} for key, scope in self.permissions.items()
+                ],
             }
         if path == "/providers/model-profiles":
             return {"items": [self.model], "total": 1}
@@ -250,7 +253,11 @@ class ReconcileTests(unittest.TestCase):
     def test_extra_resource_is_treated_as_customization(self) -> None:
         self.apply()
         skill_id = next(iter(self.api.skills))
-        self.api.request("POST", f"/skills/{skill_id}/resources", payload={"name": "custom.md", "content": "Custom"})
+        self.api.request(
+            "POST",
+            f"/skills/{skill_id}/resources",
+            payload={"name": "custom.md", "content": "Custom"},
+        )
         self.api.requests.clear()
         with self.assertRaisesRegex(install.InstallError, "extra resources"):
             self.apply()
@@ -298,7 +305,11 @@ class ReconcileTests(unittest.TestCase):
         self.assertEqual(self.api.writes(), [])
 
     def test_unusable_or_personal_model_is_refused(self) -> None:
-        for field, value in (("chat_capable", False), ("missing_key", True), ("usage_scope", "personal")):
+        for field, value in (
+            ("chat_capable", False),
+            ("missing_key", True),
+            ("usage_scope", "personal"),
+        ):
             with self.subTest(field=field):
                 api = FakeApi()
                 api.model[field] = value
@@ -329,14 +340,18 @@ class PackReaderTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.manifest = self.root / "manifest.json"
-        self.skill_folder = self.root / "backend/app/core/catalog/skill_gallery/finance/example-accounting"
+        self.skill_folder = (
+            self.root / "backend/app/core/catalog/skill_gallery/finance/example-accounting"
+        )
         self.skill_folder.mkdir(parents=True)
         (self.skill_folder / "SKILL.md").write_text(
             "---\nname: example-accounting\ndescription: Example accounting.\ncategory: finance\n---\nRead evidence.\n",
             encoding="utf-8",
         )
         (self.skill_folder / "SOURCE.md").write_text("Pinned source.\n", encoding="utf-8")
-        self.agent_folder = self.root / "backend/app/core/catalog/agent_templates/finance/example-agent"
+        self.agent_folder = (
+            self.root / "backend/app/core/catalog/agent_templates/finance/example-agent"
+        )
         self.agent_folder.mkdir(parents=True)
         (self.agent_folder / "AGENT.md").write_text(
             "---\nname: Example Agent\ndescription: Example agent.\ncapabilities: [skills]\n"
@@ -392,7 +407,9 @@ class PackReaderTests(unittest.TestCase):
 
     def test_organization_bindings_cannot_hide_in_a_template(self) -> None:
         path = self.agent_folder / "AGENT.md"
-        content = path.read_text(encoding="utf-8").replace("attach: [sandbox]", f"model_profile_id: {MODEL}")
+        content = path.read_text(encoding="utf-8").replace(
+            "attach: [sandbox]", f"model_profile_id: {MODEL}"
+        )
         path.write_text(content, encoding="utf-8")
         with self.assertRaisesRegex(install.InstallError, "organization-specific review"):
             install.read_pack(self.root, self.manifest)
@@ -405,7 +422,9 @@ class HttpClientTests(unittest.TestCase):
         api.opener.open.return_value = io.BytesIO(b'{"items": [], "total": 0}')
         api.request("GET", "/skills", params={"skip": "0", "limit": "100"})
         request = api.opener.open.call_args.args[0]
-        self.assertEqual(request.full_url, "https://deployment.example/api/v1/skills?skip=0&limit=100")
+        self.assertEqual(
+            request.full_url, "https://deployment.example/api/v1/skills?skip=0&limit=100"
+        )
         self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
         self.assertEqual(request.get_header("X-organization-id"), ORG)
 
@@ -417,27 +436,29 @@ class HttpClientTests(unittest.TestCase):
     def test_transport_never_accepts_publish_or_delete(self) -> None:
         api = install.ApiClient("https://deployment.example", "test-token", ORG, apply=True)
         for method, path in (("POST", f"/agents/{MODEL}/publish"), ("DELETE", f"/skills/{MODEL}")):
-            with self.subTest(method=method):
-                with self.assertRaises(install.InstallError):
-                    api.request(method, path, payload={})
+            with self.subTest(method=method), self.assertRaises(install.InstallError):
+                api.request(method, path, payload={})
 
     def test_http_errors_do_not_echo_server_bodies_or_retry_writes(self) -> None:
         api = install.ApiClient("https://deployment.example", "test-token", ORG, apply=True)
         api.opener = Mock()
-        api.opener.open.side_effect = HTTPError("https://deployment.example", 500, "secret content", {}, None)
+        response_error = HTTPError("https://deployment.example", 500, "secret content", {}, None)
+        api.opener.open.side_effect = response_error
         with self.assertRaisesRegex(install.InstallError, "stopped without retrying") as error:
             api.request("POST", "/skills", payload={})
         self.assertNotIn("secret content", str(error.exception))
         self.assertEqual(api.opener.open.call_count, 1)
+        self.assertTrue(response_error.closed)
 
     def test_credentials_are_not_sent_over_remote_http_or_url_userinfo(self) -> None:
         for url in ("http://deployment.example", "https://user:password@deployment.example"):
-            with self.subTest(url=url):
-                with self.assertRaises(install.InstallError):
-                    install.ApiClient(url, "test-token", ORG)
+            with self.subTest(url=url), self.assertRaises(install.InstallError):
+                install.ApiClient(url, "test-token", ORG)
 
     def test_redirects_are_refused(self) -> None:
-        result = install.NoRedirect().redirect_request(Mock(), None, 302, "Found", {}, "https://other.example")
+        result = install.NoRedirect().redirect_request(
+            Mock(), None, 302, "Found", {}, "https://other.example"
+        )
         self.assertIsNone(result)
 
 

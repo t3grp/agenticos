@@ -564,7 +564,7 @@ for row_idx, wacc_value in enumerate(wacc_range):
     for col_idx, term_growth_value in enumerate(term_growth_range):
         # Build formula that uses wacc_value and term_growth_value
         formula = f"=<DCF recalc using {wacc_value} and {term_growth_value}>"
-        ws.cell(row=start_row+row_idx, column=start_col+col_idx).value = formula
+        ws.cell(row=start_row + row_idx, column=start_col + col_idx).value = formula
 ```
 
 **The sensitivity tables must work immediately when the model is opened, with no manual steps required from the user.**
