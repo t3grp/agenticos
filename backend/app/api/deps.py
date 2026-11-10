@@ -1038,6 +1038,7 @@ ArtifactPublicDataSvc = Annotated[
 ]
 
 from app.services.memory import MemoryService
+from app.services.onboarding_team import OnboardingTeamService
 from app.services.outcome import OutcomeService
 from app.services.primary_conversation import PrimaryConversationService
 from app.services.system_agent import SystemAgentService
@@ -1082,6 +1083,14 @@ def get_primary_conversation_service(db: DBSession) -> PrimaryConversationServic
 PrimaryConversationSvc = Annotated[
     PrimaryConversationService, Depends(get_primary_conversation_service)
 ]
+
+
+def get_onboarding_team_service(db: DBSession) -> OnboardingTeamService:
+    """Create OnboardingTeamService instance with database session."""
+    return OnboardingTeamService(db)
+
+
+OnboardingTeamSvc = Annotated[OnboardingTeamService, Depends(get_onboarding_team_service)]
 
 
 def get_browser_sign_in_service(db: DBSession) -> BrowserSignInService:

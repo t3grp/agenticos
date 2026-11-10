@@ -68,7 +68,7 @@ from app.api.routes.v1 import (
 from app.api.routes.v1 import table_views
 from app.api.routes.v1 import virtual_table_triggers
 from app.api.routes.v1 import memory as memory_files
-from app.api.routes.v1 import outcomes, primary_conversations, system_agents
+from app.api.routes.v1 import onboarding, outcomes, primary_conversations, system_agents
 from app.api.routes.v1 import browser_sign_ins
 from app.api.routes.v1 import coding_accounts
 from app.api.routes.v1 import permissions
@@ -198,6 +198,7 @@ v1_router.include_router(memory_files.router, prefix="/memory", tags=["memory"])
 v1_router.include_router(
     primary_conversations.router, prefix="/agents", tags=["primary-conversations"]
 )
+v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 v1_router.include_router(system_agents.router, prefix="/system-agents", tags=["system-agents"])
 v1_router.include_router(
     browser_sign_ins.router, prefix="/browser-sign-ins", tags=["browser-sign-ins"]
