@@ -1554,10 +1554,9 @@ class TestTheGalleryOnDisk:
 
         names = [s.name for i in skill_library.gallery() for s in i.skills]
         names += [entry.name for entry in skill_library.library()]
-        # 75 - the AgenticOS guide among them - the seven the AI Architect ships
-        # with (#2069), the bundled visual-design (#2171) and the three that build,
-        # plan and check a slide deck as a published page (#2576).
-        assert len(names) == 97
+        # The existing 97 skills plus 43 opt-in accounting/finance skills from
+        # Anthropic's releases and the shared accounting engagement procedure.
+        assert len(names) == 140
         for name in names:
             assert SKILL_NAME_PATTERN.fullmatch(name), name
             SkillCreate(name=name, description="d")
