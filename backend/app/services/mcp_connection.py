@@ -109,6 +109,10 @@ from app.schemas.resource_grant import AudienceChoice
 from app.schemas.resource_usage import AgentUsage
 from app.services import portal_catalog, portals
 from app.services.access import MCP_CONNECTION, accessible_ids, decider_context, resolve_access
+from app.services.app_connections._managed import (
+    is_managed_auth_type,
+    is_managed_catalog_key,
+)
 from app.services.impersonation import refuse_binding_while_impersonating
 from app.services.mcp_catalog import get_entry
 from app.services.notifications import NotificationService
@@ -926,7 +930,7 @@ async def _record_run_reachability(observed: list[tuple[UUID, bool]]) -> None:
 async def resolve_auth_headers(connection: McpConnection) -> dict[str, str] | None:
     """Auth headers to reach *connection*, or None if it can't be used right now
     (OAuth not authorized / expired, or an undecryptable bearer token)."""
-    if connection.auth_type == "composio":
+    if is_managed_auth_type(connection.auth_type):
         # A managed account is resolved through an account-pinned session, never
         # by turning its metadata-only URL into an ordinary bearer connection.
         return None
@@ -987,8 +991,8 @@ def account_source_organization(account: McpConnection) -> UUID | None:
 
 def _refuse_managed_app(catalog_key: str | None) -> None:
     entry = get_entry(catalog_key) if catalog_key is not None else None
-    if (catalog_key is not None and catalog_key.lower().startswith("composio-")) or (
-        entry is not None and entry.auth == "composio"
+    if is_managed_catalog_key(catalog_key) or (
+        entry is not None and is_managed_auth_type(entry.auth)
     ):
         raise BadRequestError(message="Connect this personal app from Connections → Apps")
 
@@ -1105,7 +1109,7 @@ class McpConnectionService:
             data, over=McpConnection, exclude={"clear_allowed_tools"}
         )
 
-        if db_connection.auth_type == "composio":
+        if is_managed_auth_type(db_connection.auth_type):
             # The managed lifecycle owns the endpoint and credential. These
             # familiar controls still apply, but a generic MCP patch cannot
             # turn a curated app into a token server or widen its action ceiling.
@@ -1224,7 +1228,7 @@ class McpConnectionService:
 
     async def delete(self, *, user_id: UUID, connection_id: UUID) -> None:
         db_connection = await self._get_owned(user_id=user_id, connection_id=connection_id)
-        if db_connection.auth_type == "composio":
+        if is_managed_auth_type(db_connection.auth_type):
             raise BadRequestError(message="Disconnect this account from Apps")
         await mcp_connection_repo.delete(self.db, db_connection=db_connection)
 
@@ -1233,7 +1237,7 @@ class McpConnectionService:
     ) -> tuple[McpConnection, list[McpToolInfo], str | None]:
         """Probe the server, persist the result, and return discovered tools."""
         db_connection = await self._get_owned(user_id=user_id, connection_id=connection_id)
-        if db_connection.auth_type == "composio":
+        if is_managed_auth_type(db_connection.auth_type):
             raise BadRequestError(message="Check this account from Apps")
         return await self._probe(db_connection)
 
@@ -1421,7 +1425,7 @@ class McpConnectionService:
                 details={"catalog_key": catalog_key},
             )
         existing = await mcp_connection_repo.get_by_name(self.db, user_id=user_id, name=name)
-        if existing is not None and existing.auth_type == "composio":
+        if existing is not None and is_managed_auth_type(existing.auth_type):
             raise BadRequestError(message="Reconnect this account from Apps")
         client_org_id: UUID | None = None
         if client_id is None and ctx is not None and is_google_mcp(url):
@@ -2449,7 +2453,7 @@ class McpConnectionService:
         connection = await mcp_connection_repo.get_by_oauth_state(self.db, state)
         if connection is None or not connection.oauth_pending_payload:
             raise NotFoundError(message="OAuth session not found or already completed")
-        if connection.auth_type == "composio":
+        if is_managed_auth_type(connection.auth_type):
             raise OAuthError("Complete this authorization through Apps while signed in.")
         if connection.purpose == "account":
             await mcp_connection_repo.lock_account_owner(
@@ -3582,7 +3586,7 @@ async def _own_specs(
             # Two labels that read the same as a tool name (`Sales US`, `Sales-US`)
             # would share one prefix, and the resolver keeps only the first.
             name = f"{name[:55]}-{account.id.hex[:8]}"
-        if account.auth_type == "composio":
+        if is_managed_auth_type(account.auth_type):
             from app.services.app_connections.runtime import managed_connection_spec
 
             managed = await managed_connection_spec(
@@ -3633,7 +3637,7 @@ async def watched_connection_spec(connection: McpConnection) -> McpServerSpec | 
     listed; the watch keeps only the tools the server marks read-only, so the
     approval policy here never comes into play.
     """
-    if connection.auth_type == "composio":
+    if is_managed_auth_type(connection.auth_type):
         from app.services.app_connections.runtime import managed_connection_spec
 
         return await managed_connection_spec(
