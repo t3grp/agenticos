@@ -375,6 +375,49 @@ class TestPrepare:
         create_run.assert_not_awaited()
 
     @pytest.mark.anyio
+    async def test_an_instructions_override_replaces_only_the_instructions(self):
+        """An eval try runs the published spec with one proposed text swapped in.
+
+        The overridden spec is frozen as the run's `test_spec` - no version
+        exists for text nobody published - so the run records no version id.
+        """
+        ctx = _ctx()
+        service = AgentRunnerService(_db())
+        agent = MagicMock(id=uuid.uuid4(), current_version_id=uuid.uuid4())
+        spec = AgentSpec(name="Support", model_profile_id=uuid.uuid4(), instructions="Old text.")
+        run = MagicMock(id=uuid.uuid4())
+
+        with (
+            patch.object(
+                service.registry,
+                "get_runnable_spec",
+                new=AsyncMock(return_value=(agent, spec, agent.current_version_id)),
+            ),
+            patch.object(
+                service.models, "resolve", new=AsyncMock(return_value=MagicMock(label="gpt-4.1"))
+            ),
+            patch.object(service.skills, "resolve_for_agent", new=AsyncMock(return_value=[])),
+            patch(
+                "app.services.agent_runner.agent_run_repo.create_run",
+                new=AsyncMock(return_value=run),
+            ) as create_run,
+            patch("app.services.agent_runner.build_agent", return_value=MagicMock()),
+        ):
+            prepared = await service.prepare(
+                ctx, agent.id, instructions_override="New text.", test=True
+            )
+
+        opened = create_run.call_args.kwargs
+        assert opened["agent_version_id"] is None
+        assert opened["is_test"] is True
+        frozen = opened["test_spec"]
+        assert frozen["instructions"] == "New text."
+        assert prepared.spec.instructions.startswith("New text.")
+        assert prepared.spec.model_dump(exclude={"instructions"}) == spec.model_dump(
+            exclude={"instructions"}
+        )
+
+    @pytest.mark.anyio
     async def test_the_same_id_on_a_custom_endpoint_is_not_refused(self):
         """A `base_url` is somebody's own server, which the catalogs do not
         describe: an id the vendor uses for speech may be a chat model there."""

@@ -463,6 +463,18 @@ class AgentRun(Base, TimestampMixin):
             "started_at",
             "provider",
         ),
+        # Failure-learning mining: the live aggregation over real runs groups
+        # by agent and status inside an org window, over top-level runs only
+        # (test runs are the loop's own tries, delegations are already counted
+        # inside their parent). Partial, so it stays small.
+        Index(
+            "ix_agent_runs_mining",
+            "organization_id",
+            "agent_id",
+            "status",
+            "started_at",
+            postgresql_where=text("is_test = false AND parent_run_id IS NULL"),
+        ),
         CheckConstraint("modality IN ('text', 'voice')", name="ck_agent_runs_modality"),
     )
 

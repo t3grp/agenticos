@@ -604,6 +604,10 @@ WATCH_SWEEP = _sweep("watch-sweep")
 # is idempotent across attempts (Codex, #2248).
 WEEKLY_USAGE_REPORT = _sweep("weekly-usage-report", timeout=timedelta(hours=1), max_attempts=3)
 MONTHLY_USAGE_REPORT = _sweep("monthly-usage-report", timeout=timedelta(hours=1), max_attempts=3)
+# One attempt, unlike the reports above: the digest mines a 7-day window
+# and a pattern stays untracked until a draft exists for it, so a tick
+# lost to a deploy or an outage is picked up by the following day's run.
+FAILURE_LEDGER_DIGEST = _sweep("failure-ledger-digest", timeout=timedelta(hours=1))
 
 MOVE_PROJECT_WORKSPACE = Task(
     kind="move-project-workspace",
@@ -699,6 +703,7 @@ TASKS: dict[str, TaskKind] = {
         WATCH_SWEEP,
         WEEKLY_USAGE_REPORT,
         MONTHLY_USAGE_REPORT,
+        FAILURE_LEDGER_DIGEST,
     )
 }
 """Every kind, by name: what a worker looks a claimed job up in."""
