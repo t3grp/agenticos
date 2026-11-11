@@ -1209,6 +1209,11 @@
       "failed": "Nie udało się połączyć z przeglądarką"
     },
     "conversationActions": "Akcje konwersacji",
+    "changeProject": "Zmień projekt",
+    "moveToProject": "Przenieś do projektu…",
+    "removeFromProject": "Usuń z projektu",
+    "projectMoved": "Konwersacja przeniesiona",
+    "projectMoveFailed": "Nie udało się przenieść konwersacji",
     "imageNotLoaded": "Obraz (niezaładowany)",
     "whileWorking": {
       "steersWaiting": "Wysłane do zadania - agent przeczyta to w następnym kroku"
@@ -9809,6 +9814,9 @@
     "created": "Utworzono projekt {name}",
     "saved": "Zapisano projekt",
     "deleted": "Usunięto projekt. Jego czaty są teraz zwykłymi czatami.",
+    "moved": "Konwersacja przeniesiona",
+    "moveFailed": "Nie udało się przenieść konwersacji",
+    "changeProject": "Zmień projekt",
     "uploaded": "{count, plural, one {Dodano 1 plik} few {Dodano # pliki} many {Dodano # plików} other {Dodano # pliku}}",
     "removed": "Usunięto",
     "filesUnreadable": "Nie udało się odczytać plików projektu",

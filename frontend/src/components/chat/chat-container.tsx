@@ -266,6 +266,9 @@ export function ChatContainer({
   const isArchived = listed?.is_archived ?? access.archived;
   const viewOnly = access.viewOnly;
   const readOnly = isArchived || viewOnly || !access.known;
+  // Somebody else's thread: its project is read-only until the access result says
+  // otherwise. Owned threads need no access read, so they are never read-only here.
+  const projectReadOnly = needsAccess && (!access.known || access.conversation?.user_id !== meId);
 
   // The one agent a conversation used, when it used exactly one. Recovered from the
   // conversation rather than the message, which is the only source history has left.
@@ -927,6 +930,7 @@ export function ChatContainer({
         }
         isArchived={isArchived}
         readOnly={readOnly}
+        projectReadOnly={projectReadOnly}
         viewOnly={viewOnly}
         accessState={access.failed ? "error" : !access.known ? "checking" : undefined}
         onRetryAccess={access.retry}
@@ -1061,6 +1065,8 @@ interface ChatUIProps {
   isArchived?: boolean;
   viewOnly?: boolean;
   readOnly: boolean;
+  /** Somebody else's thread, or its access is unknown: its project chip is read-only. */
+  projectReadOnly: boolean;
   accessState?: "checking" | "error";
   onRetryAccess: () => void;
   sendMessage: (
@@ -1148,6 +1154,7 @@ function ChatUI({
   isArchived,
   viewOnly = false,
   readOnly,
+  projectReadOnly,
   accessState,
   onRetryAccess,
   sendMessage,
@@ -1902,6 +1909,7 @@ function ChatUI({
                                       conversationId={conversationId}
                                       pickerOpen={projectPickerOpen}
                                       onPickerOpenChange={setProjectPickerOpen}
+                                      readOnly={projectReadOnly}
                                     />
                                   </span>
                                 </>

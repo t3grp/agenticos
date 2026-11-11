@@ -9440,6 +9440,11 @@
       "failed": "Browser'a erişilemedi"
     },
     "conversationActions": "Konuşma işlemleri",
+    "changeProject": "Projeyi değiştir",
+    "moveToProject": "Projeye taşı…",
+    "removeFromProject": "Projeden kaldır",
+    "projectMoved": "Konuşma taşındı",
+    "projectMoveFailed": "Konuşma taşınamadı",
     "imageNotLoaded": "Görsel (yüklenmedi)",
     "whileWorking": {
       "steersWaiting": "Göreve gönderildi - sonraki adımda okunacak"
@@ -11684,6 +11689,9 @@
     "created": "{name} projesi oluşturuldu",
     "saved": "Proje kaydedildi",
     "deleted": "Proje silindi. Sohbetleri artık normal sohbetler.",
+    "moved": "Konuşma taşındı",
+    "moveFailed": "Konuşma taşınamadı",
+    "changeProject": "Projeyi değiştir",
     "uploaded": "{count, plural, =1 {1 dosya eklendi} other {# dosya eklendi}}",
     "removed": "Kaldırıldı",
     "filesUnreadable": "Projenin dosyaları okunamadı",
