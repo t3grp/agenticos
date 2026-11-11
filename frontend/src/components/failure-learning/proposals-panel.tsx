@@ -24,10 +24,14 @@ export function ProposalsPanel({
   canEdit,
   canApplyInstructions,
   canApplySkill,
+  canTry,
+  canRevert,
   canReject,
   prefill,
   onCreate,
   onApply,
+  onTry,
+  onRevert,
   onReject,
   onPrefillConsumed,
 }: {
@@ -38,11 +42,15 @@ export function ProposalsPanel({
   canEdit: boolean;
   canApplyInstructions: boolean;
   canApplySkill: boolean;
+  canTry: boolean;
+  canRevert: boolean;
   canReject: boolean;
   /** A try whose passing text pre-fills the create form. */
   prefill: { evalTryId: string; newText: string } | null;
   onCreate: (input: ProposalCreate) => void;
   onApply: (proposalId: string) => void;
+  onTry: (proposalId: string) => void;
+  onRevert: (proposalId: string) => void;
   onReject: (proposalId: string, reason: string) => void;
   onPrefillConsumed: () => void;
 }) {
@@ -95,8 +103,12 @@ export function ProposalsPanel({
           proposal={selected}
           canApplyInstructions={canApplyInstructions}
           canApplySkill={canApplySkill}
+          canTry={canTry}
+          canRevert={canRevert}
           canReject={canReject}
           onApply={() => onApply(selected.id)}
+          onTry={() => onTry(selected.id)}
+          onRevert={() => onRevert(selected.id)}
           onReject={(reason) => onReject(selected.id, reason)}
         />
       )}

@@ -45,11 +45,15 @@ export function FailureLearningTab({ agentId }: { agentId: string }) {
     removeCase,
     createProposal,
     apply,
+    revert,
     reject,
     startTry,
   } = useFailureLearning(agentId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = entries.find((entry) => entry.id === selectedId) ?? null;
+  // The try runner's proposal picker lives in the eval cases section above,
+  // so a proposal's "Try this text" sets it from here.
+  const [tryProposalId, setTryProposalId] = useState("none");
   const [proposalPrefill, setProposalPrefill] = useState<{
     evalTryId: string;
     newText: string;
@@ -118,6 +122,8 @@ export function FailureLearningTab({ agentId }: { agentId: string }) {
           onDelete={(caseId) => removeCase.mutate(caseId)}
           onStartTry={async (input) => startTry.mutateAsync(input)}
           onProposeFromTry={(tryId, newText) => setProposalPrefill({ evalTryId: tryId, newText })}
+          tryProposalId={tryProposalId}
+          onTryProposalChange={setTryProposalId}
         />
       </section>
       <section className="space-y-3">
@@ -131,10 +137,14 @@ export function FailureLearningTab({ agentId }: { agentId: string }) {
           canEdit={canEdit}
           canApplyInstructions={can(Perm.agentsPublish)}
           canApplySkill={can(Perm.skillsEdit)}
+          canTry={canEdit}
+          canRevert={can(Perm.skillsEdit)}
           canReject={canEdit}
           prefill={proposalPrefill}
           onCreate={(input) => createProposal.mutate(input)}
           onApply={(proposalId) => apply.mutate(proposalId)}
+          onTry={(proposalId) => setTryProposalId(proposalId)}
+          onRevert={(proposalId) => revert.mutate(proposalId)}
           onReject={(proposalId, reason) => reject.mutate({ proposalId, reason })}
           onPrefillConsumed={() => setProposalPrefill(null)}
         />

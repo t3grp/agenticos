@@ -185,6 +185,10 @@ export interface ProposalRead {
   rationale: string;
   base_agent_version_id: string | null;
   base_content_sha256: string | null;
+  applied_content_sha256: string | null;
+  reverted_at: string | null;
+  /** A skill apply that can still be reverted once, from its saved content. */
+  rollback_available: boolean;
   status: ProposalStatus;
   applied_version_id: string | null;
   created_by_user_id: string | null;
@@ -192,7 +196,7 @@ export interface ProposalRead {
   decided_at: string | null;
   eval_evidence: EvalTryRead | null;
   applied_version: { id: string; number: number } | null;
-  /** Instruction targets only: skill targets are human-reviewed, never gated. */
+  /** Whether an eval gate evidences this proposal. Set for both target types. */
   eval_gated: boolean;
   created_at: string | null;
   updated_at: string | null;
@@ -346,6 +350,14 @@ export async function getProposal(agentId: string, proposalId: string): Promise<
  */
 export async function applyProposal(agentId: string, proposalId: string): Promise<ProposalRead> {
   return apiClient.post<ProposalRead>(`${agentBase(agentId)}/proposals/${proposalId}/apply`);
+}
+
+/**
+ * Revert a skill apply once: restore the content it saved, unless the skill
+ * changed since it applied. Needs `skills:edit` on the skill.
+ */
+export async function revertProposal(agentId: string, proposalId: string): Promise<ProposalRead> {
+  return apiClient.post<ProposalRead>(`${agentBase(agentId)}/proposals/${proposalId}/revert`);
 }
 
 /** Reject a proposal, with the reason recorded in the audit trail. */

@@ -48,6 +48,8 @@ export function EvalCasesPanel({
   onDelete,
   onStartTry,
   onProposeFromTry,
+  tryProposalId,
+  onTryProposalChange,
 }: {
   agentId: string;
   cases: EvalCaseRead[];
@@ -65,13 +67,15 @@ export function EvalCasesPanel({
     samples?: number;
   }) => Promise<EvalTryRead>;
   onProposeFromTry: (tryId: string, newText: string) => void;
+  /** The proposal the try runs, `"none"` for the text typed below. Owned by the tab. */
+  tryProposalId: string;
+  onTryProposalChange: (proposalId: string) => void;
 }) {
   const t = useTranslations("failureLearning");
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [samples, setSamples] = useState(1);
   const [override, setOverride] = useState("");
-  const [proposalId, setProposalId] = useState<string>("none");
   const [activeTryId, setActiveTryId] = useState<string | null>(null);
   const { try: activeTry } = useEvalTry(agentId, activeTryId);
   const shown =
@@ -79,6 +83,11 @@ export function EvalCasesPanel({
       ? cases
       : cases.filter((entry) => entry.ledger_entry_id === ledgerEntryId);
   const draftProposals = proposals.filter((proposal) => proposal.status === "draft");
+  // A proposal applied or rejected since it was picked is no longer tryable:
+  // fall back to the typed text rather than send a proposal the server refuses.
+  const pickedProposalId = draftProposals.some((proposal) => proposal.id === tryProposalId)
+    ? tryProposalId
+    : "none";
 
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState />;
@@ -133,9 +142,9 @@ export function EvalCasesPanel({
                 case_ids: selected,
                 // A try names a proposal or an override, never both: the
                 // server refuses a try carrying both.
-                proposal_id: proposalId === "none" ? null : proposalId,
+                proposal_id: pickedProposalId === "none" ? null : pickedProposalId,
                 instructions_override:
-                  proposalId === "none" && override.trim() !== "" ? override.trim() : null,
+                  pickedProposalId === "none" && override.trim() !== "" ? override.trim() : null,
                 samples,
               });
               setActiveTryId(evaluation.id);
@@ -162,7 +171,7 @@ export function EvalCasesPanel({
           {draftProposals.length > 0 && (
             <div className="space-y-1.5">
               <Label htmlFor="try-proposal">{t("tryProposalLabel")}</Label>
-              <Select value={proposalId} onValueChange={setProposalId}>
+              <Select value={pickedProposalId} onValueChange={onTryProposalChange}>
                 <SelectTrigger id="try-proposal" className="w-64">
                   <SelectValue />
                 </SelectTrigger>
@@ -183,7 +192,7 @@ export function EvalCasesPanel({
               id="try-override"
               value={override}
               onChange={(event) => setOverride(event.target.value)}
-              disabled={proposalId !== "none"}
+              disabled={pickedProposalId !== "none"}
             />
           </div>
         </div>

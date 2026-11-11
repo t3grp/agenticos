@@ -10,25 +10,33 @@ import { TryView } from "./try-view";
 
 /**
  * One proposal, read as the approver will read it: the change itself, the
- * eval evidence that backs it, and what applying it will do. A skill
- * target is never eval-gated - no try can prove a skill safe - and it
- * reaches every agent the skill is bound to, with no rollback, so the
- * review says so plainly. Applying is the approval, and an instruction
- * target only applies once its try has passed the gate.
+ * eval evidence that backs it, and what applying it will do. Instruction and
+ * skill targets are gated alike: applying needs a try that passed the gate
+ * for this exact text. A try of a skill proposal runs its new content, so
+ * the review can start one. An applied skill can be reverted once, while
+ * the skill still holds the content the apply wrote.
  */
 export function ProposalReview({
   proposal,
   canApplyInstructions,
   canApplySkill,
+  canTry,
+  canRevert,
   canReject,
   onApply,
+  onTry,
+  onRevert,
   onReject,
 }: {
   proposal: ProposalRead;
   canApplyInstructions: boolean;
   canApplySkill: boolean;
+  canTry: boolean;
+  canRevert: boolean;
   canReject: boolean;
   onApply: () => void;
+  onTry: () => void;
+  onRevert: () => void;
   onReject: (reason: string) => void;
 }) {
   const t = useTranslations("failureLearning");
@@ -71,11 +79,6 @@ export function ProposalReview({
           tooLongLabel={t("diffTooLong")}
         />
         <p className="text-sm whitespace-pre-wrap">{proposal.rationale}</p>
-        {isSkill && (
-          <p className="text-sm font-medium">
-            {t("ungated")} — {t("ungatedWarning")}
-          </p>
-        )}
         <div className="space-y-2">
           <p className="text-sm font-medium">{t("evalEvidence")}</p>
           {evidence === null && (
@@ -84,47 +87,63 @@ export function ProposalReview({
           {evidence !== null && <TryView evaluation={evidence} />}
         </div>
         {proposal.status === "draft" && (
-          <div className="flex flex-wrap items-center gap-2">
-            {canApply && (
-              <Button
-                type="button"
-                disabled={isSkill ? false : !gatePassed}
-                title={isSkill || gatePassed ? undefined : t("gateFailed")}
-                onClick={onApply}
-              >
-                {t("apply")}
-              </Button>
-            )}
-            {canReject && !rejecting && (
-              <Button type="button" variant="outline" onClick={() => setRejecting(true)}>
-                {t("reject")}
-              </Button>
-            )}
-            {canReject && rejecting && (
-              <>
-                <div className="min-w-64 flex-1 space-y-1.5">
-                  <Label htmlFor="reject-reason">{t("rejectReasonLabel")}</Label>
-                  <Input
-                    id="reject-reason"
-                    value={reason}
-                    onChange={(event) => setReason(event.target.value)}
-                    placeholder={t("rejectReasonPlaceholder")}
-                  />
-                </div>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {canApply && (
                 <Button
                   type="button"
-                  variant="outline"
-                  disabled={reason.trim() === ""}
-                  onClick={() => onReject(reason.trim())}
+                  disabled={!gatePassed}
+                  title={gatePassed ? undefined : t("gateFailed")}
+                  onClick={onApply}
                 >
+                  {t("apply")}
+                </Button>
+              )}
+              {canTry && (
+                <Button type="button" variant="outline" onClick={onTry}>
+                  {t("tryThisText")}
+                </Button>
+              )}
+              {canReject && !rejecting && (
+                <Button type="button" variant="outline" onClick={() => setRejecting(true)}>
                   {t("reject")}
                 </Button>
-              </>
-            )}
+              )}
+              {canReject && rejecting && (
+                <>
+                  <div className="min-w-64 flex-1 space-y-1.5">
+                    <Label htmlFor="reject-reason">{t("rejectReasonLabel")}</Label>
+                    <Input
+                      id="reject-reason"
+                      value={reason}
+                      onChange={(event) => setReason(event.target.value)}
+                      placeholder={t("rejectReasonPlaceholder")}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={reason.trim() === ""}
+                    onClick={() => onReject(reason.trim())}
+                  >
+                    {t("reject")}
+                  </Button>
+                </>
+              )}
+            </div>
+            {canTry && <p className="text-muted-foreground text-sm">{t("tryThisTextHint")}</p>}
           </div>
         )}
-        {proposal.status === "applied" && (
-          <p className="text-muted-foreground text-sm">{t("rollbackHint")}</p>
+        {proposal.status === "applied" && proposal.rollback_available && canRevert && (
+          <div className="space-y-2">
+            <Button type="button" variant="outline" onClick={onRevert}>
+              {t("revert")}
+            </Button>
+            <p className="text-muted-foreground text-sm">{t("revertHint")}</p>
+          </div>
+        )}
+        {proposal.status === "applied" && proposal.reverted_at !== null && (
+          <p className="text-muted-foreground text-sm">{t("reverted")}</p>
         )}
       </CardContent>
     </Card>

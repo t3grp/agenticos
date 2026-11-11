@@ -18,6 +18,7 @@ import {
   listOrgPatterns,
   listProposals,
   rejectProposal,
+  revertProposal,
   startEvalTry,
   trackPattern,
   updateLedgerEntry,
@@ -86,6 +87,7 @@ describe("failure-learning-api", () => {
     });
     await getProposal("agent-1", "prop-1");
     await applyProposal("agent-1", "prop-1");
+    await revertProposal("agent-1", "prop-1");
     await rejectProposal("agent-1", "prop-1", "not a real pattern");
 
     expect(apiClient.get).toHaveBeenCalledWith("/failure-learning/patterns");
@@ -113,6 +115,9 @@ describe("failure-learning-api", () => {
     });
     expect(apiClient.post).toHaveBeenCalledWith(
       "/agents/agent-1/failure-learning/proposals/prop-1/apply",
+    );
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/agents/agent-1/failure-learning/proposals/prop-1/revert",
     );
     expect(apiClient.post).toHaveBeenCalledWith(
       "/agents/agent-1/failure-learning/proposals/prop-1/reject",

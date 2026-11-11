@@ -20,6 +20,7 @@ import {
   listOrgPatterns,
   listProposals,
   rejectProposal,
+  revertProposal,
   startEvalTry,
   trackPattern,
   updateLedgerEntry,
@@ -153,6 +154,14 @@ export function useFailureLearning(agentId: string) {
     },
     onError: fail,
   });
+  const revert = useMutation({
+    mutationFn: (proposalId: string) => revertProposal(agentId, proposalId),
+    onSuccess: () => {
+      toast.success(t("proposalReverted"));
+      refresh();
+    },
+    onError: fail,
+  });
   const reject = useMutation({
     mutationFn: ({ proposalId, reason }: { proposalId: string; reason: string }) =>
       rejectProposal(agentId, proposalId, reason),
@@ -188,6 +197,7 @@ export function useFailureLearning(agentId: string) {
     removeCase,
     createProposal: createProposalMutation,
     apply,
+    revert,
     reject,
     startTry,
   };

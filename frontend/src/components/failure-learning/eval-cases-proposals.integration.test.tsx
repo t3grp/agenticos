@@ -61,6 +61,9 @@ const proposal = (overrides: Partial<ProposalRead> = {}): ProposalRead => ({
   applied_version_id: null,
   eval_evidence: null,
   applied_version: null,
+  applied_content_sha256: null,
+  reverted_at: null,
+  rollback_available: false,
   eval_gated: true,
   created_by_user_id: null,
   decided_by_user_id: null,
@@ -120,6 +123,8 @@ describe("EvalCasesPanel", () => {
         onCreate={vi.fn()}
         onDelete={vi.fn()}
         onStartTry={vi.fn().mockResolvedValue(evaluation())}
+        tryProposalId="none"
+        onTryProposalChange={vi.fn()}
         onProposeFromTry={vi.fn()}
       />,
     );
@@ -143,6 +148,8 @@ describe("EvalCasesPanel", () => {
         onCreate={vi.fn()}
         onDelete={vi.fn()}
         onStartTry={onStartTry}
+        tryProposalId="none"
+        onTryProposalChange={vi.fn()}
         onProposeFromTry={vi.fn()}
       />,
     );
@@ -156,6 +163,39 @@ describe("EvalCasesPanel", () => {
         case_ids: ["case-1"],
         instructions_override: "Mention refunds when asked.",
         samples: 1,
+      }),
+    );
+  });
+
+  it("drops a preselected proposal that is no longer a draft, so the try goes ahead without it", async () => {
+    const user = userEvent.setup();
+    const onStartTry = vi.fn().mockResolvedValue(evaluation());
+    render(
+      <EvalCasesPanel
+        agentId="agent-1"
+        cases={[evalCase()]}
+        proposals={[proposal({ status: "applied" })]}
+        isLoading={false}
+        error={null}
+        ledgerEntryId={null}
+        canEdit={true}
+        onCreate={vi.fn()}
+        onDelete={vi.fn()}
+        onStartTry={onStartTry}
+        tryProposalId="proposal-1"
+        onTryProposalChange={vi.fn()}
+        onProposeFromTry={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "Bad requests return a hint" }));
+    await user.type(screen.getByLabelText("Proposed text"), "Mention refunds when asked.");
+    await user.click(screen.getByRole("button", { name: "Run try" }));
+
+    expect(onStartTry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        proposal_id: null,
+        instructions_override: "Mention refunds when asked.",
       }),
     );
   });
@@ -175,6 +215,8 @@ describe("EvalCasesPanel", () => {
         onCreate={vi.fn()}
         onDelete={onDelete}
         onStartTry={vi.fn().mockResolvedValue(evaluation())}
+        tryProposalId="none"
+        onTryProposalChange={vi.fn()}
         onProposeFromTry={vi.fn()}
       />,
     );
@@ -196,6 +238,8 @@ describe("EvalCasesPanel", () => {
         onCreate={vi.fn()}
         onDelete={vi.fn()}
         onStartTry={vi.fn().mockResolvedValue(evaluation())}
+        tryProposalId="none"
+        onTryProposalChange={vi.fn()}
         onProposeFromTry={vi.fn()}
       />,
     );
@@ -217,6 +261,8 @@ describe("EvalCasesPanel", () => {
         onCreate={vi.fn()}
         onDelete={vi.fn()}
         onStartTry={vi.fn().mockResolvedValue(evaluation())}
+        tryProposalId="none"
+        onTryProposalChange={vi.fn()}
         onProposeFromTry={vi.fn()}
       />,
     );
@@ -300,13 +346,17 @@ describe("TryView", () => {
 });
 
 describe("ProposalReview", () => {
-  it("shows the old and new text, and refuses an ungated instruction apply", () => {
+  it("shows the old and new text, and refuses an apply without a passing try", () => {
     render(
       <ProposalReview
         proposal={proposal()}
         canApplyInstructions={true}
         canApplySkill={false}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         onApply={vi.fn()}
         onReject={vi.fn()}
       />,
@@ -316,7 +366,7 @@ describe("ProposalReview", () => {
     expect(screen.getByText(/Mention refunds when the user asks/)).toBeInTheDocument();
     expect(
       screen.getByText(
-        "No eval try linked. An instruction proposal needs a gate-passed try before it can be applied.",
+        "No eval try linked. A proposal needs a gate-passed try before it can be applied.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
@@ -329,6 +379,10 @@ describe("ProposalReview", () => {
         canApplyInstructions={true}
         canApplySkill={false}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         onApply={vi.fn()}
         onReject={vi.fn()}
       />,
@@ -337,26 +391,157 @@ describe("ProposalReview", () => {
     expect(screen.getByRole("button", { name: "Apply" })).not.toBeDisabled();
   });
 
-  it("flags a skill target ungated, and applies it without a gate", async () => {
+  it("gates a skill apply the same way: disabled until a try has passed", () => {
+    render(
+      <ProposalReview
+        proposal={proposal({ target_type: "skill", skill_id: "skill-1" })}
+        canApplyInstructions={false}
+        canApplySkill={true}
+        canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
+        onApply={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/Not eval-gated/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("applies a skill proposal once its try has passed the gate", async () => {
     const user = userEvent.setup();
     const onApply = vi.fn();
     render(
       <ProposalReview
-        proposal={proposal({ target_type: "skill", skill_id: "skill-1", eval_gated: false })}
+        proposal={proposal({
+          target_type: "skill",
+          skill_id: "skill-1",
+          eval_evidence: evaluation(),
+        })}
         canApplyInstructions={false}
         canApplySkill={true}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         onApply={onApply}
         onReject={vi.fn()}
       />,
     );
 
-    expect(screen.getByText(/Not eval-gated/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/reaches every agent bound to the skill as soon as it is applied/),
-    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Apply" }));
-    expect(onApply).toHaveBeenCalled();
+    expect(onApply).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts a try of a skill draft's new text from the review", async () => {
+    const user = userEvent.setup();
+    const onTry = vi.fn();
+    render(
+      <ProposalReview
+        proposal={proposal({ target_type: "skill", skill_id: "skill-1" })}
+        canApplyInstructions={false}
+        canApplySkill={true}
+        canReject={true}
+        canTry={true}
+        canRevert={false}
+        onTry={onTry}
+        onRevert={vi.fn()}
+        onApply={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Runs from Eval cases above, on the cases you pick."),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try this text" }));
+    expect(onTry).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers a one-shot revert of an applied skill while the rollback is available", async () => {
+    const user = userEvent.setup();
+    const onRevert = vi.fn();
+    render(
+      <ProposalReview
+        proposal={proposal({
+          target_type: "skill",
+          skill_id: "skill-1",
+          status: "applied",
+          eval_evidence: evaluation(),
+          rollback_available: true,
+        })}
+        canApplyInstructions={false}
+        canApplySkill={true}
+        canReject={true}
+        canTry={false}
+        canRevert={true}
+        onTry={vi.fn()}
+        onRevert={onRevert}
+        onApply={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Revert" }));
+    expect(onRevert).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides revert once the skill has been reverted, and says so", () => {
+    render(
+      <ProposalReview
+        proposal={proposal({
+          target_type: "skill",
+          skill_id: "skill-1",
+          status: "applied",
+          eval_evidence: evaluation(),
+          rollback_available: false,
+          reverted_at: "2026-11-11T02:00:00Z",
+        })}
+        canApplyInstructions={false}
+        canApplySkill={true}
+        canReject={true}
+        canTry={false}
+        canRevert={true}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
+        onApply={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Revert" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Reverted. The skill has its content from before this apply."),
+    ).toBeInTheDocument();
+  });
+
+  it("hides revert from a caller who may not edit skills", () => {
+    render(
+      <ProposalReview
+        proposal={proposal({
+          target_type: "skill",
+          skill_id: "skill-1",
+          status: "applied",
+          eval_evidence: evaluation(),
+          rollback_available: true,
+        })}
+        canApplyInstructions={false}
+        canApplySkill={false}
+        canReject={false}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
+        onApply={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Revert" })).not.toBeInTheDocument();
   });
 
   it("hides apply from a caller who may not publish or edit skills", () => {
@@ -366,6 +551,10 @@ describe("ProposalReview", () => {
         canApplyInstructions={false}
         canApplySkill={false}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         onApply={vi.fn()}
         onReject={vi.fn()}
       />,
@@ -383,6 +572,10 @@ describe("ProposalReview", () => {
         canApplyInstructions={true}
         canApplySkill={false}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         onApply={vi.fn()}
         onReject={onReject}
       />,
@@ -409,6 +602,10 @@ describe("ProposalsPanel", () => {
         canApplyInstructions={true}
         canApplySkill={false}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         prefill={null}
         onCreate={vi.fn()}
         onApply={vi.fn()}
@@ -433,6 +630,10 @@ describe("ProposalsPanel", () => {
         canApplyInstructions={true}
         canApplySkill={false}
         canReject={true}
+        canTry={false}
+        canRevert={false}
+        onTry={vi.fn()}
+        onRevert={vi.fn()}
         prefill={{ evalTryId: "try-1", newText: "Mention refunds when asked." }}
         onCreate={vi.fn()}
         onApply={vi.fn()}
