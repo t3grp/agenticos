@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
   permanentRedirect: vi.fn(),
 }));
-vi.mock("@/lib/api-client", () => ({ apiClient: { get: vi.fn() } }));
+vi.mock("@/lib/api-client", () => ({ apiClient: { get: vi.fn(), patch: vi.fn() } }));
 vi.mock("@/lib/projects-api", async (original) => ({
   ...(await original<typeof import("@/lib/projects-api")>()),
   getProject: vi.fn(),
@@ -133,10 +133,16 @@ describe("ProjectChip", () => {
     expect(useConversationStore.getState().pendingProjectId).toBeNull();
   });
 
-  it("shows the project an existing chat is in, without a way out", async () => {
+  it("opens the picker for an existing chat's project", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ id: "c-1", project_id: "p-2" });
-    chip("c-1");
-    expect(await screen.findByRole("link", { name: "Treasury" })).toBeInTheDocument();
+    const onPickerOpenChange = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProjectChip conversationId="c-1" pickerOpen={false} onPickerOpenChange={onPickerOpenChange} />
+      </QueryClientProvider>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Change project for Treasury" }));
+    expect(onPickerOpenChange).toHaveBeenCalledWith(true);
     expect(screen.queryByRole("button", { name: /Start outside/ })).not.toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith("/conversations/c-1/metadata");
     expect(apiClient.get).not.toHaveBeenCalledWith("/conversations/c-1");
@@ -159,6 +165,21 @@ describe("ProjectChip", () => {
     expect(useAgentSelectionStore.getState().selectedAgentId).toBe("a-9");
     await userEvent.click(screen.getByRole("button", { name: "none" }));
     expect(useConversationStore.getState().pendingProjectId).toBeNull();
+  });
+
+  it("moves an existing chat and can remove it from the project", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ id: "c-1", project_id: "p-1" });
+    vi.mocked(apiClient.patch).mockResolvedValue({ id: "c-1", project_id: "p-2" });
+    chip("c-1", true);
+
+    await userEvent.click(screen.getByRole("button", { name: "pick" }));
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", { project_id: "p-2" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "none" }));
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", { project_id: null }),
+    );
   });
 });
 
