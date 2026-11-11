@@ -222,6 +222,18 @@ async def test_curated_catalog_is_shared_with_binding_validation(harness):
         assert [action.scopes for action in entry.actions] == [
             list(action.scopes) for action in catalog_app.actions
         ]
+    serialized_actions = [
+        action
+        for app in catalog.model_dump(mode="json")["apps"]
+        for action in app["actions"]
+    ]
+    assert [
+        (action["side_effecting"], action["scopes"]) for action in serialized_actions
+    ] == [
+        (action.side_effecting, list(action.scopes))
+        for app in catalog.apps
+        for action in app.actions
+    ]
     assert "synthetic-server-key" not in catalog.model_dump_json()
     assert "ac_gmail" not in catalog.model_dump_json()
 
