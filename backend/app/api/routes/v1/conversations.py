@@ -374,13 +374,15 @@ async def update_conversation(
     conversation_service: ConversationSvc,
     current_user: CurrentUser,
     active_org: ActiveOrg,
+    ctx: Auth,
 ) -> Any:
-    """Update a conversation's title or archived status."""
+    """Update a conversation's title, archived status or project."""
     return await conversation_service.update_conversation(
         conversation_id,
         data,
         organization_id=active_org.id,
         user_id=current_user.id,
+        ctx=ctx,
     )
 
 

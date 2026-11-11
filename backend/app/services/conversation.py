@@ -33,7 +33,12 @@ from app.agents.capabilities.media._store import BoundedOrganizationMediaStore, 
 from app.agents.model_context import ModelContextCheck
 from app.agents.steering import STEER_PREFIX
 from app.core.background import spawn_after_commit
-from app.core.exceptions import BadRequestError, ConcurrentChangeError, NotFoundError
+from app.core.exceptions import (
+    AuthorizationError,
+    BadRequestError,
+    ConcurrentChangeError,
+    NotFoundError,
+)
 from app.core.field_errors import refused_field
 from app.core.permissions import AuthContext, Perm
 from app.db.locks import LOCK_NOT_AVAILABLE, lock_wait_within
@@ -1667,6 +1672,7 @@ class ConversationService:
         *,
         organization_id: UUID,
         user_id: UUID | None = None,
+        ctx: AuthContext | None = None,
     ) -> Conversation:
         conversation = await self.get_conversation(
             conversation_id,
@@ -1674,6 +1680,12 @@ class ConversationService:
             user_id=user_id,
             for_write=True,
         )
+        if "project_id" in getattr(data, "model_fields_set", set()) and data.project_id is not None:
+            if ctx is None:
+                raise AuthorizationError(message="A project access context is required")
+            from app.services.project import ProjectService
+
+            await ProjectService(self.db).check_can_start(ctx, data.project_id)
         update_data = writable(data, over=Conversation)
         return await conversation_repo.update_conversation(
             self.db, db_conversation=conversation, update_data=update_data
