@@ -3253,6 +3253,13 @@ class AccountNote:
 
 
 @dataclass(frozen=True)
+class ManagedAppNote:
+    app: str
+    prefix: str
+    account: str
+
+
+@dataclass(frozen=True)
 class ResolvedMcpToolsets:
     """What a spec's MCP bindings amount to for one turn.
 
@@ -3267,6 +3274,8 @@ class ResolvedMcpToolsets:
     unavailable: list[UnavailableBinding]
     accounts: list[AccountNote] = field(default_factory=list)
     """The accounts of each service reached through more than one, by prefix."""
+    managed_apps: list[ManagedAppNote] = field(default_factory=list)
+    """Connected managed apps attached to this run, with their tool prefixes."""
     sources: dict[UUID, McpSourceIdentity] = field(default_factory=dict)
     """The concrete accounts admitted by reachable bindings, without credentials."""
     origins: dict[str, UUID] = field(default_factory=dict)
@@ -3480,6 +3489,15 @@ async def build_toolsets_for_agent(
         accounts=_several_accounts(
             [reaches[id(spec)] for spec, _ in attached if id(spec) in reaches]
         ),
+        managed_apps=[
+            ManagedAppNote(
+                app=spec.managed_app_name,
+                prefix=tool_prefix(spec.name),
+                account=spec.account or spec.name,
+            )
+            for spec, _ in attached
+            if spec.managed_app_name is not None
+        ],
         origins=origins,
         sources={
             spec.source_connection_id: McpSourceIdentity(

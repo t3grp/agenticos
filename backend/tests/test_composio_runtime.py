@@ -127,6 +127,7 @@ async def test_a_session_pins_the_member_account_config_and_reviewed_actions(pro
     assert spec.allowed_tools == [_READ, _DETAIL, _THREAD]
     assert spec.approval == "writes"
     assert spec.account == "Work · reader@example.test"
+    assert spec.managed_app_name == "Gmail"
     assert spec.source_connection_id == connection.id
     assert spec.authorization_generation == connection.authorization_generation
     assert spec.source_url == connection.url
@@ -412,7 +413,7 @@ async def test_a_surface_without_a_person_cannot_resolve_personal_managed_apps(
 async def test_identical_account_names_still_map_each_selected_id_to_its_own_tool_prefix(
     monkeypatch, provider
 ):
-    from app.services.agent_runner import _with_account_notes
+    from app.services.agent_runner import _with_account_notes, _with_managed_app_notes
 
     first = _connection()
     second = _connection(user_id=first.user_id, composio_account_id="ca_second")
@@ -436,7 +437,12 @@ async def test_identical_account_names_still_map_each_selected_id_to_its_own_too
 
     assert len(resolved.accounts) == 2
     assert len({note.prefix for note in resolved.accounts}) == 2
+    assert len(resolved.managed_apps) == 2
+    assert {note.app for note in resolved.managed_apps} == {"Gmail"}
+    spec_with_apps = _with_managed_app_notes(AgentSpec(name="Assistant"), resolved.managed_apps)
     instructions = _with_account_notes(AgentSpec(name="Assistant"), resolved.accounts).instructions
+    assert "Gmail is connected for this person" in spec_with_apps.instructions
+    assert all(f"`{note.prefix}_`" in spec_with_apps.instructions for note in resolved.managed_apps)
     for account in (first, second):
         note = next(note for note in resolved.accounts if str(account.id) in note.account)
         assert "Work · reader@example.test" in note.account

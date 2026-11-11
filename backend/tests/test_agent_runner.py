@@ -104,6 +104,7 @@ from app.services.agent_runner import (
     _spend_already_booked,
     _start_turn_on_first_use,
     _with_account_notes,
+    _with_managed_app_notes,
     _with_personal_service_gaps,
     month_start,
     run_failure_summary,
@@ -112,6 +113,7 @@ from app.services.approvals import ApprovalService
 from app.services.channels.handback import STOPPED_NOTICE
 from app.services.mcp_connection import (
     AccountNote,
+    ManagedAppNote,
     ResolvedMcpToolsets,
     UnavailablePersonalService,
     UnavailablePlatformServer,
@@ -6135,6 +6137,33 @@ class TestTellingTheAgentWhichAccountIsWhich:
         spec = AgentSpec(name="Support", instructions="x")
 
         assert _with_account_notes(spec, []) is spec
+
+    def test_connected_managed_apps_name_their_prefix_and_search_fallback(self):
+        spec = _with_managed_app_notes(
+            AgentSpec(name="Assistant", instructions="x"),
+            [ManagedAppNote("Gmail", "composio_gmail", "Work")],
+        )
+        spec = _with_personal_service_gaps(
+            spec,
+            [UnavailablePersonalService("notion", "not_connected")],
+            RunSurface.WEB,
+            sender_present=True,
+        )
+        on_use, briefed = _connect_on_use(
+            [UnavailablePersonalService("notion", "not_connected")],
+            refs=[PersonalMcpServerRef(account="personal", catalog_key="notion")],
+            user_id=uuid.uuid4(),
+            request_connection=AsyncMock(),
+        )
+
+        assert (
+            "Gmail is connected for this person (account Work); its tools are prefixed "
+            "`composio_gmail_`. If they aren't visible, find them with search_tools before "
+            "saying the app is unavailable."
+        ) in spec.instructions
+        assert "has not connected their own Notion yet" in spec.instructions
+        assert isinstance(on_use, ConnectOnUse)
+        assert briefed == []
 
 
 class TestTellingTheAgentWhatItCannotReach:
