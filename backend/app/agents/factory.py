@@ -210,6 +210,15 @@ class BuiltAgent:
     # capability list, where a capability with one gated tool and one ungated
     # one has no single answer.
     approval_required_tools: frozenset[str]
+    # The chain this run was built with, as raw model ids - the primary, then
+    # its fallbacks in order. The run row records only the label, which is a
+    # display name, so without these the caller that persists the run cannot
+    # tell a fallback's answer from the primary's: it would have to compare a
+    # recorded model id against a label, which false-positives whenever the
+    # two differ. Read by `finish()` to derive `fallback_used` and
+    # `serving_model` from the recorder.
+    primary_model: str
+    fallback_models: tuple[str, ...] = ()
     # How many of the run's tool calls arrived malformed and were repaired, read
     # by whoever persists the run - see `app/agents/tool_repair.py`.
     repairs: RepairTally = field(default_factory=RepairTally)
@@ -622,6 +631,8 @@ def build_agent(
         capabilities=configured,
         recorder=recorder,
         model_label=model_spec.label,
+        primary_model=model_spec.model,
+        fallback_models=tuple(model for _, model in model_spec.fallbacks),
         approval_required_tools=approval_required,
         usage_limits=UsageLimits(request_limit=spec.max_steps or DEFAULT_MAX_STEPS),
         repairs=repairs,
