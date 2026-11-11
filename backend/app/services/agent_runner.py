@@ -2734,6 +2734,13 @@ class _Delegation:
     answers the same person its parent does, at every level of the tree.
     """
 
+    personal_apps_allowed: bool
+    """Whether the run's replies are private to its sender.
+
+    The run's audience is persisted so a resumed delegation does not expose the
+    sender's connected apps to a room.
+    """
+
     sender_present: bool
     """Whether a signed-in person is behind the run though it may not act as them.
 
@@ -3816,7 +3823,14 @@ class AgentRunnerService:
         )
         spec = _with_local_capabilities(
             await self.registry.with_assistant_guidance(
-                agent, spec, sender_user_id=assistant_sender_user_id
+                agent,
+                spec,
+                sender_user_id=assistant_sender_user_id,
+                allow_personal_apps=(
+                    restored_audience.room_key is None
+                    if restored_audience is not None
+                    else memory_room_key is None
+                ),
             ),
             local,
             routine=routine is not None,
@@ -4572,6 +4586,11 @@ class AgentRunnerService:
             surface=surface,
             user_name=user_name,
             personal_mcp_user_id=personal_mcp_user_id,
+            personal_apps_allowed=(
+                restored_audience.room_key is None
+                if restored_audience is not None
+                else memory_room_key is None
+            ),
             sender_present=sender_present,
             resources=resources,
             approvals=channel,
@@ -4834,6 +4853,7 @@ class AgentRunnerService:
         surface: RunSurface,
         user_name: str | None,
         personal_mcp_user_id: UUID | None,
+        personal_apps_allowed: bool,
         sender_present: bool,
         resources: dict[str, Any],
         approvals: ApprovalChannel,
@@ -4903,6 +4923,7 @@ class AgentRunnerService:
             user_id=None if ctx.user_id is None else str(ctx.user_id),
             user_name=user_name,
             personal_mcp_user_id=personal_mcp_user_id,
+            personal_apps_allowed=personal_apps_allowed,
             sender_present=sender_present,
             approvals=approvals,
             budget=budget,
@@ -5394,7 +5415,10 @@ class AgentRunnerService:
         published = AgentSpec.model_validate(version.spec)
         pinned = _with_shared(published, shared)
         pinned = await self.registry.with_assistant_guidance(
-            delegate, pinned, sender_user_id=delegation.personal_mcp_user_id
+            delegate,
+            pinned,
+            sender_user_id=delegation.personal_mcp_user_id,
+            allow_personal_apps=delegation.personal_apps_allowed,
         )
         delegate_resources = await self._delegate_resources(
             ctx,

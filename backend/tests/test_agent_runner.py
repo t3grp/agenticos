@@ -3774,9 +3774,9 @@ class TestResume:
         built.agent.run = AsyncMock(return_value=MagicMock(output=output))
         return built
 
-    def _version(self):
+    def _version(self, spec: dict | None = None):
         version = MagicMock()
-        version.spec = {"name": "Clerk"}
+        version.spec = spec or {"name": "Clerk"}
         return version
 
     def _approval(self, *, status: str, tool_args: dict, note: str | None = None):
@@ -3834,6 +3834,7 @@ class TestResume:
         run_limit_usd: Decimal | None = None,
         orphaned: bool = False,
         surface: RunSurface = RunSurface.API,
+        spec: dict | None = None,
         parent_run_id: uuid.UUID | None = None,
         stream_receipt: bool = False,
         conversation_id: uuid.UUID | None = None,
@@ -3894,7 +3895,7 @@ class TestResume:
             ),
             patch(
                 "app.services.agent_runner.agent_repo.get_version",
-                new=AsyncMock(return_value=self._version()),
+                new=AsyncMock(return_value=self._version(spec)),
             ),
             patch("app.services.agent_runner.build_agent", return_value=self._built()) as build,
             patch(
@@ -4437,12 +4438,19 @@ class TestResume:
                     "audience_user_id": str(_THE_ASKER),
                     "audience_room_key": "room:slack:C1",
                 },
-            }
+            },
+            spec={
+                "name": "Clerk",
+                "mcp_servers": [{"account": "personal", "catalog_key": "composio-gmail"}],
+            },
         )
 
         audience = build.call_args.kwargs["audience"]
         assert audience.room_key == "room:slack:C1"
         assert not audience.private
+        assert not any(
+            isinstance(ref, PersonalMcpServerRef) for ref in build.call_args.args[0].mcp_servers
+        )
 
     @pytest.mark.anyio
     async def test_a_run_parked_with_nobody_at_the_keyboard_resumes_the_same_way(self):
@@ -8566,7 +8574,7 @@ async def test_routine_origin_and_live_tool_guard_are_attached_during_preparatio
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("kind", ["private", "group", "background"])
-async def test_preparation_only_mints_source_provenance_for_private_human_chat(kind: str) -> None:
+async def test_preparation_keeps_private_provenance_and_suppresses_apps_in_rooms(kind: str) -> None:
     ctx = _ctx()
     if kind == "background":
         ctx = replace(ctx, fired_as_creator="schedule")
@@ -8574,6 +8582,7 @@ async def test_preparation_only_mints_source_provenance_for_private_human_chat(k
     service = AgentRunnerService(_db())
     agent = MagicMock(id=uuid.uuid4(), current_version_id=uuid.uuid4())
     spec = AgentSpec(name="Chat")
+    guidance = AsyncMock(side_effect=lambda _agent, run_spec, **_kwargs: run_spec)
     with (
         patch.object(
             service.registry,
@@ -8584,6 +8593,7 @@ async def test_preparation_only_mints_source_provenance_for_private_human_chat(k
             service.models, "resolve", new=AsyncMock(return_value=MagicMock(label="gpt-4.1"))
         ),
         patch.object(service.skills, "resolve_for_agent", new=AsyncMock(return_value=[])),
+        patch.object(service.registry, "with_assistant_guidance", new=guidance),
         patch.object(
             service, "_platform_credential", new=AsyncMock(return_value=None)
         ) as credential,
@@ -8600,6 +8610,7 @@ async def test_preparation_only_mints_source_provenance_for_private_human_chat(k
             surface=RunSurface.SCHEDULE if kind == "background" else RunSurface.SLACK,
             memory_room_key="room:slack:C123" if kind == "group" else None,
         )
+    assert guidance.await_args.kwargs["allow_personal_apps"] is (kind != "group")
     assert credential.await_args.kwargs["conversation_id"] == (
         conversation if kind == "private" else None
     )

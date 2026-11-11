@@ -15,6 +15,7 @@ the run history keeps saying what was actually live at the time.
 """
 
 import uuid
+from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -29,6 +30,7 @@ from app.agents.spec import (
     CapabilityBindingSpec,
     OrgMcpServerRef,
     PersonalMcpServerRef,
+    PlatformMcpServerRef,
     SpecialistSpec,
     VoiceSpec,
 )
@@ -5657,6 +5659,195 @@ class TestAssistantRuntimeGuidance:
             assert actual is not spec
         else:
             assert actual is spec
+
+
+def _managed_gmail(user_id: uuid.UUID, **overrides: object) -> SimpleNamespace:
+    values: dict[str, object] = {
+        "catalog_key": "composio-gmail",
+        "user_id": user_id,
+        "organization_id": None,
+        "scope": "user",
+        "purpose": "mcp",
+        "auth_type": "composio",
+        "is_enabled": True,
+        "composio_status": "ACTIVE",
+        "composio_account_id": "account",
+        "composio_auth_config_id": "auth-config",
+        "allowed_tools": ["GMAIL_FETCH_EMAILS"],
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+class TestManagedAppsForAgents:
+    @pytest.mark.anyio
+    async def test_an_agent_gets_only_the_senders_active_connected_catalog_apps(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.app_connections import runtime
+
+        ctx = _ctx()
+        agent = _agent(ctx)
+        sender_id = uuid.uuid4()
+        spec = _spec(instructions="Keep this", mcp_servers=[])
+        lookup = AsyncMock(return_value=[_managed_gmail(sender_id)])
+        db = _db()
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.organization_assistant_repo.for_agent", AsyncMock(return_value=None)
+        )
+        monkeypatch.setattr(f"{REGISTRY_PATH}.mcp_connection_repo.list_composio_for_user", lookup)
+        monkeypatch.setattr(runtime, "is_configured", lambda _toolkit: True)
+
+        actual = await AgentRegistryService(db).with_assistant_guidance(
+            agent, spec, sender_user_id=sender_id
+        )
+
+        assert len(actual.mcp_servers) == 1
+        binding = actual.mcp_servers[0]
+        assert isinstance(binding, PersonalMcpServerRef)
+        assert binding.catalog_key == "composio-gmail"
+        assert binding.allowed_tools == [
+            "GMAIL_FETCH_EMAILS",
+            "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
+            "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
+        ]
+        assert binding.approval == "writes"
+        assert "tools available to you for account-backed tasks" in actual.instructions
+        lookup.assert_awaited_once_with(db, user_id=sender_id)
+        assert spec.mcp_servers == []
+        assert spec.instructions == "Keep this"
+
+    @pytest.mark.anyio
+    async def test_an_agent_with_no_connected_rows_gets_no_configured_placeholders(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.app_connections import runtime
+
+        ctx = _ctx()
+        sender_id = uuid.uuid4()
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.organization_assistant_repo.for_agent", AsyncMock(return_value=None)
+        )
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.mcp_connection_repo.list_composio_for_user",
+            AsyncMock(return_value=[]),
+        )
+        monkeypatch.setattr(runtime, "is_configured", lambda _toolkit: True)
+        spec = _spec(mcp_servers=[])
+
+        actual = await AgentRegistryService(_db()).with_assistant_guidance(
+            _agent(ctx), spec, sender_user_id=sender_id
+        )
+
+        assert actual is spec
+
+    @pytest.mark.anyio
+    async def test_an_agent_without_a_sender_does_not_read_managed_rows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.app_connections import runtime
+
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.organization_assistant_repo.for_agent", AsyncMock(return_value=None)
+        )
+        lookup = AsyncMock(return_value=[_managed_gmail(uuid.uuid4())])
+        monkeypatch.setattr(f"{REGISTRY_PATH}.mcp_connection_repo.list_composio_for_user", lookup)
+        monkeypatch.setattr(runtime, "is_configured", lambda _toolkit: True)
+        spec = _spec(mcp_servers=[])
+
+        actual = await AgentRegistryService(_db()).with_assistant_guidance(_agent(_ctx()), spec)
+
+        assert actual is spec
+        lookup.assert_not_awaited()
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "overrides",
+        [{"composio_status": "INITIATED"}, {"is_enabled": False}],
+    )
+    async def test_an_agent_gets_no_binding_for_an_inactive_managed_row(
+        self, monkeypatch: pytest.MonkeyPatch, overrides: dict[str, object]
+    ) -> None:
+        from app.services.app_connections import runtime
+
+        ctx = _ctx()
+        sender_id = uuid.uuid4()
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.organization_assistant_repo.for_agent", AsyncMock(return_value=None)
+        )
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.mcp_connection_repo.list_composio_for_user",
+            AsyncMock(return_value=[_managed_gmail(sender_id, **overrides)]),
+        )
+        monkeypatch.setattr(runtime, "is_configured", lambda _toolkit: True)
+        spec = _spec(mcp_servers=[])
+
+        actual = await AgentRegistryService(_db()).with_assistant_guidance(
+            _agent(ctx), spec, sender_user_id=sender_id
+        )
+
+        assert actual is spec
+
+    @pytest.mark.anyio
+    async def test_connected_app_discovery_preserves_an_explicit_binding_ceiling(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.app_connections import runtime
+
+        ctx = _ctx()
+        sender_id = uuid.uuid4()
+        explicit = PersonalMcpServerRef(
+            account="personal",
+            catalog_key="composio-gmail",
+            allowed_tools=["GMAIL_FETCH_EMAILS"],
+            approval="none",
+        )
+        spec = _spec(mcp_servers=[explicit])
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.organization_assistant_repo.for_agent", AsyncMock(return_value=None)
+        )
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.mcp_connection_repo.list_composio_for_user",
+            AsyncMock(return_value=[_managed_gmail(sender_id)]),
+        )
+        monkeypatch.setattr(runtime, "is_configured", lambda _toolkit: True)
+
+        actual = await AgentRegistryService(_db()).with_assistant_guidance(
+            _agent(ctx), spec, sender_user_id=sender_id
+        )
+
+        assert actual.mcp_servers == [explicit]
+        assert actual.mcp_servers[0].allowed_tools == ["GMAIL_FETCH_EMAILS"]
+        assert actual.mcp_servers[0].approval == "none"
+        assert spec.mcp_servers == [explicit]
+
+    @pytest.mark.anyio
+    async def test_assistant_keeps_configured_apps_without_changing_its_stored_spec(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.app_connections import runtime
+
+        ctx = _ctx()
+        agent = _agent(ctx)
+        assistant = SimpleNamespace(organization_id=ctx.organization_id)
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.organization_assistant_repo.for_agent",
+            AsyncMock(return_value=assistant),
+        )
+        monkeypatch.setattr(
+            f"{REGISTRY_PATH}.mcp_connection_repo.list_composio_for_user",
+            AsyncMock(return_value=[]),
+        )
+        monkeypatch.setattr(runtime, "is_configured", lambda toolkit: toolkit == "gmail")
+        spec = _spec(mcp_servers=[PlatformMcpServerRef(account="platform", allowed_tools=[])])
+
+        actual = await AgentRegistryService(_db()).with_assistant_guidance(agent, spec)
+
+        assert [
+            ref.catalog_key for ref in actual.mcp_servers if isinstance(ref, PersonalMcpServerRef)
+        ] == ["composio-gmail"]
+        assert "tools available on this assistant for account-backed tasks" in actual.instructions
+        assert spec.mcp_servers == [PlatformMcpServerRef(account="platform", allowed_tools=[])]
 
 
 @pytest.mark.anyio
