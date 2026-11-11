@@ -23,8 +23,10 @@ import { cn, setUrlParam, timeAgo } from "@/lib/utils";
 import {
   useAgentSelectionStore,
   useChatBandsStore,
+  useChatListModeStore,
   useChatSidebarStore,
   useWorkingStore,
+  type ChatListMode,
 } from "@/stores";
 import { DEFAULT_COLLAPSED_BANDS, LONG_LIST } from "@/stores/chat-sidebar-store";
 import { useProjects } from "@/hooks/use-projects";
@@ -405,6 +407,8 @@ interface ConversationListProps {
   /** Other people's threads shared with the reader. */
   shared?: Conversation[];
   onLeaveShared?: (id: string) => void;
+  /** Laid out by the chats' bands, or gathered under the agent that answered. */
+  mode: ChatListMode;
 }
 
 /**
@@ -497,6 +501,40 @@ export function byProject(
     bands.set(projectId, band);
   }
   return { inProjects: [...bands.values()], outside };
+}
+
+/**
+ * The threads gathered under the agent that answered them, one band per agent,
+ * in the order the list reached them - so the agent with the newest thread
+ * heads the list. A thread that names several agents sits under the first.
+ *
+ * A thread no agent has answered yet, a new chat before its first run, has no
+ * agent to head it: it goes in a last band of its own.
+ */
+export function byAgent(conversations: Conversation[], unnamed: string): Band[] {
+  const bands = new Map<string, Band>();
+  const withoutAgent: Conversation[] = [];
+  for (const conversation of conversations) {
+    const agent = conversation.agents?.[0];
+    if (!agent) {
+      withoutAgent.push(conversation);
+      continue;
+    }
+    const band = bands.get(agent.id) ?? {
+      key: `agent:${agent.id}`,
+      heading: agent.name,
+      icon: null,
+      rows: [],
+    };
+    band.rows.push(conversation);
+    bands.set(agent.id, band);
+  }
+  return [
+    ...bands.values(),
+    ...(withoutAgent.length > 0
+      ? [{ key: "agent:none", heading: unnamed, icon: null, rows: withoutAgent }]
+      : []),
+  ];
 }
 
 /**
@@ -597,6 +635,38 @@ function useBands(
 }
 
 /**
+ * The list in agents mode: the starred run first, as in the chats list, then one
+ * band per agent. Unread and direct shares have no band here - the dot on a row
+ * still says an answer is waiting.
+ */
+function useAgentBands(
+  conversations: Conversation[],
+  isArchivedView: boolean,
+  shared: Conversation[],
+  enabled: boolean,
+): Band[] {
+  const t = useTranslations("chat");
+  const ts = useTranslations("chat.sidebar");
+  return useMemo((): Band[] => {
+    if (!enabled) return [];
+    const sharedRows = isArchivedView ? [] : shared;
+    const sharedIds = new Set(sharedRows.map((conversation) => conversation.id));
+    const rows = [
+      ...conversations.filter((conversation) => !sharedIds.has(conversation.id)),
+      ...sharedRows,
+    ];
+    const starred = rows.filter((conversation) => conversation.is_favourite === true);
+    const others = rows.filter((conversation) => conversation.is_favourite !== true);
+    return [
+      ...(starred.length > 0
+        ? [{ key: "favourites", heading: t("favourites"), icon: "star" as const, rows: starred }]
+        : []),
+      ...byAgent(others, ts("otherAgents")),
+    ];
+  }, [conversations, isArchivedView, shared, enabled, t, ts]);
+}
+
+/**
  * Which bands are drawn folded, and how to flip one.
  *
  * A band somebody folded or opened by hand stays that way. One nobody chose for
@@ -637,6 +707,7 @@ function ConversationList({
   datedOrder,
   shared,
   onLeaveShared,
+  mode,
 }: ConversationListProps) {
   const t = useTranslations("chat");
   const ts = useTranslations("chat.sidebar");
@@ -648,7 +719,15 @@ function ConversationList({
   };
 
   const isArchivedView = view === "archived";
-  const bands = useBands(conversations, currentConversationId, isArchivedView, datedOrder, shared);
+  const chatBands = useBands(
+    conversations,
+    currentConversationId,
+    isArchivedView,
+    datedOrder,
+    shared,
+  );
+  const agentBands = useAgentBands(conversations, isArchivedView, shared ?? [], mode === "agents");
+  const bands = mode === "agents" ? agentBands : chatBands;
   const { isFolded, flip } = useBandFolds(bands, conversations.length);
   const foldedKeys = bands
     .filter((band) => isFolded(band.key))
@@ -839,8 +918,49 @@ interface ConversationSidebarProps {
   className?: string;
 }
 
+/** Chats | Agents: how the list is laid out. A segmented control, one of two pressed. */
+function ListModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: ChatListMode;
+  onChange: (mode: ChatListMode) => void;
+}) {
+  const ts = useTranslations("chat.sidebar");
+  const options: { value: ChatListMode; label: string }[] = [
+    { value: "chats", label: ts("modeChats") },
+    { value: "agents", label: ts("modeAgents") },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label={ts("modeLabel")}
+      className="bg-muted grid grid-cols-2 gap-0.5 rounded-lg p-0.5"
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={mode === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "focus-visible:ring-ring min-h-8 rounded-md px-2 text-xs font-medium transition-colors outline-none focus-visible:ring-2",
+            mode === option.value
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ConversationSidebar({ className }: ConversationSidebarProps) {
   const ts = useTranslations("chat.sidebar");
+  const mode = useChatListModeStore((state) => state.mode);
+  const setMode = useChatListModeStore((state) => state.setMode);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const collapse = () => setIsCollapsed(true);
@@ -957,6 +1077,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
     datedOrder: sort === DEFAULT_SORT,
     shared,
     onLeaveShared: (id: string) => void leave(id),
+    mode,
   };
 
   // The list's own controls, in its header beside the title the way a chat
@@ -1029,6 +1150,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
       </IconButton>
     </div>
   );
+  const listModeToggle = <ListModeToggle mode={mode} onChange={setMode} />;
   const searchDialog = (
     <ConversationSearchDialog
       open={searchOpen}
@@ -1074,6 +1196,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
               <ChevronLeft />
             </IconButton>
           </div>
+          <div className="shrink-0 px-3 pt-2">{listModeToggle}</div>
           <div className="shrink-0 px-3 py-2">{filters()}</div>
           {sharedNotice}
           <ConversationList {...listProps} />
@@ -1090,6 +1213,7 @@ export function ConversationSidebar({ className }: ConversationSidebarProps) {
             <SheetClose onClick={close} />
           </SheetHeader>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="shrink-0 px-3 pt-2">{listModeToggle}</div>
             <div className="shrink-0 px-3 py-2">{filters()}</div>
             {sharedNotice}
             <ConversationList {...listProps} onNavigate={close} />
@@ -1121,6 +1245,7 @@ function CollapsedSidebar({
   onLoadMore,
   datedOrder,
   shared,
+  mode,
   toolbar,
   onExpand,
   className,
@@ -1134,6 +1259,7 @@ function CollapsedSidebar({
   | "onLoadMore"
   | "datedOrder"
   | "shared"
+  | "mode"
 > & {
   toolbar: ReactNode;
   onExpand: () => void;
@@ -1142,7 +1268,15 @@ function CollapsedSidebar({
   const t = useTranslations("chat");
   const ts = useTranslations("chat.sidebar");
   const isArchivedView = view === "archived";
-  const bands = useBands(conversations, currentConversationId, isArchivedView, datedOrder, shared);
+  const chatBands = useBands(
+    conversations,
+    currentConversationId,
+    isArchivedView,
+    datedOrder,
+    shared,
+  );
+  const agentBands = useAgentBands(conversations, isArchivedView, shared ?? [], mode === "agents");
+  const bands = mode === "agents" ? agentBands : chatBands;
   const { isFolded, flip } = useBandFolds(bands, conversations.length);
 
   return (

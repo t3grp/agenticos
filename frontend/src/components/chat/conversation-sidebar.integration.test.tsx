@@ -24,6 +24,7 @@ import * as invalidation from "@/lib/coalesced-invalidation";
 import {
   useAgentSelectionStore,
   useChatBandsStore,
+  useChatListModeStore,
   useChatSidebarStore,
   useConversationStore,
   useWorkingStore,
@@ -560,7 +561,6 @@ describe("what the sidebar says about the list", () => {
     );
   });
 
-
   it("keeps one run, without days, in an order that is not by date", async () => {
     urlParams = new URLSearchParams("sort=title:asc");
     serve([
@@ -1071,9 +1071,7 @@ it("lets a reader favourite and unfavourite a shared conversation", async () => 
     expect(apiClient.post).toHaveBeenCalledWith("/conversations/shared-favourite/favourite", {}),
   );
   await userEvent.click(within(list()).getByRole("button", { name: "Conversation actions" }));
-  await userEvent.click(
-    await screen.findByRole("menuitem", { name: "Remove from favourites" }),
-  );
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Remove from favourites" }));
   await waitFor(() =>
     expect(apiClient.delete).toHaveBeenCalledWith("/conversations/shared-favourite/favourite"),
   );
@@ -1097,7 +1095,6 @@ it("uses the usual favourite band for a starred shared thread while retaining it
   expect(await screen.findByRole("menuitem", { name: "Remove from my chats" })).toBeVisible();
   expect(screen.queryByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument();
 });
-
 
 describe("conversation row keyboard access and actions", () => {
   it.each(["{Enter}", " "])(
@@ -1231,4 +1228,123 @@ it("keeps the small-screen chat sheet available after collapsing the desktop sid
 
   await waitFor(() => expect(useConversationStore.getState().currentConversationId).toBe("c-1"));
   expect(useChatSidebarStore.getState().isOpen).toBe(false);
+});
+
+/** A thread a named agent answered in, as the listing sends it. */
+function answeredBy(
+  id: string,
+  title: string,
+  agent: { id: string; name: string },
+  favourite = false,
+): Conversation {
+  return {
+    ...conversation(id, title, favourite),
+    agents: [{ id: agent.id, slug: agent.id, name: agent.name, has_avatar: false }],
+  } as Conversation;
+}
+
+describe("the Chats | Agents toggle", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useChatListModeStore.setState({ mode: "chats" });
+  });
+
+  it("gathers each agent's threads under its name, newest agent first, and no agent under Other", async () => {
+    serve([
+      answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" }),
+      answeredBy("c-2", "Launch copy", { id: "a-2", name: "Writer" }),
+      answeredBy("c-3", "Churn cut", { id: "a-1", name: "Analyst" }),
+      conversation("c-4", "Brand new chat"),
+    ]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+
+    const headings = within(list())
+      .getAllByRole("button", { expanded: true })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(["Analyst", "Writer", "Other"]);
+    const analyst = within(list()).getByRole("button", { name: "Analyst", expanded: true });
+    const group = analyst.parentElement as HTMLElement;
+    expect(within(group).getByRole("button", { name: "Revenue deck" })).toBeInTheDocument();
+    expect(within(group).getByRole("button", { name: "Churn cut" })).toBeInTheDocument();
+    expect(within(group).queryByRole("button", { name: "Launch copy" })).toBeNull();
+    expect(within(list()).getByRole("button", { name: "Brand new chat" })).toBeInTheDocument();
+  });
+
+  it("folds one agent's threads away from its heading, and opens them again", async () => {
+    serve([answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" })]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+
+    const heading = within(list()).getByRole("button", { name: "Analyst", expanded: true });
+    await userEvent.click(heading);
+    expect(within(list()).queryByRole("button", { name: "Revenue deck" })).toBeNull();
+    const folded = within(list()).getByRole("button", { name: /Analyst/, expanded: false });
+    expect(folded).toHaveTextContent("1");
+
+    await userEvent.click(folded);
+    expect(within(list()).getByRole("button", { name: "Revenue deck" })).toBeInTheDocument();
+  });
+
+  it("keeps a starred thread under Favourites, not repeated under its agent", async () => {
+    serve([
+      answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" }, true),
+      answeredBy("c-2", "Churn cut", { id: "a-1", name: "Analyst" }),
+    ]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+
+    const headings = within(list())
+      .getAllByRole("button", { expanded: true })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(["Favourites", "Analyst"]);
+    const analyst = within(list()).getByRole("button", { name: "Analyst", expanded: true });
+    const group = analyst.parentElement as HTMLElement;
+    expect(within(group).queryByRole("button", { name: "Revenue deck" })).toBeNull();
+    expect(within(group).getByRole("button", { name: "Churn cut" })).toBeInTheDocument();
+  });
+
+  it("remembers the choice across a reload, and returns to the chats list from it", async () => {
+    serve([answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" })]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+
+    expect(window.localStorage.getItem("chat-list-mode")).toContain('"mode":"agents"');
+    await userEvent.click(screen.getByRole("button", { name: "Chats", pressed: false }));
+    expect(window.localStorage.getItem("chat-list-mode")).toContain('"mode":"chats"');
+    expect(within(list()).queryByRole("button", { name: "Analyst", expanded: true })).toBeNull();
+  });
+
+  it("opens on the agents view when the choice was stored before", async () => {
+    window.localStorage.setItem(
+      "chat-list-mode",
+      JSON.stringify({ state: { mode: "agents" }, version: 1 }),
+    );
+    await useChatListModeStore.persist.rehydrate();
+    serve([answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" })]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+
+    expect(screen.getByRole("button", { name: "Agents", pressed: true })).toBeInTheDocument();
+    expect(
+      within(list()).getByRole("button", { name: "Analyst", expanded: true }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the search and the agent filter working in the agents view", async () => {
+    urlParams = new URLSearchParams("agent=a-1");
+    serve([answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" })]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+
+    expect(listRequests().some((path) => path.includes("agent_id=a-1"))).toBe(true);
+    expect(
+      within(list()).getByRole("button", { name: "Analyst", expanded: true }),
+    ).toBeInTheDocument();
+  });
 });

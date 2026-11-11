@@ -6,7 +6,12 @@ export { useMotionStore } from "./motion-store";
 export { useWorkflowNodeStyleStore } from "./workflow-node-style-store";
 export { useSidebarStore } from "./sidebar-store";
 export { useChatStore } from "./chat-store";
-export { useChatBandsStore, useChatSidebarStore } from "./chat-sidebar-store";
+export {
+  useChatBandsStore,
+  useChatListModeStore,
+  useChatSidebarStore,
+  type ChatListMode,
+} from "./chat-sidebar-store";
 export { useConversationStore } from "./conversation-store";
 export { useFilePreviewStore } from "./file-preview-store";
 export { useOrgStore } from "./org-store";
