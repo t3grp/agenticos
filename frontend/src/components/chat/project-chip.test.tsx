@@ -23,8 +23,9 @@ vi.mock("@/hooks/use-project-folder", () => ({
 }));
 const shared = vi.hoisted(() => ({ ids: [] as string[] }));
 vi.mock("@/hooks/use-conversation-shares", () => ({
-  useSharedConversation: (id: string | null) =>
-    id !== null && shared.ids.includes(id) ? { id } : undefined,
+  useConversationAccess: (id: string | null) => ({
+    conversation: id !== null && shared.ids.includes(id) ? { id, share_permission: "view" } : null,
+  }),
 }));
 const params = vi.fn(() => new URLSearchParams());
 vi.mock("next/navigation", () => ({
