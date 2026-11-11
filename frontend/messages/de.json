@@ -1,4 +1,114 @@
 {
+  "appConnections": {
+    "enable": "Aktivieren",
+    "enabled": "Konto aktiviert.",
+    "title": "Verbinde deine Apps",
+    "description": "Nutze deine vertrauten Werkzeuge in T3OS. Beginne mit einer nützlichen Aufgabe.",
+    "unconfiguredTitle": "App-Verbindungen sind noch nicht eingerichtet",
+    "unconfiguredDescription": "Dein Administrator muss den App-Verbindungsdienst aktivieren. Bestehende und eigene Verbindungen bleiben im Tab MCP-Server verfügbar.",
+    "progress": "Fortschritt der Verbindungseinrichtung",
+    "steps": {
+      "1": "1 · Dein Ziel",
+      "2": "2 · Apps verbinden (optional)",
+      "3": "3 · Erste Aufgabe"
+    },
+    "chooseGoal": "Beginne mit etwas Nützlichem.",
+    "goalHint": "Wähle einen Einstieg. Weitere Apps kannst du später verbinden.",
+    "goals": {
+      "day": {
+        "title": "Meinen Tag vorbereiten",
+        "description": "Eine hilfreiche Übersicht vor dem ersten Termin.",
+        "prompt": "Nutze ausschließlich mein verbundenes {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}), um die heutigen anstehenden Termine und nötigen Vorbereitungen zusammenzufassen. Nur lesen: nichts erstellen, ändern oder senden. Wechsle nicht zu einem anderen Konto. Füge verfügbare Quellenlinks hinzu und erkläre fehlenden Zugriff, statt ein Ergebnis zu erfinden."
+      },
+      "inbox": {
+        "title": "Mein Postfach durchsehen",
+        "description": "Finde Nachrichten, die deine Aufmerksamkeit brauchen.",
+        "prompt": "Nutze ausschließlich mein verbundenes {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}), um eine kleine Auswahl neuer Nachrichten zusammenzufassen, die Aufmerksamkeit erfordern, und nächste Schritte vorzuschlagen. Nur lesen: nichts senden, löschen, archivieren oder ändern. Wechsle nicht das Konto. Füge verfügbare Quellenlinks hinzu und erkläre fehlenden Zugriff, statt ein Ergebnis zu erfinden."
+      },
+      "answers": {
+        "title": "Projektantworten finden",
+        "description": "Mache aus Projektnotizen klare nächste Schritte.",
+        "prompt": "Nutze ausschließlich mein verbundenes {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}), um eine kleine Auswahl aktueller Projektnotizen zu finden und Prioritäten, Entscheidungen sowie offene Fragen zusammenzufassen. Nur lesen: nichts ändern. Wechsle nicht das Konto. Nenne die verwendeten Quellen und bitte um eine Eingrenzung des Projekts, falls der Kontext mehrdeutig ist."
+      }
+    },
+    "catalogTitle": "Wähle deine Apps",
+    "catalogHint": "Durchsuche den Composio-App-Katalog oder suche nach einer App. Die Empfehlungen richten sich nach deinem Ziel; jede App benötigt eine eigene Autorisierung.",
+    "searchApps": "Alle Apps durchsuchen",
+    "recommended": "Für dein Ziel empfohlen",
+    "loadMore": "Weitere Apps laden",
+    "noSearchResults": "Keine Apps entsprechen dieser Suche. Versuche einen anderen Namen.",
+    "catalogUnavailable": "Der vollständige App-Katalog ist vorübergehend nicht verfügbar. Deine bestehenden Konten und eingerichteten Apps bleiben zugänglich.",
+    "setupRequiredHint": "Ein Administrator muss diese App einrichten, bevor du sie verbinden kannst.",
+    "approvalRequired": "Jede Aktion braucht deine Freigabe",
+    "approvalRequiredHint": "Diese App kann Daten lesen und Änderungen vornehmen. T3OS fragt vor jeder Aktion nach deiner Freigabe.",
+    "exploreApp": "Diese App mit meinem Assistenten erkunden",
+    "exploreAppPrompt": "Hilf mir, mit meinem verbundenen {toolkit}-Konto {account} (Verbindung {connection}; Dienst {catalog}) loszulegen. Beschreibe einige nützliche Aufgaben mit den verfügbaren Werkzeugen und frage mich, welche ich ausprobieren möchte. Rufe keine App-Werkzeuge auf, bevor ich eine Aufgabe ausgewählt habe. Verwende nur dieses Konto.",
+    "toolkits": {
+      "googlecalendar": "Anstehende Termine und Besprechungsdetails lesen.",
+      "gmail": "Nachrichten zu deiner Anfrage finden und lesen.",
+      "outlook": "Relevante Nachrichten und anstehende Besprechungen lesen.",
+      "googledrive": "Relevante Projektdokumente finden und lesen.",
+      "notion": "Von dir freigegebene Projektseiten lesen.",
+      "slack": "Relevante Gespräche und Projektaktualisierungen finden.",
+      "github": "Repository-Aktivität, Issues und Pull Requests prüfen."
+    },
+    "connectNamed": "{name} verbinden",
+    "addAccount": "Konto hinzufügen",
+    "connect": "Verbinden",
+    "notConfigured": "Einrichtung erforderlich",
+    "unavailableApp": "Nicht verfügbar",
+    "unavailableAppHint": "Bei dieser Integration kannst du hier kein Konto verbinden.",
+    "noApps": "In dieser Bereitstellung sind keine Apps verfügbar.",
+    "yourAccounts": "Deine verbundenen Konten",
+    "personalHint": "Dein Konto bleibt persönlich. Agents nutzen es nur über Werkzeuge, die für dein eigenes Konto eingerichtet sind.",
+    "statuses": {
+      "pending": "Wartet auf Autorisierung",
+      "connected": "Verbunden",
+      "expired": "Erneute Verbindung nötig",
+      "failed": "Verbindung fehlgeschlagen",
+      "disabled": "Deaktiviert"
+    },
+    "defaultAccount": "Standardkonto",
+    "authorizationVerified": "Autorisierung bestätigt. Der App-Zugriff wird beim Werkzeugaufruf erneut geprüft.",
+    "checkFailed": "Die letzte Prüfung konnte den Zugriff nicht bestätigen. Verbinde das Konto erneut oder wiederhole die Prüfung.",
+    "reconnect": "Erneut verbinden",
+    "checkConnection": "Zugriff prüfen",
+    "makeDefault": "Als Standard festlegen",
+    "disconnect": "Trennen",
+    "defaultHint": "Ohne Kontoangabe wird das Standardkonto verwendet. Andere verbundene Konten bleiben verfügbar.",
+    "consentHint": "Autorisiere diese App und kehre danach zur Prüfung der Verbindung zurück.",
+    "accountLabel": "Kontobezeichnung (optional)",
+    "accountLabelPlaceholder": "Zum Beispiel Arbeit oder Privat",
+    "intendedAccess": "So kann dein Assistent diese App nutzen",
+    "providerPermissions": "Prüfe die genauen Berechtigungen auf der Zustimmungsseite des Anbieters. Die Aktionsregeln von T3OS gelten davon getrennt.",
+    "cancel": "Abbrechen",
+    "continueToApp": "Weiter zur App",
+    "disconnectTitle": "Dieses Konto trennen?",
+    "disconnectHint": "Entferne {account} aus T3OS. Agents und Routinen, die diese Verbindung nutzen, benötigen danach ein anderes Konto oder eine neue Verbindung.",
+    "firstTaskTitle": "Nutze deine Verbindung.",
+    "firstTaskHint": "Wähle ein Konto und lass deinen Assistenten eine echte Aufgabe ausführen. Das Ergebnis erscheint im Gespräch mit dem Assistenten.",
+    "firstTaskNeedsAccount": "Verbinde und bestätige zuerst eine App für diese Aufgabe. Du kannst die Einrichtung auch überspringen und T3OS erkunden.",
+    "useAccount": "Dieses Konto verwenden",
+    "assistantUnavailable": "Dein Assistent kann diese Aufgabe noch nicht ausführen. Deine Verbindungen sind gespeichert; ein Administrator kann Modell und Zugriffseinstellungen prüfen.",
+    "retry": "Erneut versuchen",
+    "taskSent": "Anfrage an deinen Assistenten gesendet. Folge dem Fortschritt und möglichen Zugriffsfragen im Gespräch.",
+    "callbackVerified": "Deine App-Autorisierung wurde bestätigt.",
+    "callbackPending": "Die Autorisierung ist noch nicht bereit. Prüfe das Konto unten oder verbinde es erneut.",
+    "callbackFailed": "Die App-Verbindung konnte nicht bestätigt werden. Versuche es erneut oder verbinde das Konto neu.",
+    "invalidAuthorizationUrl": "Die App hat eine ungültige Autorisierungsadresse zurückgegeben. Versuche es erneut.",
+    "connectFailed": "Die Autorisierung konnte nicht gestartet werden. Versuche es erneut.",
+    "permissionHint": "Deine erste Aufgabe fordert Lesezugriff an. Andere Aktionen folgen den Freigaberegeln des Agents.",
+    "back": "Zurück",
+    "skip": "Vorerst überspringen",
+    "continue": "Weiter",
+    "chooseApps": "Apps auswählen",
+    "verifying": "Verbindung wird geprüft…",
+    "retryVerification": "Erneut prüfen",
+    "connectionChecked": "Kontostatus aktualisiert.",
+    "defaultChanged": "Standardkonto aktualisiert.",
+    "disconnected": "Konto getrennt.",
+    "continueWithoutApps": "Ohne Apps fortfahren"
+  },
   "admin": {
     "actions": "Aktionen",
     "active": "Aktiv",
@@ -1528,6 +1638,10 @@
       "filters": "Filtern und sortieren",
       "show": "Anzeigen",
       "backToActive": "Zurück zu aktiven",
+      "modeLabel": "Gespräche anzeigen nach",
+      "modeChats": "Chats",
+      "modeAgents": "Agenten",
+      "otherAgents": "Sonstige",
       "age": {
         "today": "Heute",
         "yesterday": "Gestern",
@@ -1544,7 +1658,11 @@
       "unread": "Neue Antwort",
       "unreadHeading": "Ungelesen",
       "unnamedProject": "Ein Projekt",
-      "apiFilterLabel": "API-Gespräche ausblenden"
+      "apiFilterLabel": "API-Gespräche ausblenden",
+      "sharedHeading": "Mit Ihnen geteilt",
+      "sharedLoading": "Geteilte Unterhaltungen werden geladen…",
+      "sharedFailed": "Geteilte Unterhaltungen konnten nicht geladen werden.",
+      "retryShared": "Geteilte Unterhaltungen erneut laden"
     },
     "skipComment": "Kommentar überspringen",
     "sourceCount": "{count, plural, =1 {1 Quelle} other {# Quellen}}",
@@ -1635,11 +1753,11 @@
       "knowledgeBaseSearch": "Suche in der Wissensdatenbank",
       "listed": "{named, select, no {Aufgelistet …} other {{subject} aufgelistet}}",
       "listing": "{named, select, no {Listet auf …} other {Listet {subject} auf}}",
-      "loadSkill": "Skill laden",
+      "loadSkill": "Skill lesen",
       "loading": "Wird geladen …",
       "availableSkills": "Verfügbare Skills",
       "lookingThroughSkills": "Sieht die Skills durch",
-      "loadingSkill": "Lädt einen Skill",
+      "loadingSkill": "Liest einen Skill",
       "lookedFor": "{named, select, no {Gesucht …} other {Nach {subject} gesucht}}",
       "lookingAtChannel": "Sieht sich den Kanal an",
       "lookingAtChannelMembers": "Sieht nach, wer im Kanal ist",
@@ -1831,6 +1949,14 @@
       "backgroundTasks": "Hintergrundthemen",
       "stoppingBackgroundTask": "Hintergrundthema stoppen",
       "backgroundTaskStopped": "Hintergrundthema gestoppt",
+      "sendingAgentMessage": "Nachricht an einen Agenten senden",
+      "sendAgentMessage": "Nachricht an einen Agenten gesendet",
+      "readingAgentMessages": "Agentennachrichten lesen",
+      "readAgentMessages": "Agentennachrichten gelesen",
+      "listingAgentThreads": "Agententhemen auflisten",
+      "agentThreads": "Agententhemen",
+      "reactingToAgentMessage": "Auf eine Agentennachricht reagieren",
+      "reactToAgentMessage": "Auf eine Agentennachricht reagiert",
       "memoryResult": "Gedächtnis",
       "manageMemory": "Dein Gedächtnis",
       "memoryRecordedResult": "Im Gedächtnis gespeichert",
@@ -1930,6 +2056,11 @@
       "failed": "Der Browser war nicht erreichbar"
     },
     "conversationActions": "Aktionen der Konversation",
+    "changeProject": "Projekt ändern",
+    "moveToProject": "In Projekt verschieben…",
+    "removeFromProject": "Aus Projekt entfernen",
+    "projectMoved": "Konversation verschoben",
+    "projectMoveFailed": "Konversation konnte nicht verschoben werden",
     "imageNotLoaded": "Bild (nicht geladen)",
     "whileWorking": {
       "steersWaiting": "In die Aufgabe gesendet - sie liest es beim nächsten Schritt"
@@ -2372,8 +2503,9 @@
     "approvalRememberFailed": "Die Freigabe konnte nicht entfernt werden. Erneut versuchen.",
     "approvalRememberRetry": "Erneut versuchen",
     "localAccess": {
+      "continue": "Zugriff erteilt - bitte fortfahren.",
       "title": "Wo darf {agent} arbeiten?",
-      "description": "{agent} arbeitet auf deinem Computer. Du wirst einmal für diesen Agenten gefragt; ändere oder widerrufe es später unter Chat controls → Work on.",
+      "description": "{agent} braucht für diese Anfrage Dateien auf deinem Computer. Deine Wahl wird für diesen Agenten gespeichert; ändere oder widerrufe es später unter Chat controls → Work on.",
       "computer": "Ganzer Computer",
       "computerHint": "Darf überall, wo dein Konto Zugriff hat, Dateien lesen und ändern und Befehle als du ausführen. Dein Computer fragt nach einer Bestätigung.",
       "folder": "Ordner wählen",
@@ -2381,7 +2513,23 @@
       "cancel": "Nicht jetzt",
       "agentUnavailable": "Der ausgewählte Agent konnte nicht geladen werden. Versuche es erneut.",
       "failed": "Zugriff auf diesem Computer konnte nicht eingerichtet werden"
-    }
+    },
+    "fork": "In neue Unterhaltung abzweigen",
+    "forkedToast": "Unterhaltung abgezweigt",
+    "failedForkConversation": "Unterhaltung konnte nicht abgezweigt werden",
+    "forkedFrom": "Abgezweigt aus <link>{title}</link>",
+    "untitledFork": "Unbenannte Unterhaltung",
+    "leaveShared": "Aus meinen Chats entfernen",
+    "leftShared": "Aus Ihren Chats entfernt",
+    "failedLeaveShared": "Unterhaltung konnte nicht entfernt werden",
+    "conversationViewOnly": "Schreibgeschützt mit Ihnen geteilt",
+    "accessChanged": "Zugriff geändert",
+    "failedToChangeAccess": "Zugriff konnte nicht geändert werden",
+    "accessLevelFor": "Zugriffsstufe für {name}",
+    "accessChecking": "Zugriff auf die Unterhaltung wird geprüft…",
+    "accessFailed": "Der Zugriff auf diese Unterhaltung konnte nicht geprüft werden",
+    "accessRetry": "Erneut versuchen",
+    "forking": "Unterhaltung wird verzweigt…"
   },
   "common": {
     "archiveNamedConfirm": "{name} archivieren?",
@@ -2996,6 +3144,14 @@
         "empty": {
           "title": "Noch nichts hier",
           "description": "Benachrichtigungen erscheinen hier."
+        }
+      },
+      "agent-messages": {
+        "title": "Agentennachrichten",
+        "description": "Themen, die auf Sie warten.",
+        "empty": {
+          "title": "Keine ungelesenen Themen",
+          "description": "Nachrichten zwischen Ihren Agenten erscheinen hier, wenn sie auf Sie warten."
         }
       },
       "artifacts": {
@@ -4041,6 +4197,7 @@
     "failedLoadConnections": "Verbindungen konnten nicht geladen werden",
     "failedLoadOrgServers": "Die MCP-Server der Organisation konnten nicht geladen werden",
     "finishConsentThenReturn": "Schließen Sie es im geöffneten Tab ab und kommen Sie zurück - der Server erscheint hier, sobald er autorisiert ist.",
+    "finishConsentInBrowser": "Schließen Sie die Anmeldung in Ihrem Browser ab und kommen Sie zurück - der Server erscheint hier, sobald er autorisiert ist.",
     "consentTabBlocked": "Ihr Browser hat den Anmelde-Tab blockiert. Erlauben Sie Pop-ups für diese Seite und versuchen Sie es erneut.",
     "fromRegistry": "Registry",
     "fromRegistryHint": "Aus der öffentlichen MCP-Registry. Niemand hier hat ihn geprüft: Die Beschreibung stammt vom Herausgeber, und es gibt keinen Hinweis darauf, welches Credential er verlangt.",
@@ -4062,6 +4219,8 @@
     "oauthFailed": "Die Anmeldung ist fehlgeschlagen, und es wurde keine Verbindung gespeichert.",
     "oauthMissingCode": "Der Provider hat keinen Autorisierungscode gesendet.",
     "googleOAuthClientRequired": "Google benötigt vor dem Verbinden eine Client-ID und ein Client-Secret aus Google Cloud.",
+    "googleAppAskAdmin": "Bitte einen Admin, Google für diese Organisation einzurichten.",
+    "googleAppDescription": "Google-OAuth-Client für verbundene Konten",
     "googleOAuthSetupGuide": "Google-Einrichtungsanleitung öffnen",
     "oauthRequiredClient": "OAuth-Client in Google Cloud",
     "googleOAuthClientHint": "Erstelle einen OAuth-Client vom Typ Web application, wähle „Use this client for an AI-powered agent“ und trage die exakte Weiterleitungs-URL unten ein.",
@@ -4228,6 +4387,8 @@
     "expandSidebar": "Seitenleiste ausklappen",
     "workflows": "Workflows",
     "artifacts": "Apps",
+    "apps": "Apps",
+    "allApps": "Alle Apps",
     "assistant": "Assistent",
     "groups": "Gruppen",
     "api": "API",
@@ -4242,6 +4403,7 @@
     "loadingPage": "Seite wird geöffnet",
     "tables": "Tabellen",
     "inbox": "Posteingang",
+    "agentMessages": "Agentennachrichten",
     "inboxCount": "{count, plural, =1 {1 wartet} other {# warten}}",
     "consoleVersion": "Konsolenversion {version}",
     "updateAvailable": "Version {version} ist verfügbar",
@@ -4251,7 +4413,10 @@
     "whatsNewTitle": "Neu in {version}",
     "whatsNewDescription": "Änderungen in der verwendeten Version.",
     "whatsNewDone": "Verstanden",
-    "backgroundWork": "Arbeit im Hintergrund"
+    "backgroundWork": "Arbeit im Hintergrund",
+    "connectors": "Verbindungen",
+    "onboarding": "Einführung",
+    "noFavouriteApps": "Markiere eine App mit dem Stern, um sie hier anzuheften. <link>Alle Apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -4285,6 +4450,10 @@
         "title": "Eine Wissensdatenbank erstellen?",
         "body": "Eine Wissensdatenbank lässt Ihre Agents Ihre Dokumente durchsuchen. Wollen Sie jetzt eine einrichten? Wir führen Sie hindurch."
       },
+      "connect-app": {
+        "title": "Eine App verbinden?",
+        "body": "Wähle eine erste hilfreiche Aufgabe, autorisiere eine App und bitte deinen Assistenten, sie zu verwenden. Du kannst jeden Schritt überspringen."
+      },
       "create-mcp": {
         "title": "Einen MCP-Server verbinden?",
         "body": "MCP-Server geben Agents Tools aus anderen Systemen. Wollen Sie jetzt eine Verbindung hinzufügen? Wir führen Sie hindurch."
@@ -4304,6 +4473,10 @@
       "create-workflow": {
         "body": "Ein Workflow verkettet Schritte zu einer Automatisierung, die Ihre Agents ausführen. Jetzt einen anlegen? Wir öffnen den Dialog, damit Sie eine leere Arbeitsfläche oder eine Vorlage wählen.",
         "title": "Einen Workflow bauen?"
+      },
+      "create-agent-message": {
+        "title": "Erste Nachricht zwischen Agenten senden?",
+        "body": "Ein Agent kann direkt an einen anderen schreiben, in einem Thema, das Sie lesen können. Sollen wir jetzt eine senden? Wir führen Sie hindurch und sehen zu, wie das Thema erscheint."
       },
       "explore-chat": {
         "title": "Eine kurze Tour durch den Chat?",
@@ -4338,6 +4511,10 @@
       "agent-history": {
         "title": "Jede Version, aufbewahrt",
         "body": "Jede Veröffentlichung friert den Spec als Version ein, die Sie in ein Environment heben, auf die Sie zurückrollen oder gegen die Sie die Run-Historie lesen können."
+      },
+      "agent-messages": {
+        "title": "Nachrichten zwischen Agenten",
+        "body": "Wenn ein Agent einem anderen schreibt, landet das Thema hier, zuletzt aktive zuerst. Öffnen Sie ein Thema, um es zu lesen, als einer seiner Agenten zu antworten oder auf eine Nachricht zu reagieren."
       },
       "agent-instructions": {
         "title": "Die Instruktionen sind das Verhalten",
@@ -4503,6 +4680,26 @@
         "title": "Den Katalog öffnen",
         "body": "Wählen Sie Server verbinden - der Katalog öffnet sich direkt hier im Builder, und wir wählen gemeinsam einen aus."
       },
+      "flow-agent-message-create": {
+        "title": "Erste Nachricht senden",
+        "body": "Öffnen Sie das Fenster für eine neue Nachricht, um die Worte eines Agenten an einen anderen zu senden."
+      },
+      "flow-agent-message-sender": {
+        "title": "Sendenden Agent wählen",
+        "body": "Wählen Sie, welcher Ihrer ausführbaren Agenten diese Nachricht sendet."
+      },
+      "flow-agent-message-recipient": {
+        "title": "Empfänger wählen",
+        "body": "Suchen Sie die Agenten, denen Sie schreiben dürfen, und wählen Sie den Empfänger."
+      },
+      "flow-agent-message-body": {
+        "title": "Nachricht schreiben",
+        "body": "Schreiben Sie, was der andere Agent hören muss — bis zu 16.000 Zeichen."
+      },
+      "flow-agent-message-send": {
+        "title": "Senden",
+        "body": "Senden Sie die Nachricht und gehen Sie dann weiter, um das neue Thema zu sehen."
+      },
       "flow-agent-model-add": {
         "title": "Ein Modell hinzufügen",
         "body": "Ihre Organisation hat noch kein Modell. Wählen Sie einen Provider, nennen Sie ein Modell und fügen Sie einen Schlüssel ein - er wird im Vault gespeichert, und das Modell ist bereit. Wir machen weiter, sobald es hinzugefügt ist."
@@ -4603,6 +4800,14 @@
         "title": "Füllen Sie die Verbindung aus",
         "body": "Benennen Sie ihn - der Name geht seinen Tool-Namen voran —, behalten Sie Organisation, damit Ihre Agents ihn nutzen können, und fügen Sie ein Token ein, falls dieser Server eines verlangt. Wählen Sie dann Weiter."
       },
+      "flow-app-goal": {
+        "title": "Wähle deine erste Aufgabe",
+        "body": "Wähle Meinen Tag vorbereiten, Meinen Posteingang prüfen oder Projektantworten finden und danach die Apps. Ein verbundenes Konto reicht für den Anfang. Du kannst das Ziel ändern oder die Einrichtung überspringen."
+      },
+      "flow-app-authorize": {
+        "title": "Autorisieren und ausprobieren",
+        "body": "Verbinde eine App und prüfe ihre Berechtigungen beim Anbieter. Nach deiner Rückkehr überprüft T3OS das Konto. Gehe zur ersten Aufgabe, wähle das Konto und frage deinen Assistenten. Du kannst diese Anleitung jederzeit beenden; dadurch wird keine App autorisiert."
+      },
       "flow-mcp-field-pick": {
         "title": "Wählen Sie einen Server",
         "body": "Das ist der Katalog der Systeme, aus denen Ihre Agents Tools beziehen können. Finden Sie den gewünschten und wählen Sie dort Verbinden."
@@ -4671,6 +4876,10 @@
         "title": "Bringen Sie Ihren eigenen mit",
         "body": "Nicht im Katalog? Fügen Sie einen eigenen Server hinzu, indem Sie seine URL einfügen - für die ganze Organisation oder nur für Sie."
       },
+      "app-connections": {
+        "title": "Deine Apps verbinden",
+        "body": "Beginne mit einem Ziel und verbinde nur die benötigten Apps. Jeder Anbieter fragt nach einer eigenen Autorisierung. Eigene Server findest du im Tab MCP-Server; unter Mehr liegen Kanäle, Remote-Agenten, Vault und Sandboxes."
+      },
       "mcp-catalog": {
         "title": "Tools anstecken",
         "body": "MCP-Server sind fertige Werkzeugsätze, die Ihre Agents aufrufen können. Verbinden Sie einen für die ganze Organisation oder mit Ihrem eigenen Konto für sich, und fügen Sie ihn dann im Tab MCP servers eines Agents hinzu."
@@ -4679,9 +4888,17 @@
         "title": "Verbinden, dann Tools wählen",
         "body": "Einen Server zu verbinden fragt, wie die Anmeldung erfolgt, und lässt Sie dann genau auswählen, welche seiner Tools Ihre Agents aufrufen dürfen."
       },
+      "connections-more": {
+        "title": "Weitere Verbindungen",
+        "body": "Der Tab Mehr enthält Kanäle, Remote-Agenten sowie Vault- und Sandbox-Einstellungen, die für deine Rolle verfügbar sind."
+      },
       "mcp-filter": {
         "title": "Einen Server finden",
         "body": "Durchsuchen Sie den Katalog oder grenzen Sie ihn nach Kategorie ein und danach, ob Sie ihn schon verbunden haben."
+      },
+      "organization-switcher": {
+        "title": "Wählen Sie Ihre Organisation",
+        "body": "Der Name zeigt die Organisation, in der Sie arbeiten. Öffnen Sie das Menü, um die Organisation zu wechseln, Organisationen zu verwalten oder eine neue anzulegen. Agents, Wissen und Aktivität folgen Ihrer Auswahl."
       },
       "notification-bell": {
         "title": "Bleiben Sie im Bilde",
@@ -4810,6 +5027,10 @@
       "artifacts-list": {
         "title": "Veröffentlichte Seiten",
         "body": "Berichte und Dashboards, die Ihre Agents veröffentlicht haben. Öffnen Sie eines, wählen Sie eine frühere Version, teilen Sie es mit Kolleginnen und Kollegen oder geben Sie ihm einen öffentlichen Link."
+      },
+      "nav-pinned": {
+        "title": "Angeheftete Apps",
+        "body": "Deine markierten Apps findest du hier in der Seitenleiste. Markiere eine App auf ihrer Karte oder Seite und entferne die Markierung genauso."
       },
       "settings-api-keys": {
         "title": "Ihre API-Schlüssel",
@@ -5146,6 +5367,22 @@
       "chat-coding-accounts": {
         "title": "Deine Coding-Konten",
         "body": "Verbinde Codex oder Claude Code, ohne den Chat zu verlassen. Dies sind deine privaten Cloud-Konten; lokale Desktop-Werkzeuge behalten ihre eigene Anmeldung."
+      },
+      "claude-subscription-connect": {
+        "title": "Dein Claude-Abonnement verbinden",
+        "body": "Öffne die Claude-Anmeldung, schließe sie mit deinem eigenen Konto ab und füge den erhaltenen Code ein. Füge nach dem Verbinden ein Abonnement-Modell hinzu und wähle es in einem Agent oder Chat."
+      },
+      "chat-subscription-model": {
+        "title": "Dein Claude-Abonnement verwenden",
+        "body": "Wähle eines deiner gespeicherten Claude-Abonnement-Modelle für diesen Chat. Die Verbindung bleibt persönlich; verwalte sie unter Einstellungen → AI-Verbindungen."
+      },
+      "workflow-run-questions": {
+        "title": "Dem Agent antworten",
+        "body": "Ein Agent in diesem Workflow kann Rückfragen stellen. Antworte hier, um die gespeicherte Unterhaltung und den Workflow fortzusetzen."
+      },
+      "workflow-input-contract": {
+        "title": "Erwartete Eingabe festlegen",
+        "body": "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft."
       }
     },
     "chooseLanguage": "Sprache",
@@ -5614,7 +5851,7 @@
       "inCategoryUse": "Bereits verwendete Kategorien",
       "inTagUse": "Bereits verwendete Tags",
       "mcpToolLoad": "Diese MCP-Server geben dem Modell bei jeder Anfrage {count} Werkzeuge - etwa {tokens, number} Tokens, bevor jemand etwas schreibt, und mehr Werkzeuge, als ein Modell gut auseinanderhält. Die Tool-Suche hält sie zurück, bis der Agent eines nachschlägt.",
-      "mcpToolLoadEnable": "Tool-Suche einschalten",
+      "mcpToolLoadEnable": "MCP-Tool-Suche einschalten",
       "agentDescriptionLabel": "Beschreibung",
       "agentNameLabel": "Name",
       "agentNameRequired": "Ein Agent braucht einen Namen.",
@@ -5901,7 +6138,6 @@
     },
     "mcp-servers": {
       "catalogCompiledIntoBackend": "Der Katalog ist ins Backend kompiliert, und niemand hat einen eigenen Server hinzugefügt. Eine leere Liste hier heißt, dass dieses Deployment keinen mitliefert.",
-      "externalToolsYourAgents": "Werkzeuge, die Ihre Agents nutzen können - Notion, GitHub, Ihr CRM. Verbinden Sie einen Server für die ganze Organisation oder nur für sich.",
       "mcpServers": "MCP-Server",
       "noServersConnect": "Keine Server zum Verbinden"
     },
@@ -6027,14 +6263,11 @@
       "errorId": "Fehler-ID: {id}",
       "errorOccurredWhileLoading": "Beim Laden dieser Seite ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
       "goBack": "Zurück",
-      "goToDashboard": "Zum Dashboard",
       "noMessagesYet": "Diese Unterhaltung hat noch keine Nachrichten.",
       "ogBadge": "Selbst gehostet",
       "ogHeadline": "<lead>Agents, die Ihnen</lead><mark>gehören.</mark>",
-      "onboardingDescription": "Richten Sie Ihre Organisation ein.",
-      "onboardingRebuilt": "Der Einrichtungsassistent wird neu gebaut. Nichts hält Sie auf – gehen Sie in die Konsole und beginnen Sie dort.",
+      "onboardingDescription": "Loslegen und bei Bedarf deine Apps verbinden.",
       "onboardingTitle": "Loslegen",
-      "onboardingUnderConstruction": "Das Onboarding ist im Aufbau",
       "pageError": "Seitenfehler:",
       "sectionFailed": "Dieser Abschnitt konnte nicht geladen werden",
       "shareLinkExpired": "Dieser Freigabelink ist möglicherweise abgelaufen oder widerrufen worden.",
@@ -6044,7 +6277,6 @@
       "sharedConversationViewEdit": "Geteilte Unterhaltung – ansehen & bearbeiten",
       "signInFailedRedirecting": "Anmeldung fehlgeschlagen. Weiterleitung …",
       "somethingWentWrong": "Etwas ist schiefgelaufen",
-      "startAChat": "Einen Chat beginnen",
       "tryAgain": "Erneut versuchen",
       "unexpectedWhileLoading": "Beim Laden dieser Ansicht ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es erneut.",
       "unexpectedWithDigest": "Ein unerwarteter Fehler ist aufgetreten. Fehler-ID: {digest}"
@@ -6453,7 +6685,7 @@
       "avatarColourHint": "Wird als Ihr Avatar angezeigt, bis Sie ein Bild hochladen.",
       "prefArtifactVersionPublished": "App aktualisiert",
       "prefArtifactVersionPublishedTrigger": "Eine App, der Sie folgen, erhält eine neue Version - vom Agent neu veröffentlicht oder von einer Person wiederhergestellt.",
-      "prefResourceShared": "Mit Ihrer Gruppe geteilt",
+      "prefResourceShared": "Mit Ihnen oder Ihrer Gruppe geteilt",
       "prefResourceSharedTrigger": "Etwas - ein Agent, ein Skill, Wissen, eine App - wird mit einer Gruppe geteilt, in der Sie sind.",
       "prefBudgetWarning": "Abteilungsbudget bei 80 %",
       "prefBudgetWarningTrigger": "Eine Abteilung, die Sie leiten, hat 80 % ihres monatlichen Budgets verbraucht. Administratoren werden über jede Abteilung informiert.",
@@ -6942,7 +7174,8 @@
         "queued": "In der Warteschlange",
         "running": "Läuft",
         "waiting_approval": "Wartet auf Freigabe",
-        "waiting_retry": "Wird wiederholt"
+        "waiting_retry": "Wird wiederholt",
+        "waiting_for_user": "Wartet auf Antwort"
       },
       "nodeStatus": {
         "cancelled": "Abgebrochen",
@@ -7489,7 +7722,11 @@
       "replyMailboxUnavailable": "Ausgewähltes Postfach nicht verfügbar",
       "replyMailboxConnect": "Zuerst Gmail oder Outlook unter Integrationen verbinden.",
       "replySharedMailbox": "Freigegebenes Outlook-Postfach (optional)",
-      "startRunListHint": "Ein Eintrag pro Zeile. Leere Zeilen werden ignoriert."
+      "startRunListHint": "Ein Eintrag pro Zeile. Leere Zeilen werden ignoriert.",
+      "runQuestionsTitle": "Dein Agent braucht eine Antwort, um fortzufahren",
+      "runQuestionsFailed": "Die Fragen konnten nicht geladen werden.",
+      "runQuestionsRetry": "Erneut versuchen",
+      "startRunSchema": "Erwartetes Eingabeschema"
     },
     "adminApns": {
       "title": "iPhone-Benachrichtigungen",
@@ -7596,6 +7833,18 @@
       "servicesHint": "Audioaufzeichnung und Push-Benachrichtigungen für die mobile App.",
       "operations": "Wartung",
       "operationsHint": "Anwendungsupdates und Bereitstellungsdiagnose."
+    },
+    "connectors": {
+      "title": "Verbindungen",
+      "description": "Verwalte deine App-Konten und MCP-Server an einem Ort.",
+      "apps": "Apps",
+      "mcp": "MCP-Server",
+      "more": "Mehr",
+      "advancedDescription": "Chat-Kanäle, Remote-Agenten, Vault und Sandboxes.",
+      "channelsDescription": "Chat-Plattformen, über die deine Organisation erreichbar ist.",
+      "remoteAgentsDescription": "Agenten anderer Anbieter, an die deine Agenten delegieren können.",
+      "vaultDescription": "Schlüssel und Geheimnisse, die deine Verbindungen verwenden.",
+      "sandboxesDescription": "Wo Agenten Code ausführen, und die Grenzen auf jedem Host."
     }
   },
   "profile": {
@@ -8103,6 +8352,9 @@
     "loading": "Wird geladen"
   },
   "teams": {
+    "organizationLabel": "Organisation",
+    "organizationSwitcher": "Organisation wechseln, aktuell: {name}",
+    "selectOrganization": "Organisation auswählen",
     "acmeCom": "acme.com",
     "approvalWaiver": "Freigaben im Chat übergehen",
     "approvalWaiverDescription": "Ob eine Unterhaltung laufen darf, ohne für Freigaben anzuhalten.",
@@ -8751,13 +9003,15 @@
     "templatesMore": "{count, plural, =1 {1 weitere zeigen} other {# weitere zeigen}}",
     "templatesFewer": "Weniger zeigen",
     "local": {
+      "useAllowed": "Erlaubten Ordner verwenden",
+      "allRoutines": "Alle meine Routinen",
       "label": "Arbeiten auf",
       "hint": "Jeder Lauf arbeitet über die Desktop-App in einem Ordner auf Ihrem Computer oder in der Sandbox des Agenten. Ist die App geschlossen, wartet der Lauf auf sie.",
       "elsewhereHint": "Jeder Lauf arbeitet in diesem Ordner auf Ihrem Computer. Ändern Sie ihn in der Desktop-App auf diesem Computer.",
       "sandbox": "Die Sandbox des Agenten",
       "pick": "Ordner wählen…",
       "useSandbox": "Sandbox verwenden",
-      "routineHint": "Ordner und Vorgänge wählen. Beim Speichern bestätigt dieser Computer nur diese Routine.",
+      "routineHint": "Ordner und Vorgänge wählen. Beim ersten Mal fragt dieser Computer einmal, ob alle deine Routinen dort arbeiten dürfen; spätere Routinen in diesem Ordner brauchen keine Bestätigung.",
       "read": "Lesen",
       "write": "Schreiben",
       "execute": "Befehle ausführen",
@@ -9230,7 +9484,13 @@
         "boolean": "Ja oder nein",
         "date": "Datum",
         "choice": "Auswahl"
-      }
+      },
+      "contractFormat": "Eingabevertrag",
+      "simpleFields": "Einfache Felder",
+      "jsonSchema": "JSON Schema",
+      "formatHint": "Wähle einfache Felder oder einen JSON-Schema-Vertrag. Beide gespeicherten Formate bleiben erhalten, solange dieser Trigger geöffnet ist; nur das ausgewählte Format wird im Workflow gespeichert.",
+      "schemaHint": "Verwende JSON Schema Draft 2020-12 für verschachtelte Objekte, Arrays und Referenzen. Eingaben werden vor dem Start eines Runs geprüft.",
+      "schemaInvalid": "Gib ein JSON-Objekt ein. Diese Änderung wurde nicht gespeichert."
     },
     "pickerHostLabel": "Sandbox-Host",
     "pickerHostDefault": "Der Standard-Host der Organisation",
@@ -9424,7 +9684,7 @@
     "templateUnknown": "{placeholder} bezeichnet nichts, was dieser Schritt lesen kann.",
     "templatePreview": "Vorschau:",
     "templateSuggestions": "Werte aus vorherigen Schritten",
-    "triggerHintCall": "Der Schritt Run a workflow eines anderen Workflows startet diesen mit seiner Eingabe, geprüft gegen diese Felder. Die Schritte danach lesen sie als payload.",
+    "triggerHintCall": "Der Schritt Run a workflow eines anderen Workflows startet diesen mit seiner Eingabe, geprüft gegen diesen Eingabevertrag. Die Schritte danach lesen die Eingabe als payload.",
     "pickerWorkflowLabel": "Workflow",
     "pickerWorkflowPlaceholder": "Workflow wählen",
     "pickerWorkflowNone": "Noch kein Workflow ist mit dem Auslöser Called by a workflow veröffentlicht.",
@@ -10070,7 +10330,11 @@
       "blockedLink": "Die Seite hat keinen öffentlichen Link. Schalten Sie ihn zuerst ein."
     },
     "lightTheme": "Helles App-Design verwenden",
-    "darkTheme": "Dunkles App-Design verwenden"
+    "darkTheme": "Dunkles App-Design verwenden",
+    "addFavourite": "Zu Favoriten hinzufügen",
+    "removeFavourite": "Aus Favoriten entfernen",
+    "addFavouriteNamed": "{name} zu Favoriten hinzufügen",
+    "removeFavouriteNamed": "{name} aus Favoriten entfernen"
   },
   "tables": {
     "cells": {
@@ -10743,7 +11007,8 @@
     "revoked": "Schlüssel widerrufen",
     "couldNotLoad": "Ihre API-Schlüssel konnten nicht geladen werden",
     "emptyTitle": "Noch keine API-Schlüssel",
-    "emptyWhy": "Erstellen Sie einen, um die API aus einem Skript, Postman oder Claude Code aufzurufen."
+    "emptyWhy": "Erstellen Sie einen, um die API aus einem Skript, Postman oder Claude Code aufzurufen.",
+    "personalConsentWhy": "Persönliche Zustimmung ist nicht in den Voreinstellungen enthalten. Damit dieser Schlüssel oder diese App Routinen und Watches mit Ihren persönlichen Verbindungen und Daten genehmigen darf, wählen Sie personal:consent unter Benutzerdefiniert."
   },
   "mcpOauth": {
     "title": "{client} möchte in Ihrem Namen handeln",
@@ -11138,7 +11403,7 @@
     "tool_search": {
       "name": "Tool-Suche",
       "does": "Ein Agent mit vielen Tools findet das richtige, wenn er es braucht, statt jedes Mal alle zu lesen.",
-      "example1": "Ein Agent, der mit mehreren MCP-Servern mit Dutzenden Tools verbunden ist",
+      "example1": "Ein Agent mit vielen aktivierten Capabilities und gebundenen MCP-Servern",
       "needs": "Nichts weiter.",
       "never": "Fügt nie ein Tool hinzu; blendet Tools nur aus, bis der Agent eines sucht."
     },
@@ -11245,6 +11510,13 @@
       "example3": "Eine Tabelle aus Ihrer Datenbank lesen und zusammenfassen",
       "needs": "Die Zugangsdaten der Dienste im Vault oder ein verbundenes Google-Konto. Ein Deployment installiert das Terminal mit dem Extra mirage, und ein Operator erlaubt die Hosts jedes Servers, den Sie eintragen.",
       "never": "Schreibt nie in einen nur lesbar eingebundenen Ordner und fragt vor jedem Schreiben eine Person, wo Sie das festgelegt haben."
+    },
+    "agent_messages": {
+      "name": "Agentennachrichten",
+      "does": "Lässt einen Agenten direkt an einen anderen schreiben, in einem Thema, das die Konsole mit Antworten, Reaktionen und Dateien zeigt.",
+      "needs": "Zwei veröffentlichte Agenten, die der Aufrufer ausführen darf, und die Berechtigung agents:run zum Lesen des Themas.",
+      "never": "Erreicht keinen Agenten, den der Aufrufer nicht ausführen darf, sendet nicht im Namen eines Menschen und stellt keine Nachricht außerhalb des Themas zu.",
+      "example1": "Bitte den Recherche-Agenten, seine Ergebnisse vor der Frist an den Schreib-Agenten zu übergeben."
     }
   },
   "capabilityCategories": {
@@ -11660,6 +11932,26 @@
       "max_results": {
         "title": "Treffer pro Suche",
         "description": "Wie viele Treffer die lokale Suche liefert; bei nativer Suche ignoriert."
+      },
+      "defer_capabilities": {
+        "title": "Capability-Tools verzögert laden",
+        "description": "Geeignete Tools aktivierter Capabilities ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben Capability-Tools sichtbar."
+      },
+      "defer_mcp_servers": {
+        "title": "MCP-Tools verzögert laden",
+        "description": "Geeignete Tools gebundener MCP-Server ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben MCP-Tools sichtbar."
+      },
+      "exclude_capabilities": {
+        "title": "Immer sichtbare Capabilities",
+        "description": "Kommagetrennte Capability-IDs, deren Tools sichtbar bleiben, etwa knowledge oder visuals. Diese Capabilities müssen weiterhin aktiviert sein."
+      },
+      "exclude_mcp_servers": {
+        "title": "Immer sichtbare MCP-Server",
+        "description": "Kommagetrennte Namensraum-Präfixe der MCP-Tools, die sichtbar bleiben, etwa github_work oder agenticos. Das Präfix vor dem Tool-Namen verwenden und Bindestriche durch Unterstriche ersetzen."
+      },
+      "exclude_tools": {
+        "title": "Immer sichtbare Tools",
+        "description": "Kommagetrennte Tool-Namen, wie sie das Modell sieht, die sichtbar bleiben sollen. Umbenannte Capability-Tools und vollständige MCP-Tool-Namen mit Präfix verwenden, etwa github_work_list_issues."
       }
     },
     "web_fetch": {
@@ -11859,6 +12151,16 @@
         "title": "Verborgene Pfade",
         "description": "Pfade, die der Agent gar nicht sieht, z. B. /drive/HR/."
       }
+    },
+    "agent_messages": {
+      "max_message_chars": {
+        "title": "Längste Nachricht",
+        "description": "Die längste Nachricht, die dieser Agent senden darf, in Zeichen. 16.000 ist auch die Obergrenze der Konsole, sodass ein Thema gleich liest, wie die Nachricht auch gesendet wurde; senken Sie sie für einen Agenten, der kurz schreiben soll."
+      },
+      "allow_attachments": {
+        "title": "Dateianhänge zulassen",
+        "description": "Ob dieser Agent Dateien, die er bereits hochgeladen hat, zusammen mit seinen Nachrichten senden darf. Aus bedeutet nur Text; bereits angehängte Dateien bleiben lesbar."
+      }
     }
   },
   "apiReference": {
@@ -12001,6 +12303,9 @@
     "created": "Projekt {name} erstellt",
     "saved": "Projekt gespeichert",
     "deleted": "Projekt gelöscht. Seine Chats sind jetzt normale Chats.",
+    "moved": "Konversation verschoben",
+    "moveFailed": "Konversation konnte nicht verschoben werden",
+    "changeProject": "Projekt ändern",
     "uploaded": "{count, plural, =1 {1 Datei hinzugefügt} other {# Dateien hinzugefügt}}",
     "removed": "Entfernt",
     "filesUnreadable": "Die Dateien des Projekts konnten nicht gelesen werden",
@@ -12465,6 +12770,56 @@
       "finding": "Routine"
     },
     "openWorkingChat": "Gespräch öffnen"
+  },
+  "agentMessages": {
+    "title": "Agentennachrichten",
+    "description": "Direkte Nachrichten zwischen Ihren Agenten, in Themen.",
+    "newMessage": "Neue Nachricht",
+    "threadCount": "{count, plural, =0 {Keine Themen} =1 {1 Thema} other {# Themen}}",
+    "failedLoad": "Agentennachrichten konnten nicht geladen werden.",
+    "sent": "Nachricht gesendet.",
+    "cannotSee": "Du kannst in dieser Organisation keine Agentennachrichten sehen",
+    "askForAccess": "Bitte einen Administrator um Zugriff auf Agentennachrichten.",
+    "threadTitle": "{first} und {second}",
+    "lastMessage": "{slug}: {body}",
+    "noMessagesYet": "Noch keine Nachrichten.",
+    "unread": "Ungelesen",
+    "read": "Gelesen",
+    "emptyThreads": {
+      "title": "Noch keine Themen",
+      "description": "Wenn ein Agent einem anderen schreibt, erscheint das Thema hier."
+    },
+    "emptyMessages": {
+      "title": "Noch keine Nachrichten",
+      "description": "In diesem Thema wurde noch nichts gesagt."
+    },
+    "selectThread": {
+      "title": "Wählen Sie ein Thema",
+      "description": "Wählen Sie links ein Thema, um es zu lesen."
+    },
+    "reply": "Antworten",
+    "replyTo": "Antwort an {slug}",
+    "cancelReply": "Antwort abbrechen",
+    "reactWith": "Mit {emoji} reagieren",
+    "charCount": "{count} von {max} Zeichen",
+    "messagePlaceholder": "Nachricht schreiben…",
+    "replyPlaceholder": "Als sendender Agent antworten…",
+    "send": "Senden",
+    "cancel": "Abbrechen",
+    "senderLabel": "Senden als",
+    "recipientLabel": "An",
+    "bodyLabel": "Nachricht",
+    "searchRecipients": "Agenten suchen",
+    "loadingRecipients": "Agenten werden geladen…",
+    "noRecipients": "Kein Agent passt zu dieser Suche.",
+    "removeFile": "{name} entfernen",
+    "noRunnableAgent": "Kein Agent, den Sie ausführen dürfen, ist in diesem Thema.",
+    "newMessageTitle": "Neue Nachricht",
+    "newMessageDescription": "Ein Agent schreibt einem anderen. Der Empfänger erhält die Nachricht in seinem Thema.",
+    "attachFiles": "Dateien anhängen",
+    "tooManyFiles": "Sie können höchstens {max} Dateien anhängen.",
+    "uploadFailed": "Eine Datei konnte nicht hochgeladen werden.",
+    "chooseSender": "Sendenden Agent wählen"
   },
   "agentLimit": {
     "title": "Diese Organisation hat ihr Agenten-Limit erreicht",
@@ -13137,5 +13492,155 @@
     "jsonLabel": "{name} (JSON)",
     "jsonHint": "Als JSON bearbeiten. Gültige Änderungen werden gespeichert; unvollständiges JSON behält den letzten gültigen Wert.",
     "jsonInvalid": "Gültiges JSON des erforderlichen Typs eingeben. Der letzte gültige Wert bleibt unverändert."
+  },
+  "claudeSubscription": {
+    "title": "Claude-Abonnement",
+    "description": "Melde dich mit deinem Claude-Konto an, um deine persönlichen Agent-Runs damit auszuführen.",
+    "permission": "Zum Verbinden eines Claude-Abonnements brauchst du connections:manage in dieser Organisation.",
+    "ownSessionOnly": "Melde dich mit deinem eigenen Konto an, um ein persönliches Abonnement zu verbinden oder zu verwenden.",
+    "checking": "Claude-Verbindung wird geprüft…",
+    "notConfigured": "Die Anmeldung mit einem Claude-Abonnement ist für diese Bereitstellung nicht konfiguriert.",
+    "statusFailed": "Deine Claude-Verbindung konnte nicht geprüft werden. Versuche erneut, den Status abzurufen.",
+    "requestFailed": "Die Anmeldeanfrage konnte nicht abgeschlossen werden. Versuche erneut, die Verbindung zu prüfen.",
+    "signInFailed": "Die Claude-Anmeldung wurde nicht abgeschlossen. Starte erneut und verwende den Code von der neuen Anmeldeseite.",
+    "invalidLink": "Der Link zur Claude-Anmeldung konnte nicht bestätigt werden. Brich ab und starte erneut.",
+    "connect": "Claude-Abonnement verbinden",
+    "connected": "Verbunden · persönlich",
+    "disconnect": "Claude trennen",
+    "starting": "Claude-Anmeldung wird vorbereitet…",
+    "verifying": "Claude-Anmeldung wird abgeschlossen…",
+    "openInstructions": "Öffne Claude, melde dich mit deinem Konto an und füge dann den Code von der Bestätigungsseite ein.",
+    "openClaude": "Claude-Anmeldung öffnen",
+    "code": "Claude-Anmeldecode",
+    "codeHint": "Füge den Code von der Claude-Seite ein. Er wird sofort nach dem Absenden geleert.",
+    "complete": "Anmeldung abschließen",
+    "cancel": "Anmeldung abbrechen",
+    "expired": "Diese Anmeldung ist abgelaufen. Starte erneut, um einen neuen Link zu erhalten.",
+    "startAgain": "Erneut starten",
+    "expiresIn": "Läuft in {minutes, plural, =1 {1 Minute} other {# Minuten}} ab.",
+    "retry": "Erneut versuchen",
+    "supportedInputs": "Diese Verbindung unterstützt Text und Agent-Tools. Bilder und Dateien werden noch nicht unterstützt.",
+    "modelHint": "Wähle ein Claude-Modell. Dein Abonnement bestimmt den Modellzugang und die Nutzungslimits.",
+    "model": "Abonnement-Modell",
+    "models": {
+      "sonnet": "Claude Sonnet",
+      "opus": "Claude Opus",
+      "haiku": "Claude Haiku"
+    },
+    "connectionLabel": "Claude-Abonnement · {person}",
+    "addModel": "Abonnement-Modell hinzufügen",
+    "modelAlreadySaved": "Modell bereits gespeichert",
+    "savedModels": "Deine Claude-Abonnement-Modelle",
+    "chooseSavedModel": "Wähle ein gespeichertes Modell in einem Agent oder Chat, um dein Claude-Abonnement zu verwenden.",
+    "reconnectModels": "Verbinde Claude erneut, um diese gespeicherten Modelle zu verwenden.",
+    "modelsUnavailable": "Deine gespeicherten Abonnement-Modelle konnten nicht geladen werden.",
+    "chooseSaved": "Gespeichertes Abonnement-Modell wählen",
+    "manageConnection": "Claude-Abonnement verwalten",
+    "chooseApiModel": "API-Modell wählen",
+    "disconnected": "Getrennt"
+  },
+  "onboardingSetup": {
+    "title": "Willkommen bei {appName}",
+    "description": "Starte in deinem eigenen Tempo. Verbinde jetzt eine App oder öffne direkt deinen Workspace.",
+    "appsTitle": "Verbinde deine Apps",
+    "optional": "Optional",
+    "appsDescription": "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
+    "connectApps": "Apps verbinden",
+    "opensNewTab": "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
+    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen.",
+    "continueToWorkspace": "Weiter zum Workspace"
+  },
+  "onboardingTeam": {
+    "step1Title": "Über dich & deine Arbeit",
+    "step1Subtitle": "Erzähle uns kurz von deiner Rolle, damit wir dir die passenden Spezialisten empfehlen können.",
+    "roleLabel": "Was ist deine Rolle?",
+    "industryLabel": "In welcher Branche oder Domäne arbeitest du?",
+    "teamSizeLabel": "Teamgröße",
+    "step2Title": "Was soll dein KI-Team übernehmen?",
+    "step2Subtitle": "Wähle die Arbeitsabläufe, die du delegieren, automatisieren oder beschleunigen möchtest.",
+    "goalsLabel": "Schwerpunkte",
+    "detailsLabel": "Erzähle uns mehr über deine Workflows (optional)",
+    "detailsPlaceholder": "z.B. Wir erhalten viele Kundenanfragen und müssen wöchentliche Updates verfassen...",
+    "step3Title": "Tools & Integrationen",
+    "step3Subtitle": "Wähle die Tools, die dein Team täglich nutzt. Du kannst sie jetzt oder später verbinden.",
+    "toolsInStack": "Tools in deinem Stack",
+    "appsTitle": "Apps & Tools verbinden",
+    "appsOptional": "Optional",
+    "appsDescription": "Autorisiere deine Tools über Composio. Du kannst sie auch später verbinden.",
+    "connectApps": "Apps verbinden",
+    "opensNewTab": "Öffnet einen neuen Tab.",
+    "skipHint": "Die Verbindung von Apps ist optional.",
+    "step4Title": "Dein empfohlenes KI-Team",
+    "step4Subtitle": "Hier ist deine Teamstruktur. Dein Team Lead koordiniert Aufgaben und delegiert an Spezialisten.",
+    "leadBadge": "Team Lead & Orchestrator",
+    "leadOrchestrationHint": "Leitet Aufgaben an Spezialisten weiter und bündelt die Ergebnisse für dich.",
+    "starterPromptsHeader": "Beispiel-Prompts",
+    "specialistsTitle": "Spezialisten-Agenten",
+    "addSpecialist": "Spezialist hinzufügen",
+    "removeSpecialist": "Entfernen",
+    "selectTemplate": "Vorlage wählen",
+    "deployTeam": "Mein Team erstellen & bereitstellen",
+    "deployingTitle": "Dein KI-Team wird zusammengestellt...",
+    "deployingSubtitle": "Modelle, Delegationskanäle und Workspace werden eingerichtet...",
+    "deployingStep1": "Spezifikationen der Spezialisten werden erstellt...",
+    "deployingStep2": "Fähigkeiten und Tools werden verknüpft...",
+    "deployingStep3": "Delegationshierarchie wird eingerichtet...",
+    "deployingStep4": "Workspace im Chat wird geöffnet...",
+    "errorTitle": "Etwas ist schiefgelaufen",
+    "tryAgain": "Erneut versuchen",
+    "teamMembersCreated": "Erstellte Teammitglieder",
+    "successTitle": "Dein KI-Team ist bereit!",
+    "successSubtitle": "Dein Team Lead und deine Spezialisten wurden erfolgreich eingerichtet.",
+    "startChat": "Chat mit Team Lead starten",
+    "viewAgents": "Team unter Agenten ansehen",
+    "skip": "Vorerst überspringen",
+    "back": "Zurück",
+    "continue": "Weiter",
+    "generating": "Wird generiert...",
+    "generatingProposal": "Profil wird analysiert und Team-Empfehlung wird erstellt...",
+    "stepTracker": "Schritt {step} von 4",
+    "stepProfile": "Profil",
+    "stepGoals": "Ziele",
+    "stepTools": "Tools",
+    "stepTeam": "Empfohlenes Team",
+    "roles": {
+      "founder": "Gründer / Führungskraft",
+      "engineering": "Entwicklung / Technik",
+      "product": "Produkt / PM",
+      "operations": "Betrieb / Operations",
+      "support": "Support & Erfolg",
+      "legal": "Recht & Finanzen",
+      "other": "Sonstiges"
+    },
+    "industries": {
+      "software": "Software & Technologie",
+      "ecommerce": "E-Commerce & Handel",
+      "finance": "Finanzen & Banken",
+      "healthcare": "Gesundheitswesen",
+      "legal": "Rechtsberatung",
+      "manufacturing": "Produktion & Logistik",
+      "publicSector": "Öffentlicher Sektor",
+      "general": "Allgemein / Sonstiges"
+    },
+    "teamSizes": {
+      "solo": "Solo",
+      "soloDesc": "Nur ich",
+      "small": "Kleines Team",
+      "smallDesc": "2–15 Personen",
+      "company": "Organisation",
+      "companyDesc": "15+ Personen"
+    },
+    "goals": {
+      "support": "Kundensupport & Ticket-Triage",
+      "docs": "Dokumentation & Team-Wissen",
+      "releases": "Versionshinweise & Changelog",
+      "research": "Recherche & Wettbewerbsanalyse",
+      "contracts": "Verträge & Richtlinienprüfung",
+      "automation": "Prozess- & Workflow-Automatisierung",
+      "incidents": "Vorfallreaktion & Alarmdiagnose",
+      "content": "Texterstellung & Produkttexte",
+      "data": "Datenanalyse & Berichterstellung",
+      "meetings": "Besprechungsnotizen & Protokolle"
+    }
   }
 }

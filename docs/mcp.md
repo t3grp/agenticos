@@ -7,7 +7,8 @@ An organization points at a server, its tools appear in the Builder, and no code
 changes on our side.
 
 Everything in the [capability catalog](reference/capabilities.md) is code we wrote
-and hold to 100% coverage. Everything here is a URL somebody pasted.
+and hold to 100% coverage. MCP connections reach tools through a server URL or a
+managed app connection.
 
 !!! info "The two are not alternatives"
 
@@ -17,6 +18,33 @@ and hold to 100% coverage. Everything here is a URL somebody pasted.
     **MCP** is the right shape for the dozens of SaaS products a company happens to
     use, where the guarantee that matters is only "the tools are the ones the
     vendor published".
+
+## Connect an app through Composio
+
+In T3OS, **Connections → Apps** lets you search and browse Composio's app catalog.
+Your selected goal highlights suggestions without hiding other apps. Managed
+authentication is available where the provider supports it; apps that need an
+operator's auth configuration show **Setup required**. You consent to each account
+separately, and the backend verifies that the returned account belongs to you.
+
+Your accounts follow the author of each message. The original seven integrations
+keep their reviewed read actions. Other supported apps have an explicit tool
+list saved when you connect, and every action requires your approval. A later
+catalog update cannot silently expand that account's tool access.
+
+**Connections → MCP servers** manages existing personal, organization and custom
+MCP servers. Both connection types use the same account ownership, tool limits
+and approval infrastructure. Chat channels, remote agents, the vault and
+sandboxes are on **More**. Existing `?tab=advanced` links still open MCP servers.
+
+Composio hosts provider credentials and relays requests and results. Connecting
+an app does not automatically synchronize it into a knowledge base. Optional
+setup remains available at `/onboarding` and in the account menu.
+
+The operator configures a runtime project key, a separate catalog metadata key,
+any custom toolkit auth configs, and callback identity verification. See the fork's
+[Composio setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)
+for configuration, data handling, and required live acceptance checks.
 
 ## A connection
 
@@ -184,6 +212,12 @@ A connection nothing has probed yet has no catalogue to offer, and the picker
 says so and points at the servers page, which is where a connection is checked.
 A binding that already names tools shows those, so what it is bound to stays
 visible and can still be narrowed.
+
+With [Tool search](reference/capabilities.md#tool-search), eligible MCP tools are
+hidden until the agent searches for them. Its settings let you defer MCP tools,
+capability tools or both, and keep selected server namespaces or individual tools
+visible from the first request. These exclusions change when a tool's schema is
+shown; the connection and binding allowlists still decide whether it is available.
 
 ### Which calls wait for a person
 
@@ -1132,6 +1166,10 @@ permissions. Each tool is a call to the [public API](api.md) made with that key,
 so it is refused, rate limited and audited exactly as the same request over HTTP
 would be; an expected refusal returns an explicit error envelope naming the missing permission.
 
+Approving personal routines and watches requires the explicit `personal:consent` scope, selected under **Custom** when issuing a key or authorizing an MCP client. It is excluded from every preset, including **Full access**. The confirmation allows the credential to approve persistent routines and watches using your personal connections and data; ordinary `agents:run` and `runs:view` scopes do not. Existing keys and MCP authorizations gain no personal consent automatically.
+
+Connection checks update discovered tools and status. `test_my_connection` therefore waits for approval under both `writes` and `all`.
+
 | Tool | Needs |
 |---|---|
 | `whoami` | — |
@@ -1145,7 +1183,9 @@ would be; an expected refusal returns an explicit error envelope naming the miss
 | `list_routines` | `agents:view` |
 | `create_routine`, `run_routine_now` | `agents:run` on the agent |
 | `update_routine`, `delete_routine` | the routine's creator, or `agents:edit` on its agent |
-| `list_runs`, `get_run`, `read_conversation`, `get_spend` | `runs:view` |
+| `list_runs`, `get_run`, `read_conversation`, `list_conversations`, `get_spend` | `runs:view` |
+| `create_conversation` | `agents:run` |
+| `update_proactivity_settings` | `org:settings`, `budgets:manage` |
 | `list_knowledge_bases`, `search_knowledge` | `collections:view` |
 | `list_embedding_models` | — |
 | `create_knowledge_base`, `add_document` | `collections:edit` |
@@ -1160,9 +1200,14 @@ would be; an expected refusal returns an explicit error envelope naming the miss
 | `create_project` | `projects:edit` |
 | `list_members` | `members:view` |
 | `invite_member` | `members:manage` and `roles:manage` |
-| `list_my_connections`, `set_my_language`, `set_my_profile` | — (the caller's own) |
+| `list_my_connections`, `test_my_connection`, `set_my_language`, `set_my_profile` | — (the caller's own; a key needs `agents:run` for `test_my_connection`) |
 | `list_watches`, `delete_watch` | the caller’s own watches |
-| `create_watch`, `update_watch` | private-human consent; `agents:run` when selecting an agent |
+| `create_watch`, `update_watch` | the person themselves - signed in, through a key or MCP token they issued, or in their private chat; `agents:run` when selecting an agent |
+
+The platform’s `read_conversation` tool omits guardrail-refused turns and quoted
+reply excerpts. `list_conversations` omits conversations containing refused turns,
+so a generated title cannot repeat their text to a model. The console keeps the
+complete transcript for its authorized reader.
 
 Project discovery with `list_projects` returns only project ids and names.
 Read a selected project's instructions and configuration with `get_project`.
@@ -1250,8 +1295,9 @@ The platform MCP server explains the same app and environment distinctions as ag
 
 - An MCP server is **a URL somebody pasted**, and its tools appear without a
   deploy.
-- **Personal** connections reach one member's assistant; only **organization**
-  connections may be named by a published spec.
+- In a private run, **personal** connections bind at runtime to the sender for any
+  agent; shared rooms skip them. Only **organization** connections may be named
+  by a published spec.
 - Every address in an OAuth flow is **checked and pinned**, including the ones the
   remote server chose.
 - A token never follows a moved URL, a disabled connection hands out none, and
@@ -1266,6 +1312,22 @@ Health admission uses its own indexed timestamp. Renewing OAuth credentials or p
 ## Building workflows and tables { #workflow-and-table-tools }
 
 The platform MCP server also supplies workflow and Virtual Table tools. Start with `list_workflow_definitions`, `get_workflow_definition`, `list_workflow_nodes` and `get_workflow_node`. Create and save private graphs with `create_workflow_draft` and `update_workflow_draft`, preserving `expected_revision`. `test_workflow_draft` accepts an optional `entry_node_id`; inspect `get_workflow_execution` and `get_workflow_execution_steps` before claiming success. Testing can call real APIs and write data. `publish_workflow` activates configured entries, requires the existing publication permissions, and withholds one-time signing secrets from the model. Unattended publication still requires a human session; an API key cannot retain a person's authority.
+
+Use `get_workflow_input_schema` before `run_workflow` to inspect the published
+input contract without executing it. It accepts `workflow_id` and an optional
+`version_id`, returning the same per-entry `input_schema` contracts as the
+[HTTP discovery endpoint](api.md#running-a-workflow). Select the intended
+`entry_node_id` and send matching `fields`. JSON Schema Draft 2020-12 contracts,
+legacy simple fields and untyped inputs share this discovery format; admission
+validates against the version admitted for the run.
+
+The MCP tool returns only Manual/API entries that its paired `run_workflow`
+can start. Form and Called by a workflow contracts remain available through
+HTTP discovery for their own admission surfaces.
+
+`get_workflow_input_schema` refuses responses above 32 KiB of encoded JSON,
+including all returned entries. It never returns a partial contract. Inspect
+larger contracts through the HTTP endpoint outside the model context.
 
 For operational records use `list_virtual_tables`, `get_virtual_table`, `create_virtual_table`, `update_virtual_table_schema`, `query_virtual_table`, `add_virtual_table_record` and `update_virtual_table_record`. Schema and record writes preserve revision checks. All tools use the caller's organization, permissions and resource grants; write tools retain the platform MCP approval gate. Architect's workflow-builder and virtual-tables skills explain choosing triggers, wrapping a documented HTTP API when the MCP gallery lacks an integration, and binding a published callable workflow to an agent. Credentials are configured in the vault UI, never embedded in graphs or model output.
 

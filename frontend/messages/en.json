@@ -1,4 +1,114 @@
 {
+  "appConnections": {
+    "enable": "Enable",
+    "enabled": "Account enabled.",
+    "title": "Connect your apps",
+    "description": "Bring the tools you already use into T3OS. Start with one useful task.",
+    "unconfiguredTitle": "App connections are not configured yet",
+    "unconfiguredDescription": "Your administrator needs to enable the app connection service. Existing and custom connections remain available in MCP servers.",
+    "progress": "Connection setup progress",
+    "steps": {
+      "1": "1 · Your goal",
+      "2": "2 · Connect apps (optional)",
+      "3": "3 · First task"
+    },
+    "chooseGoal": "Start with something useful.",
+    "goalHint": "Choose a starting point. You can connect more apps later.",
+    "goals": {
+      "day": {
+        "title": "Prepare my day",
+        "description": "A useful brief before your first meeting.",
+        "prompt": "Use only my connected {toolkit} account {account} (connection {connection}; service {catalog}) to summarize today's upcoming meetings and what I should prepare. Read only; do not create, change, or send anything. Do not switch to a different account. Include source links where available, and explain any missing access rather than inventing a result."
+      },
+      "inbox": {
+        "title": "Review my inbox",
+        "description": "Find the messages that need your attention.",
+        "prompt": "Use only my connected {toolkit} account {account} (connection {connection}; service {catalog}) to summarize a small set of recent messages that need my attention and suggest next steps. Read only; do not send, delete, archive, or change anything. Do not switch accounts. Include source links where available, and explain any missing access rather than inventing a result."
+      },
+      "answers": {
+        "title": "Find project answers",
+        "description": "Turn project notes into clear next steps.",
+        "prompt": "Use only my connected {toolkit} account {account} (connection {connection}; service {catalog}) to find a small set of recent project notes and summarize priorities, decisions, and open questions. Read only; do not change anything. Do not switch accounts. Cite the sources you used and ask me to narrow the project if the available context is ambiguous."
+      }
+    },
+    "catalogTitle": "Choose the apps you use",
+    "catalogHint": "Browse the Composio app catalog or search for an app. Recommendations are based on your goal; every app asks for its own authorization.",
+    "searchApps": "Search all apps",
+    "recommended": "Suggested for your goal",
+    "loadMore": "Load more apps",
+    "noSearchResults": "No apps match this search. Try another name.",
+    "catalogUnavailable": "The full app catalog is temporarily unavailable. Your existing accounts and configured apps remain accessible.",
+    "setupRequiredHint": "An administrator needs to configure this app before you can connect.",
+    "approvalRequired": "Every action requires your approval",
+    "approvalRequiredHint": "This app may support reading and making changes. T3OS asks for your approval before every action.",
+    "exploreApp": "Explore this app with my assistant",
+    "exploreAppPrompt": "Help me get started with my connected {toolkit} account {account} (connection {connection}; service {catalog}). Describe a few useful tasks using the available tools and ask which I want to try. Do not call app tools until I choose a task. Use only this account.",
+    "toolkits": {
+      "googlecalendar": "Read upcoming events and meeting details.",
+      "gmail": "Find and read messages relevant to your request.",
+      "outlook": "Read relevant messages and upcoming meetings.",
+      "googledrive": "Find and read relevant project documents.",
+      "notion": "Read project pages you make available.",
+      "slack": "Find relevant conversations and project updates.",
+      "github": "Review repository activity, issues, and pull requests."
+    },
+    "connectNamed": "Connect {name}",
+    "addAccount": "Add account",
+    "connect": "Connect",
+    "notConfigured": "Setup required",
+    "unavailableApp": "Unavailable",
+    "unavailableAppHint": "This integration does not support connecting an account here.",
+    "noApps": "No apps are available on this deployment.",
+    "yourAccounts": "Your connected accounts",
+    "personalHint": "Your account stays personal. Agents use it only through tools configured for your own account.",
+    "statuses": {
+      "pending": "Awaiting authorization",
+      "connected": "Connected",
+      "expired": "Reconnect required",
+      "failed": "Connection failed",
+      "disabled": "Disabled"
+    },
+    "defaultAccount": "Default account",
+    "authorizationVerified": "Authorization verified. App access is checked again when a tool runs.",
+    "checkFailed": "The latest check could not verify access. Reconnect or try checking again.",
+    "reconnect": "Reconnect",
+    "checkConnection": "Check access",
+    "makeDefault": "Make default",
+    "disconnect": "Disconnect",
+    "defaultHint": "The default account is used when no account is specified. Other connected accounts remain available.",
+    "consentHint": "Continue to authorize this app, then return here to verify the connection.",
+    "accountLabel": "Account label (optional)",
+    "accountLabelPlaceholder": "For example, Work or Personal",
+    "intendedAccess": "How your assistant can use this app",
+    "providerPermissions": "Review the exact permissions on the provider's consent screen. T3OS action policies are separate from those permissions.",
+    "cancel": "Cancel",
+    "continueToApp": "Continue to app",
+    "disconnectTitle": "Disconnect this account?",
+    "disconnectHint": "Remove {account} from T3OS. Agents and routines that rely on this connection will need another account or a new connection.",
+    "firstTaskTitle": "Put your connection to work.",
+    "firstTaskHint": "Choose an account and ask your assistant to complete a real task. The result opens in your assistant conversation.",
+    "firstTaskNeedsAccount": "Connect and verify an app for this task first. You can also skip setup and explore T3OS.",
+    "useAccount": "Use this account",
+    "assistantUnavailable": "Your assistant is not ready to run this task. Your connections are saved; an administrator can check the assistant's model and access settings.",
+    "retry": "Try again",
+    "taskSent": "Request sent to your assistant. Follow its progress and any access questions in the conversation.",
+    "callbackVerified": "Your app authorization was verified.",
+    "callbackPending": "Authorization is not ready yet. Check the account below or reconnect.",
+    "callbackFailed": "We could not verify the app connection. Try again or reconnect.",
+    "invalidAuthorizationUrl": "The app returned an invalid authorization address. Please try again.",
+    "connectFailed": "We could not start authorization. Please try again.",
+    "permissionHint": "Your first task requests read access. Other actions follow the agent's approval policy.",
+    "back": "Back",
+    "skip": "Skip for now",
+    "continue": "Continue",
+    "chooseApps": "Choose apps",
+    "verifying": "Verifying your connection…",
+    "retryVerification": "Verify again",
+    "connectionChecked": "Account status refreshed.",
+    "defaultChanged": "Default account updated.",
+    "disconnected": "Account disconnected.",
+    "continueWithoutApps": "Continue without apps"
+  },
   "admin": {
     "actions": "Actions",
     "active": "Active",
@@ -1528,6 +1638,10 @@
       "filters": "Filter and sort",
       "show": "Show",
       "backToActive": "Back to active",
+      "modeLabel": "Show conversations by",
+      "modeChats": "Chats",
+      "modeAgents": "Agents",
+      "otherAgents": "Other",
       "age": {
         "today": "Today",
         "yesterday": "Yesterday",
@@ -1544,7 +1658,11 @@
       "unread": "New answer",
       "unreadHeading": "Unread",
       "unnamedProject": "A project",
-      "apiFilterLabel": "Hide API conversations"
+      "apiFilterLabel": "Hide API conversations",
+      "sharedHeading": "Shared with you",
+      "sharedLoading": "Loading shared conversations…",
+      "sharedFailed": "Shared conversations could not be loaded.",
+      "retryShared": "Retry shared conversations"
     },
     "skipComment": "Skip comment",
     "sourceCount": "{count, plural, =1 {1 source} other {# sources}}",
@@ -1635,11 +1753,11 @@
       "knowledgeBaseSearch": "Knowledge Base Search",
       "listed": "{named, select, no {Listed…} other {Listed {subject}}}",
       "listing": "{named, select, no {Listing…} other {Listing {subject}}}",
-      "loadSkill": "Load Skill",
+      "loadSkill": "Read Skill",
       "loading": "Loading…",
       "availableSkills": "Available Skills",
       "lookingThroughSkills": "Looking through the skills",
-      "loadingSkill": "Loading a skill",
+      "loadingSkill": "Reading a skill",
       "lookedFor": "{named, select, no {Looked for…} other {Looked for {subject}}}",
       "lookingAtChannel": "Looking at the channel",
       "lookingAtChannelMembers": "Looking at who is in the channel",
@@ -1831,6 +1949,14 @@
       "backgroundTasks": "Background topics",
       "stoppingBackgroundTask": "Stopping a background topic",
       "backgroundTaskStopped": "Background topic stopped",
+      "sendingAgentMessage": "Sending a message to an agent",
+      "sendAgentMessage": "Message sent to an agent",
+      "readingAgentMessages": "Reading agent messages",
+      "readAgentMessages": "Agent messages read",
+      "listingAgentThreads": "Listing agent threads",
+      "agentThreads": "Agent threads",
+      "reactingToAgentMessage": "Reacting to an agent message",
+      "reactToAgentMessage": "Reacted to an agent message",
       "memoryResult": "Memory",
       "manageMemory": "Your memory",
       "memoryRecordedResult": "Saved to memory",
@@ -1930,6 +2056,11 @@
       "failed": "The browser could not be reached"
     },
     "conversationActions": "Conversation actions",
+    "changeProject": "Change project",
+    "moveToProject": "Move to project…",
+    "removeFromProject": "Remove from project",
+    "projectMoved": "Conversation moved",
+    "projectMoveFailed": "Could not move conversation",
     "imageNotLoaded": "Image (not loaded)",
     "whileWorking": {
       "steersWaiting": "Sent into the task - it reads it at its next step"
@@ -2372,8 +2503,9 @@
     "approvalRememberFailed": "Could not forget this approval. Try again.",
     "approvalRememberRetry": "Retry",
     "localAccess": {
+      "continue": "Access granted - please continue.",
       "title": "Where may {agent} work?",
-      "description": "{agent} works on your computer. You are asked once for this agent; change or revoke it later under Chat controls → Work on.",
+      "description": "{agent} needs files on your computer for this request. Your choice is remembered for this agent; change or revoke it later under Chat controls → Work on.",
       "computer": "Whole computer",
       "computerHint": "It may read and change files anywhere your account can, and run commands as you. Your computer asks you to confirm.",
       "folder": "Choose a folder",
@@ -2381,7 +2513,25 @@
       "cancel": "Not now",
       "agentUnavailable": "The selected agent could not be loaded. Try again.",
       "failed": "Could not set up access on this computer"
-    }
+    },
+    "sendNowNotWithPageContext": "This question keeps its selected agent and page, and waits for a full answer",
+    "queuedPageContext": "Page: {page}",
+    "fork": "Fork into a new conversation",
+    "forkedToast": "Conversation forked",
+    "failedForkConversation": "Failed to fork conversation",
+    "forkedFrom": "Forked from <link>{title}</link>",
+    "untitledFork": "Untitled conversation",
+    "leaveShared": "Remove from my chats",
+    "leftShared": "Removed from your chats",
+    "failedLeaveShared": "Failed to remove the conversation",
+    "conversationViewOnly": "Shared with you as read-only",
+    "accessChanged": "Access changed",
+    "failedToChangeAccess": "Failed to change access",
+    "accessLevelFor": "Access level for {name}",
+    "accessChecking": "Checking conversation access…",
+    "accessFailed": "Could not verify access to this conversation",
+    "accessRetry": "Retry",
+    "forking": "Forking conversation…"
   },
   "common": {
     "archiveNamedConfirm": "Archive {name}?",
@@ -2996,6 +3146,14 @@
         "empty": {
           "title": "Nothing here yet",
           "description": "Notifications will show up here."
+        }
+      },
+      "agent-messages": {
+        "title": "Agent messages",
+        "description": "Threads waiting on you.",
+        "empty": {
+          "title": "No unread threads",
+          "description": "Messages between your agents appear here when they wait on you."
         }
       },
       "artifacts": {
@@ -4159,6 +4317,7 @@
     "failedLoadConnections": "Failed to load connections",
     "failedLoadOrgServers": "Failed to load the organization's MCP servers",
     "finishConsentThenReturn": "Finish in the tab that opened, then come back - the server appears here once it is authorised.",
+    "finishConsentInBrowser": "Finish signing in in your browser, then come back - the server appears here once it is authorised.",
     "consentTabBlocked": "Your browser blocked the sign-in tab. Allow pop-ups for this site, then try again.",
     "fromRegistry": "Registry",
     "fromRegistryHint": "From the public MCP registry. Nobody here reviewed it: the description is the publisher's, and there is no guidance on what credential it wants.",
@@ -4180,6 +4339,8 @@
     "oauthFailed": "Sign-in failed, and no connection was saved.",
     "oauthMissingCode": "The provider sent no authorization code.",
     "googleOAuthClientRequired": "Google requires a Client ID and client secret from Google Cloud before you can connect.",
+    "googleAppAskAdmin": "Ask an admin to set up Google for this organization.",
+    "googleAppDescription": "Google OAuth client for connected accounts",
     "googleOAuthSetupGuide": "Open Google setup guide",
     "oauthRequiredClient": "Google Cloud OAuth client",
     "googleOAuthClientHint": "Create a Web application OAuth client, select “Use this client for an AI-powered agent”, and add the exact redirect URL below.",
@@ -4285,6 +4446,7 @@
     "you": "(you)"
   },
   "nav": {
+    "aiConnections": "AI connections",
     "monitoring": "Monitoring",
     "memory": "Memory",
     "account": "Account",
@@ -4346,6 +4508,8 @@
     "expandSidebar": "Expand the sidebar",
     "workflows": "Workflows",
     "artifacts": "Apps",
+    "apps": "Apps",
+    "allApps": "All apps",
     "assistant": "Assistant",
     "groups": "Groups",
     "api": "API",
@@ -4360,6 +4524,7 @@
     "loadingPage": "Opening the page",
     "tables": "Tables",
     "inbox": "Inbox",
+    "agentMessages": "Agent messages",
     "inboxCount": "{count, plural, =1 {1 waiting} other {# waiting}}",
     "blobby": "Blobby",
     "desktopApp": "Desktop app",
@@ -4373,7 +4538,10 @@
     "whatsNewTitle": "What’s new in {version}",
     "whatsNewDescription": "Recent changes in the version you are using.",
     "whatsNewDone": "Got it",
-    "backgroundWork": "Background work"
+    "backgroundWork": "Background work",
+    "connectors": "Connections",
+    "onboarding": "Onboarding",
+    "noFavouriteApps": "Star an app to pin it here. <link>All apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -4395,6 +4563,10 @@
     "offer": {
       "accept": "Yes, guide me",
       "decline": "Not now",
+      "connect-personal-model": {
+        "title": "Connect a personal model?",
+        "body": "Connect your Claude subscription or a personal API key, then choose a model for your signed-in agent runs. Saving a connection or model does not send an inference request."
+      },
       "create-agent": {
         "title": "Create your first agent?",
         "body": "An agent is instructions, a model and a set of tools. Want to build your first one together? We'll check what your organization already has and only stop where you need to."
@@ -4406,6 +4578,10 @@
       "create-kb": {
         "title": "Create a knowledge base?",
         "body": "A knowledge base lets your agents search your documents. Want to set one up now? We'll walk you through it."
+      },
+      "connect-app": {
+        "title": "Connect an app?",
+        "body": "Choose a useful starting task, authorize one app, and ask your assistant to use it. You can skip any step."
       },
       "create-mcp": {
         "title": "Connect an MCP server?",
@@ -4427,6 +4603,10 @@
         "title": "Build a workflow?",
         "body": "A workflow chains steps into an automation your agents run. Want to start one now? We'll open the create dialog so you can pick a blank canvas or a template."
       },
+      "create-agent-message": {
+        "title": "Send a first message between agents?",
+        "body": "One agent can write directly to another, in a thread you can read. Shall we send one now? We'll walk you through it and watch the thread appear."
+      },
       "explore-chat": {
         "title": "Take a quick tour of chat?",
         "body": "See how to start a conversation, switch which agent answers, and change the model or thinking effort for a single chat. Want a quick guided run through it?"
@@ -4437,6 +4617,14 @@
       }
     },
     "steps": {
+      "personal-model-connections": {
+        "title": "Your AI connections",
+        "body": "Connect your Claude subscription or a personal API key, then choose its models in an agent or chat. Only your signed-in runs can use personal connections."
+      },
+      "flow-personal-model-connect": {
+        "title": "Connect and choose a model",
+        "body": "Connect Claude by opening its sign-in page and pasting the returned code, or save an Anthropic or OpenAI API key. Then add a model and select it in an agent or chat. Setup does not send an inference request."
+      },
       "activity-approvals": {
         "title": "What's waiting on you",
         "body": "Runs that paused for a human decision queue here. Approve or reject each one and the run picks up from where it stopped - this tab only appears if you're allowed to decide them."
@@ -4460,6 +4648,10 @@
       "agent-history": {
         "title": "Every version, kept",
         "body": "Each publish freezes the spec as a version you can promote to an environment, roll back to, or read the run history against."
+      },
+      "agent-messages": {
+        "title": "Messages between agents",
+        "body": "When one agent writes to another, the thread lands here, most recently active first. Open a thread to read it, reply as either of its agents, or react to a message."
       },
       "agent-instructions": {
         "title": "Instructions are the behaviour",
@@ -4625,6 +4817,26 @@
         "title": "Open the catalog",
         "body": "Choose Connect a server - the catalog opens right here in the builder, and we'll pick one together."
       },
+      "flow-agent-message-create": {
+        "title": "Send a first message",
+        "body": "Open the new-message dialog to send one agent's words to another."
+      },
+      "flow-agent-message-sender": {
+        "title": "Pick the sending agent",
+        "body": "Choose which of your runnable agents sends this message."
+      },
+      "flow-agent-message-recipient": {
+        "title": "Pick the recipient",
+        "body": "Search the agents you may message and pick the one this goes to."
+      },
+      "flow-agent-message-body": {
+        "title": "Write the message",
+        "body": "Say what the other agent needs to hear — up to 16,000 characters."
+      },
+      "flow-agent-message-send": {
+        "title": "Send it",
+        "body": "Send the message, then step on to see the new thread."
+      },
       "flow-agent-model-add": {
         "title": "Add a model",
         "body": "Your organization has no model yet. Pick a provider, name a model, and paste a key - it's stored in the vault and the model is ready. We'll move on once it's added."
@@ -4725,6 +4937,14 @@
         "title": "Fill in the connection",
         "body": "Name it - the name prefixes its tool names - keep Organization so your agents can use it, and paste a token if this server asks for one. Then choose Next."
       },
+      "flow-app-goal": {
+        "title": "Choose your first task",
+        "body": "Pick Prepare my day, Review my inbox, or Find project answers, then choose apps. One connected account is enough to start. You can change the goal or skip setup."
+      },
+      "flow-app-authorize": {
+        "title": "Authorize, then try it",
+        "body": "Connect an app and review its permissions on the provider's screen. When you return, T3OS verifies the account. Continue to First task, choose the account, and ask your assistant. Finish this guide whenever you are ready; it does not authorize an app."
+      },
       "flow-mcp-field-pick": {
         "title": "Pick a server",
         "body": "This is the catalog of systems your agents can get tools from. Find the one you want and choose Connect on it."
@@ -4793,6 +5013,10 @@
         "title": "Bring your own",
         "body": "Not in the catalog? Add a custom server by pasting its URL - for the whole organization, or just for yourself."
       },
+      "app-connections": {
+        "title": "Connect your apps",
+        "body": "Start with a goal and connect only the apps you need. Each provider asks for its own authorization. The MCP servers tab includes custom servers; More has channels, remote agents, the vault and sandboxes."
+      },
       "mcp-catalog": {
         "title": "Plug in tools",
         "body": "MCP servers are ready-made tool sets your agents can call. Connect one for the whole organization, or for yourself with your own account, then add it to an agent from its MCP servers tab."
@@ -4801,9 +5025,17 @@
         "title": "Connect, then pick tools",
         "body": "Connecting a server asks how to sign in, then lets you choose exactly which of its tools your agents are allowed to call."
       },
+      "connections-more": {
+        "title": "More connections",
+        "body": "The More tab holds channels, remote agents, vault and sandbox settings available to your role."
+      },
       "mcp-filter": {
         "title": "Find a server",
         "body": "Search the catalog, or narrow it by category and by whether you've already connected it."
+      },
+      "organization-switcher": {
+        "title": "Choose your organization",
+        "body": "The name here is the organization you're working in. Open the menu to switch organizations, manage them or create another. Agents, knowledge and activity follow your selection."
       },
       "notification-bell": {
         "title": "Stay in the loop",
@@ -4933,6 +5165,10 @@
         "title": "Published pages",
         "body": "Reports and dashboards your agents published. Open one to see it, pick an earlier version, share it with colleagues or give it a public link."
       },
+      "nav-pinned": {
+        "title": "Pinned apps",
+        "body": "Apps you starred sit here in the sidebar, one tap away. Star one from its card or page, and unstar it the same way."
+      },
       "settings-api-keys": {
         "title": "Your API keys",
         "body": "A key lets a script, Postman or an MCP client act as you, without a browser. Pick what it may do; it can never do more than you can, and it stops the moment you revoke it."
@@ -4943,7 +5179,7 @@
       },
       "assistant-widget": {
         "title": "Your Architect",
-        "body": "Ask it anything about the platform - it builds agents with you, explains errors and finds settings. Its speech bubbles suggest what to do on each page; turn them off in Settings → Assistant."
+        "body": "Open the floating assistant to ask about the page you are viewing. Choose who answers, inspect or switch off the page context, and keep asking as you navigate. Its speech bubbles suggest what to do on each page."
       },
       "groups-new": {
         "title": "Add a group",
@@ -5268,6 +5504,30 @@
       "chat-coding-accounts": {
         "title": "Your coding accounts",
         "body": "Connect Codex or Claude Code without leaving the chat. These are your private cloud accounts; local desktop tools keep their own sign-in."
+      },
+      "claude-subscription-connect": {
+        "title": "Connect your Claude subscription",
+        "body": "Open Claude sign-in, complete it with your own account, and paste the returned code. Once connected, add a subscription model and choose it in an agent or chat."
+      },
+      "chat-subscription-model": {
+        "title": "Use your Claude subscription",
+        "body": "Choose one of your saved Claude subscription models to power this chat. The connection stays personal; manage it in Settings → AI connections."
+      },
+      "assistant-agent-picker": {
+        "title": "Choose who answers",
+        "body": "Select a published agent you can run. The next question goes to that agent, while previous answers keep their original attribution."
+      },
+      "assistant-page-context": {
+        "title": "Include the current page",
+        "body": "The next question includes the page details shown here. View them before sending or switch page context off. Queued questions keep the page and agent selected when you submitted them."
+      },
+      "workflow-run-questions": {
+        "title": "Answer the agent",
+        "body": "An agent in this workflow can ask for clarification. Answer here to continue its saved conversation and let the workflow proceed."
+      },
+      "workflow-input-contract": {
+        "title": "Define the expected input",
+        "body": "A Manual, API or Called by a workflow trigger can use simple fields or a JSON Schema Draft 2020-12 contract. The schema supports nested values and is checked before a run starts."
       }
     },
     "chooseLanguage": "Language",
@@ -5385,7 +5645,8 @@
         "budget_exceeded": "Budget spent",
         "failed": "Failed",
         "cancelled": "Cancelled",
-        "succeeded": "Succeeded"
+        "succeeded": "Succeeded",
+        "waiting_for_user": "Waiting for user"
       },
       "nodeStatus": {
         "pending": "Pending",
@@ -5905,7 +6166,11 @@
       "replyMailboxUnavailable": "Selected mailbox unavailable",
       "replyMailboxConnect": "Connect Gmail or Outlook in Integrations first.",
       "replySharedMailbox": "Shared Outlook mailbox (optional)",
-      "startRunListHint": "One item per line. Blank lines are ignored."
+      "startRunListHint": "One item per line. Blank lines are ignored.",
+      "runQuestionsTitle": "Your agent needs an answer to continue",
+      "runQuestionsFailed": "The questions could not be loaded.",
+      "runQuestionsRetry": "Try again",
+      "startRunSchema": "Expected input schema"
     },
     "retention": {
       "title": "Data retention",
@@ -6336,7 +6601,7 @@
       "inCategoryUse": "Categories already in use",
       "inTagUse": "Tags already in use",
       "mcpToolLoad": "These MCP servers give the model {count} tools on every request - roughly {tokens, number} tokens before anyone types, and more tools than a model chooses between well. Tool search keeps them out of the way until the agent looks one up.",
-      "mcpToolLoadEnable": "Turn on Tool search",
+      "mcpToolLoadEnable": "Enable MCP tool search",
       "agentDescriptionLabel": "Description",
       "agentNameLabel": "Name",
       "agentNameRequired": "An agent needs a name.",
@@ -6623,7 +6888,6 @@
     },
     "mcp-servers": {
       "catalogCompiledIntoBackend": "The catalog is compiled into the backend, and nobody has added a server of their own. An empty list here means this deployment ships none.",
-      "externalToolsYourAgents": "Tools your agents can use - Notion, GitHub, your CRM. Connect one for the whole organization, or just for yourself.",
       "mcpServers": "MCP servers",
       "noServersConnect": "No servers to connect"
     },
@@ -6749,14 +7013,11 @@
       "errorId": "Error ID: {id}",
       "errorOccurredWhileLoading": "An error occurred while loading this page. Please try again.",
       "goBack": "Go back",
-      "goToDashboard": "Go to dashboard",
       "noMessagesYet": "This conversation has no messages yet.",
       "ogBadge": "Self-hosted",
       "ogHeadline": "<lead>Agents you</lead><mark>own.</mark>",
-      "onboardingDescription": "Set up your organization.",
-      "onboardingRebuilt": "The setup wizard is being rebuilt. Nothing is blocking you - head into the console and start from there.",
+      "onboardingDescription": "Get started and optionally connect your apps.",
       "onboardingTitle": "Get started",
-      "onboardingUnderConstruction": "Onboarding is under construction",
       "pageError": "Page error:",
       "sectionFailed": "This section failed to load",
       "shareLinkExpired": "This share link may have expired or been revoked.",
@@ -6766,7 +7027,6 @@
       "sharedConversationViewEdit": "Shared conversation - view & edit",
       "signInFailedRedirecting": "Sign-in failed. Redirecting…",
       "somethingWentWrong": "Something went wrong",
-      "startAChat": "Start a chat",
       "tryAgain": "Try again",
       "unexpectedWhileLoading": "An unexpected error occurred while loading this view. Please try again.",
       "unexpectedWithDigest": "An unexpected error occurred. Error ID: {digest}"
@@ -7175,7 +7435,7 @@
       "avatarColourHint": "Shown as your avatar until you upload a picture.",
       "prefArtifactVersionPublished": "App updated",
       "prefArtifactVersionPublishedTrigger": "An app you follow gets a new version - republished by its agent or restored by a person.",
-      "prefResourceShared": "Shared with your group",
+      "prefResourceShared": "Shared with you or your group",
       "prefResourceSharedTrigger": "Something - an agent, a skill, knowledge, an app - is shared with a group you are in.",
       "prefBudgetWarning": "Department budget at 80%",
       "prefBudgetWarningTrigger": "A department you lead has used 80% of its monthly budget. Administrators hear about every department.",
@@ -7718,6 +7978,18 @@
       "servicesHint": "Audio recording preferences and push notifications for the mobile app.",
       "operations": "Maintenance",
       "operationsHint": "Application updates and deployment diagnostics."
+    },
+    "connectors": {
+      "title": "Connections",
+      "description": "Connect app accounts and MCP servers, and manage them in one place.",
+      "apps": "Apps",
+      "mcp": "MCP servers",
+      "more": "More",
+      "advancedDescription": "Manage chat channels, remote agents, the vault and sandboxes.",
+      "channelsDescription": "Chat platforms your organization is reachable on.",
+      "remoteAgentsDescription": "Other vendors' agents your agents can delegate to.",
+      "vaultDescription": "Keys and secrets your connections use.",
+      "sandboxesDescription": "Where agents run code, and the limits on each host."
     }
   },
   "profile": {
@@ -7760,6 +8032,29 @@
     "credentialOpenVault": "Open the Vault",
     "credentialPlaceholder": "Choose a credential",
     "credentialUnreadable": "The vault could not be read, so there is nothing to choose from yet. Try again, or reload the page.",
+    "driveCredentialType": "Google Drive sign-in method",
+    "driveUseAccount": "Connected Google account",
+    "driveUseServiceAccount": "Service account",
+    "driveAccountsLoading": "Loading connected Google accounts…",
+    "driveAccountsUnreadable": "Connected Google accounts could not be loaded.",
+    "driveAccountLabel": "Google account",
+    "driveAccountPlaceholder": "Choose a connected account",
+    "driveNoAccount": "No connected Google account has Drive access.",
+    "driveConnectAccount": "Connect a Google account in the Vault",
+    "driveConnectGoogle": "Connect Google account",
+    "driveFolderLabel": "Folder to sync",
+    "driveFolderPath": "Folder path",
+    "driveFolderRoot": "My Drive",
+    "driveFolderLoading": "Loading folders…",
+    "driveFolderRetry": "Try again",
+    "driveFolderEmpty": "No folders here.",
+    "driveFolderSelect": "Select this folder",
+    "driveFolderNotChosen": "No folder chosen yet.",
+    "driveFolderChosen": "Syncing {name}",
+    "driveFolderChosenUnnamed": "Syncing the selected folder",
+    "driveSectionShared": "Shared drives",
+    "driveSectionMine": "My Drive",
+    "driveFolderIdHint": "Paste the folder ID: the part of the folder's Google Drive link after /folders/.",
     "customMinutes": "Custom (minutes):",
     "dropFilesDetail": "Files will be added to the active collection",
     "editSyncSource": "Edit sync source",
@@ -8084,6 +8379,39 @@
     "todo": "todo",
     "yourCustomCommands": "Your custom commands"
   },
+  "personalModels": {
+    "title": "Your AI connections",
+    "description": "Use a personal provider connection to power the agents you run while signed in.",
+    "personal": "Personal",
+    "personalUnavailable": "Personal connections are not enabled on this deployment yet.",
+    "personalNotConfirmed": "The server did not confirm this connection as personal. Manage the saved key in the vault before trying again.",
+    "personalUse": "Only your signed-in agent runs can use this connection. Scheduled and organisation runs need an organisation connection.",
+    "connection": "Connection",
+    "chooseConnection": "Choose a connection",
+    "connectionName": "{provider} · {person}",
+    "connectApiKey": "Connect API key: {provider}",
+    "name": "Connection name",
+    "apiKey": "API key",
+    "saveConnection": "Save personal connection",
+    "cancel": "Cancel",
+    "getApiKey": "Get an API key",
+    "anthropicCredits": "Eligible Claude subscriptions can provide API credits after linking a Claude Console organisation. Connect an API key from that organisation to use those credits; this does not use your Claude chat allowance.",
+    "openaiApi": "Connect your OpenAI API account. API usage has separate billing from a ChatGPT subscription.",
+    "learnCredits": "How subscription API credits work",
+    "readPermission": "Viewing personal model connections needs secrets:view and agents:view in this organisation.",
+    "writePermission": "Adding a personal connection needs secrets:edit in this organisation.",
+    "modelPermission": "Adding a model on a connection needs connections:manage in this organisation.",
+    "connectionSaved": "Personal connection saved. Provider access has not been tested.",
+    "modelSaved": "Saved {label}. Choose this connection and model in an agent or chat to use it.",
+    "savedConnections": "Saved personal connections",
+    "noneSaved": "You have no personal model connections in this organisation yet.",
+    "savedNotTested": "Saved · provider access not tested",
+    "chooseModelFor": "Choose a model for {name}",
+    "chooseModel": "Choose model",
+    "modelsUnavailable": "Saved models could not be read.",
+    "retry": "Retry",
+    "manageInVault": "Manage or disconnect connections in the vault"
+  },
   "sharing": {
     "access": "Access",
     "accessFor": "Access for {name}",
@@ -8225,6 +8553,9 @@
     "loading": "Loading"
   },
   "teams": {
+    "organizationLabel": "Organization",
+    "organizationSwitcher": "Switch organization, current: {name}",
+    "selectOrganization": "Select organization",
     "acmeCom": "acme.com",
     "approvalWaiver": "Waiving approvals in chat",
     "approvalWaiverDescription": "Whether a conversation may run without stopping for approvals.",
@@ -8872,13 +9203,15 @@
     "templatesMore": "{count, plural, =1 {Show 1 more} other {Show # more}}",
     "templatesFewer": "Show fewer",
     "local": {
+      "useAllowed": "Use the allowed folder",
+      "allRoutines": "All my routines",
       "label": "Work on",
       "hint": "Each fire works in a folder on your computer through the desktop app, or in the agent's sandbox. A fire waits for the app if it is closed.",
       "elsewhereHint": "Each fire works in this folder on your computer. Change it from the desktop app on that computer.",
       "sandbox": "The agent's sandbox",
       "pick": "Choose a folder…",
       "useSandbox": "Use the sandbox",
-      "routineHint": "Choose a folder and operations. Saving asks this computer to approve this routine only.",
+      "routineHint": "Choose a folder and operations. The first time, this computer asks once to let all your routines work there; later routines in that folder need no approval.",
       "read": "Read",
       "write": "Write",
       "execute": "Run commands",
@@ -9351,7 +9684,13 @@
         "boolean": "Yes or no",
         "date": "Date",
         "choice": "Choice"
-      }
+      },
+      "contractFormat": "Input contract",
+      "simpleFields": "Simple fields",
+      "jsonSchema": "JSON Schema",
+      "formatHint": "Choose simple fields or a JSON Schema contract. Each saved format is kept while this trigger stays open; only the selected format is saved to the workflow.",
+      "schemaHint": "Use JSON Schema Draft 2020-12 for nested objects, arrays and references. Inputs are checked before a run starts.",
+      "schemaInvalid": "Enter a JSON object. This edit was not saved."
     },
     "pickerHostLabel": "Sandbox host",
     "pickerHostDefault": "The organization's default host",
@@ -9545,7 +9884,7 @@
     "templateUnknown": "{placeholder} names nothing this step can read.",
     "templatePreview": "Preview:",
     "templateSuggestions": "Values from earlier steps",
-    "triggerHintCall": "Another workflow's Run a workflow step starts this one with its input, checked against these fields. The steps after it read them as payload.",
+    "triggerHintCall": "Another workflow's Run a workflow step starts this one with its input, checked against this input contract. The steps after it read the input as payload.",
     "pickerWorkflowLabel": "Workflow",
     "pickerWorkflowPlaceholder": "Choose a workflow",
     "pickerWorkflowNone": "No workflow is published starting from Called by a workflow yet.",
@@ -10191,7 +10530,11 @@
       "blockedLink": "The page has no public link. Turn it on first."
     },
     "lightTheme": "Use light app theme",
-    "darkTheme": "Use dark app theme"
+    "darkTheme": "Use dark app theme",
+    "addFavourite": "Add to favourites",
+    "removeFavourite": "Remove from favourites",
+    "addFavouriteNamed": "Add {name} to favourites",
+    "removeFavouriteNamed": "Remove {name} from favourites"
   },
   "tables": {
     "cells": {
@@ -10864,7 +11207,8 @@
     "revoked": "Key revoked",
     "couldNotLoad": "Could not load your API keys",
     "emptyTitle": "No API keys yet",
-    "emptyWhy": "Create one to call the API from a script, Postman or Claude Code."
+    "emptyWhy": "Create one to call the API from a script, Postman or Claude Code.",
+    "personalConsentWhy": "Personal consent is excluded from presets. To let this key or app approve routines and watches that use your personal connections and data, select personal:consent under Custom."
   },
   "mcpOauth": {
     "title": "{client} wants to act as you",
@@ -11028,7 +11372,18 @@
     },
     "screenshot": "Show it this page",
     "screenshotFailed": "The screenshot could not be taken. Paste one into the conversation instead.",
-    "defaultName": "Architect"
+    "defaultName": "Architect",
+    "pageContext": {
+      "include": "Use the current page",
+      "using": "Using: {page}",
+      "off": "Page context is off",
+      "view": "View context",
+      "explanation": "These page details will accompany your next question. Each queued question keeps the page it was submitted from.",
+      "page": "Page",
+      "record": "Record",
+      "viewLabel": "View",
+      "selected": "Selected records"
+    }
   },
   "assistantSettings": {
     "notForYou": "Your role doesn't include running agents, so the assistant isn't available to you. An administrator can change that.",
@@ -11259,7 +11614,7 @@
     "tool_search": {
       "name": "Tool search",
       "does": "Lets an agent with many tools find the right one when it needs it, instead of reading all of them every time.",
-      "example1": "An agent connected to several MCP servers with dozens of tools",
+      "example1": "An agent with many enabled capabilities and bound MCP servers",
       "needs": "Nothing extra.",
       "never": "Never adds a tool; it only hides tools until the agent looks for one."
     },
@@ -11366,6 +11721,13 @@
       "example3": "Read a table from your database and summarise it",
       "needs": "The services' credentials in the vault, or a connected Google account. A deployment installs the terminal with the mirage extra, and an operator allows the hosts of any server you type.",
       "never": "Never writes to a folder you mounted read-only, and asks a person before each write where you said so."
+    },
+    "agent_messages": {
+      "name": "Agent messages",
+      "does": "Lets one agent write directly to another, in a thread the console shows with replies, reactions and files.",
+      "needs": "Two published agents the caller may run, and the agents:run permission to read the thread.",
+      "never": "Does not reach an agent the caller may not run, send on a human's behalf, or deliver a message outside the thread.",
+      "example1": "Ask the research agent to hand its findings to the writing agent before the draft is due."
     }
   },
   "capabilityCategories": {
@@ -11781,6 +12143,26 @@
       "max_results": {
         "title": "Matches per search",
         "description": "How many matches the local search returns; ignored for native search."
+      },
+      "defer_capabilities": {
+        "title": "Defer capability tools",
+        "description": "Hide eligible tools from enabled capabilities until the agent searches for them. Off keeps capability tools visible."
+      },
+      "defer_mcp_servers": {
+        "title": "Defer MCP tools",
+        "description": "Hide eligible tools from bound MCP servers until the agent searches for them. Off keeps MCP tools visible."
+      },
+      "exclude_capabilities": {
+        "title": "Always-visible capabilities",
+        "description": "Comma-separated capability IDs whose tools stay visible, such as knowledge or visuals. These capabilities must still be enabled."
+      },
+      "exclude_mcp_servers": {
+        "title": "Always-visible MCP servers",
+        "description": "Comma-separated MCP tool namespace prefixes whose tools stay visible, such as github_work or agenticos. Use the prefix before the tool name, with hyphens replaced by underscores."
+      },
+      "exclude_tools": {
+        "title": "Always-visible tools",
+        "description": "Comma-separated model-facing tool names to keep visible. Use renamed capability tool names and fully prefixed MCP tool names, such as github_work_list_issues."
       }
     },
     "web_fetch": {
@@ -11980,6 +12362,16 @@
         "title": "Hidden paths",
         "description": "Paths the agent cannot see at all, e.g. /drive/HR/."
       }
+    },
+    "agent_messages": {
+      "max_message_chars": {
+        "title": "Longest message",
+        "description": "The longest message this agent may send, in characters. 16,000 is the console's ceiling as well, so a thread reads the same however the message was sent; lower it for an agent that should keep its messages short."
+      },
+      "allow_attachments": {
+        "title": "Allow file attachments",
+        "description": "Whether this agent may send files it already uploaded along with its messages. Off means text only; files already attached stay readable."
+      }
     }
   },
   "apiReference": {
@@ -12122,6 +12514,9 @@
     "created": "Project {name} created",
     "saved": "Project saved",
     "deleted": "Project deleted. Its chats are ordinary chats now.",
+    "moved": "Conversation moved",
+    "moveFailed": "Could not move conversation",
+    "changeProject": "Change project",
     "uploaded": "{count, plural, =1 {1 file added} other {# files added}}",
     "removed": "Removed",
     "filesUnreadable": "The project's files could not be read",
@@ -12586,6 +12981,56 @@
       "finding": "Routine"
     },
     "openWorkingChat": "Open conversation"
+  },
+  "agentMessages": {
+    "title": "Agent messages",
+    "description": "Direct messages between your agents, in threads.",
+    "newMessage": "New message",
+    "threadCount": "{count, plural, =0 {No threads} =1 {1 thread} other {# threads}}",
+    "failedLoad": "Couldn't load agent messages.",
+    "sent": "Message sent.",
+    "cannotSee": "You cannot see agent messages in this organization",
+    "askForAccess": "Ask an administrator for access to agent messages.",
+    "threadTitle": "{first} and {second}",
+    "lastMessage": "{slug}: {body}",
+    "noMessagesYet": "No messages yet.",
+    "unread": "Unread",
+    "read": "Read",
+    "emptyThreads": {
+      "title": "No threads yet",
+      "description": "When one agent writes to another, the thread appears here."
+    },
+    "emptyMessages": {
+      "title": "No messages yet",
+      "description": "Nothing has been said in this thread."
+    },
+    "selectThread": {
+      "title": "Pick a thread",
+      "description": "Choose a thread on the left to read it."
+    },
+    "reply": "Reply",
+    "replyTo": "Replying to {slug}",
+    "cancelReply": "Cancel reply",
+    "reactWith": "React with {emoji}",
+    "charCount": "{count} of {max} characters",
+    "messagePlaceholder": "Write a message…",
+    "replyPlaceholder": "Reply as the sending agent…",
+    "send": "Send",
+    "cancel": "Cancel",
+    "senderLabel": "Send as",
+    "recipientLabel": "To",
+    "bodyLabel": "Message",
+    "searchRecipients": "Search agents",
+    "loadingRecipients": "Loading agents…",
+    "noRecipients": "No agents match that search.",
+    "removeFile": "Remove {name}",
+    "noRunnableAgent": "No agent you may run is in this thread.",
+    "newMessageTitle": "New message",
+    "newMessageDescription": "One agent writes to another. The recipient gets the message in their thread.",
+    "attachFiles": "Attach files",
+    "tooManyFiles": "You can attach at most {max} files.",
+    "uploadFailed": "Couldn't upload a file.",
+    "chooseSender": "Choose a sending agent"
   },
   "agentLimit": {
     "title": "This organization is at its agent limit",
@@ -13465,5 +13910,155 @@
     "jsonLabel": "{name} (JSON)",
     "jsonHint": "Edit as JSON. Valid changes are saved; incomplete JSON keeps the last valid value.",
     "jsonInvalid": "Enter valid JSON of the required type. The last valid value is unchanged."
+  },
+  "claudeSubscription": {
+    "title": "Claude subscription",
+    "description": "Sign in with your Claude account to power your personal agent runs.",
+    "permission": "Connecting a Claude subscription needs connections:manage in this organisation.",
+    "ownSessionOnly": "Sign in as yourself to connect or use a personal subscription.",
+    "checking": "Checking Claude connection…",
+    "notConfigured": "Claude subscription sign-in is not configured on this deployment.",
+    "statusFailed": "Your Claude connection could not be checked. Retry to read its status.",
+    "requestFailed": "The sign-in request could not be completed. Retry to check the connection.",
+    "signInFailed": "Claude sign-in did not complete. Start again and use the code from the new sign-in page.",
+    "invalidLink": "The Claude sign-in link could not be verified. Cancel and start again.",
+    "connect": "Connect Claude subscription",
+    "connected": "Connected · personal",
+    "disconnect": "Disconnect Claude",
+    "starting": "Preparing Claude sign-in…",
+    "verifying": "Completing Claude sign-in…",
+    "openInstructions": "Open Claude, sign in to your account, then paste the code shown on its confirmation page.",
+    "openClaude": "Open Claude sign-in",
+    "code": "Claude sign-in code",
+    "codeHint": "Paste the code from the Claude page. It is cleared as soon as you submit it.",
+    "complete": "Complete sign-in",
+    "cancel": "Cancel sign-in",
+    "expired": "This sign-in has expired. Start again to get a new link.",
+    "startAgain": "Start again",
+    "expiresIn": "Expires in {minutes, plural, =1 {1 minute} other {# minutes}}.",
+    "retry": "Retry",
+    "supportedInputs": "This connection supports text and agent tools. Images and files are not supported yet.",
+    "modelHint": "Choose a Claude model. Your subscription determines model access and usage limits.",
+    "model": "Subscription model",
+    "models": {
+      "sonnet": "Claude Sonnet",
+      "opus": "Claude Opus",
+      "haiku": "Claude Haiku"
+    },
+    "connectionLabel": "Claude subscription · {person}",
+    "addModel": "Add subscription model",
+    "modelAlreadySaved": "Model already saved",
+    "savedModels": "Your Claude subscription models",
+    "chooseSavedModel": "Choose a saved model in an agent or chat to use your Claude subscription.",
+    "reconnectModels": "Reconnect Claude to use these saved models.",
+    "modelsUnavailable": "Your saved subscription models could not be read.",
+    "chooseSaved": "Choose a saved subscription model",
+    "manageConnection": "Manage Claude subscription",
+    "chooseApiModel": "Choose an API model",
+    "disconnected": "Disconnected"
+  },
+  "onboardingSetup": {
+    "title": "Welcome to {appName}",
+    "description": "Get started at your own pace. Connect an app now, or head straight into your workspace.",
+    "appsTitle": "Connect your apps",
+    "optional": "Optional",
+    "appsDescription": "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
+    "connectApps": "Connect apps",
+    "opensNewTab": "Opens in a new tab. Return here when you're ready.",
+    "skipHint": "No app connection is required. You can connect later from Connections → Apps.",
+    "continueToWorkspace": "Continue to workspace"
+  },
+  "onboardingTeam": {
+    "step1Title": "About you & your work",
+    "step1Subtitle": "Tell us a bit about what you do so we can recommend the right specialist agents.",
+    "roleLabel": "What is your role?",
+    "industryLabel": "What industry or domain are you in?",
+    "teamSizeLabel": "Team size",
+    "step2Title": "What should your AI team handle?",
+    "step2Subtitle": "Select the workflows you want to delegate, automate, or accelerate.",
+    "goalsLabel": "Priority areas",
+    "detailsLabel": "Tell us more about your workflow (optional)",
+    "detailsPlaceholder": "e.g. We get lots of customer inquiries, write weekly updates, and need help drafting documentation without spending hours on it...",
+    "step3Title": "Tools & integrations",
+    "step3Subtitle": "Choose the tools your team relies on daily. You can connect them now or anytime later from Connectors.",
+    "toolsInStack": "Tools in your stack",
+    "appsTitle": "Connect apps & tools",
+    "appsOptional": "Optional",
+    "appsDescription": "Authorize your tools through Composio with verified permissions. You can also connect them later.",
+    "connectApps": "Connect apps",
+    "opensNewTab": "Opens in a new tab. Return here when ready.",
+    "skipHint": "Connecting apps is completely optional. You can connect anytime later.",
+    "step4Title": "Your recommended AI team",
+    "step4Subtitle": "Here is your team structure. Your Team Lead coordinates incoming requests and delegates work to your specialists.",
+    "leadBadge": "Team Lead & Orchestrator",
+    "leadOrchestrationHint": "Routes tasks to specialists and synthesizes unified answers for you.",
+    "starterPromptsHeader": "Example starter prompts",
+    "specialistsTitle": "Specialist agents",
+    "addSpecialist": "Add specialist",
+    "removeSpecialist": "Remove",
+    "selectTemplate": "Pick a specialist template",
+    "deployTeam": "Build & deploy my team",
+    "deployingTitle": "Assembling your AI team...",
+    "deployingSubtitle": "Setting up models, delegation channels, and workspace...",
+    "deployingStep1": "Configuring specialist agent specifications...",
+    "deployingStep2": "Binding skills, tools, and capabilities...",
+    "deployingStep3": "Wiring delegation hierarchy and orchestrator routing...",
+    "deployingStep4": "Opening team workspace in chat...",
+    "errorTitle": "Something went wrong",
+    "tryAgain": "Try Again",
+    "teamMembersCreated": "Team Members Created",
+    "successTitle": "Your AI team is ready!",
+    "successSubtitle": "Your Lead Agent and specialists have been created and wired together.",
+    "startChat": "Chat with your Team Lead",
+    "viewAgents": "View team in Agents",
+    "skip": "Skip for now",
+    "back": "Back",
+    "continue": "Continue",
+    "generating": "Generating...",
+    "generatingProposal": "Analyzing your profile and generating team recommendation...",
+    "stepTracker": "Step {step} of 4",
+    "stepProfile": "Profile",
+    "stepGoals": "Goals",
+    "stepTools": "Tools",
+    "stepTeam": "Recommended Team",
+    "roles": {
+      "founder": "Founder / Executive",
+      "engineering": "Engineering / Tech",
+      "product": "Product / PM",
+      "operations": "Operations",
+      "support": "Support & Success",
+      "legal": "Legal & Finance",
+      "other": "Other"
+    },
+    "industries": {
+      "software": "Software & Technology",
+      "ecommerce": "E-Commerce & Retail",
+      "finance": "Finance & Banking",
+      "healthcare": "Healthcare & Life Sciences",
+      "legal": "Legal Services",
+      "manufacturing": "Manufacturing & Logistics",
+      "publicSector": "Public Sector & Gov",
+      "general": "General / Other"
+    },
+    "teamSizes": {
+      "solo": "Solo",
+      "soloDesc": "Just me",
+      "small": "Small Team",
+      "smallDesc": "2–15 people",
+      "company": "Organization",
+      "companyDesc": "15+ people"
+    },
+    "goals": {
+      "support": "Customer Support & Ticket Triage",
+      "docs": "Documentation & Team Knowledge Q&A",
+      "releases": "Release Notes & Changelog Writing",
+      "research": "Research, Citations & Competitive Intel",
+      "contracts": "Contracts, Invoices & Policy Review",
+      "automation": "Process & Workflow Automation",
+      "incidents": "Incident Response & Alert Diagnostics",
+      "content": "Content Writing & Product Copy",
+      "data": "Data Analysis, Metrics & Reporting",
+      "meetings": "Meeting Notes, Action Items & Minutes"
+    }
   }
 }

@@ -24,6 +24,7 @@ from app.repositories import (
 from app.repositories.rag_document import CollectionCounts, CollectionScope
 from app.schemas.knowledge_base import (
     KnowledgeBaseCreate,
+    KnowledgeBaseDetailRead,
     KnowledgeBaseList,
     KnowledgeBaseRead,
     KnowledgeBaseUpdate,
@@ -552,6 +553,13 @@ class KnowledgeBaseService:
             raise _no_knowledge_base(kb_id)
         return kb
 
+    async def describe(self, kb: KnowledgeBase, *, ctx: AuthContext) -> KnowledgeBaseDetailRead:
+        """Serialize an authorized row with the write decision used by mutations."""
+        read = KnowledgeBaseRead.model_validate(kb)
+        return KnowledgeBaseDetailRead(
+            **read.model_dump(), can_edit=await writable_kb(self.db, ctx, kb)
+        )
+
     async def get_for_write(self, kb_id: UUID, *, ctx: AuthContext) -> KnowledgeBase:
         """The knowledge base, resolved for a caller about to change it.
 
@@ -822,6 +830,11 @@ class KnowledgeBaseService:
             raise BadRequestError(
                 message="That key is not in this organization's vault",
                 details={"embedding_secret_id": str(secret_id)},
+            )
+        if row.usage_scope == "personal":
+            raise refused_field(
+                "embedding_secret_id",
+                "A collection cannot spend a personal model connection; choose an organization key",
             )
         if row.purpose != provider.provider:
             raise refused_field(

@@ -33,6 +33,8 @@ import { useSourcesPanelStore } from "@/stores/sources-panel-store";
 import {
   Bot,
   CornerUpLeft,
+  GitBranch,
+  Loader2,
   Mic,
   MoreHorizontal,
   OctagonPause,
@@ -106,6 +108,9 @@ interface MessageItemProps {
    */
   turnUsage?: TurnUsage;
   onRegenerate?: () => void;
+  /** Fork the conversation at a message, given its id; absent where the reader may not (#2762). */
+  onFork?: (messageId: string) => void;
+  forkingMessageId?: string | null;
   /** In the test panel: a question can be pinned to ask again after each change (#2075). */
   pins?: PinnedPrompts;
   /** The agents the reader can see, which name the one a delegation asked. */
@@ -124,6 +129,8 @@ export const MessageItem = memo(function MessageItem({
   turnUsage,
   openLastStep = false,
   onRegenerate,
+  onFork,
+  forkingMessageId = null,
   pins,
   agents = [],
   request,
@@ -227,7 +234,7 @@ export const MessageItem = memo(function MessageItem({
         // Architect's window, and the message under them at the column's full
         // width: a column of avatars beside every turn spent a gutter on a face
         // that only needs saying once per turn.
-        "group relative flex flex-col overflow-visible",
+        "group relative flex max-w-full min-w-0 flex-col",
         compact ? "gap-1.5" : "gap-2",
         // Each edge decided once, and never as `py-*` with a `pt-0` over it: two
         // utilities of equal specificity leave which one wins to the order of the
@@ -255,7 +262,7 @@ export const MessageItem = memo(function MessageItem({
       {(!continuesTurn || canShowActions) && (
         <div
           className={cn(
-            "flex items-center gap-2",
+            "flex max-w-full min-w-0 items-center gap-2",
             isUser && "flex-row-reverse",
             continuesTurn && "sm:hidden",
           )}
@@ -299,7 +306,7 @@ export const MessageItem = memo(function MessageItem({
       )}
       <div
         className={cn(
-          "overflow-hidden",
+          "max-w-full min-w-0",
           compact ? "space-y-1.5" : "space-y-2",
           isUser ? "flex max-w-[85%] flex-col items-end" : "w-full",
         )}
@@ -332,7 +339,7 @@ export const MessageItem = memo(function MessageItem({
                       type="button"
                       key={att.file.id}
                       onClick={() => openPreview(att.file)}
-                      className="hover:ring-foreground/30 block overflow-hidden rounded-xl border ring-2 ring-transparent transition-all"
+                      className="hover:ring-foreground/30 block max-w-full min-w-0 overflow-hidden rounded-xl border ring-2 ring-transparent transition-shadow"
                       title={t("openFile", { name: att.file.filename })}
                     >
                       <KeptImage
@@ -340,7 +347,7 @@ export const MessageItem = memo(function MessageItem({
                         alt={att.file.filename}
                         width={320}
                         height={256}
-                        className="h-auto max-h-64 w-auto max-w-xs object-contain"
+                        className="h-auto max-h-64 w-auto max-w-[min(20rem,100%)] object-contain"
                       />
                     </button>
                   ) : "file" in att ? (
@@ -551,6 +558,29 @@ export const MessageItem = memo(function MessageItem({
                 className={cn(TURN_ACTION, "sm:opacity-0 sm:group-hover:opacity-100")}
               >
                 <RefreshCw />
+              </button>
+            )}
+            {/* A fork copies the stored history up to this answer, so it needs the
+                saved row; the server refuses one a run is still writing. */}
+            {message.role === "assistant" && onFork && !message.isTemporaryId && (
+              <button
+                type="button"
+                onClick={() => onFork(message.id)}
+                title={t("fork")}
+                aria-label={t(forkingMessageId === message.id ? "forking" : "fork")}
+                disabled={forkingMessageId !== null}
+                aria-busy={forkingMessageId === message.id}
+                className={cn(
+                  TURN_ACTION,
+                  "focus-visible:opacity-100 disabled:cursor-wait sm:opacity-0 sm:group-hover:opacity-100",
+                  forkingMessageId === message.id && "sm:opacity-100",
+                )}
+              >
+                {forkingMessageId === message.id ? (
+                  <Loader2 className="animate-spin motion-reduce:animate-none" />
+                ) : (
+                  <GitBranch />
+                )}
               </button>
             )}
             {/* A rating is stored against the saved message; a turn that failed

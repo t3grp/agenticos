@@ -7,7 +7,14 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, computed_field, field_validator, model_validator, ValidationInfo
+from pydantic import (
+    Field,
+    SecretStr,
+    computed_field,
+    field_validator,
+    model_validator,
+    ValidationInfo,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.map_tiles import MapTiles, resolve as resolve_map_tiles
@@ -59,6 +66,30 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     UPDATE_AGENT_SOCKET: Path | None = None
     UPDATE_PIPELINE_URL: str | None = None
+    CLAUDE_SUBSCRIPTION_URL: str | None = None
+    CLAUDE_SUBSCRIPTION_SERVICE_KEY: SecretStr | None = Field(
+        default=None, min_length=32, repr=False
+    )
+
+    @field_validator("CLAUDE_SUBSCRIPTION_URL")
+    @classmethod
+    def claude_subscription_origin(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        url = urlsplit(value)
+        if (
+            url.scheme not in {"http", "https"}
+            or not url.hostname
+            or url.username is not None
+            or url.password is not None
+            or url.path not in {"", "/"}
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError(
+                "Claude subscription runtime must be an HTTP(S) origin without credentials or a path"
+            )
+        return value.rstrip("/")
 
     @field_validator("UPDATE_PIPELINE_URL")
     @classmethod
@@ -103,6 +134,7 @@ class Settings(BaseSettings):
         return value.rstrip("/")
 
     DEBUG: bool = False
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     DB_ECHO: bool = (
         False  # Set DB_ECHO=true to log SQL queries (latency + log-noise drain by default)
     )
@@ -308,6 +340,7 @@ class Settings(BaseSettings):
     EVENT_LOOP_WEDGED_AFTER: float = 15.0
 
     LOGFIRE_TOKEN: str | None = None
+    LOGFIRE_CONSOLE: bool = False
     LOGFIRE_SERVICE_NAME: str = "agenticos"
     LOGFIRE_ENVIRONMENT: str = "development"
     # Where a stored trace id can be *read*. `LOGFIRE_TOKEN` is a write
@@ -429,6 +462,17 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     FRONTEND_URL: str = "http://localhost:3000"
     PUBLIC_BASE_URL: str = "http://localhost:8000"
+
+    # Supplied by the operator's secret store. End users authorize their own apps;
+    # the project key and auth-config selection never come from their browser.
+    COMPOSIO_API_KEY: SecretStr | None = None
+    # Read-only metadata key for the official toolkit and tool directory. Keep
+    # its permissions separate from the runtime key used to create sessions.
+    COMPOSIO_CATALOG_API_KEY: SecretStr | None = None
+    COMPOSIO_AUTH_CONFIGS: dict[str, str] = Field(default_factory=dict)
+    COMPOSIO_USER_NAMESPACE: str = Field(
+        default="t3os", min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"
+    )
 
     # How long a phone number stays linked to an account before it has to be linked again.
     # A number is a claim of identity that outlives the person's hold on it - reassigned,

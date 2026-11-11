@@ -4,6 +4,8 @@ import logging
 import re
 from typing import ClassVar, overload
 
+from app.core.config import settings
+
 #: Bytes that end a log line, or move a terminal reading one.
 #:
 #: A log entry is one line, and the reader of a text log splits on newlines - so
@@ -94,6 +96,8 @@ _SECRET_PATH = re.compile(
 #:   MCP OAuth return its provider's `code` and `state`, under the same names;
 #: - `invitation_handle` on `/oauth/<provider>/login` and `/auth/kerberos/login`:
 #:   the one-time handle that stands in for an invitation token and redeems it;
+#: - `session_uri` on `/connectors`: Composio's single-use browser identity verifier
+#:   returned after app consent;
 #: - `token` on the console's `/reset-password`, `/auth/magic-link` and
 #:   `/auth/email-change`, the links an email carries - the API never sees those
 #:   addresses, but a proxy's log does, and `token` is already on the list.
@@ -107,7 +111,9 @@ _SECRET_PATH = re.compile(
 #: for its argument to fill, so the line still formats. `%d` counts as a
 #: placeholder only when no hex digit follows it - `%d3` is a percent-encoded byte
 #: of a value, and a value that starts with one is still a credential.
-SECRET_QUERY_PARAMS = frozenset({"code", "invitation_handle", "state", "token", "visitor"})
+SECRET_QUERY_PARAMS = frozenset(
+    {"code", "invitation_handle", "session_uri", "state", "token", "visitor"}
+)
 _SECRET_QUERY = re.compile(
     rf"((?:^|[?&])(?:{'|'.join(sorted(SECRET_QUERY_PARAMS))})=)"
     r"(?!%(?:[sr(]|d(?![0-9a-fA-F])))[^&#\s\"']+"
@@ -276,8 +282,24 @@ def _escape_line_breakers(value: str) -> str:
     )
 
 
+def _console_level(record: logging.LogRecord) -> bool:
+    """DB_ECHO explicitly enables SQL independently of application verbosity."""
+    threshold = logging.getLevelNamesMapping()[settings.LOG_LEVEL]
+    if settings.DB_ECHO and (
+        record.name == "sqlalchemy.engine" or record.name.startswith("sqlalchemy.engine.")
+    ):
+        threshold = logging.INFO
+    return record.levelno >= threshold
+
+
 def setup_logging() -> None:
-    """Redact PII from everything this application logs, in every process.
+    """Emit application logs to stderr and redact PII in every process.
+
+    The API, CLI, worker and ingest children share one console handler, even
+    when another library has already installed a root handler. Keep existing
+    handlers for telemetry and capture; repeated startup must not duplicate ours.
+    SQL and HTTP transport chatter have separate levels so enabling application
+    debugging does not turn container logs into a dump of requests and queries.
 
     The filter goes on the root logger's **handlers**, not on the root logger.
     A filter on a logger runs only for a record logged on *that* logger
@@ -308,6 +330,18 @@ def setup_logging() -> None:
     handler added since the first.
     """
     root = logging.getLogger()
+    root.setLevel(settings.LOG_LEVEL)
+    if not any(handler.name == "agenticos.console" for handler in root.handlers):
+        console = logging.StreamHandler()
+        console.name = "agenticos.console"
+        console.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        console.addFilter(_console_level)
+        root.addHandler(console)
+    logging.getLogger("sqlalchemy.engine").setLevel(
+        logging.INFO if settings.DB_ECHO else logging.WARNING
+    )
+    for name in ("httpx", "httpcore", "httpx2", "httpcore2"):
+        logging.getLogger(name).setLevel(logging.WARNING)
     handlers: list[logging.Handler] = list(root.handlers)
     # A snapshot: `getLogger` in another thread adds to this dict, and iterating it
     # live would raise. `list()` copies it in one call; the lock that guards it is

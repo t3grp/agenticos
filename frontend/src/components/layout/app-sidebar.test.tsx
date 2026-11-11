@@ -23,6 +23,16 @@ const recentProjects = vi.fn<() => { id: string; name: string; has_unread_chats?
 vi.mock("@/hooks/use-projects", () => ({
   useProjects: () => ({ projects: recentProjects() }),
 }));
+const apps = vi.fn<() => { id: string; title: string; name: string }[]>(() => []);
+const appsQuery =
+  vi.fn<(query: { limit?: number; mineOrShared?: boolean; enabled?: boolean }) => void>();
+vi.mock("@/hooks/use-artifacts", () => ({
+  useArtifacts: (query: { limit?: number; enabled?: boolean }) => {
+    appsQuery(query);
+    return { artifacts: apps(), isLoading: false };
+  },
+  useToggleArtifactFavourite: () => ({ isPending: false, mutate: vi.fn() }),
+}));
 const waiting = vi.fn<() => { id: string }[]>(() => []);
 vi.mock("@/hooks/use-suggestions", () => ({ useSuggestions: () => ({ suggestions: waiting() }) }));
 const sidebar = {
@@ -116,25 +126,25 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "agents" })).toBeInTheDocument();
   });
 
-  it("shows the Vault to anyone who can view secrets, without connections:manage", () => {
-    // The backend gates the Vault's listing on secrets:view; a Member holds it
-    // at OWN scope but never holds connections:manage. Gating the nav on the
-    // latter hid the Vault from everyone below admin.
+  it("shows Connectors to anyone who can view secrets, without connections:manage", () => {
+    // The Vault lives behind Connectors' Advanced tab now, so the entry shows to
+    // anyone who can reach one of its areas. A Member holds secrets:view at OWN
+    // scope but never connections:manage, and must still see the entry.
     can.mockImplementation((permission) => permission === "secrets:view");
     sidebar.openGroups = ["connections"];
 
     renderNav();
 
-    expect(screen.getByRole("link", { name: "vault" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "connectors" })).toBeInTheDocument();
   });
 
-  it("hides the Vault when the caller cannot even list secrets", () => {
+  it("hides Connectors when the caller holds none of the areas it opens to", () => {
     can.mockImplementation((permission) => permission === "connections:manage");
     sidebar.openGroups = ["connections"];
 
     renderNav();
 
-    expect(screen.queryByRole("link", { name: "vault" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "connectors" })).not.toBeInTheDocument();
   });
 
   it("reveals nothing while permissions are still loading", () => {
@@ -197,12 +207,15 @@ describe("SidebarNav", () => {
 
   it("never folds the group holding the page you are on", () => {
     can.mockReturnValue(true);
-    currentPath.mockReturnValue("/channels");
+    currentPath.mockReturnValue("/connectors");
     sidebar.openGroups = [];
 
     renderNav();
 
-    expect(screen.getByRole("link", { name: "channels" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "connectors" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(screen.getByRole("button", { name: "connections" })).toBeDisabled();
   });
 
@@ -352,7 +365,7 @@ describe("the navigation definition", () => {
     ]);
     const unguarded = NAV_GROUPS.filter((group) => !group.adminOnly)
       .flatMap((group) => group.items)
-      .filter((item) => !item.permission && !open.has(item.labelKey));
+      .filter((item) => !item.permission && !item.permissions && !open.has(item.labelKey));
 
     expect(unguarded).toEqual([]);
   });
@@ -385,10 +398,12 @@ describe("daily-work navigation", () => {
     sidebar.openGroups = [];
     renderNav();
     const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-    expect(hrefs.slice(0, 6)).toEqual([
+    expect(hrefs.slice(0, 8)).toEqual([
       "/dashboard",
       "/chat",
       "/inbox",
+      "/agent-messages",
+      "/apps",
       "/agents",
       "/workflows",
       "/routines",
@@ -419,5 +434,76 @@ describe("daily-work navigation", () => {
       "false",
     );
     expect(screen.queryByRole("link", { name: "skills" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the Apps section", () => {
+  const app = (n: number) => ({ id: `app-${n}`, title: `App ${n}`, name: `app-${n}` });
+
+  beforeEach(() => {
+    apps.mockReturnValue([]);
+    appsQuery.mockClear();
+  });
+
+  it("is hidden entirely, and asks for nothing, without artifacts:view", () => {
+    can.mockImplementation((permission) => permission !== "artifacts:view");
+    apps.mockReturnValue([app(1), app(2)]);
+
+    renderNav();
+
+    expect(screen.queryByText("apps")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "allApps" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "App 1" })).not.toBeInTheDocument();
+    expect(appsQuery).not.toHaveBeenCalled();
+  });
+
+  it("is hidden without artifacts:view", () => {
+    can.mockReturnValue(false);
+    apps.mockReturnValue([]);
+
+    renderNav();
+
+    expect(screen.queryByText("apps")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "allApps" })).not.toBeInTheDocument();
+  });
+
+  it("keeps All apps, with the pin hint, when nothing is starred", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue([]);
+
+    renderNav();
+
+    expect(screen.getByText("apps")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
+  });
+
+  it("lists at most eight apps, then links to all of them", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue(Array.from({ length: 10 }, (_, i) => app(i + 1)));
+
+    renderNav();
+
+    const listed = screen.getAllByRole("link", { name: /^App \d+$/ });
+    expect(listed).toHaveLength(8);
+    expect(listed[0]).toHaveAttribute("href", "/apps/app-1");
+    expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
+    expect(appsQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 8, mineOrShared: true, enabled: true }),
+    );
+  });
+
+  it("sits right after the main group and before Build", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue([app(1)]);
+    sidebar.openGroups = ["monitoring"];
+
+    const { container } = renderNav();
+    const links = Array.from(container.querySelectorAll("a")).map((a) => a.textContent);
+    const order = ["chat", "inbox", "App 1", "allApps", "agents"].map((label) =>
+      links.findIndex((text) => text?.includes(label)),
+    );
+
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 });

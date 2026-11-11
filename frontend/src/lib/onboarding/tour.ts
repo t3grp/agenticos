@@ -76,6 +76,8 @@ export const TABLE_DETAIL = "table-detail";
  */
 export const WORKFLOW_DETAIL = "workflow-detail";
 
+export const WORKFLOW_RUN_DETAIL = "workflow-run-detail";
+
 export const WORKFLOW_RUNS_DETAIL = "workflow-runs-detail";
 
 /** One workflow's log, `/workflows/<id>/logs`: "?"-only and shown in place, like its runs. */
@@ -156,6 +158,14 @@ export interface TourStep {
 export const TOUR_STEPS: readonly TourStep[] = [
   { id: "welcome", inTour: true },
 
+  // Sidebar controls belong to the dashboard's help tour. Optional because the
+  // phone drawer may be closed when the tour reaches this step.
+  {
+    id: "organization-switcher",
+    page: ROUTES.DASHBOARD,
+    target: "organization-switcher",
+    optional: true,
+  },
   { id: "dashboard-filters", page: ROUTES.DASHBOARD, target: "dashboard-filters", inTour: true },
   // "?"-only: arranging the dashboard is detail the exhaustive walk covers, not a
   // first-run essential. Ungated — the layout is the reader's own, not org-scoped.
@@ -179,6 +189,21 @@ export const TOUR_STEPS: readonly TourStep[] = [
     id: "assistant-widget",
     page: ROUTES.DASHBOARD,
     target: "assistant-widget",
+    permission: Perm.agentsRun,
+    optional: true,
+  },
+
+  {
+    id: "assistant-agent-picker",
+    page: ROUTES.DASHBOARD,
+    target: "assistant-agent-picker",
+    permission: Perm.agentsRun,
+    optional: true,
+  },
+  {
+    id: "assistant-page-context",
+    page: ROUTES.DASHBOARD,
+    target: "assistant-page-context",
     permission: Perm.agentsRun,
     optional: true,
   },
@@ -506,6 +531,13 @@ export const TOUR_STEPS: readonly TourStep[] = [
     target: "workflow-step-view",
     optional: true,
   },
+  {
+    id: "workflow-input-contract",
+    page: WORKFLOW_DETAIL,
+    target: "workflow-input-contract",
+    permission: Perm.workflowsEdit,
+    optional: true,
+  },
   // Every workflow's runs, filtered on the server: one describing stop on the list.
   {
     id: "workflows-runs",
@@ -518,6 +550,12 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // who reached the page may see a workflow, which is all both stops need.
   { id: "workflow-stats", page: WORKFLOW_RUNS_DETAIL, target: "workflow-stats" },
   { id: "workflow-run-history", page: WORKFLOW_RUNS_DETAIL, target: "workflow-run-history" },
+  {
+    id: "workflow-run-questions",
+    page: WORKFLOW_RUN_DETAIL,
+    target: "workflow-run-questions",
+    optional: true,
+  },
   // One workflow's log, `/workflows/<id>/logs`: the lines its steps' quick logs wrote.
   { id: "workflow-logs", page: WORKFLOW_LOGS_DETAIL, target: "workflow-logs" },
   // The alert rules under it: drawn for anyone who may view the workflow, anchored on
@@ -537,6 +575,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
     page: ROUTES.ARTIFACTS,
     target: "artifacts-list",
     permission: Perm.artifactsView,
+  },
+  // The reader's starred apps in the sidebar, present once at least one app is
+  // starred. The Apps heading and All apps link remain available when empty.
+  {
+    id: "nav-pinned",
+    page: ROUTES.DASHBOARD,
+    target: "nav-pinned",
+    permission: Perm.artifactsView,
+    optional: true,
   },
   // Grouping by department (#2124): only where the organization has groups.
   {
@@ -882,11 +929,19 @@ export const TOUR_STEPS: readonly TourStep[] = [
   { id: "vault-keys", page: ROUTES.VAULT, target: "vault-keys", permission: Perm.secretsView },
 
   {
+    id: "app-connections",
+    page: ROUTES.CONNECTORS,
+    activate: "connectors-apps",
+    target: "app-connections",
+    inTour: true,
+    optional: true,
+  },
+  {
     id: "mcp-catalog",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-catalog",
     permission: Perm.agentsView,
-    inTour: true,
   },
   // The catalog controls — filter, custom-add, connect — render only inside the
   // list, which the page swaps for an empty-state card when the catalog has no
@@ -896,6 +951,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-filter",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-filter",
     permission: Perm.agentsView,
     optional: true,
@@ -903,6 +959,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-add",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-add",
     permission: Perm.connectionsManage,
     optional: true,
@@ -910,9 +967,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: "mcp-connect",
     page: ROUTES.MCP_SERVERS,
+    activate: "connectors-advanced",
     target: "mcp-connect",
     permission: Perm.agentsView,
     optional: true,
+  },
+  {
+    id: "connections-more",
+    page: ROUTES.CONNECTORS,
+    target: "connectors-more",
   },
 
   // The chat platforms the organization is reachable on — beside MCP because it
@@ -1065,6 +1128,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // routines stop: the launch walk does not take a first login here.
   { id: "inbox-filters", page: ROUTES.INBOX, target: "inbox-filters" },
 
+  // The threads between the reader's agents. "?"-only, gated on running agents:
+  // the walk does not take a first login here either.
+  {
+    id: "agent-messages",
+    page: ROUTES.AGENT_MESSAGES,
+    target: "agent-messages-list",
+    permission: Perm.agentsRun,
+  },
+
   { id: "workspaces-browser", page: ROUTES.DOCUMENTS, target: "workspaces-browser" },
   // The detail a workspace opens onto — the file tree. "?"-only and shown in
   // place: the reader is already on one of their own workspaces, so the walk
@@ -1076,6 +1148,24 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // in the shared layout, so it lands on whichever of the four pages the reader
   // opened help from. Ungated: everyone has their own settings.
   { id: "settings-tabs", page: SETTINGS_DETAIL, target: "settings-tabs" },
+  {
+    id: "personal-model-connections",
+    page: ROUTES.SETTINGS_AI_CONNECTIONS,
+    target: "personal-model-connections",
+  },
+  {
+    id: "claude-subscription-connect",
+    page: ROUTES.SETTINGS_AI_CONNECTIONS,
+    target: "claude-subscription-connect",
+    permission: Perm.connectionsManage,
+  },
+  {
+    id: "chat-subscription-model",
+    page: ROUTES.CHAT,
+    target: "chat-subscription-model",
+    permission: Perm.connectionsManage,
+    optional: true,
+  },
   {
     id: "personal-coding-accounts",
     page: SETTINGS_DETAIL,
@@ -1153,11 +1243,13 @@ export function pageKey(path: string): string {
     return ORG_MEMBERS;
   }
   if (path.startsWith(`${ROUTES.GROUPS}/`)) return GROUP_DETAIL;
+  if (path === ROUTES.SETTINGS_AI_CONNECTIONS) return path;
   if (path.startsWith(`${ROUTES.SETTINGS}/`)) return SETTINGS_DETAIL;
   if (path.startsWith(`${ROUTES.DOCUMENTS}/`)) return WORKSPACE_DETAIL;
   if (path.startsWith(`${ROUTES.PROJECTS}/`)) return PROJECT_DETAIL;
   if (path.startsWith(`${ROUTES.TABLES}/`)) return TABLE_DETAIL;
   if (path.startsWith(`${ROUTES.ARTIFACTS}/`)) return ARTIFACT_DETAIL;
+  if (/^\/workflows\/[^/]+\/runs\/[^/]+$/.test(path)) return WORKFLOW_RUN_DETAIL;
   if (WORKFLOW_RUNS_PATH.test(path)) return WORKFLOW_RUNS_DETAIL;
   if (WORKFLOW_LOGS_PATH.test(path)) return WORKFLOW_LOGS_DETAIL;
   if (/^\/workflows\/[^/]+$/.test(path) && path !== ROUTES.WORKFLOW_ALL_RUNS)

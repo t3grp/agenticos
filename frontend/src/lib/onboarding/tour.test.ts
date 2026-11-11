@@ -18,6 +18,7 @@ import {
   visibleTourSteps,
   WORKFLOW_LOGS_DETAIL,
   WORKFLOW_RUNS_DETAIL,
+  WORKFLOW_RUN_DETAIL,
   WORKSPACE_DETAIL,
   PROJECT_DETAIL,
 } from "./tour";
@@ -34,6 +35,7 @@ const UNGATED_LAUNCH = [
   "dashboard-filters",
   "chat-start",
   "chat-agent-picker",
+  "app-connections",
   "finish",
 ];
 
@@ -79,12 +81,19 @@ const ORG_STEPS = [
 ];
 
 describe("pageKey", () => {
+  it("offers an optional question stop on a workflow's single run", () => {
+    expect(pageKey("/workflows/wf/runs/run")).toBe(WORKFLOW_RUN_DETAIL);
+    expect(stepsForPage("/workflows/wf/runs/run", () => true)).toEqual([
+      expect.objectContaining({ id: "workflow-run-questions", optional: true }),
+    ]);
+  });
   it("identifies the canvas without treating the all-runs list as a canvas", () => {
     expect(pageKey("/workflows/wf-1")).toBe("workflow-detail");
     expect(pageKey("/workflows/runs")).toBe("/workflows/runs");
     expect(stepsForPage("/workflows/wf-1", () => true).map((step) => step.id)).toEqual([
       "workflow-canvas-fullscreen",
       "workflow-step-view",
+      "workflow-input-contract",
     ]);
   });
   it("collapses every concrete builder route onto the one builder identity", () => {
@@ -112,6 +121,10 @@ describe("pageKey", () => {
   it("collapses each settings tab and each workspace onto one identity", () => {
     expect(pageKey(ROUTES.SETTINGS_PROFILE)).toBe(SETTINGS_DETAIL);
     expect(pageKey(ROUTES.SETTINGS_SLASH_COMMANDS)).toBe(SETTINGS_DETAIL);
+    expect(pageKey(ROUTES.SETTINGS_AI_CONNECTIONS)).toBe(ROUTES.SETTINGS_AI_CONNECTIONS);
+    expect(stepsForPage(ROUTES.SETTINGS_AI_CONNECTIONS, () => true).map((step) => step.id)).toEqual(
+      ["personal-model-connections", "claude-subscription-connect"],
+    );
     expect(pageKey("/documents/abc-123")).toBe(WORKSPACE_DETAIL);
     expect(pageKey("/projects/abc-123")).toBe(PROJECT_DETAIL);
   });
@@ -119,9 +132,7 @@ describe("pageKey", () => {
   it("collapses one workflow's runs, but not every workflow's runs, onto its identity", () => {
     expect(pageKey(ROUTES.WORKFLOW_RUNS("wf-1"))).toBe(WORKFLOW_RUNS_DETAIL);
     expect(pageKey(ROUTES.WORKFLOW_ALL_RUNS)).toBe(ROUTES.WORKFLOW_ALL_RUNS);
-    expect(pageKey(ROUTES.WORKFLOW_RUN_DETAIL("wf-1", "run-1"))).toBe(
-      ROUTES.WORKFLOW_RUN_DETAIL("wf-1", "run-1"),
-    );
+    expect(pageKey(ROUTES.WORKFLOW_RUN_DETAIL("wf-1", "run-1"))).toBe(WORKFLOW_RUN_DETAIL);
     expect(stepsForPage(ROUTES.WORKFLOW_RUNS("wf-1"), () => true).map((s) => s.id)).toEqual([
       "workflow-stats",
       "workflow-run-history",
@@ -217,7 +228,7 @@ describe("visibleTourSteps", () => {
       "agent-availability",
       "agent-history",
       "kb-documents",
-      "mcp-catalog",
+      "app-connections",
       "finish",
     ]);
   });
@@ -251,6 +262,7 @@ describe("stepsForPage", () => {
       "chat-voice-call",
       "chat-approval-mode",
       "chat-your-connections",
+      "chat-subscription-model",
     ]);
   });
 
@@ -443,10 +455,12 @@ describe("stepsForPage", () => {
 
   it("deepens the MCP page component by component", () => {
     expect(stepsForPage(ROUTES.MCP_SERVERS, () => true).map((step) => step.id)).toEqual([
+      "app-connections",
       "mcp-catalog",
       "mcp-filter",
       "mcp-add",
       "mcp-connect",
+      "connections-more",
     ]);
   });
 

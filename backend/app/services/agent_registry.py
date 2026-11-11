@@ -70,6 +70,7 @@ from app.agents.spec import (
     VoiceSpec,
 )
 from app.core.audit import current_impersonator, record_audit
+from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.config import settings
 from app.core.exceptions import (
     AlreadyExistsError,
@@ -201,6 +202,7 @@ DEFAULT_GRANTED_SCOPES = frozenset(
         "code:execute",
         "sandbox:execute",
         "agents:delegate",
+        "agents:message",
         "tables:read",
         "tables:write",
         "workflows:run",
@@ -2155,6 +2157,12 @@ class AgentRegistryService:
         )
         if profile is None:
             return ["The selected model profile no longer exists"]
+        if (
+            profile.usage_scope == "personal" or profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+        ) and (
+            ctx.personal_user_id is None or profile.personal_owner_user_id != ctx.personal_user_id
+        ):
+            return ["Choose one of your own personal model connections"]
         outputs = model_outputs(profile.provider, profile.model, base_url=profile.base_url)
         if not outputs.chat:
             return [not_chat_refusal(profile.label, profile.model, outputs)]
@@ -2179,6 +2187,15 @@ class AgentRegistryService:
         # In the chain's order. One that no longer exists is skipped at run
         # time, not refused here.
         for fallback in (fallbacks[pid] for pid in fallback_ids if pid in fallbacks):
+            if (
+                fallback.usage_scope == "personal"
+                or fallback.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+            ) and (
+                ctx.personal_user_id is None
+                or fallback.personal_owner_user_id != ctx.personal_user_id
+            ):
+                problems.append("Remove the personal fallback that this signed-in user cannot use")
+                continue
             found = model_outputs(fallback.provider, fallback.model, base_url=fallback.base_url)
             if not found.chat:
                 problems.append(
@@ -2255,7 +2272,19 @@ class AgentRegistryService:
             )
         }
         problems = _SpecProblems()
-        if not out_of_reach:
+        personal_out_of_reach = {
+            profile.id
+            for profile in profiles.values()
+            if (
+                profile.usage_scope == "personal"
+                or profile.provider == CLAUDE_SUBSCRIPTION_PROVIDER
+            )
+            and (
+                ctx.personal_user_id is None
+                or profile.personal_owner_user_id != ctx.personal_user_id
+            )
+        }
+        if not out_of_reach and not personal_out_of_reach:
             return problems
         who = "you" if person is not None else "an API key"
         ask = ", or ask its owner to share the sign-in with you" if person is not None else ""
@@ -2264,6 +2293,11 @@ class AgentRegistryService:
             profile = profiles.get(ref.profile_id)
             if profile is None:
                 continue
+            if profile.id in personal_out_of_reach:
+                problems.refuse(
+                    ref.field,
+                    f"{ref.says}This personal model connection can only be chosen by its signed-in owner",
+                )
             if profile.secret_id in out_of_reach:
                 instead = "pin another delegate or version" if ref.pinned else "pick another model"
                 problems.refuse(
@@ -2273,6 +2307,11 @@ class AgentRegistryService:
                 )
             for fallback_id in chains[profile.id]:
                 fallback = profiles.get(fallback_id)
+                if fallback_id in personal_out_of_reach:
+                    problems.refuse(
+                        ref.field,
+                        f"{ref.says}Remove the personal fallback that this signed-in user cannot use",
+                    )
                 if fallback is not None and fallback.secret_id in out_of_reach:
                     instead = (
                         "pin another delegate or version"
@@ -3152,15 +3191,16 @@ class AgentRegistryService:
         A new version put in front of their trigger by somebody else - a publish
         an environment follows, a promotion, a rollback - could read their mailbox
         with their connections, so their consent does not carry over to it; their
-        own publishes keep it (#2027) - in person only. Through one of their API
-        keys, or by an administrator impersonating them, it is somebody else's
-        publish: the rule `agent_trigger._acts_as_themselves` sets for granting
-        the consent holds for keeping it.
+        own publishes keep it (#2027) - in person, which includes a key or MCP
+        token they issued. By an administrator impersonating them, or an agent's
+        run credential, it is somebody else's publish: the rule
+        `agent_trigger._acts_as_themselves` sets for granting the consent holds
+        for keeping it.
 
         An explicitly pinned routine keeps its immutable spec, so changing the
         default or an environment does not withdraw its unchanged consent.
         """
-        in_person = ctx.api_key_id is None and current_impersonator() is None
+        in_person = ctx.acts_in_person and current_impersonator() is None
         withdrawn = await agent_trigger_repo.withdraw_creator_consent(
             self.db, agent_id=agent.id, kept_for=ctx.user_id if in_person else None
         )
@@ -3833,21 +3873,60 @@ class AgentRegistryService:
             )
         return agent, AgentSpec.model_validate(version.spec), version.id
 
-    async def with_assistant_guidance(self, agent: Agent, spec: AgentSpec) -> AgentSpec:
-        """Add current Projects guidance only to the registered Architect's runtime copy.
+    async def with_assistant_guidance(
+        self,
+        agent: Agent,
+        spec: AgentSpec,
+        *,
+        sender_user_id: UUID | None = None,
+        allow_personal_apps: bool = True,
+    ) -> AgentSpec:
+        """Add runtime guidance and the sender's active apps without changing the stored spec.
 
-        Existing installations keep their customized stored specs. Other agents
-        and external MCP clients keep their own workflow, even with platform tools.
+        The registered assistant keeps its configured-app placeholders. Every
+        other agent gets only apps in the sender's verified active managed rows.
+        Personal bindings can be removed for shared audiences, where replies are
+        visible to other people.
         """
         platform = next(
             (ref for ref in spec.mcp_servers if isinstance(ref, PlatformMcpServerRef)), None
         )
-        if platform is None:
-            return spec
+        assistant = (
+            await organization_assistant_repo.for_agent(self.db, agent.id)
+            if platform is not None
+            else None
+        )
+        is_assistant = assistant is not None and assistant.organization_id == agent.organization_id
+        from app.services.app_connections.runtime import (
+            managed_composio_catalog_keys,
+            with_app_connection_bindings,
+        )
+
+        connected_catalog_keys: set[str] = set()
+        if sender_user_id is None or not allow_personal_apps:
+            if not is_assistant or platform is None:
+                return with_app_connection_bindings(
+                    spec,
+                    include_configured_apps=False,
+                    allow_personal_apps=allow_personal_apps,
+                )
+        else:
+            connections = await mcp_connection_repo.list_composio_for_user(
+                self.db, user_id=sender_user_id
+            )
+            connected_catalog_keys = managed_composio_catalog_keys(
+                connections, user_id=sender_user_id
+            )
+
+        if not is_assistant or platform is None:
+            return with_app_connection_bindings(
+                spec,
+                connected_catalog_keys=sorted(connected_catalog_keys),
+                include_configured_apps=False,
+                allow_personal_apps=allow_personal_apps,
+            )
+
         required = {"list_projects", "get_project", "create_project"}
-        assistant = await organization_assistant_repo.for_agent(self.db, agent.id)
-        if assistant is None or assistant.organization_id != agent.organization_id:
-            return spec
         guidance = (
             (agent_templates.TEMPLATES_ROOT / "general/platform-assistant/PROJECTS.md")
             .read_text()
@@ -3875,9 +3954,18 @@ class AgentRegistryService:
                 "",
                 instructions,
             )
-        if not additions and instructions == spec.instructions:
-            return spec
-        return spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+        guided = (
+            spec
+            if not additions and instructions == spec.instructions
+            else spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])})
+        )
+        return with_app_connection_bindings(
+            guided,
+            connected_catalog_keys=sorted(connected_catalog_keys),
+            dynamic_catalog_keys=sorted(connected_catalog_keys),
+            include_configured_apps=True,
+            allow_personal_apps=allow_personal_apps,
+        )
 
     async def refuse_a_switched_off_assistant(self, agent_id: UUID) -> None:
         """Refuse running - or continuing a run of - an assistant somebody switched off (#2063).

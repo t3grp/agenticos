@@ -164,7 +164,8 @@ snapshot you meant to keep.
 Routines has two tabs. **Agent routines** runs a chosen agent on a schedule or
 event, with its configured tools; runs appear in Activity. **My watches** only
 reads your personal connected accounts and sends findings to your private Inbox.
-Each tab has its own creation controls. `/routines?tab=watches` opens watches.
+Each check makes at most 30 model requests, with long results trimmed, so a watch
+on a large workspace stays cheap. Each tab has its own creation controls. `/routines?tab=watches` opens watches.
 
 Organization → Proactivity separates suggestions, monitoring, shared limits, delivery timing and welcome messages. Unsaved changes can be discarded. Background services show status and usage, with model and budget controls expanded per service.
 
@@ -197,6 +198,12 @@ What a watch finds that need not be heard at once waits for your morning: at
 the hour your organization's proactivity keeps, one notification and one direct
 message from each of its Slack, Teams and Mattermost bots that knows you list
 what is new. Each finding is in one briefing only.
+
+The organization switcher sits below the brand at the top of the sidebar and shows
+the active organization's name and avatar. Open it to switch organizations or
+reach the organization management and creation actions. The collapsed sidebar
+keeps the avatar as the switcher; the phone menu offers the same control. Account
+settings stay in the account menu at the bottom.
 
 Search stays above the sidebar's destinations, with its keyboard shortcut visible
 on a computer. Notifications and the account menu stay below the scrolling list.
@@ -298,9 +305,20 @@ On a phone there is no bubble - it would cover the page it talks about - and the
 button carries the dot instead. Approvals it has raised stay raised for the rest
 of the browser tab, even when a link reloads the console.
 
-Its window is the console's own chat, not a page inside the page, and opens on
-four tiles, so a first message is a click; it keeps its own conversation
-history. On a phone it fills the screen.
+Its window uses the console's chat and starts with the main assistant selected.
+Use the agent selector in the header to choose a published agent you are allowed
+to run. Switching agents keeps the current conversation; the header and
+conversation history follow the selection. The Architect's welcome tiles appear
+only when the main assistant is selected. On a phone the window fills the screen.
+
+Each new question includes fresh structured context about the current console
+page while page context is enabled. The window shows which page will be shared and
+lets you switch sharing off.
+
+A queued question or a retry of a refused submission keeps the page context and
+agent selected when you submitted it. A new question or regenerated answer uses
+the current page and current agent. Changing account or organization resets the
+window's conversation, agent selection and page context setting.
 
 When it names a page, the link opens in the console behind the window and
 points at the control it means — the button that creates an agent, the tab with
@@ -308,7 +326,7 @@ the approvals. The camera in its header shows it the page you are on: your
 browser asks which tab to share, and one picture is attached to your next
 message.
 
-It plans longer jobs as a checklist you can watch, keeps notes about
+The Architect plans longer jobs as a checklist you can watch, keeps notes about
 you between conversations, can tell you what your agents cost, and deletes
 nothing but an agent draft it made by mistake and a routine you ask it to
 remove. Besides approvals and an
@@ -397,6 +415,19 @@ moved. One whose run is still at work shows a spinner and how long it has been
 going; one with an answer you have not seen since you last had it open carries a
 dot, which opening it clears - for you only, since a shared thread is read by each
 of its readers separately.
+
+Conversations other people shared with you sit under **Shared with you**, below
+your favourites. They are theirs to rename, share, archive or delete. Their menu
+lets you favourite or unfavourite them, or **Remove from my chats**, which ends your access and leaves the
+conversation as it is for everybody else. One shared with you to read has no
+message box. When somebody shares a conversation with you, you get a
+notification that opens it. Unread and favourite shared conversations use their usual bands.
+
+In **Share**, each person the conversation is shared with has a **View** or
+**Edit** picker beside their name, to change what they may do without revoking
+and sharing again. A share link stays view-only.
+
+Direct shares are limited per minute to 100 attempts per organization, 20 per sender, 20 per recipient and five per sender–recipient pair within that organization. New conversations do not reset these limits. A refused share returns `429` with a retry interval and creates neither a share nor its notification. Shared lists and effective access refresh every 15 seconds while the page is active.
 
 Three things in the composer worth knowing.
 
@@ -762,6 +793,22 @@ In **Activity**, a call is one row with a microphone badge, and the kind filter
 one row, with every connection's time and cost summed. The **Voice minutes**
 dashboard card, in the Usage band for a holder of `runs:view`, shows the
 period's call minutes and calls and the top three agents.
+
+### Forking a conversation { #forking }
+
+To try another approach, or to take a side question somewhere it will not crowd the main thread, choose **Fork into a new conversation** under one of the agent's answers. You get a new conversation of your own, in the same project, holding everything up to and including that answer. The next message continues from there with the same history; the original is not changed.
+
+Only the conversation's owner can fork it: somebody it is shared with, for viewing or editing, does not get the action. A fork copies the messages and the tool calls, not the attachments' files, the files the agent wrote in its workspace, the images agents generated, the cost or the run records. The agent still has the text of an attachment, but the fork shows no card for it; an image an agent generated is the original's, and stops loading once the original is deleted. While a run in the history is still writing, or waits on an approval or a question, the conversation cannot be forked.
+
+The top of a fork says **Forked from** the original, with a link to it. Only you see that line: if you share the fork, the person you share it with sees an ordinary conversation.
+
+Forks are limited to 2,000 messages, 10,000 tool calls and 20 MiB of copied text and structured data, with at most ten requests per minute per member and organization. A conversation being updated may briefly refuse a fork; retry once the update finishes. Over-limit histories must be shortened before they can be copied.
+
+Retained fork copies have a separate allowance of 100 MiB per member within an organization and 1 GiB across the organization. Each copy reserves its payload size plus 4 KiB for the conversation and 1 KiB per message or tool call. Admission is serialized in PostgreSQL, so concurrent requests cannot exceed the allowance. The charge remains until the fork itself is deleted; deleting its source or archiving it does not free it. A drawing with stored image files cannot currently be forked: choose an answer before that drawing instead. The request is refused before a broken copy can be created.
+
+An eligible summary's externalized text and media are restored into the copy, so deleting the source does not remove that context. Restored content counts toward the 20 MiB limit. Restoration is limited to 100 external references and ten seconds; unavailable content or an exceeded limit refuses the fork without creating a partial copy.
+
+A conversation with a saved checklist can be forked only at its latest message, which must be an assistant answer. The fork keeps that checklist, including task IDs and dependencies. Earlier checklist snapshots are not stored, so an earlier fork is refused rather than copying later tasks into an older history.
 
 ### Background topics { #background-topics }
 

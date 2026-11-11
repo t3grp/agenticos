@@ -17,6 +17,81 @@ if TYPE_CHECKING:
     from app.db.models.user import User
 
 
+class ChatPageResource(BaseSchema):
+    """A client-named page resource; its id conveys no access or ownership."""
+
+    model_config = ConfigDict(
+        from_attributes=False,
+        extra="forbid",
+        strict=True,
+        str_strip_whitespace=False,
+    )
+
+    kind: str = Field(min_length=1, max_length=64)
+    id: str = Field(min_length=1, max_length=128)
+    title: str | None = Field(default=None, max_length=240)
+
+
+class ChatPageContext(BaseSchema):
+    """Bounded reference data captured when a floating-chat question is submitted.
+
+    This is a client assertion about its page, not a trusted record or an
+    instruction. Resource ids never select the caller, organization or answering
+    agent, and never authorize a lookup. The snapshot is scoped to one turn;
+    ordinary chat clients may omit it.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=False,
+        extra="forbid",
+        strict=True,
+        str_strip_whitespace=False,
+    )
+
+    path: str = Field(min_length=1, max_length=2048)
+    title: str = Field(max_length=240)
+    captured_at: str = Field(min_length=1, max_length=64)
+    resource: ChatPageResource | None = None
+    view: str | None = Field(default=None, max_length=120)
+    filters: (
+        dict[
+            Annotated[str, Field(min_length=1, max_length=80)],
+            Annotated[str, Field(max_length=240)],
+        ]
+        | None
+    ) = Field(default=None, max_length=20)
+    selected_ids: list[Annotated[str, Field(min_length=1, max_length=128)]] | None = Field(
+        default=None, max_length=20
+    )
+    summary: str | None = Field(default=None, max_length=6000)
+    selected_text: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("path")
+    @classmethod
+    def in_app_path(cls, value: str) -> str:
+        """Accept a page path without an origin, query, fragment or control bytes."""
+        if (
+            not value.startswith("/")
+            or value.startswith("//")
+            or any(character in value for character in ("?", "#", "\\"))
+            or any(ord(character) < 32 or ord(character) == 127 for character in value)
+        ):
+            raise ValueError("Use an in-app path without a query string or fragment")
+        return value
+
+    @field_validator("captured_at")
+    @classmethod
+    def capture_time_has_timezone(cls, value: str) -> str:
+        """Require an ISO timestamp whose timezone does not depend on the server."""
+        try:
+            captured = datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("Use an ISO timestamp with a timezone") from exc
+        if captured.utcoffset() is None:
+            raise ValueError("Use an ISO timestamp with a timezone")
+        return value
+
+
 class LocalMessageFileSource(BaseSchema):
     """Opaque turn origin; its folder mapping stays on the initiating desktop."""
 
@@ -77,8 +152,8 @@ class MessagePart(BaseSchema):
     they picked rather than text that only looks like one.
     """
 
-    # The one schema in this module that must not strip its strings. `BaseSchema`
-    # strips every string field, which is right for a name somebody typed into a
+    # Transcript parts must not strip their strings. `BaseSchema` strips every
+    # string field, which is right for a name somebody typed into a
     # form and wrong for a fragment of a transcript: a part is *accumulated* from
     # streamed deltas, so trimming each one deletes the space between the words
     # they meet at - "Two " and "are open." stored as "Twoare open." - and it
@@ -177,7 +252,8 @@ class ToolCallComplete(BaseSchema):
 
 
 class ToolCallRead(ToolCallBase):
-    presentation_kind: Literal["draft"] | None = None
+    tool_id: str | None = None
+    presentation_kind: Literal["draft", "generic", "platform"] | None = None
     """Schema for reading a tool call (API response)."""
 
     id: UUID
@@ -507,6 +583,7 @@ class ConversationUpdate(BaseSchema):
 
     title: str | None = Field(default=None, max_length=255)
     is_archived: bool | None = None
+    project_id: UUID | None = Field(default=None, description="The project this chat belongs to")
 
 
 class ConversationAgent(BaseSchema):
@@ -518,6 +595,24 @@ class ConversationAgent(BaseSchema):
     has_avatar: bool = False
     # The colour its face was given, so a list draws the face its own page does.
     avatar_color: int | None = None
+
+
+class ConversationForkCreate(BaseSchema):
+    """Fork a conversation at one of its answers."""
+
+    message_id: UUID = Field(
+        description="The assistant message the fork's copied history ends with",
+    )
+
+
+class ConversationForkOrigin(BaseSchema):
+    """Where a fork came from, for the person who owns both."""
+
+    conversation_id: UUID
+    message_id: UUID | None = Field(
+        default=None, description="The answer the fork was made from; null once it is gone"
+    )
+    title: str | None = None
 
 
 class ConversationRead(ConversationBase, TimestampSchema):
@@ -575,6 +670,24 @@ class ConversationRead(ConversationBase, TimestampSchema):
     coding_agents: list[Literal["claude_code", "codex"]] = Field(
         default_factory=list,
         description="Coding harnesses used in this conversation, most recently first, from saved task reports",
+    )
+    share_permission: Literal["view", "edit"] | None = Field(
+        default=None,
+        description=(
+            "What the caller's share of somebody else's conversation lets them do - "
+            "`view` to read, `edit` to write in it too. Set on "
+            "`GET /conversations/shared-with-me` and on a single conversation's read; "
+            "null for the owner and for anyone reading it another way."
+        ),
+    )
+    forked_from: ConversationForkOrigin | None = Field(
+        default=None,
+        description=(
+            "The conversation this one was forked from. Set only for a caller who owns "
+            "both, so a fork shared with somebody else does not name its source; null "
+            "for anybody else, for a conversation that is not a fork, and once the "
+            "source is deleted."
+        ),
     )
 
 

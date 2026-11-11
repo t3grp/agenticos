@@ -11,6 +11,7 @@ const SOURCE: SyncSourceRead = {
   collection_name: "handbook",
   config: { folder_id: "1AbC", recursive: true },
   secret_id: "sec-1",
+  connected_account_id: null,
   secret_hint: "abcd",
   organizational_unit: null,
   sync_mode: "full",
@@ -30,6 +31,7 @@ describe("syncSourceForm", () => {
       collection_name: "handbook",
       config: { folder_id: "1AbC", recursive: true },
       secret_id: "sec-1",
+      connected_account_id: null,
       organizational_unit: null,
       sync_mode: "full",
       schedule_minutes: null,
@@ -83,6 +85,18 @@ describe("syncSourceChanges", () => {
       secret_id: null,
       organizational_unit: null,
       schedule_minutes: null,
+    });
+  });
+
+  it("changes an edited source from a service account to OAuth cleanly", () => {
+    const form = {
+      ...syncSourceForm(SOURCE),
+      secret_id: null,
+      connected_account_id: "account-1",
+    };
+    expect(syncSourceChanges(SOURCE, form)).toEqual({
+      secret_id: null,
+      connected_account_id: "account-1",
     });
   });
 

@@ -1,4 +1,5 @@
 export { useAuth } from "./use-auth";
+export { useClaudeSubscription } from "./use-claude-subscription";
 export { useCopyToClipboard } from "./use-copy-to-clipboard";
 export { useApiKeys } from "./use-api-keys";
 export { usePublicOpenApi } from "./use-public-openapi";
@@ -28,12 +29,22 @@ export { useKnowledgeBaseFor, useKnowledgeBases, useKBDetail } from "./use-knowl
 export { useSlashCommands, isBuiltinEnabled, BUILTIN_COMMAND_LIST } from "./use-slash-commands";
 export { useNotificationPreferences } from "./use-notification-preferences";
 export { useNotificationInbox, useUnreadNotificationCount } from "./use-notifications";
+export {
+  useAgentMessageRecipients,
+  useAgentMessages,
+  useAgentMessageThread,
+  useAgentMessageThreads,
+  useMarkAgentMessageThreadRead,
+  useReactToAgentMessage,
+  useSendAgentMessage,
+} from "./use-agent-messages";
 export { useDashboardLayout } from "./use-dashboard-layout";
 export { useDashboardPresets } from "./use-dashboard-presets";
 export { useReusableIntegrations } from "./use-reusable-integrations";
 export { useLocalServices } from "./use-local-services";
 export { useExternalAgents } from "./use-external-agents";
 export { useMcpConnections } from "./use-mcp-connections";
+export { useAppConnections } from "./use-app-connections";
 export { useOrgMcpConnections, useOrgMcpToolCalls } from "./use-org-mcp-connections";
 export { useUsableMcpConnections } from "./use-usable-mcp-connections";
 export { useMcpToolServers } from "./use-mcp-tool-servers";
@@ -75,6 +86,7 @@ export {
   type McpServerRow,
 } from "./use-mcp-servers";
 export { useMcpOAuthOutcome } from "./use-mcp-oauth-outcome";
+export { useDriveFolders } from "./use-drive-folders";
 export {
   usePortalCatalog,
   usePortals,
@@ -161,6 +173,7 @@ export {
 export { useWorkflowActions } from "./use-workflow-actions";
 export { useWorkflowTables, useWorkflowTable } from "./use-workflow-tables";
 export { useCausingRun, useRunHistory, useWorkflowRun, useWorkflowRuns } from "./use-workflow-runs";
+export { useWorkflowChatRun, useWorkflowRunQuestions } from "./use-workflow-questions";
 export { useWorkflowApprovalHistory, useWorkflowApprovals } from "./use-workflow-approvals";
 export { useWorkflowExposure } from "./use-workflow-exposure";
 export { useWorkflowLogs } from "./use-workflow-logs";
@@ -198,3 +211,7 @@ export { useWikiGraph } from "./use-wiki-graph";
 export { useDurableTasks } from "./use-durable-tasks";
 
 export { useCodingAccounts } from "./use-coding-accounts";
+export {
+  useAssistantPageContext,
+  useRegisterAssistantPageContext,
+} from "./use-assistant-page-context";
