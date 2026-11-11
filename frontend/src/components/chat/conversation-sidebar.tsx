@@ -523,7 +523,8 @@ export function byAgent(conversations: Conversation[], unnamed: string): Band[] 
     const band = bands.get(agent.id) ?? {
       key: `agent:${agent.id}`,
       heading: agent.name,
-      icon: null,
+      icon: "agent",
+      agent,
       rows: [],
     };
     band.rows.push(conversation);
@@ -865,6 +866,9 @@ function ConversationList({
                     {icon === "unread" && <Inbox className="h-3.5 w-3.5" aria-hidden />}
                     {icon === "shared" && <Users className="h-3.5 w-3.5" aria-hidden />}
                     {icon === "project" && <ProjectAvatar name={heading} />}
+                    {icon === "agent" && agent && (
+                      <ConversationAgents agents={[agent]} showName={false} size="sm" unframed />
+                    )}
                     <span className="min-w-0 flex-1 truncate">{heading}</span>
                     {isFolded(key) && (
                       <span className="text-muted-foreground/70 tabular-nums">{rows.length}</span>
@@ -1344,6 +1348,14 @@ function CollapsedSidebar({
                     <Users className="h-3.5 w-3.5" aria-hidden />
                   ) : icon === "project" ? (
                     <ProjectAvatar name={heading} />
+                  ) : icon === "agent" && agent ? (
+                    <ConversationAgents
+                      agents={[agent]}
+                      showName={false}
+                      size="sm"
+                      unframed
+                      compact
+                    />
                   ) : (
                     <span
                       aria-hidden
