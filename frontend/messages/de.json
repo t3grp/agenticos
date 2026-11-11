@@ -4415,7 +4415,8 @@
     "whatsNewDone": "Verstanden",
     "backgroundWork": "Arbeit im Hintergrund",
     "connectors": "Verbindungen",
-    "onboarding": "Einführung"
+    "onboarding": "Einführung",
+    "noFavouriteApps": "Markiere eine App mit dem Stern, um sie hier anzuheften. <link>Alle Apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5377,7 +5378,7 @@
       },
       "workflow-input-contract": {
         "title": "Erwartete Eingabe festlegen",
-        "body": "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft." 
+        "body": "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft."
       }
     },
     "chooseLanguage": "Sprache",
@@ -10325,7 +10326,11 @@
       "blockedLink": "Die Seite hat keinen öffentlichen Link. Schalten Sie ihn zuerst ein."
     },
     "lightTheme": "Helles App-Design verwenden",
-    "darkTheme": "Dunkles App-Design verwenden"
+    "darkTheme": "Dunkles App-Design verwenden",
+    "addFavourite": "Zu Favoriten hinzufügen",
+    "removeFavourite": "Aus Favoriten entfernen",
+    "addFavouriteNamed": "{name} zu Favoriten hinzufügen",
+    "removeFavouriteNamed": "{name} aus Favoriten entfernen"
   },
   "tables": {
     "cells": {

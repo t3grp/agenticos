@@ -24,12 +24,14 @@ vi.mock("@/hooks/use-projects", () => ({
   useProjects: () => ({ projects: recentProjects() }),
 }));
 const apps = vi.fn<() => { id: string; title: string; name: string }[]>(() => []);
-const appsQuery = vi.fn<(query: { limit?: number; mineOrShared?: boolean; enabled?: boolean }) => void>();
+const appsQuery =
+  vi.fn<(query: { limit?: number; mineOrShared?: boolean; enabled?: boolean }) => void>();
 vi.mock("@/hooks/use-artifacts", () => ({
   useArtifacts: (query: { limit?: number; enabled?: boolean }) => {
     appsQuery(query);
     return { artifacts: apps(), isLoading: false };
   },
+  useToggleArtifactFavourite: () => ({ isPending: false, mutate: vi.fn() }),
 }));
 const waiting = vi.fn<() => { id: string }[]>(() => []);
 vi.mock("@/hooks/use-suggestions", () => ({ useSuggestions: () => ({ suggestions: waiting() }) }));
@@ -396,10 +398,12 @@ describe("daily-work navigation", () => {
     sidebar.openGroups = [];
     renderNav();
     const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-    expect(hrefs.slice(0, 6)).toEqual([
+    expect(hrefs.slice(0, 8)).toEqual([
       "/dashboard",
       "/chat",
       "/inbox",
+      "/agent-messages",
+      "/apps",
       "/agents",
       "/workflows",
       "/routines",
@@ -453,14 +457,24 @@ describe("the Apps section", () => {
     expect(appsQuery).not.toHaveBeenCalled();
   });
 
-  it("is hidden when the caller can open no apps", () => {
-    can.mockReturnValue(true);
+  it("is hidden without artifacts:view", () => {
+    can.mockReturnValue(false);
     apps.mockReturnValue([]);
 
     renderNav();
 
     expect(screen.queryByText("apps")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "allApps" })).not.toBeInTheDocument();
+  });
+
+  it("keeps All apps, with the pin hint, when nothing is starred", () => {
+    can.mockReturnValue(true);
+    apps.mockReturnValue([]);
+
+    renderNav();
+
+    expect(screen.getByText("apps")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
   });
 
   it("lists at most eight apps, then links to all of them", () => {
@@ -473,7 +487,9 @@ describe("the Apps section", () => {
     expect(listed).toHaveLength(8);
     expect(listed[0]).toHaveAttribute("href", "/apps/app-1");
     expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
-    expect(appsQuery).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 8, mineOrShared: true, enabled: true }));
+    expect(appsQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 8, mineOrShared: true, enabled: true }),
+    );
   });
 
   it("sits right after the main group and before Build", () => {
