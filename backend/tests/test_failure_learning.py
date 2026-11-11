@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError as PydanticValidationError
 
 from app.agents.spec import AgentSpec
 from app.core.exceptions import (
@@ -130,6 +131,10 @@ def _proposal_row(agent_id, **overrides):
         rationale="The agent drafts when told to publish.",
         base_agent_version_id=uuid4(),
         base_content_sha256=None,
+        prior_skill_content=None,
+        applied_content_sha256=None,
+        reverted_by_user_id=None,
+        reverted_at=None,
         status="draft",
         applied_version_id=None,
         created_by_user_id=uuid4(),
@@ -942,6 +947,8 @@ def _created_run(_db, **fields):
         agent_id=fields["agent_id"],
         organization_id=fields["organization_id"],
         proposal_id=fields.get("proposal_id"),
+        target_skill_id=fields.get("target_skill_id"),
+        tested_content_sha256=fields.get("tested_content_sha256"),
         created_at=_NOW,
         cases=fields["cases"],
     )
@@ -1018,16 +1025,59 @@ class TestTries:
                 ),
             )
 
-    async def test_a_try_naming_a_skill_proposal_is_refused(self, monkeypatch, mock_db_session):
-        """Skills have no per-run override, so a skill proposal cannot be tried."""
+    async def test_a_try_naming_a_skill_proposal_overrides_only_the_test_run(
+        self, monkeypatch, mock_db_session
+    ):
+        import hashlib
+
         service = _service(mock_db_session)
-        agent = service.registry.get.return_value
-        proposal = _proposal_row(agent.id, target_type="skill", skill_id=uuid4())
+        agent, case = self._setup_try(service, monkeypatch)
+        skill_id = uuid4()
+        spec = AgentSpec(name="Support", model_profile_id=uuid4()).model_dump(mode="json")
+        spec["skill_ids"] = [str(skill_id)]
+        monkeypatch.setattr(agent_repo, "get_version", AsyncMock(return_value=SimpleNamespace(spec=spec)))
+        skill = SimpleNamespace(id=skill_id, content="Current skill text.")
+        service.skills.get = AsyncMock(return_value=skill)
+        proposal = _proposal_row(
+            agent.id,
+            target_type="skill",
+            skill_id=skill_id,
+            new_text="Proposed skill text.",
+            base_content_sha256=hashlib.sha256(b"Current skill text.").hexdigest(),
+        )
         monkeypatch.setattr(failure_learning_repo, "get_proposal", AsyncMock(return_value=proposal))
-        with pytest.raises(BadRequestError):
-            await service.start_try(
-                _ctx(), agent.id, EvalTryCreate(case_ids=[uuid4()], proposal_id=proposal.id)
-            )
+        old_run, new_run = SimpleNamespace(id=uuid4()), SimpleNamespace(id=uuid4())
+        service.runner.execute = AsyncMock(side_effect=[("old", old_run), ("new", new_run)])
+        monkeypatch.setattr(failure_learning_repo, "create_run", AsyncMock(side_effect=_created_run))
+        linked = AsyncMock()
+        monkeypatch.setattr(failure_learning_repo, "update_proposal", linked)
+        monkeypatch.setattr(
+            agent_run_repo,
+            "get_run",
+            AsyncMock(
+                side_effect=[
+                    SimpleNamespace(id=old_run.id, status="failed"),
+                    SimpleNamespace(id=new_run.id, status="completed"),
+                ]
+            ),
+        )
+        monkeypatch.setattr(conversation_repo, "last_answer_of_run", AsyncMock(return_value="safe"))
+
+        tried = await service.start_try(
+            _ctx(), agent.id, EvalTryCreate(case_ids=[case.id], proposal_id=proposal.id)
+        )
+
+        assert tried.target_skill_id == skill_id
+        assert tried.tested_content_sha256 == hashlib.sha256(b"Proposed skill text.").hexdigest()
+        assert service.runner.execute.await_args_list[0].kwargs["skill_content_overrides"] is None
+        assert service.runner.execute.await_args_list[1].kwargs["skill_content_overrides"] == {
+            skill_id: "Proposed skill text."
+        }
+        assert linked.await_args.kwargs["update_data"]["eval_try_id"] == tried.id
+
+    def test_eval_try_rejects_more_than_ten_model_calls(self):
+        with pytest.raises(PydanticValidationError, match="at most 10 model calls"):
+            EvalTryCreate(case_ids=[uuid4() for _ in range(6)])
 
     async def test_a_try_naming_a_decided_proposal_is_refused(self, monkeypatch, mock_db_session):
         service = _service(mock_db_session)
@@ -1682,7 +1732,7 @@ class TestProposals:
 
         assert proposal.base_agent_version_id is None
         assert proposal.base_content_sha256 == hashlib.sha256(b"Old skill text.").hexdigest()
-        assert proposal.eval_gated is False
+        assert proposal.eval_gated is True
 
     async def test_creating_a_proposal_for_a_missing_entry_is_not_found(
         self, monkeypatch, mock_db_session
@@ -1839,6 +1889,10 @@ def _created_proposal(_db, **fields):
         rationale=fields["rationale"],
         base_agent_version_id=fields.get("base_agent_version_id"),
         base_content_sha256=fields.get("base_content_sha256"),
+        prior_skill_content=fields.get("prior_skill_content"),
+        applied_content_sha256=fields.get("applied_content_sha256"),
+        reverted_by_user_id=fields.get("reverted_by_user_id"),
+        reverted_at=fields.get("reverted_at"),
         status=fields["status"],
         applied_version_id=None,
         created_by_user_id=fields.get("created_by_user_id"),
@@ -1898,7 +1952,17 @@ class TestApply:
         monkeypatch.setattr("app.services.failure_learning.record_audit", audited)
         return agent, proposal, applied, audited
 
-    def _gate_try(self, monkeypatch, agent_id, *, passed=True, pending=False):
+    def _gate_try(
+        self,
+        monkeypatch,
+        agent_id,
+        *,
+        passed=True,
+        pending=False,
+        proposal_id=None,
+        target_skill_id=None,
+        tested_content_sha256=None,
+    ):
         """A linked try whose verdict is a pass, a fail, or still going."""
         case = _case_row(agent_id)
         old_run, new_run = SimpleNamespace(id=uuid4()), SimpleNamespace(id=uuid4())
@@ -1910,6 +1974,9 @@ class TestApply:
                     None,
                     agent_id=agent_id,
                     organization_id=uuid4(),
+                    proposal_id=proposal_id,
+                    target_skill_id=target_skill_id,
+                    tested_content_sha256=tested_content_sha256,
                     cases=[
                         {
                             "eval_id": str(case.id),
@@ -2074,6 +2141,7 @@ class TestApply:
             agent.id,
             target_type="skill",
             skill_id=skill_id,
+            eval_try_id=uuid4(),
             old_text="Old skill text.",
             new_text="New skill text.",
             base_agent_version_id=None,
@@ -2083,6 +2151,13 @@ class TestApply:
         service.skills.get = AsyncMock(return_value=skill)
         updated_skill = AsyncMock()
         service.skills.update = updated_skill
+        self._gate_try(
+            monkeypatch,
+            agent.id,
+            proposal_id=proposal.id,
+            target_skill_id=skill_id,
+            tested_content_sha256=hashlib.sha256(b"New skill text.").hexdigest(),
+        )
         monkeypatch.setattr(
             failure_learning_repo,
             "update_proposal",
@@ -2096,6 +2171,8 @@ class TestApply:
                     new_text=proposal.new_text,
                     rationale=proposal.rationale,
                     base_content_sha256=proposal.base_content_sha256,
+                    prior_skill_content=update_data.get("prior_skill_content"),
+                    applied_content_sha256=update_data.get("applied_content_sha256"),
                     status=update_data["status"],
                     applied_version_id=None,
                 )
@@ -2109,7 +2186,12 @@ class TestApply:
 
         assert read.status == "applied"
         assert read.applied_version is None
-        assert read.eval_gated is False
+        assert read.eval_gated is True
+        assert read.rollback_available is True
+        assert read.applied_content_sha256 == hashlib.sha256(b"New skill text.").hexdigest()
+        assert service.skills.update.await_args.args[2].content == "New skill text."
+        update_data = failure_learning_repo.update_proposal.await_args.kwargs["update_data"]
+        assert update_data["prior_skill_content"] == "Old skill text."
         updated_skill.assert_awaited_once()
         assert updated_skill.await_args.args[2].content == "New skill text."
         audited.assert_awaited_once()
@@ -2146,8 +2228,9 @@ class TestApply:
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
         updated_skill.assert_not_awaited()
 
-    async def test_applying_a_skill_proposal_is_not_eval_gated(self, monkeypatch, mock_db_session):
-        """A skill target applies on human review alone - a linked try is not consulted."""
+    async def test_applying_a_skill_proposal_without_an_eval_try_is_refused(
+        self, monkeypatch, mock_db_session
+    ):
         import hashlib
 
         service = _service(mock_db_session)
@@ -2159,41 +2242,69 @@ class TestApply:
             agent.id,
             target_type="skill",
             skill_id=skill_id,
-            eval_try_id=uuid4(),
             base_content_sha256=hashlib.sha256(b"Old skill text.").hexdigest(),
         )
         monkeypatch.setattr(failure_learning_repo, "get_proposal", AsyncMock(return_value=proposal))
         service.skills.get = AsyncMock(return_value=skill)
-        service.skills.update = AsyncMock()
-        # The linked try is not consulted for a skill target; the read
-        # finds no try row and reports no evidence.
-        monkeypatch.setattr(failure_learning_repo, "get_run", AsyncMock(return_value=None))
+        updated_skill = AsyncMock()
+        service.skills.update = updated_skill
+
+        with pytest.raises(BadRequestError, match="names no eval try"):
+            await service.apply_proposal(_ctx(), agent.id, proposal.id)
+
+        updated_skill.assert_not_awaited()
+
+    async def test_reverting_a_skill_proposal_restores_its_snapshot(
+        self, monkeypatch, mock_db_session
+    ):
+        import hashlib
+
+        service = _service(mock_db_session)
+        agent = _agent()
+        service.registry.get = AsyncMock(return_value=agent)
+        skill_id = uuid4()
+        proposal = _proposal_row(
+            agent.id,
+            target_type="skill",
+            skill_id=skill_id,
+            status="applied",
+            prior_skill_content="Old skill text.",
+            applied_content_sha256=hashlib.sha256(b"New skill text.").hexdigest(),
+        )
+        monkeypatch.setattr(failure_learning_repo, "get_proposal", AsyncMock(return_value=proposal))
+        service.skills.get = AsyncMock(
+            return_value=SimpleNamespace(id=skill_id, content="New skill text.")
+        )
+        restored = AsyncMock()
+        service.skills.update = restored
         monkeypatch.setattr(
             failure_learning_repo,
             "update_proposal",
             AsyncMock(
                 side_effect=lambda _db, *, proposal, update_data: _proposal_row(
-                    proposal.agent_id,
+                    agent.id,
                     id=proposal.id,
                     target_type="skill",
                     skill_id=skill_id,
-                    eval_try_id=proposal.eval_try_id,
-                    old_text=proposal.old_text,
-                    new_text=proposal.new_text,
-                    rationale=proposal.rationale,
-                    base_content_sha256=proposal.base_content_sha256,
-                    status=update_data["status"],
-                    applied_version_id=None,
+                    status="applied",
+                    prior_skill_content=proposal.prior_skill_content,
+                    applied_content_sha256=proposal.applied_content_sha256,
+                    reverted_at=update_data["reverted_at"],
+                    reverted_by_user_id=update_data["reverted_by_user_id"],
                 )
             ),
         )
-        monkeypatch.setattr(failure_learning_repo, "get_entry", AsyncMock(return_value=None))
-        audited = AsyncMock()
-        monkeypatch.setattr("app.services.failure_learning.record_audit", audited)
+        monkeypatch.setattr(
+            "app.services.failure_learning.record_audit", AsyncMock()
+        )
 
-        read = await service.apply_proposal(_ctx(), agent.id, proposal.id)
+        read = await service.revert_proposal(_ctx(), agent.id, proposal.id)
 
         assert read.status == "applied"
+        assert read.reverted_at is not None
+        assert read.rollback_available is False
+        restored.assert_awaited_once()
+        assert restored.await_args.args[2].content == "Old skill text."
 
 
 class TestProposalBranches:

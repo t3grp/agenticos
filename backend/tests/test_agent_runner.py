@@ -101,6 +101,7 @@ from app.services.agent_runner import (
     _classify_output,
     _connect_on_use,
     _RunRendering,
+    _skills_with_content_overrides,
     _spend_already_booked,
     _start_turn_on_first_use,
     _with_account_notes,
@@ -265,6 +266,24 @@ def _parked_run(**overrides):
     for name, value in overrides.items():
         setattr(run, name, value)
     return run
+
+
+class TestSkillContentOverrides:
+    def test_overrides_only_the_test_copy_of_the_selected_skill(self):
+        skill_id = uuid.uuid4()
+        skill = SimpleNamespace(
+            id=skill_id, name="Refunds", description="Rules", content="old", resources=[]
+        )
+        other = SimpleNamespace(
+            id=uuid.uuid4(), name="Other", description="", content="other", resources=[]
+        )
+
+        result = _skills_with_content_overrides([skill, other], {skill_id: "proposed"})
+
+        assert result[0].content == "proposed"
+        assert result[0] is not skill
+        assert skill.content == "old"
+        assert result[1] is other
 
 
 class TestMonthBoundary:

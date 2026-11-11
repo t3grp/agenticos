@@ -77,20 +77,14 @@ reproducing: "case does not reproduce - the old text already passes".
 Verdicts are judged when the try is read, never stored. A run still going
 leaves its case pending.
 
-A try may name a proposal instead of an instructions override: it runs the
-proposal's new text, so the try is the evidence that proposal is judged by.
-A skill-targeted proposal cannot be tried — skills have no per-run
-override — and only a draft proposal can be tried.
+A try may name a draft proposal instead of an instructions override: it runs
+the proposal's new instructions or skill content, so the try is evidence for
+that exact proposal. Skill tries record the tested content's SHA-256; apply
+refuses unless the linked passing try belongs to that proposal and hash.
 
-A try runs synchronously in the request, so a large try — five cases at
-five samples is fifty runs — takes minutes and can hit an HTTP timeout.
-Moving try execution to a background job was assessed in Phase 2 and not
-shipped: the worker path — a `run-eval-try` job that re-establishes the
-asker's authority, runs the sides, and fills in the try row while the
-request returns 201 with the try pending — could not be verified here,
-where no Postgres and no worker run, and an unverified worker path is
-worse than a slow request. Until it lands, keep tries small — one or two
-cases, one sample.
+A try runs synchronously in the request and is capped at ten model calls
+(two sides per case sample). Larger requests are rejected before model
+calls start. Background execution remains a separate follow-up.
 
 ## Proposals
 
@@ -107,11 +101,8 @@ base. The applied-changes list is the proposals list filtered to
 `status=applied`: each entry carries the version it published and the try
 that evidenced it.
 
-Skill targets are human-reviewed only. No try can evidence a skill change,
-so a skill proposal is never eval-gated, and every surface that shows one
-flags it as ungated. Prefer the rule as an instruction change on the
-affected agent first, and move it to the shared skill once it has proven
-itself there.
+Skill proposals are eval-gated too. A try runs the proposed skill content
+as an in-memory override on the test side and does not write to the skill.
 
 ## Applying a proposal
 
@@ -136,12 +127,12 @@ text, and the proposal records it as the rollback handle. The linked
 ledger entry, if any, is marked resolved, and the audit entry records the
 proposal, the version, the try, and the base version.
 
-A skill apply refuses with 409 unless the skill's current content still
-hashes to the proposal's base hash, then edits the skill live. That edit
-reaches every agent bound to the skill immediately, and there is no skill
-rollback — a bad apply is undone by a new edit, not a version restore.
-The audit entry records the applied content hash, since the proposal row
-carries no version to point at.
+A skill apply requires the linked try to have passed and records its exact
+new-content hash. It refuses with 409 unless the live skill still hashes
+to the proposal's base hash, then snapshots the prior content on the
+proposal before editing. The one-shot revert endpoint restores that
+snapshot only while the live skill matches the applied hash; it records
+who reverted and an audit entry, and never overwrites later edits.
 
 Undoing an instruction apply is the existing rollback: publish a new
 version copied from the base version the proposal recorded. There is no
@@ -182,8 +173,7 @@ load its last user message, with the turns before it as history, then cut
 the message down to the failing part and write what the answer should
 say. A try runs over the cases checked, with a number of samples and
 either a draft proposal's new text or a typed override — never both.
-Tries run synchronously, so keep them small: one or two cases, one
-sample. A try that passes the gate offers its text as a proposal,
+Requests above ten model calls are rejected before they run. A try that passes the gate offers its text as a proposal,
 pre-filled with the try as its evidence.
 
 ### Proposal review
@@ -191,9 +181,8 @@ pre-filled with the try as its evidence.
 Selecting a proposal shows the change as a diff, the eval evidence with
 its per-case gate verdicts, and the apply and reject actions. An
 instruction proposal applies only once its try has passed the gate, and
-only a holder of `agents:publish` sees the apply control. A skill
-proposal is flagged ungated wherever it appears: it was never tried, it
-reaches every agent bound to the skill, and it has no rollback. An
+only a holder of `agents:publish` sees the apply control. A skill proposal needs a passing try for its exact content; its rollback
+control restores the saved content if the skill has not changed since. An
 applied proposal records the version it published, with the rollback
 hint — undo it by rolling back to the base version it recorded.
 
@@ -283,8 +272,7 @@ are the loop's own tries — mining either would learn from itself.
 ### Why did my try take so long?
 
 Tries run synchronously: every case runs twice per sample, one model call
-after another, inside the request. Keep tries small — one or two cases, one
-sample — until background execution lands.
+after another, inside the request. A request can start at most ten calls.
 
 ### Can a try change what my agent says?
 
@@ -301,18 +289,19 @@ overwriting the newer publish.
 
 Roll back to the base version the proposal recorded: the existing rollback
 publishes a new version copied from it, so the timeline shows the rollback
-happened. A skill apply has no rollback — undo it with a new skill edit.
+happened. A skill apply can be reverted once from its snapshot if the skill still
+has the applied content.
 
 ### What happens when I apply a skill change?
 
-Every agent bound to the skill runs the new content on its next run, with
-no eval gate and no version to roll back to. That is why skill proposals
-are flagged ungated, and why an instruction change on one agent is the
-safer first step.
+Every agent bound to the skill runs the new content on its next run. The
+proposal's passing eval covers the exact new content; rollback restores the
+previous content unless a later edit changed the skill.
 
 ### Where do I see the new patterns each day?
 
 In your inbox, if the deployment configured a digest recipient — one
-mail per organization with anything new, none when there is nothing —
+mail per organization with anything new, a logged no-op when unset or
+when there is nothing —
 and on the org-wide patterns page, which lists every agent's patterns
 in one place.

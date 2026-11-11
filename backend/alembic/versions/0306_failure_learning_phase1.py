@@ -1,4 +1,4 @@
-"""Failure-learning loop, Phase 1: ledger, eval cases, eval runs (#0304).
+"""Failure-learning loop, Phase 1: ledger, eval cases, eval runs (#0306).
 
 Three tables for mining real failures, curating them into a ledger, and
 trying instruction changes against eval cases that reproduce them. Mining
@@ -7,19 +7,15 @@ snapshot table - so the only new index on an existing table is the partial
 `ix_agent_runs_mining` on `agent_runs`, which serves the mining group-by
 (agent and status inside an org window, top-level real runs only).
 
-Proposals and apply land in Phase 2 (migration 0305): the two proposal
+Proposals and apply land in Phase 2 (migration 0307): the two proposal
 references here (`agent_failure_ledger.resolved_proposal_id`,
 `agent_eval_runs.proposal_id`) are plain UUID columns until then, and 0305
 adds their foreign keys.
 
-Chaining note: this parallel worktree chains 0304 off 0302 because the
-row-level-access build's 0303 (`0303_virtual_table_row_policy`) has not
-merged yet. At merge time - row-level lands first - this migration must be
-RE-CHAINED onto `0303_virtual_table_row_policy`. That is a merge-time
-decision, not to be done unilaterally here.
+This follows the access-hardening chain through `0305_mfa_totp`.
 
-Revision ID: 0304_failure_learning_phase1
-Revises: 0302_merge_upstream
+Revision ID: 0306_failure_learning_phase1
+Revises: 0305_mfa_totp
 Create Date: 2026-11-10
 """
 
@@ -30,8 +26,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0304_failure_learning_phase1"
-down_revision: str | None = "0302_merge_upstream"
+revision: str = "0306_failure_learning_phase1"
+down_revision: str | None = "0305_mfa_totp"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -188,6 +184,8 @@ def upgrade() -> None:
         sa.Column("organization_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("agent_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("proposal_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("target_skill_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("tested_content_sha256", sa.String(length=64), nullable=True),
         sa.Column("started_by_user_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("cases", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column(
@@ -212,6 +210,12 @@ def upgrade() -> None:
             ["started_by_user_id"],
             ["users.id"],
             name=op.f("agent_eval_runs_started_by_user_id_fkey"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["target_skill_id"],
+            ["skills.id"],
+            name=op.f("agent_eval_runs_target_skill_id_fkey"),
             ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("agent_eval_runs_pkey")),

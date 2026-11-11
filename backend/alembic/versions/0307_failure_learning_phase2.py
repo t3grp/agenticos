@@ -1,4 +1,4 @@
-"""Failure-learning loop, Phase 2: instruction proposals (#0305).
+"""Failure-learning loop, Phase 2: instruction proposals (#0307).
 
 One table for the proposed change itself - the rule text, what it replaces,
 why, and the eval try that evidences it - plus the two foreign keys Phase 1
@@ -7,14 +7,12 @@ deferred: `agent_eval_runs.proposal_id` and
 table, both nullable and SET NULL, so deleting a proposal never deletes a
 try or an entry.
 
-Chaining note: this chains off 0304, which itself chains off 0302 with a
-re-chain note for the row-level-access build's 0303. At merge time -
-row-level lands first - 0304 is re-chained onto 0303 and this migration
-follows it; its `down_revision` stays "the failure-learning Phase 1
-migration", whatever number that carries then.
+This follows the failure-learning tables in `0306_failure_learning_phase1`,
+which is chained after the access-hardening migration head. Skill proposals
+record the applied content hash and prior content for a one-time rollback.
 
-Revision ID: 0305_failure_learning_phase2
-Revises: 0304_failure_learning_phase1
+Revision ID: 0307_failure_learning_phase2
+Revises: 0306_failure_learning_phase1
 Create Date: 2026-11-10
 """
 
@@ -25,8 +23,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0305_failure_learning_phase2"
-down_revision: str | None = "0304_failure_learning_phase1"
+revision: str = "0307_failure_learning_phase2"
+down_revision: str | None = "0306_failure_learning_phase1"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -46,11 +44,15 @@ def upgrade() -> None:
         sa.Column("rationale", sa.Text(), nullable=False),
         sa.Column("base_agent_version_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("base_content_sha256", sa.String(length=64), nullable=True),
+        sa.Column("prior_skill_content", sa.Text(), nullable=True),
+        sa.Column("applied_content_sha256", sa.String(length=64), nullable=True),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="draft"),
         sa.Column("applied_version_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("created_by_user_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("decided_by_user_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("reverted_by_user_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("reverted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -121,6 +123,12 @@ def upgrade() -> None:
             ["decided_by_user_id"],
             ["users.id"],
             name=op.f("agent_instruction_proposals_decided_by_user_id_fkey"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["reverted_by_user_id"],
+            ["users.id"],
+            name=op.f("agent_instruction_proposals_reverted_by_user_id_fkey"),
             ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("agent_instruction_proposals_pkey")),

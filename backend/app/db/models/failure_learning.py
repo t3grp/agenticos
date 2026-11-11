@@ -224,6 +224,10 @@ class AgentEvalRun(Base):
         ForeignKey("agent_instruction_proposals.id", ondelete="SET NULL"),
         nullable=True,
     )
+    target_skill_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("skills.id", ondelete="SET NULL"), nullable=True
+    )
+    tested_content_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     started_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -251,15 +255,12 @@ class AgentInstructionProposal(Base, TimestampMixin):
     target is eval-gated - apply refuses unless the linked try gate-passed
     (§5.4) - and optimistic concurrency on `base_agent_version_id` plus the
     draft guard keep it from overwriting a newer publish or in-progress
-    edits. A skill target carries the hash of the skill content it was
-    written against instead, and is human-reviewed only: skills have no
-    versions and no per-run override, so no try can evidence one.
+    edits. A skill target carries the hash of its base content, the exact
+    content tried, and the previous content needed for a one-shot rollback.
 
     Applying is the approval: there is no separate approve step. A proposal
     is `draft` until it is applied or rejected; `applied_version_id` is the
-    version the apply published (NULL for skill targets, which have no
-    versions - the applied content hash is recorded in the audit entry
-    instead), and is the rollback handle.
+    version the apply published (NULL for skill targets).
     """
 
     __tablename__ = "agent_instruction_proposals"
@@ -314,6 +315,12 @@ class AgentInstructionProposal(Base, TimestampMixin):
     )
     # Skill-target equivalent: SHA-256 of the skill content at proposal time.
     base_content_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prior_skill_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    applied_content_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reverted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    reverted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     # The version the apply published. The rollback handle; NULL for skill
     # targets, which have no versions.

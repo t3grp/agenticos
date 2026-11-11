@@ -342,6 +342,7 @@ __all__ = [
     "AgentEvalCase",
     "AgentEvalRun",
     "AgentFailureLedger",
+    "AgentInstructionProposal",
     "WorkflowApprovalStatus",
     "WorkflowFile",
     "WorkflowLogAlertFiring",

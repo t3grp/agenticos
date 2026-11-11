@@ -84,7 +84,7 @@ def _mail(*, accepted=True):
 
 
 @pytest.mark.anyio
-async def test_no_recipient_means_nothing_happens_at_all():
+async def test_no_recipient_means_logged_no_op(caplog):
     """Empty recipient: no mining, no drafts, no mail - the job is a no-op."""
     list_all = AsyncMock(return_value=[])
     with (
@@ -101,6 +101,7 @@ async def test_no_recipient_means_nothing_happens_at_all():
         "digests_sent": 0,
     }
     list_all.assert_not_awaited()
+    assert "failure_ledger_digest_skipped_no_recipient_configured" in caplog.text
 
 
 @pytest.mark.anyio

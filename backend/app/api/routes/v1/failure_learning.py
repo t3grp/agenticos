@@ -249,9 +249,19 @@ async def get_proposal(
 async def apply_proposal(
     agent_id: UUID, proposal_id: UUID, service: FailureLearningSvc, ctx: Auth
 ) -> Any:
-    """Apply a proposal: publish the new instructions as a version, or edit
-    the skill live. Audited; a skill apply has no rollback."""
+    """Apply a proposal after its eval gate passes."""
     return await service.apply_proposal(ctx, agent_id, proposal_id)
+
+
+@router.post(
+    "/agents/{agent_id}/failure-learning/proposals/{proposal_id}/revert",
+    response_model=ProposalRead,
+)
+async def revert_proposal(
+    agent_id: UUID, proposal_id: UUID, service: FailureLearningSvc, ctx: Auth
+) -> Any:
+    """Restore the skill content snapshotted when the proposal was applied."""
+    return await service.revert_proposal(ctx, agent_id, proposal_id)
 
 
 @router.post(

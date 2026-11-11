@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.schemas.base import BaseSchema, TimestampSchema
 from app.schemas.eval_judging import EvalExpectation
@@ -20,6 +20,9 @@ MAX_EVAL_CASES = 50
 
 MAX_SAMPLES = 5
 """The most samples per case in a try: Theo fails a case when half or more fail."""
+
+MAX_MODEL_CALLS_PER_TRY = 10
+"""Each case sample runs old and new content once."""
 
 MAX_HISTORY_TURNS = 10
 """Prior turns a case carries, truncated - the failing part is the message."""
@@ -179,6 +182,14 @@ class EvalTryCreate(BaseSchema):
     instructions_override: str | None = Field(default=None, min_length=1)
     samples: int = Field(default=1, ge=1, le=MAX_SAMPLES)
 
+    @model_validator(mode="after")
+    def bound_model_calls(self) -> EvalTryCreate:
+        if len(self.case_ids) * self.samples * 2 > MAX_MODEL_CALLS_PER_TRY:
+            raise ValueError(
+                f"A try can start at most {MAX_MODEL_CALLS_PER_TRY} model calls"
+            )
+        return self
+
 
 class EvalTryCaseRead(BaseSchema):
     """One case as its runs stand now: still going, answered, or failed."""
@@ -209,6 +220,8 @@ class EvalTryRead(BaseSchema):
     id: UUID
     agent_id: UUID
     proposal_id: UUID | None = None
+    target_skill_id: UUID | None = None
+    tested_content_sha256: str | None = None
     created_at: datetime | None = None
     cases: list[EvalTryCaseRead]
     passed: int
@@ -277,6 +290,9 @@ class ProposalRead(BaseSchema, TimestampSchema):
     rationale: str
     base_agent_version_id: UUID | None = None
     base_content_sha256: str | None = None
+    applied_content_sha256: str | None = None
+    reverted_at: datetime | None = None
+    rollback_available: bool = False
     status: ProposalStatus
     applied_version_id: UUID | None = None
     created_by_user_id: UUID | None = None

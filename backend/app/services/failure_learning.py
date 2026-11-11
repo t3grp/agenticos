@@ -5,14 +5,10 @@ the patterns endpoint is called - no ETL table, no background job. A count
 is not a diagnosis: a human curates a mined pattern into a ledger entry,
 writes the rule's rationale, and builds an eval case that reproduces one
 bad experience. A try runs each case twice per sample - once on the current
-published spec ("old"), once on the same spec with the instructions
-replaced ("new") - through the test-run path, and the gate passes only
-when old fails and new passes. A proposal holds one rule-text change with
-its evidence; applying it is `save_draft` + `publish` in one audited action
-for instruction targets, and a live `skills.update` for skill targets.
-Skill targets are human-reviewed only: skills have no versions and no
-per-run override, so no try can evidence one, and there is no skill
-rollback. Nothing here auto-applies.
+published spec ("old"), once with the proposed instructions or skill content
+("new") - through the test-run path, and the gate passes only when old fails
+and new passes. Skill proposals snapshot their prior content at apply for an
+audited, one-shot rollback. Nothing here auto-applies.
 
 Reads use `AGENTS_VIEW` on the agent, writes `AGENTS_EDIT`, applying
 `AGENTS_PUBLISH` (or `SKILLS_EDIT` on the skill), resolved in the service
@@ -726,6 +722,58 @@ class FailureLearningService:
             proposal = await self._apply_instructions(ctx, agent, proposal)
         return await self._proposal_read(proposal)
 
+    async def revert_proposal(
+        self, ctx: AuthContext, agent_id: UUID, proposal_id: UUID
+    ) -> ProposalRead:
+        """Restore the skill content snapshotted when this proposal applied."""
+        proposal = await self._proposal(ctx, agent_id, proposal_id)
+        if (
+            proposal.target_type != "skill"
+            or proposal.status != "applied"
+            or proposal.reverted_at is not None
+            or proposal.prior_skill_content is None
+        ):
+            raise ConflictError(
+                message="This proposal has no available skill rollback",
+                details={"proposal_id": str(proposal.id)},
+            )
+        if proposal.skill_id is None or proposal.applied_content_sha256 is None:
+            raise ConflictError(
+                message="This proposal has no complete skill rollback record",
+                details={"proposal_id": str(proposal.id)},
+            )
+        skill = await self.skills.get(ctx, proposal.skill_id, perm=Perm.SKILLS_EDIT)
+        current_hash = hashlib.sha256(skill.content.encode("utf-8")).hexdigest()
+        if current_hash != proposal.applied_content_sha256:
+            raise ConflictError(
+                message="The skill changed after this proposal applied; refusing to overwrite it",
+                details={"proposal_id": str(proposal.id), "skill_id": str(skill.id)},
+            )
+        await self.skills.update(
+            ctx, skill.id, SkillUpdate(content=proposal.prior_skill_content)
+        )
+        proposal = await failure_learning_repo.update_proposal(
+            self.db,
+            proposal=proposal,
+            update_data={"reverted_by_user_id": ctx.subject_id, "reverted_at": datetime.now(UTC)},
+        )
+        await record_audit(
+            self.db,
+            actor_user_id=ctx.subject_id,
+            organization_id=ctx.organization_id,
+            action="agent.skill_proposal_reverted",
+            target_type="skill",
+            target_id=str(skill.id),
+            details={
+                "proposal_id": str(proposal.id),
+                "restored_content_sha256": hashlib.sha256(
+                    proposal.prior_skill_content.encode("utf-8")
+                ).hexdigest(),
+                "reverted_from_content_sha256": current_hash,
+            },
+        )
+        return await self._proposal_read(proposal)
+
     async def _apply_instructions(
         self, ctx: AuthContext, agent: Agent, proposal: AgentInstructionProposal
     ) -> AgentInstructionProposal:
@@ -835,8 +883,15 @@ class FailureLearningService:
                     "base_content_sha256": proposal.base_content_sha256,
                 },
             )
+        await self._require_gate_passed(ctx, agent_id, proposal)
         await self.skills.update(ctx, skill.id, SkillUpdate(content=proposal.new_text))
-        proposal = await self._mark_applied(ctx, proposal, applied_version_id=None)
+        proposal = await self._mark_applied(
+            ctx,
+            proposal,
+            applied_version_id=None,
+            prior_skill_content=skill.content,
+            applied_content_sha256=hashlib.sha256(proposal.new_text.encode("utf-8")).hexdigest(),
+        )
         await record_audit(
             self.db,
             actor_user_id=ctx.subject_id,
@@ -857,6 +912,8 @@ class FailureLearningService:
         proposal: AgentInstructionProposal,
         *,
         applied_version_id: UUID | None,
+        prior_skill_content: str | None = None,
+        applied_content_sha256: str | None = None,
     ) -> AgentInstructionProposal:
         """Mark the proposal applied and resolve its ledger entry, if any.
 
@@ -872,6 +929,8 @@ class FailureLearningService:
                 "applied_version_id": applied_version_id,
                 "decided_by_user_id": ctx.subject_id,
                 "decided_at": datetime.now(UTC),
+                "prior_skill_content": prior_skill_content,
+                "applied_content_sha256": applied_content_sha256,
             },
         )
         if proposal.ledger_entry_id is not None:
@@ -922,6 +981,17 @@ class FailureLearningService:
                     "eval_try_id": str(proposal.eval_try_id),
                 },
             )
+        if proposal.target_type == "skill":
+            expected_hash = hashlib.sha256(proposal.new_text.encode("utf-8")).hexdigest()
+            if (
+                run.proposal_id != proposal.id
+                or run.target_skill_id != proposal.skill_id
+                or run.tested_content_sha256 != expected_hash
+            ):
+                raise ConflictError(
+                    message="The linked eval try did not test this exact skill proposal",
+                    details={"proposal_id": str(proposal.id), "eval_try_id": str(run.id)},
+                )
         judged = await self._judged(run)
         if judged.gate_passed is not True:
             raise BadRequestError(
@@ -984,6 +1054,14 @@ class FailureLearningService:
             rationale=proposal.rationale,
             base_agent_version_id=proposal.base_agent_version_id,
             base_content_sha256=proposal.base_content_sha256,
+            applied_content_sha256=proposal.applied_content_sha256,
+            reverted_at=proposal.reverted_at,
+            rollback_available=(
+                proposal.target_type == "skill"
+                and proposal.status == "applied"
+                and proposal.prior_skill_content is not None
+                and proposal.reverted_at is None
+            ),
             status=proposal.status,  # ty: ignore[invalid-argument-type]
             applied_version_id=proposal.applied_version_id,
             created_by_user_id=proposal.created_by_user_id,
@@ -993,7 +1071,7 @@ class FailureLearningService:
             updated_at=proposal.updated_at,
             eval_evidence=evidence,
             applied_version=applied_version,
-            eval_gated=proposal.target_type == "instructions",
+            eval_gated=True,
         )
 
     async def _ledger_read(self, entry: AgentFailureLedger) -> LedgerEntryRead:
@@ -1171,7 +1249,7 @@ class FailureLearningService:
         """Start a try of the named cases: old text against new, per sample.
 
         Each case runs twice per sample - once on the current published spec,
-        once on the same spec with the instructions replaced - as test runs
+        once with the proposal's instruction or skill content - as test runs
         in fresh conversations. A case whose run cannot start is recorded as
         refused with the reason, and the others still start. The try returns
         with the run ids; verdicts are judged when the try is read.
@@ -1184,7 +1262,7 @@ class FailureLearningService:
             NotFoundError: The agent, a named case, or the named proposal is
                 out of reach.
             BadRequestError: The try names both a proposal and an override,
-                names neither, names a skill-targeted or non-draft proposal,
+                names neither, names a non-draft proposal,
                 or the agent has nothing published to try against.
         """
         agent = await self._agent(ctx, agent_id, Perm.AGENTS_EDIT)
@@ -1193,23 +1271,32 @@ class FailureLearningService:
                 message="A try names a proposal or an instructions override, not both",
                 details={"proposal_id": str(data.proposal_id)},
             )
+        proposal = None
+        target_skill_id = None
+        tested_content_sha256 = None
         if data.proposal_id is not None:
             proposal = await self._proposal(ctx, agent.id, data.proposal_id)
-            if proposal.target_type != "instructions":
-                raise BadRequestError(
-                    message="A skill-targeted proposal cannot be tried - skills "
-                    "have no per-run override",
-                    details={"proposal_id": str(proposal.id)},
-                )
             if proposal.status != "draft":
                 raise BadRequestError(
                     message="Only a draft proposal can be tried",
                     details={"proposal_id": str(proposal.id), "status": proposal.status},
                 )
             new_text = proposal.new_text
+            if proposal.target_type == "skill":
+                if proposal.skill_id is None:
+                    raise BadRequestError("A skill proposal must name its skill")
+                skill = await self.skills.get(ctx, proposal.skill_id, perm=Perm.SKILLS_EDIT)
+                current_hash = hashlib.sha256(skill.content.encode("utf-8")).hexdigest()
+                if current_hash != proposal.base_content_sha256:
+                    raise ConflictError(
+                        message="The skill has changed since this proposal was written",
+                        details={"proposal_id": str(proposal.id)},
+                    )
+                target_skill_id = skill.id
+                tested_content_sha256 = hashlib.sha256(new_text.encode("utf-8")).hexdigest()
         else:
             new_text = data.instructions_override
-        if new_text is None:
+        if new_text is None and target_skill_id is None:
             raise BadRequestError(
                 message="A try needs new instruction text to try",
                 details={"instructions_override": None},
@@ -1221,7 +1308,12 @@ class FailureLearningService:
             found = {case.id for case in cases}
             missing = [case_id for case_id in data.case_ids if case_id not in found]
             raise NotFoundError(message="Eval case not found", details={"eval_id": str(missing[0])})
-        await self._refuse_unrunnable(agent)
+        published_spec = await self._refuse_unrunnable(agent)
+        if target_skill_id is not None and target_skill_id not in published_spec.skill_ids:
+            raise BadRequestError(
+                message="The skill proposal must target a skill attached to the published agent",
+                details={"skill_id": str(target_skill_id)},
+            )
         tried: list[dict[str, Any]] = []
         run_index = 0
         for case in cases:
@@ -1235,12 +1327,19 @@ class FailureLearningService:
                 "refused": None,
             }
             for _sample in range(data.samples):
-                for side, override in (("old", None), ("new", new_text)):
+                for side in ("old", "new"):
                     run_id, refused = await self._try_side(
                         ctx,
                         agent,
                         case,
-                        instructions_override=override,
+                        instructions_override=(
+                            new_text if target_skill_id is None and side == "new" else None
+                        ),
+                        skill_content_overrides=(
+                            {target_skill_id: new_text}
+                            if target_skill_id is not None and side == "new"
+                            else None
+                        ),
                         charge=run_index != 0 or not first_run_charged,
                     )
                     run_index += 1
@@ -1254,9 +1353,15 @@ class FailureLearningService:
             organization_id=ctx.organization_id,
             agent_id=agent.id,
             proposal_id=data.proposal_id,
+            target_skill_id=target_skill_id,
+            tested_content_sha256=tested_content_sha256,
             started_by_user_id=ctx.subject_id,
             cases=tried,
         )
+        if proposal is not None and target_skill_id is not None:
+            await failure_learning_repo.update_proposal(
+                self.db, proposal=proposal, update_data={"eval_try_id": run_row.id}
+            )
         return await self._judged(run_row)
 
     async def _try_side(
@@ -1266,6 +1371,7 @@ class FailureLearningService:
         case: AgentEvalCase,
         *,
         instructions_override: str | None,
+        skill_content_overrides: dict[UUID, str] | None = None,
         charge: bool,
     ) -> tuple[UUID | None, str | None]:
         """One side of one sample: a fresh test conversation, one test run.
@@ -1307,6 +1413,7 @@ class FailureLearningService:
                 message_history=_history_messages(case.input),
                 model_profile_id=case.model_profile_id,
                 instructions_override=instructions_override,
+                skill_content_overrides=skill_content_overrides,
                 test=True,
                 on_run_open=_capture,
             )
@@ -1331,7 +1438,7 @@ class FailureLearningService:
             raise NotFoundError(message="Eval run not found", details={"eval_run_id": str(try_id)})
         return await self._judged(run)
 
-    async def _refuse_unrunnable(self, agent: Agent) -> None:
+    async def _refuse_unrunnable(self, agent: Agent) -> AgentSpec:
         """Refuse a try against an agent with nothing published to try.
 
         The published version is read off the agent row directly - access
@@ -1356,7 +1463,7 @@ class FailureLearningService:
                 message=f"Agent '{agent.name}' points at a missing version",
                 details={"agent_id": str(agent.id)},
             )
-        AgentSpec.model_validate(version.spec)
+        return AgentSpec.model_validate(version.spec)
 
     async def _judged(self, eval_run: AgentEvalRun) -> EvalTryRead:
         results = [await self._judge_case(eval_run, entry) for entry in eval_run.cases]
@@ -1367,6 +1474,8 @@ class FailureLearningService:
             id=eval_run.id,
             agent_id=eval_run.agent_id,
             proposal_id=eval_run.proposal_id,
+            target_skill_id=eval_run.target_skill_id,
+            tested_content_sha256=eval_run.tested_content_sha256,
             created_at=eval_run.created_at,
             cases=results,
             passed=passed,
