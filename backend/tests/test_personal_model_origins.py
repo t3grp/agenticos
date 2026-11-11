@@ -278,6 +278,7 @@ def _delegation(owner: AuthContext) -> _Delegation:
         user_id=str(owner.user_id),
         user_name=None,
         personal_mcp_user_id=owner.user_id,
+        personal_apps_allowed=True,
         sender_present=True,
         approvals=MagicMock(),
         budget=_RunBudget(),

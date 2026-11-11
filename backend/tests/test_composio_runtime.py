@@ -800,7 +800,53 @@ async def test_assistant_app_bindings_preserve_explicit_ceilings_and_only_add_co
     assert runtime.with_app_connection_bindings(updated) is updated
 
 
-def test_dynamic_assistant_bindings_are_sender_catalog_only_and_require_all_approvals():
+async def test_any_agent_resolves_the_senders_gmail_and_gets_its_managed_app_note(
+    monkeypatch, provider
+):
+    from app.services.agent_runner import _with_managed_app_notes
+
+    sender_id = uuid4()
+    organization_id = uuid4()
+    agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
+    connection = _connection(user_id=sender_id, allowed_tools=[_READ])
+    monkeypatch.setattr(
+        agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        agent_registry.mcp_connection_repo,
+        "list_composio_for_user",
+        AsyncMock(return_value=[connection]),
+    )
+    monkeypatch.setattr(runtime, "is_configured", lambda _toolkit: True)
+    spec = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(
+        agent, AgentSpec(name="Research"), sender_user_id=sender_id
+    )
+    monkeypatch.setattr(
+        mcp_connection.mcp_connection_repo,
+        "list_user_scoped_by_catalog_key",
+        AsyncMock(return_value=[connection]),
+    )
+
+    async def probed(specs):
+        return [(server, FunctionToolset()) for server in specs]
+
+    monkeypatch.setattr(mcp_connection, "probe_toolsets", probed)
+    resolved = await mcp_connection.build_toolsets_for_agent(
+        AsyncMock(),
+        organization_id=organization_id,
+        refs=spec.mcp_servers,
+        sender_user_id=sender_id,
+    )
+    noted = _with_managed_app_notes(spec, resolved.managed_apps)
+
+    assert "Gmail is connected for this person" in noted.instructions
+    assert "`composio_gmail_`" in noted.instructions
+    assert "Gmail is connected for this person" not in spec.instructions
+
+
+async def test_dynamic_bindings_keep_an_explicit_tool_ceiling_and_resolve_approval(
+    monkeypatch, provider
+):
     explicit = PersonalMcpServerRef(
         account="personal",
         catalog_key="composio-google_sheets",
@@ -825,13 +871,44 @@ def test_dynamic_assistant_bindings_are_sender_catalog_only_and_require_all_appr
     ]
     assert len(dynamic) == 1
     assert dynamic[0].allowed_tools == [_DYNAMIC_TOOLS[1]]
-    # The runtime tightens a legacy ref to require approval while retaining its
-    # explicit per-agent tool ceiling.
-    assert dynamic[0].approval == "all"
     assert not any(
         isinstance(ref, PersonalMcpServerRef) and ref.catalog_key == "composio-invalid toolkit"
         for ref in updated.mcp_servers
     )
+
+    sender_id = uuid4()
+    connection = _dynamic_connection(user_id=sender_id)
+    monkeypatch.setattr(
+        mcp_connection.mcp_connection_repo,
+        "list_user_scoped_by_catalog_key",
+        AsyncMock(return_value=[connection]),
+    )
+
+    def result() -> str:
+        return "read"
+
+    inner = FunctionToolset(
+        [
+            Tool(
+                result,
+                name=_DYNAMIC_TOOLS[1],
+                metadata={"annotations": {"readOnlyHint": True}},
+            )
+        ]
+    )
+    monkeypatch.setattr(mcp, "MCPToolset", MagicMock(return_value=inner))
+    monkeypatch.setattr(mcp, "probe_mcp_server", AsyncMock(return_value=[]))
+    resolved = await mcp_connection.build_toolsets_for_agent(
+        AsyncMock(),
+        organization_id=uuid4(),
+        refs=updated.mcp_servers,
+        sender_user_id=sender_id,
+    )
+    ctx = RunContext(deps=object(), model=TestModel(), usage=RunUsage())
+    tools = await resolved.toolsets[0].get_tools(ctx)
+
+    assert list(tools) == [f"{tool_prefix(dynamic[0].catalog_key)}_{_DYNAMIC_TOOLS[1]}"]
+    assert tools[next(iter(tools))].tool_def.metadata[mcp.NEEDS_APPROVAL] is True
 
 
 @pytest.mark.parametrize("missing", ["key", "blank_key", "configs", "blank_config", "reviewed_app"])
@@ -855,7 +932,7 @@ async def test_unconfigured_managed_apps_leave_assistant_specs_unchanged(monkeyp
 
 
 @pytest.mark.parametrize("identity", ["registered", "ordinary", "another_organization"])
-async def test_only_the_organizations_registered_assistant_receives_auto_bindings(
+async def test_every_agent_gets_only_its_sender_apps_unless_it_is_the_assistant(
     monkeypatch, identity
 ):
     organization_id = uuid4()
@@ -891,11 +968,11 @@ async def test_only_the_organizations_registered_assistant_receives_auto_binding
             "composio-slack",
             "composio-google_sheets",
         }
-        dynamic_lookup.assert_awaited_once_with(db, user_id=sender_id)
     else:
-        assert actual is spec
-        assert personal == []
-        dynamic_lookup.assert_not_awaited()
+        assert {ref.catalog_key for ref in personal} == {"composio-google_sheets"}
+        assert all(ref.approval == "all" for ref in personal)
+    dynamic_lookup.assert_awaited_once_with(db, user_id=sender_id)
+    assert spec.mcp_servers == [PlatformMcpServerRef(account="platform", allowed_tools=[])]
 
 
 async def test_registered_assistant_without_a_sender_does_not_discover_dynamic_apps(monkeypatch):

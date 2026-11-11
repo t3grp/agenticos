@@ -301,6 +301,7 @@ async def _prepare(
     profiles: list[MagicMock] | None = None,
     voice: VoiceRun | None = None,
     surface: RunSurface = RunSurface.API,
+    memory_room_key: str | None = None,
     acts_for_sender: bool = False,
     request_computer_access: ComputerAccessCallback | None = None,
 ) -> _Prepared:
@@ -391,6 +392,10 @@ async def _prepare(
         ) as fetch_version,
         patch(f"{RUNNER}.agent_repo.get", new=AsyncMock(side_effect=get_agent)),
         patch(f"{RUNNER}.agent_run_repo.create_run", new=AsyncMock(return_value=run)),
+        patch(
+            "app.services.agent_registry.mcp_connection_repo.list_composio_for_user",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(f"{RUNNER}.build_agent") as build,
     ):
         prepared = await service.prepare(
@@ -398,6 +403,7 @@ async def _prepare(
             agent.id,
             voice=voice,
             surface=surface,
+            memory_room_key=memory_room_key,
             acts_for_sender=acts_for_sender,
             request_computer_access=request_computer_access,
             local=local,
@@ -2277,6 +2283,42 @@ class TestADelegateIsBriefedOnWhatItCannotReach:
         assert built["spec"].instructions.startswith("Search Notion.\n\n")
         assert "has not connected their own Notion" in built["spec"].instructions
         assert built["extra_toolsets"] == []
+
+    async def test_a_shared_room_does_not_bind_personal_apps_for_parent_or_delegate(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        delegate_id = uuid.uuid4()
+        delegate = _version(
+            delegate_id,
+            AgentSpec(
+                name="Delegate",
+                mcp_servers=[
+                    PersonalMcpServerRef(account="personal", catalog_key="composio-gmail")
+                ],
+            ),
+        )
+        parent = _delegating(
+            mcp_servers=[PersonalMcpServerRef(account="personal", catalog_key="composio-gmail")],
+            subagents=[SubagentRef(agent_id=delegate_id, agent_version_id=delegate.id)],
+        )
+        monkeypatch.setattr(
+            "app.services.agent_registry.mcp_connection_repo.list_composio_for_user",
+            AsyncMock(return_value=[]),
+        )
+
+        prepared = await _prepare(
+            parent,
+            versions={delegate.id: delegate},
+            surface=RunSurface.SLACK,
+            memory_room_key="room:slack:C1",
+            acts_for_sender=True,
+        )
+        built = prepared.built("delegate")
+
+        assert not any(
+            isinstance(ref, PersonalMcpServerRef) for ref in prepared.prepared.spec.mcp_servers
+        )
+        assert not any(isinstance(ref, PersonalMcpServerRef) for ref in built["spec"].mcp_servers)
 
 
 @pytest.mark.parametrize("unattended", [False, True])
