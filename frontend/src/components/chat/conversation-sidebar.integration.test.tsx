@@ -1005,7 +1005,7 @@ describe("who a row is with", () => {
 
     await screen.findAllByText("Quarterly numbers");
     const faces = within(list()).getAllByTestId("row-agents");
-    expect(faces.map((face) => face.textContent)).toEqual(["Analyst"]);
+    expect(faces.map((face) => face.getAttribute("data-names"))).toEqual(["Analyst"]);
   });
 });
 
@@ -1270,6 +1270,21 @@ describe("the Chats | Agents toggle", () => {
     expect(within(group).getByRole("button", { name: "Churn cut" })).toBeInTheDocument();
     expect(within(group).queryByRole("button", { name: "Launch copy" })).toBeNull();
     expect(within(list()).getByRole("button", { name: "Brand new chat" })).toBeInTheDocument();
+  });
+
+  it("puts the agent's face on its heading, as the rows carry it", async () => {
+    serve([
+      answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" }),
+      answeredBy("c-2", "Launch copy", { id: "a-2", name: "Writer" }),
+    ]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+
+    const analyst = within(list()).getByRole("button", { name: "Analyst", expanded: true });
+    expect(within(analyst).getByTestId("row-agents")).toHaveAttribute("data-names", "Analyst");
+    const writer = within(list()).getByRole("button", { name: "Writer", expanded: true });
+    expect(within(writer).getByTestId("row-agents")).toHaveAttribute("data-names", "Writer");
   });
 
   it("folds one agent's threads away from its heading, and opens them again", async () => {
