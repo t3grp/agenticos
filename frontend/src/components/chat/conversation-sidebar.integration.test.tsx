@@ -46,8 +46,16 @@ vi.mock("@/components/agents/agent-avatar", () => ({
   AgentAvatar: ({ name }: { name: string }) => <span>{name}</span>,
 }));
 vi.mock("@/components/agents/conversation-agents", () => ({
-  ConversationAgents: ({ agents }: { agents: Array<{ name: string }> }) => (
-    <span data-testid="row-agents">{agents.map((agent) => agent.name).join(", ")}</span>
+  ConversationAgents: ({
+    agents,
+    showName = true,
+  }: {
+    agents: Array<{ name: string }>;
+    showName?: boolean;
+  }) => (
+    <span data-testid="row-agents">
+      {showName ? agents.map((agent) => agent.name).join(", ") : null}
+    </span>
   ),
 }));
 // The event path is the portal grid, covered by the portal tests; stubbed here so
