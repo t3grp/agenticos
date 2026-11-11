@@ -27,12 +27,14 @@ import type { AgentRun } from "@/types/runs";
 const useRunMock = vi.fn();
 const prefetched = vi.fn();
 const useResumeRunMock = vi.fn();
+const useRetryRunMock = vi.fn();
 vi.mock("@/hooks", () => ({
   useRun: (runId: string) => useRunMock(runId),
   useDelegatedRuns: () => ({ runs: [], total: 0, isLoading: false }),
   usePermissions: () => ({ can: () => true, isLoading: false }),
   usePrefetchRuns: (ids: unknown[]) => prefetched(ids),
   useResumeRun: (options?: unknown) => useResumeRunMock(options),
+  useRetryRun: (options?: unknown) => useRetryRunMock(options),
   useAgent: () => ({ agent: undefined }),
 }));
 vi.mock("@/components/runs/run-timeline", () => ({
@@ -44,7 +46,15 @@ vi.mock("@/components/runs/run-timeline", () => ({
 vi.mock("@/components/runs/run-manifest", () => ({
   RunManifest: () => <div data-testid="manifest" />,
 }));
-vi.mock("@/stores", () => ({ useAuthStore: () => null }));
+// The viewer, so the starter-only controls can tell their run from another
+// person's. The fixture's runs belong to nobody by default, which reads as
+// "not mine" for every control gated on it. The selector is honoured rather
+// than answered with a bare id, because the component asks for the id through
+// it.
+vi.mock("@/stores", () => ({
+  useAuthStore: (selector: (state: { user: { id: string } | null }) => unknown) =>
+    selector({ user: { id: "user-1" } }),
+}));
 
 function run(overrides: Partial<AgentRun> = {}): AgentRun {
   return {
@@ -98,6 +108,8 @@ beforeEach(() => {
   prefetched.mockReset();
   useResumeRunMock.mockReset();
   useResumeRunMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  useRetryRunMock.mockReset();
+  useRetryRunMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
 });
 
 describe("stepping to a neighbour", () => {
@@ -160,6 +172,52 @@ describe("stepping to a neighbour", () => {
     serve({ run: run({ status: "running", error: "The run did not finish" }) });
     renderRun();
     expect(screen.queryByText(/Why it stopped/)).toBeNull();
+  });
+
+  it("offers a retry on a failed run the viewer started", () => {
+    serve({ run: run({ status: "failed", user_id: "user-1" }) });
+    renderRun();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("offers no retry on a run somebody else started", () => {
+    serve({ run: run({ status: "failed", user_id: "user-2" }) });
+    renderRun();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("offers no retry while the run is still going", () => {
+    serve({ run: run({ status: "running", user_id: "user-1" }) });
+    renderRun();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("offers no retry on a parked run - that one resumes", () => {
+    serve({ run: run({ status: "awaiting_approval", user_id: "user-1" }) });
+    renderRun();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("offers no retry on a run with no conversation to retry from", () => {
+    serve({ run: run({ status: "failed", user_id: "user-1", conversation_id: null }) });
+    renderRun();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("retries the run on screen, and steps to the new run", async () => {
+    const mutate = vi.fn();
+    useRetryRunMock.mockReturnValue({ mutate, isPending: false });
+    serve({ run: run({ status: "failed", user_id: "user-1" }) });
+    const onFocusRun = renderRun();
+
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(mutate).toHaveBeenCalledWith("run-2");
+    const options = useRetryRunMock.mock.calls[0][0] as {
+      onRetried: (runId: string) => void;
+    };
+    options.onRetried("run-9");
+    expect(onFocusRun).toHaveBeenCalledWith("run-9");
   });
 
   it("says how much of the input the cache served, when it did (#2170)", () => {

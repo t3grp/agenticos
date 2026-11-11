@@ -482,6 +482,28 @@ async def cancel_parked_run(run_id: UUID, service: AgentRunnerSvc, ctx: Auth) ->
     return await service.cancel_parked(ctx, run_id)
 
 
+@router.post(
+    "/runs/{run_id}/retry",
+    response_model=AgentRunResult,
+    dependencies=[Depends(require(Perm.RUNS_VIEW))],
+)
+async def retry_run(run_id: UUID, service: AgentRunnerSvc, ctx: Auth) -> Any:
+    """Run a finished run's request again, as a new run linked to it.
+
+    The original row is never mutated or re-executed: the answer comes from a
+    fresh run whose `parent_run_id` names the original, so the attempt it
+    replaced is still there to be read. Only the person who started the run
+    may retry it, from a signed-in session; a run that has not finished, has
+    no conversation, or has no user turn of its own is refused rather than
+    guessed at. A run that parks on an approval reports it in `parked`.
+
+    Gated on `runs:view` like the single-run read, because retrying starts by
+    reading the run and its transcript; the starter rule is the service's, and
+    is the refusal a colleague meets.
+    """
+    return await service.retry_run(ctx, run_id)
+
+
 @router.get("/runs/{run_id}/questions", response_model=list[ParkedQuestion])
 async def get_parked_questions(run_id: UUID, service: AgentRunnerSvc, ctx: Auth) -> Any:
     """The questions this run is waiting on you to answer (#2064).

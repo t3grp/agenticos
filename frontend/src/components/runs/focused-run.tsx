@@ -11,6 +11,7 @@ import {
   CornerLeftUp,
   ExternalLink,
   Play,
+  RotateCcw,
   Wrench,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import {
   usePermissions,
   usePrefetchRuns,
   useResumeRun,
+  useRetryRun,
   useRun,
 } from "@/hooks";
 import { useAuthStore } from "@/stores";
@@ -109,6 +111,7 @@ export function FocusedRun({
   const { run, isLoading, error } = useRun(runId);
   const { runs: delegated } = useDelegatedRuns(runId);
   const resume = useResumeRun({ continuesInChat: run?.continues_in_chat ?? false });
+  const retry = useRetryRun({ onRetried: (newRunId) => onFocusRun(newRunId) });
   // What is on screen is the answer being held, which during a step is the run
   // stepped away from. Nothing that navigates may act on it: its neighbours are
   // its own, so an arrow pressed twice quickly would otherwise walk back to
@@ -226,6 +229,27 @@ export function FocusedRun({
                 {t("resumeRun")}
               </Button>
             )}
+            {/* A finished run, asked again. Only the person who started it
+                sees it - the endpoint refuses anybody else, and a retry
+                spends real money as them - and only while the run is
+                finished: a live or parked run has a resume or a stop, not a
+                second copy of itself. A run with no conversation has no
+                request to re-issue, so there is nothing to retry from. */}
+            {TERMINAL_RUN_STATUSES.includes(run.status) &&
+              run.conversation_id !== null &&
+              run.user_id !== null &&
+              run.user_id === meId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mr-1"
+                  disabled={retry.isPending}
+                  onClick={() => retry.mutate(run.id)}
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden />
+                  {t("retryRun")}
+                </Button>
+              )}
             <Button
               variant="ghost"
               size="icon-sm"

@@ -1,0 +1,253 @@
+"""Retrying a finished run: the same request, as a new run.
+
+The original row is never mutated or re-executed. A retry reads the run's
+own user turn back off its transcript, rebuilds the conversation's history
+as it stood when that turn was asked, and executes the agent on it - the
+new run linked to the original by `parent_run_id`, so the attempt it
+replaced is still there to be read.
+
+The refusals are the point as much as the run: a retry spends real money as
+the person who started the run, so anybody else, a key, a run that has not
+finished, and a run with no request to re-issue are all refused rather than
+guessed at.
+"""
+
+import uuid
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
+from app.core.permissions import AuthContext, OrgRoleName
+from app.db.models.agent_run import RunStatus
+from app.services.agent_runner import AgentRunnerService
+
+pytestmark = pytest.mark.anyio
+
+MODULE = "app.services.agent_runner"
+
+
+def _ctx(*, user_id=None, api_key_id=None) -> AuthContext:
+    return AuthContext(
+        user_id=user_id or uuid.uuid4(),
+        organization_id=uuid.uuid4(),
+        role=OrgRoleName.OWNER,
+        api_key_id=api_key_id,
+    )
+
+
+def _run(**overrides) -> SimpleNamespace:
+    row = {
+        "id": uuid.uuid4(),
+        "agent_id": uuid.uuid4(),
+        "user_id": uuid.uuid4(),
+        "organization_id": uuid.uuid4(),
+        "conversation_id": uuid.uuid4(),
+        "surface": "web",
+        "status": RunStatus.FAILED.value,
+        "error": "The run did not finish (ModelHTTPError, HTTP 400)",
+        "cost_usd": Decimal("0.01"),
+        "cost_is_partial": False,
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+    }
+    row.update(overrides)
+    return SimpleNamespace(**row)
+
+
+def _message(*, role, content, row_id=None, files=None):
+    return SimpleNamespace(
+        id=row_id or uuid.uuid4(), role=role, content=content, files=files or []
+    )
+
+
+class TestRetryRefusals:
+    async def test_a_key_cannot_retry(self):
+        """A retry spends as a person, and a key is not one - the same rule
+        `cancel_parked` keeps for stopping a run."""
+        service = AgentRunnerService(MagicMock())
+        ctx = _ctx(api_key_id=uuid.uuid4())
+
+        with pytest.raises(AuthorizationError, match="signed-in session"):
+            await service.retry_run(ctx, uuid.uuid4())
+
+    async def test_a_run_in_another_tenant_reads_as_absent(self):
+        service = AgentRunnerService(MagicMock())
+
+        with patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=None)):
+            with pytest.raises(NotFoundError, match="Run not found"):
+                await service.retry_run(_ctx(), uuid.uuid4())
+
+    async def test_somebody_elses_run_is_not_theirs_to_retry(self):
+        service = AgentRunnerService(MagicMock())
+        original = _run()
+        ctx = _ctx(user_id=uuid.uuid4())
+
+        with patch(
+            f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+        ):
+            with pytest.raises(AuthorizationError, match="who started this run"):
+                await service.retry_run(ctx, original.id)
+
+    @pytest.mark.parametrize(
+        "status",
+        [RunStatus.RUNNING, RunStatus.AWAITING_APPROVAL, RunStatus.AWAITING_ANSWER],
+        ids=lambda status: status.value,
+    )
+    async def test_a_run_that_has_not_finished_is_not_retried(self, status):
+        """Running and parked runs are refused in the same words
+        `cancel_parked` refuses a run that is not waiting: the retry is for
+        finished runs, and a live one has a stop, a parked one a resume."""
+        service = AgentRunnerService(MagicMock())
+        original = _run(status=status.value)
+        ctx = _ctx(user_id=original.user_id)
+
+        with patch(
+            f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+        ):
+            with pytest.raises(BadRequestError, match="has not finished"):
+                await service.retry_run(ctx, original.id)
+
+    async def test_a_run_with_no_conversation_has_nothing_to_retry_from(self):
+        service = AgentRunnerService(MagicMock())
+        original = _run(conversation_id=None)
+        ctx = _ctx(user_id=original.user_id)
+
+        with patch(
+            f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+        ):
+            with pytest.raises(BadRequestError, match="no conversation"):
+                await service.retry_run(ctx, original.id)
+
+    async def test_a_run_with_no_user_turn_has_no_request_to_reissue(self):
+        """A delegation or a workflow step: the transcript holds what the
+        agent did, not a question somebody asked."""
+        service = AgentRunnerService(MagicMock())
+        original = _run()
+        ctx = _ctx(user_id=original.user_id)
+
+        with (
+            patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)),
+            patch.object(
+                service,
+                "get_run_transcript",
+                new=AsyncMock(
+                    return_value=(
+                        original,
+                        [_message(role="assistant", content="Working on it")],
+                        1,
+                    )
+                ),
+            ),
+        ):
+            with pytest.raises(BadRequestError, match="no user turn"):
+                await service.retry_run(ctx, original.id)
+
+
+class TestRetryRunsTheSameRequest:
+    @staticmethod
+    def _service(original):
+        service = AgentRunnerService(MagicMock())
+        return service
+
+    async def test_the_new_run_reissues_the_original_turn(self):
+        """The prompt is the original user turn as the model reads it, the
+        history stops before it, its files travel with it, and the new run
+        names the original as its parent - while the original row is left
+        exactly as it was."""
+        service = self._service(None)
+        original = _run()
+        prompt = _message(role="user", content="pay the invoice")
+        failed = _message(role="assistant", content="Working on it, half done")
+        new_run = _run(
+            id=uuid.uuid4(),
+            status=RunStatus.COMPLETED.value,
+            cost_usd=Decimal("0.02"),
+            input_tokens=100,
+            output_tokens=50,
+            cache_read_tokens=0,
+            cache_write_tokens=0,
+            cost_is_partial=False,
+        )
+        ctx = _ctx(user_id=original.user_id)
+        conversations = MagicMock()
+        conversations.find_conversation = AsyncMock(return_value=MagicMock())
+        conversations.model_text = AsyncMock(return_value="pay the invoice")
+        conversations.model_history = AsyncMock(return_value=[])
+        executed = AsyncMock(return_value=("Paid.", new_run))
+
+        with (
+            patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)),
+            patch.object(
+                service,
+                "get_run_transcript",
+                new=AsyncMock(return_value=(original, [prompt, failed], 2)),
+            ),
+            patch(f"{MODULE}.ConversationService", return_value=conversations),
+            patch(f"{MODULE}.load_turn_attachments", new=AsyncMock(return_value=[])),
+            patch(f"{MODULE}.record_audit", new=AsyncMock()) as audited,
+            patch.object(service, "execute", new=executed),
+            patch.object(service, "parked_calls", new=AsyncMock(return_value=[])),
+        ):
+            result = await service.retry_run(ctx, original.id)
+
+        assert result.run_id == new_run.id
+        assert result.output == "Paid."
+        conversations.model_history.assert_awaited_once()
+        history_kwargs = conversations.model_history.await_args.kwargs
+        assert history_kwargs["before_message_id"] == prompt.id
+        assert history_kwargs["exclude_message_id"] == prompt.id
+        executed.assert_awaited_once()
+        execute_kwargs = executed.await_args.kwargs
+        assert execute_kwargs["parent_run_id"] == original.id
+        assert execute_kwargs["conversation_id"] == original.conversation_id
+        assert execute_kwargs["message_history"] == []
+        assert executed.await_args.args[2] == "pay the invoice"
+        audited.assert_awaited_once()
+        assert audited.await_args.kwargs["action"] == "run.retried"
+        assert audited.await_args.kwargs["target_id"] == str(new_run.id)
+        assert audited.await_args.kwargs["details"]["retried_from"] == str(original.id)
+
+    async def test_the_original_turns_files_travel_with_the_retry(self):
+        """A question asked with a document is the same request only with the
+        document: the files are re-read off the turn that carried them."""
+        service = self._service(None)
+        original = _run()
+        file_id = uuid.uuid4()
+        prompt = _message(
+            role="user", content="what changed?", files=[SimpleNamespace(id=file_id)]
+        )
+        new_run = _run(status=RunStatus.COMPLETED.value)
+        ctx = _ctx(user_id=original.user_id)
+        conversations = MagicMock()
+        conversations.find_conversation = AsyncMock(return_value=MagicMock())
+        conversations.model_text = AsyncMock(return_value="what changed?")
+        conversations.model_history = AsyncMock(return_value=[])
+
+        with (
+            patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)),
+            patch.object(
+                service,
+                "get_run_transcript",
+                new=AsyncMock(return_value=(original, [prompt], 1)),
+            ),
+            patch(f"{MODULE}.ConversationService", return_value=conversations),
+            patch(
+                f"{MODULE}.load_turn_attachments", new=AsyncMock(return_value=["file"])
+            ) as attached,
+            patch(f"{MODULE}.record_audit", new=AsyncMock()),
+            patch.object(
+                service, "execute", new=AsyncMock(return_value=("Rose.", new_run))
+            ) as executed,
+            patch.object(service, "parked_calls", new=AsyncMock(return_value=[])),
+        ):
+            await service.retry_run(ctx, original.id)
+
+        attached.assert_awaited_once()
+        assert attached.await_args.args[1] == prompt.id
+        assert attached.await_args.args[2] == [str(file_id)]
+        assert executed.await_args.kwargs["attachments"] == ["file"]

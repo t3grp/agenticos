@@ -614,6 +614,23 @@ export interface ResumedRun {
   cache_write_tokens?: number;
 }
 
+/** What `POST /runs/{id}/retry` answers with: the new run, and what it said.
+
+The new run's id is the point - the detail view steps to it - so the
+rest is the answer's shape rather than a second read: what it said, how
+it ended, what it cost.
+*/
+export interface RetriedRun {
+  run_id: string;
+  conversation_id: string | null;
+  output: string;
+  status: RunStatus;
+  cost_usd: string;
+  cost_is_partial: boolean;
+  input_tokens: number;
+  output_tokens: number;
+}
+
 /** One question as the server carries it, before the card's own shape (#2064). */
 export interface WireQuestion {
   question: string;

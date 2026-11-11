@@ -298,7 +298,7 @@ from app.repositories import (
 )
 from app.repositories.agent_run import AgentSpendRow, RunFilters
 from app.repositories.voice_call import VoiceChain
-from app.schemas.agent import ParkedCall, ParkedQuestion
+from app.schemas.agent import AgentRunResult, ParkedCall, ParkedQuestion
 from app.schemas.user import WorkingHours
 from app.services import change_feed
 from app.services.agent_registry import (
@@ -315,6 +315,7 @@ from app.services.attachments import (
     AttachmentRouter,
     EarlierAttachments,
     find_earlier_attachments,
+    load_turn_attachments,
     restore_earlier_attachments,
 )
 from app.services.channel_link import mcp_servers_link
@@ -340,6 +341,7 @@ from app.services.channels.prompt_variables import CHANNEL_CONTEXT
 from app.services.channels.prompt_variables import resolve as resolve_prompt_variables
 from app.services.context import ContextService
 from app.services.conversation import (
+    API_HISTORY_MESSAGES,
     ConversationService,
     check_history_snapshot,
     model_context_check,
@@ -2734,13 +2736,6 @@ class _Delegation:
     answers the same person its parent does, at every level of the tree.
     """
 
-    personal_apps_allowed: bool
-    """Whether the run's replies are private to its sender.
-
-    The run's audience is persisted so a resumed delegation does not expose the
-    sender's connected apps to a room.
-    """
-
     sender_present: bool
     """Whether a signed-in person is behind the run though it may not act as them.
 
@@ -3397,6 +3392,7 @@ class AgentRunnerService:
         # what an unnamed surface is. Every production caller passes one.
         surface: RunSurface = RunSurface.API,
         conversation_id: UUID | None = None,
+        parent_run_id: UUID | None = None,
         channel_key: str | None = None,
         memory_room_key: str | None = None,
         channel_directory: ChannelDirectory | None = None,
@@ -3496,6 +3492,18 @@ class AgentRunnerService:
                 cannot run *before* assembly, so no sandbox opens and no
                 delegate resolves; the row is stamped `modality='voice'` with
                 the realtime model and its key.
+            parent_run_id: The run this one retries, when one does. The link
+                is what lets a reader walk from a retry back to the attempt it
+                replaced - but it is the delegation link, so it carries the
+                delegation's reading: the retry is listed under the original
+                run's delegations rather than in top-level history, and the
+                spend breakdowns treat its cost as inside the original's.
+                That reading is only exactly true for a delegation, whose cost
+                the parent's ledger already holds; a retry spends on its own
+                ledger, so the original's own-cost line reads low by the
+                retry's cost and the month-to-date total misses it. Known
+                limitation of reusing this link rather than a column of its
+                own; see the retry endpoint.
             person_time_zone: The person's own IANA time zone, when the surface
                 knows it - what an agent whose `time_zone` is `user` tells the
                 time in (#2065).
@@ -3823,14 +3831,7 @@ class AgentRunnerService:
         )
         spec = _with_local_capabilities(
             await self.registry.with_assistant_guidance(
-                agent,
-                spec,
-                sender_user_id=assistant_sender_user_id,
-                allow_personal_apps=(
-                    restored_audience.room_key is None
-                    if restored_audience is not None
-                    else memory_room_key is None
-                ),
+                agent, spec, sender_user_id=assistant_sender_user_id
             ),
             local,
             routine=routine is not None,
@@ -4164,6 +4165,7 @@ class AgentRunnerService:
                     else sorted(scope.value for scope in ctx.key_scopes)
                 ),
                 conversation_id=conversation_id,
+                parent_run_id=parent_run_id,
                 environment_id=environment_id,
                 exposure_id=exposure.id if exposure else None,
                 channel_identity_id=ctx.channel_identity_id,
@@ -4586,11 +4588,6 @@ class AgentRunnerService:
             surface=surface,
             user_name=user_name,
             personal_mcp_user_id=personal_mcp_user_id,
-            personal_apps_allowed=(
-                restored_audience.room_key is None
-                if restored_audience is not None
-                else memory_room_key is None
-            ),
             sender_present=sender_present,
             resources=resources,
             approvals=channel,
@@ -4853,7 +4850,6 @@ class AgentRunnerService:
         surface: RunSurface,
         user_name: str | None,
         personal_mcp_user_id: UUID | None,
-        personal_apps_allowed: bool,
         sender_present: bool,
         resources: dict[str, Any],
         approvals: ApprovalChannel,
@@ -4923,7 +4919,6 @@ class AgentRunnerService:
             user_id=None if ctx.user_id is None else str(ctx.user_id),
             user_name=user_name,
             personal_mcp_user_id=personal_mcp_user_id,
-            personal_apps_allowed=personal_apps_allowed,
             sender_present=sender_present,
             approvals=approvals,
             budget=budget,
@@ -5415,10 +5410,7 @@ class AgentRunnerService:
         published = AgentSpec.model_validate(version.spec)
         pinned = _with_shared(published, shared)
         pinned = await self.registry.with_assistant_guidance(
-            delegate,
-            pinned,
-            sender_user_id=delegation.personal_mcp_user_id,
-            allow_personal_apps=delegation.personal_apps_allowed,
+            delegate, pinned, sender_user_id=delegation.personal_mcp_user_id
         )
         delegate_resources = await self._delegate_resources(
             ctx,
@@ -6425,6 +6417,7 @@ class AgentRunnerService:
         channel_author_context: str = "",
         surface: RunSurface = RunSurface.API,
         conversation_id: UUID | None = None,
+        parent_run_id: UUID | None = None,
         channel_key: str | None = None,
         memory_room_key: str | None = None,
         channel_directory: ChannelDirectory | None = None,
@@ -6542,6 +6535,7 @@ class AgentRunnerService:
             agent_id,
             surface=surface,
             conversation_id=conversation_id,
+            parent_run_id=parent_run_id,
             channel_key=channel_key,
             memory_room_key=memory_room_key,
             channel_directory=channel_directory,
@@ -7148,6 +7142,127 @@ class AgentRunnerService:
                 self.db, [ChatNotice(run.organization_id, run.id, destination, STOPPED_NOTICE)]
             )
         return result
+
+    async def retry_run(self, ctx: AuthContext, run_id: UUID) -> AgentRunResult:
+        """Re-run a finished run's own request as a new run linked to it.
+
+        The original row is never mutated or re-executed: the new run is a
+        fresh row whose `parent_run_id` names the original, so the attempt it
+        replaced is still there to be read - and so the detail view's
+        delegations section is where the retry is listed from.
+
+        What "the same request" means is the original run's own user turn,
+        read back off its transcript, with the conversation's history as it
+        stood when that turn was asked. The failed attempt's own turns are
+        not in that history: a half-written answer, and any tool call of it
+        whose result never arrived, cannot be replayed as history, and
+        leaving the question in would ask the model the same thing twice.
+        The turn is written to the thread again under the new run, exactly
+        as if the person had sent the message a second time - which is what
+        this is, done for them.
+
+        Only the person who started the run may retry it, from a signed-in
+        session - the same rule `cancel_parked` keeps for stopping one, and
+        for the same reason: a retry spends real money as them. A run with
+        no conversation, or no user turn of its own - an API call that ran
+        with none, a delegation, a workflow step - has no request to
+        re-issue and is refused rather than guessed at.
+
+        The retry executes synchronously over HTTP, like an API run: the
+        answer comes back on this response, and a run that parks on an
+        approval reports it in `parked` rather than in `output`.
+
+        Raises:
+            NotFoundError: The run is not in the caller's organization.
+            AuthorizationError: A key asked, or somebody other than the
+                person who started the run asked.
+            BadRequestError: The run has not finished, has no conversation,
+                or has no user turn to re-issue.
+        """
+        if ctx.api_key_id is not None:
+            raise AuthorizationError(
+                message="Retry this run from a signed-in session", details={"run_id": run_id}
+            )
+        run = await agent_run_repo.get_run(self.db, run_id, organization_id=ctx.organization_id)
+        if run is None:
+            raise NotFoundError(message="Run not found", details={"run_id": str(run_id)})
+        if run.user_id != ctx.user_id:
+            raise AuthorizationError(
+                message="Only the person who started this run may retry it",
+                details={"run_id": run_id},
+            )
+        if run.status not in (
+            RunStatus.COMPLETED.value,
+            RunStatus.FAILED.value,
+            RunStatus.CANCELLED.value,
+            RunStatus.BUDGET_EXCEEDED.value,
+            RunStatus.GUARDRAIL_BLOCKED.value,
+            RunStatus.LOOP_STOPPED.value,
+        ):
+            raise BadRequestError(
+                message="This run has not finished",
+                details={"run_id": run_id, "status": run.status},
+            )
+        if run.conversation_id is None:
+            raise BadRequestError(
+                message="This run has no conversation to retry from",
+                details={"run_id": run_id},
+            )
+        _, turns, _ = await self.get_run_transcript(ctx, run_id, limit=100)
+        prompt_message = next((turn for turn in turns if turn.role == "user"), None)
+        if prompt_message is None:
+            raise BadRequestError(
+                message="This run has no user turn to retry",
+                details={"run_id": run_id},
+            )
+        conversations = ConversationService(self.db)
+        conversation = await conversations.find_conversation(run.conversation_id)
+        prompt = await conversations.model_text(prompt_message, conversation)
+        history = await conversations.model_history(
+            run.conversation_id,
+            limit=API_HISTORY_MESSAGES,
+            exclude_message_id=prompt_message.id,
+            before_message_id=prompt_message.id,
+        )
+        attached = await load_turn_attachments(
+            self.db,
+            prompt_message.id,
+            [str(file.id) for file in prompt_message.files or []],
+            user_id=ctx.subject_id,
+        )
+        output, new_run = await self.execute(
+            ctx,
+            run.agent_id,
+            prompt,
+            surface=RunSurface(run.surface),
+            conversation_id=run.conversation_id,
+            parent_run_id=run.id,
+            message_history=history,
+            attachments=attached,
+            reports_failure=True,
+        )
+        await record_audit(
+            self.db,
+            actor_user_id=ctx.subject_id,
+            organization_id=run.organization_id,
+            action="run.retried",
+            target_type="agent_run",
+            target_id=str(new_run.id),
+            details={"retried_from": str(run.id), "previous_status": run.status},
+        )
+        return AgentRunResult(
+            run_id=new_run.id,
+            conversation_id=new_run.conversation_id,
+            output=output,
+            status=new_run.status,
+            cost_usd=new_run.cost_usd,
+            cost_is_partial=new_run.cost_is_partial,
+            input_tokens=new_run.input_tokens,
+            output_tokens=new_run.output_tokens,
+            cache_read_tokens=new_run.cache_read_tokens,
+            cache_write_tokens=new_run.cache_write_tokens,
+            parked=await self.parked_calls(ctx, new_run),
+        )
 
     async def stop_parked_for_workflow(
         self,
