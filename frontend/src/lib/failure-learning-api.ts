@@ -153,6 +153,10 @@ export interface EvalTryRead {
   id: string;
   agent_id: string;
   proposal_id: string | null;
+  /** Set when the try was run against a skill's new text. */
+  target_skill_id: string | null;
+  /** SHA-256 of the exact text the try ran; a skill apply must match it. */
+  tested_content_sha256: string | null;
   created_at: string | null;
   cases: EvalTryCaseRead[];
   passed: number;

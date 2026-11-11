@@ -77,6 +77,8 @@ const evaluation = (overrides: Partial<EvalTryRead> = {}): EvalTryRead => ({
   id: "try-1",
   agent_id: "agent-1",
   proposal_id: null,
+  target_skill_id: null,
+  tested_content_sha256: null,
   cases: [
     {
       eval_id: "case-1",

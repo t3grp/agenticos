@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { apiClient } from "@/lib/api-client";
 
@@ -123,6 +123,30 @@ describe("failure-learning-api", () => {
       "/agents/agent-1/failure-learning/proposals/prop-1/reject",
       { reason: "not a real pattern" },
     );
+  });
+
+  it("reads a skill try's target and tested-text hash from the wire", async () => {
+    const hash = "a".repeat(64);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      id: "try-2",
+      agent_id: "agent-1",
+      proposal_id: "prop-2",
+      target_skill_id: "skill-1",
+      tested_content_sha256: hash,
+      created_at: null,
+      cases: [],
+      passed: 0,
+      failed: 0,
+      pending: 0,
+      gate_passed: null,
+    });
+
+    const read = await getEvalTry("agent-1", "try-2");
+
+    expect(read.target_skill_id).toBe("skill-1");
+    expect(read.tested_content_sha256).toBe(hash);
+    expectTypeOf(read.target_skill_id).toEqualTypeOf<string | null>();
+    expectTypeOf(read.tested_content_sha256).toEqualTypeOf<string | null>();
   });
 
   it("tracks an agent pattern under its own agent", async () => {
