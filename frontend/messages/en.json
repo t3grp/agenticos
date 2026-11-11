@@ -2052,6 +2052,11 @@
       "failed": "The browser could not be reached"
     },
     "conversationActions": "Conversation actions",
+    "changeProject": "Change project",
+    "moveToProject": "Move to project…",
+    "removeFromProject": "Remove from project",
+    "projectMoved": "Conversation moved",
+    "projectMoveFailed": "Could not move conversation",
     "imageNotLoaded": "Image (not loaded)",
     "whileWorking": {
       "steersWaiting": "Sent into the task - it reads it at its next step"
@@ -12496,6 +12501,9 @@
     "created": "Project {name} created",
     "saved": "Project saved",
     "deleted": "Project deleted. Its chats are ordinary chats now.",
+    "moved": "Conversation moved",
+    "moveFailed": "Could not move conversation",
+    "changeProject": "Change project",
     "uploaded": "{count, plural, =1 {1 file added} other {# files added}}",
     "removed": "Removed",
     "filesUnreadable": "The project's files could not be read",
