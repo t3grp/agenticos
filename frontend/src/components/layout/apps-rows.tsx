@@ -79,7 +79,7 @@ export function AppsRows({
       )}
       {artifacts.slice(0, SHOWN).map((app) => {
         const href = ROUTES.ARTIFACT_DETAIL(app.id);
-        const active = pathname === href;
+        const active = pathname === href || pathname.startsWith(`${href}/`);
         const name = app.title || app.name;
         return (
           <div key={app.id} className="group relative flex w-full items-center">

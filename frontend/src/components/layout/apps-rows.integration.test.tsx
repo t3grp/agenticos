@@ -17,7 +17,8 @@ vi.mock("@/lib/api-client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api-client")>("@/lib/api-client");
   return { ...actual, apiClient: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } };
 });
-vi.mock("next/navigation", () => ({ usePathname: () => "/en/apps" }));
+const pathname = vi.fn(() => "/en/apps");
+vi.mock("next/navigation", () => ({ usePathname: () => pathname() }));
 let canView = true;
 vi.mock("@/hooks/use-permissions", () => ({
   usePermissions: () => ({ can: (perm: string) => perm === "artifacts:view" && canView }),
@@ -60,6 +61,7 @@ function listRequests(): string[] {
 beforeEach(() => {
   vi.clearAllMocks();
   canView = true;
+  pathname.mockReturnValue("/en/apps");
 });
 
 describe("sidebar starred apps", () => {
@@ -102,6 +104,25 @@ describe("sidebar starred apps", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Remove Weekly report from favourites" }),
     );
+
+    await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/apps/a1/favourite"));
+  });
+
+  it("keeps a nested app route active and lets keyboard users unstar it", async () => {
+    pathname.mockReturnValue("/en/apps/a1/data");
+    vi.mocked(apiClient.get).mockResolvedValue({ items: [app()], total: 1 });
+    vi.mocked(apiClient.delete).mockResolvedValue(app({ is_favourite: false }));
+    const user = userEvent.setup();
+    render(<AppsRows collapsed={false} />, { wrapper });
+
+    const appLink = await screen.findByRole("link", { name: "Weekly report" });
+    expect(appLink).toHaveAttribute("aria-current", "page");
+    await user.tab();
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Remove Weekly report from favourites" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
 
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/apps/a1/favourite"));
   });
