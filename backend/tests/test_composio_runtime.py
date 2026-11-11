@@ -855,7 +855,7 @@ async def test_unconfigured_managed_apps_leave_assistant_specs_unchanged(monkeyp
 
 
 @pytest.mark.parametrize("identity", ["registered", "ordinary", "another_organization"])
-async def test_only_the_organizations_registered_assistant_receives_auto_bindings(
+async def test_every_member_agent_receives_apps_but_only_the_registered_assistant_gets_guidance(
     monkeypatch, identity
 ):
     organization_id = uuid4()
@@ -871,6 +871,7 @@ async def test_only_the_organizations_registered_assistant_receives_auto_binding
     monkeypatch.setattr(
         agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=assistant)
     )
+    monkeypatch.setattr(agent_registry.member_repo, "get_active", AsyncMock(return_value=object()))
     dynamic_lookup = AsyncMock(return_value=[_dynamic_connection(user_id=sender_id)])
     monkeypatch.setattr(
         agent_registry.mcp_connection_repo, "list_composio_for_user", dynamic_lookup
@@ -885,20 +886,19 @@ async def test_only_the_organizations_registered_assistant_receives_auto_binding
     personal = [ref for ref in actual.mcp_servers if isinstance(ref, PersonalMcpServerRef)]
 
     assert spec.mcp_servers == [PlatformMcpServerRef(account="platform", allowed_tools=[])]
+    assert {ref.catalog_key for ref in personal} == {
+        "composio-gmail",
+        "composio-slack",
+        "composio-google_sheets",
+    }
+    dynamic_lookup.assert_awaited_once_with(db, user_id=sender_id)
     if identity == "registered":
-        assert {ref.catalog_key for ref in personal} == {
-            "composio-gmail",
-            "composio-slack",
-            "composio-google_sheets",
-        }
-        dynamic_lookup.assert_awaited_once_with(db, user_id=sender_id)
+        assert "# Ongoing work belongs in Projects" in actual.instructions
     else:
-        assert actual is spec
-        assert personal == []
-        dynamic_lookup.assert_not_awaited()
+        assert "# Ongoing work belongs in Projects" not in actual.instructions
 
 
-async def test_registered_assistant_without_a_sender_does_not_discover_dynamic_apps(monkeypatch):
+async def test_registered_assistant_without_a_sender_gets_no_personal_apps(monkeypatch):
     organization_id = uuid4()
     agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
     assistant = SimpleNamespace(organization_id=organization_id)
@@ -916,9 +916,99 @@ async def test_registered_assistant_without_a_sender_does_not_discover_dynamic_a
     )
 
     lookup.assert_not_awaited()
-    assert "composio-google_sheets" not in {
-        ref.catalog_key for ref in actual.mcp_servers if isinstance(ref, PersonalMcpServerRef)
-    }
+    assert not any(isinstance(ref, PersonalMcpServerRef) for ref in actual.mcp_servers)
+
+
+async def test_non_assistant_run_gets_the_authenticated_members_configured_gmail(monkeypatch):
+    organization_id = uuid4()
+    sender_id = uuid4()
+    agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
+    membership = AsyncMock(return_value=object())
+    monkeypatch.setattr(agent_registry.member_repo, "get_active", membership)
+    monkeypatch.setattr(
+        agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=None)
+    )
+    connection = _connection(user_id=sender_id)
+    lookup = AsyncMock(return_value=[connection])
+    monkeypatch.setattr(
+        agent_registry.mcp_connection_repo,
+        "list_composio_for_user",
+        lookup,
+    )
+    spec = AgentSpec(name="Researcher")
+
+    db = AsyncMock()
+    actual = await agent_registry.AgentRegistryService(db).with_assistant_guidance(
+        agent, spec, sender_user_id=sender_id
+    )
+
+    gmail = next(
+        ref
+        for ref in actual.mcp_servers
+        if isinstance(ref, PersonalMcpServerRef) and ref.catalog_key == "composio-gmail"
+    )
+    assert gmail.allowed_tools
+    assert actual is not spec
+    assert spec.mcp_servers == []
+    membership.assert_awaited_once_with(db, organization_id=organization_id, user_id=sender_id)
+    lookup.assert_awaited_once_with(db, user_id=sender_id)
+
+
+async def test_non_assistant_run_without_sender_gets_no_personal_apps(monkeypatch):
+    agent = SimpleNamespace(id=uuid4(), organization_id=uuid4())
+    monkeypatch.setattr(
+        agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=None)
+    )
+    lookup = AsyncMock(return_value=[_connection()])
+    monkeypatch.setattr(agent_registry.mcp_connection_repo, "list_composio_for_user", lookup)
+    spec = AgentSpec(name="Researcher")
+
+    actual = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(agent, spec)
+
+    assert actual is spec
+    assert not any(isinstance(ref, PersonalMcpServerRef) for ref in actual.mcp_servers)
+    lookup.assert_not_awaited()
+
+
+async def test_non_assistant_sender_without_a_gmail_account_resolves_no_gmail_tools(
+    monkeypatch, provider
+):
+    sender_id = uuid4()
+    monkeypatch.setattr(
+        mcp_connection.mcp_connection_repo,
+        "list_user_scoped_by_catalog_key",
+        AsyncMock(return_value=[]),
+    )
+    ref = PersonalMcpServerRef(account="personal", catalog_key="composio-gmail")
+
+    specs, status = await mcp_connection._personal_specs(
+        AsyncMock(), ref, sender_user_id=sender_id
+    )
+
+    assert specs == []
+    assert status == "not_connected"
+    provider.verify_account.assert_not_awaited()
+
+
+async def test_non_assistant_app_bindings_leave_the_stored_spec_unchanged(monkeypatch):
+    agent = SimpleNamespace(id=uuid4(), organization_id=uuid4())
+    monkeypatch.setattr(agent_registry.member_repo, "get_active", AsyncMock(return_value=object()))
+    monkeypatch.setattr(
+        agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        agent_registry.mcp_connection_repo,
+        "list_composio_for_user",
+        AsyncMock(return_value=[]),
+    )
+    spec = AgentSpec(name="Researcher", instructions="Keep this wording")
+    before = spec.model_dump()
+
+    await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(
+        agent, spec, sender_user_id=uuid4()
+    )
+
+    assert spec.model_dump() == before
 
 
 async def test_registered_assistant_discovers_only_active_dynamic_apps_of_the_sender(monkeypatch):
@@ -929,6 +1019,7 @@ async def test_registered_assistant_discovers_only_active_dynamic_apps_of_the_se
     monkeypatch.setattr(
         agent_registry.organization_assistant_repo, "for_agent", AsyncMock(return_value=assistant)
     )
+    monkeypatch.setattr(agent_registry.member_repo, "get_active", AsyncMock(return_value=object()))
     dynamic = _dynamic_connection(user_id=sender_id)
     inactive = _dynamic_connection(
         user_id=sender_id,
@@ -966,6 +1057,26 @@ async def test_registered_assistant_discovers_only_active_dynamic_apps_of_the_se
     assert [(ref.catalog_key, ref.allowed_tools, ref.approval) for ref in dynamic_refs] == [
         ("composio-google_sheets", None, "all")
     ]
+
+
+async def test_sender_outside_the_agent_organization_gets_no_apps(monkeypatch):
+    sender_id = uuid4()
+    organization_id = uuid4()
+    agent = SimpleNamespace(id=uuid4(), organization_id=organization_id)
+    membership = AsyncMock(return_value=None)
+    monkeypatch.setattr(agent_registry.member_repo, "get_active", membership)
+    lookup = AsyncMock(return_value=[_connection(user_id=sender_id)])
+    monkeypatch.setattr(agent_registry.mcp_connection_repo, "list_composio_for_user", lookup)
+    spec = AgentSpec(name="Researcher")
+
+    db = AsyncMock()
+    actual = await agent_registry.AgentRegistryService(db).with_assistant_guidance(
+        agent, spec, sender_user_id=sender_id
+    )
+
+    membership.assert_awaited_once_with(db, organization_id=organization_id, user_id=sender_id)
+    assert actual is spec
+    lookup.assert_not_awaited()
 
 
 async def test_generic_mcp_create_cannot_forge_dynamic_composio_keys():

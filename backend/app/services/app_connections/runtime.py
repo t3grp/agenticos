@@ -44,12 +44,12 @@ _GUIDANCE = (
 def with_app_connection_bindings(
     spec: AgentSpec, *, dynamic_catalog_keys: Sequence[str] = ()
 ) -> AgentSpec:
-    """Add configured personal apps to a registered assistant's runtime copy.
+    """Add configured personal apps to an authenticated member's runtime copy.
 
-    The caller verifies that this is the organization's registered assistant.
-    Stored agent versions and explicitly configured personal bindings keep their
-    existing ceilings. Dynamic catalog keys come only from this sender's managed
-    app rows; account ownership is resolved again for every message.
+    The caller verifies membership and discovers dynamic keys only from this
+    sender's managed app rows. Stored agent versions and explicitly configured
+    personal bindings keep their existing ceilings. Account ownership is resolved
+    again for every message.
     """
     configured = [app for app in APPS if is_configured(app.toolkit)]
     dynamic_keys = sorted(

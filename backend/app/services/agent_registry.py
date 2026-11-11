@@ -3880,27 +3880,20 @@ class AgentRegistryService:
         *,
         sender_user_id: UUID | None = None,
     ) -> AgentSpec:
-        """Add current guidance and personal apps to the registered assistant's runtime copy.
+        """Add assistant guidance and the authenticated sender's apps to a runtime copy.
 
-        Existing installations keep their customized stored specs. Other agents
-        and external MCP clients keep their own workflow, even with platform tools.
-        Dynamic personal apps are discovered only from the authenticated sender's
-        own managed rows, and are never added to the stored or publishable spec.
+        Assistant project and workflow guidance remains assistant-only. Personal
+        apps are resolved for any agent only when the authenticated sender is an
+        active member of its organization. Neither is written to a stored spec.
         """
-        platform = next(
-            (ref for ref in spec.mcp_servers if isinstance(ref, PlatformMcpServerRef)), None
-        )
-        if platform is None:
-            return spec
-        required = {"list_projects", "get_project", "create_project"}
-        assistant = await organization_assistant_repo.for_agent(self.db, agent.id)
-        if assistant is None or assistant.organization_id != agent.organization_id:
-            return spec
         from app.services.app_connections import get_app_by_catalog_key, toolkit_from_catalog_key
         from app.services.app_connections.runtime import with_app_connection_bindings
 
-        dynamic_catalog_keys: set[str] = set()
-        if sender_user_id is not None:
+        runtime_spec = spec
+        if sender_user_id is not None and await member_repo.get_active(
+            self.db, organization_id=agent.organization_id, user_id=sender_user_id
+        ) is not None:
+            dynamic_catalog_keys: set[str] = set()
             for connection in await mcp_connection_repo.list_composio_for_user(
                 self.db, user_id=sender_user_id
             ):
@@ -3923,6 +3916,19 @@ class AgentRegistryService:
                 ):
                     continue
                 dynamic_catalog_keys.add(key)
+            runtime_spec = with_app_connection_bindings(
+                spec, dynamic_catalog_keys=sorted(dynamic_catalog_keys)
+            )
+
+        platform = next(
+            (ref for ref in runtime_spec.mcp_servers if isinstance(ref, PlatformMcpServerRef)), None
+        )
+        if platform is None:
+            return runtime_spec
+        required = {"list_projects", "get_project", "create_project"}
+        assistant = await organization_assistant_repo.for_agent(self.db, agent.id)
+        if assistant is None or assistant.organization_id != agent.organization_id:
+            return runtime_spec
 
         guidance = (
             (agent_templates.TEMPLATES_ROOT / "general/platform-assistant/PROJECTS.md")
@@ -3933,7 +3939,7 @@ class AgentRegistryService:
             platform.allowed_tools
         )
         additions = (
-            [guidance] if project_tools_available and guidance not in spec.instructions else []
+            [guidance] if project_tools_available and guidance not in runtime_spec.instructions else []
         )
         workflow_tools = {"list_workflow_nodes", "create_workflow_draft", "list_virtual_tables"}
         if platform.allowed_tools is None or workflow_tools.issubset(platform.allowed_tools):
@@ -3942,22 +3948,19 @@ class AgentRegistryService:
                 .read_text()
                 .strip()
             )
-            if workflow_guidance not in spec.instructions:
+            if workflow_guidance not in runtime_spec.instructions:
                 additions.append(workflow_guidance)
-        instructions = spec.instructions
+        instructions = runtime_spec.instructions
         if platform.allowed_tools is None or workflow_tools.issubset(platform.allowed_tools):
             instructions = re.sub(
                 r"- Workflows and tables are not something you can reach yet; say so rather than\s+guessing\.\n?",
                 "",
                 instructions,
             )
-        if not additions and instructions == spec.instructions:
-            return with_app_connection_bindings(
-                spec, dynamic_catalog_keys=sorted(dynamic_catalog_keys)
-            )
-        return with_app_connection_bindings(
-            spec.model_copy(update={"instructions": "\n\n".join([instructions, *additions])}),
-            dynamic_catalog_keys=sorted(dynamic_catalog_keys),
+        if not additions and instructions == runtime_spec.instructions:
+            return runtime_spec
+        return runtime_spec.model_copy(
+            update={"instructions": "\n\n".join([instructions, *additions])}
         )
 
     async def refuse_a_switched_off_assistant(self, agent_id: UUID) -> None:
