@@ -583,6 +583,7 @@ class ConversationUpdate(BaseSchema):
 
     title: str | None = Field(default=None, max_length=255)
     is_archived: bool | None = None
+    project_id: UUID | None = Field(default=None, description="The project this chat belongs to")
 
 
 class ConversationAgent(BaseSchema):
