@@ -574,11 +574,12 @@ async def published_compaction_windows(
     """The window each version's `compaction` binding overrides its model's with.
 
     An author sets this when the resolved window is wrong - the pricing registry
-    records 1,000,000 for `anthropic:claude-sonnet-4-5` against a real 200,000 -
-    or when they want the trigger to allow for the instructions and tool schemas
-    the compaction estimator does not count. Either way it is the number the
-    *trigger* uses, so it has to be the number the gauge divides by: two figures
-    describing one ceiling, disagreeing, is what this whole area kept producing.
+    is a third-party bundle that has recorded a window too high before
+    (`anthropic:claude-sonnet-4-5`, #773) - or when they want the trigger to
+    allow for the instructions and tool schemas the compaction estimator does
+    not count. Either way it is the number the *trigger* uses, so it has to be
+    the number the gauge divides by: two figures describing one ceiling,
+    disagreeing, is what this whole area kept producing.
 
     The capability array rather than one path, because the binding is an entry in
     a list and JSONB has no readable way to filter one out. It is a handful of

@@ -1,5 +1,5 @@
 ---
-source_sha: "1991069bf88d"
+source_sha: "99911adb55ad"
 ---
 
 # Modelos y providers { #models-and-providers }
@@ -658,14 +658,15 @@ correcto cuando un agent se muda a otro modelo.
 !!! danger "Por qué se guarda en vez de resolverse por run"
 
     El camino de la petición no debe llamar a un provider, y lo único que podría
-    consultar si no es el snapshot de precios incluido — que aquí se equivoca en
-    la dirección que rompe un run.
-
-    Ese snapshot registra 1.000.000 para `anthropic:claude-sonnet-4-5` frente a
-    unos 200.000 reales, así que un disparo al 90 % cae por encima del techo real
-    y la compactación nunca se activa antes de que el provider rechace la
-    petición. Un perfil con fallbacks es peor: construye un `FallbackModel` cuyo
-    id compuesto no resuelve a nada en absoluto.
+    consultar si no es el snapshot de precios incluido — un bundle de terceros
+    cuyos números no son autoritativos: un snapshot anterior registraba
+    1.000.000 para `anthropic:claude-sonnet-4-5` frente a unos 200.000 reales,
+    así que un disparo al 90 % caía por encima del techo real y la compactación
+    nunca se activaba antes de que el provider rechazara la petición (#773).
+    El snapshot fijado registra hoy los 200.000 correctos, pero una subida del
+    bundle puede mover un número sin que este repo lo note. Un perfil con
+    fallbacks es peor: construye un `FallbackModel` cuyo id compuesto no
+    resuelve a nada en absoluto.
 
 Nulo significa **no anotado**, no cero: un perfil más antiguo que la columna, un
 provider que no publica longitud, una lista curada, o un listado al que no se

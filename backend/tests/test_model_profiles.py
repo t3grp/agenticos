@@ -2052,11 +2052,12 @@ class TestTheWindowAModelAccepts:
 
     The `compaction` capability triggers on a fraction of the context window, and
     the only thing it could otherwise resolve one from is the `genai-prices`
-    snapshot - which records 1,000,000 for `anthropic:claude-sonnet-4-5` against
-    a real 200,000, and answers nothing at all for a profile with fallbacks,
-    whose `FallbackModel` has a composite `fallback:...` id. Over-recording is
-    the direction that takes a run down: the trigger lands above the real
-    ceiling, compaction never fires, and the provider refuses the request (#773).
+    snapshot - a third-party bundle that has recorded a window too high before
+    (`anthropic:claude-sonnet-4-5`, #773), and that answers nothing at all for
+    a profile with fallbacks, whose `FallbackModel` has a composite
+    `fallback:...` id. Over-recording is the direction that takes a run down:
+    the trigger lands above the real ceiling, compaction never fires, and the
+    provider refuses the request (#773).
     """
 
     @staticmethod
