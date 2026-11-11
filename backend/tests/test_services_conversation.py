@@ -12,11 +12,11 @@ from uuid import uuid4
 import pytest
 from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelRequest, SystemPromptPart
 
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.permissions import AuthContext, Perm
 from app.repositories import conversation_repo, conversation_share_repo
 from app.repositories.conversation import RunOutcome
-from app.schemas.conversation import ToolCallCreate
+from app.schemas.conversation import ConversationUpdate, ToolCallCreate
 from app.services.conversation import ConversationService
 from app.services.message_history import REFUSED_TURN
 
@@ -1198,6 +1198,121 @@ class TestConversationServiceUpdate:
                 await service.update_conversation(
                     conv_id, mock_update, user_id=other_id, organization_id=TEST_ORG_ID
                 )
+
+    @pytest.mark.anyio
+    async def test_update_moves_conversation_into_a_project(self, service: ConversationService):
+        conversation = MockConversation()
+        project_id = uuid4()
+        user_id = uuid4()
+        ctx = AuthContext(user_id=user_id, organization_id=TEST_ORG_ID, role="member")
+        data = ConversationUpdate(project_id=project_id)
+        with (
+            patch.object(service, "get_conversation", AsyncMock(return_value=conversation)),
+            patch(
+                "app.services.project.ProjectService.check_can_start", new_callable=AsyncMock
+            ) as check,
+            patch.object(
+                conversation_repo, "update_conversation", AsyncMock(return_value=conversation)
+            ) as update,
+        ):
+            await service.update_conversation(
+                conversation.id,
+                data,
+                organization_id=TEST_ORG_ID,
+                user_id=user_id,
+                ctx=ctx,
+            )
+
+        check.assert_awaited_once_with(ctx, project_id)
+        assert update.await_args.kwargs["update_data"]["project_id"] == project_id
+
+    @pytest.mark.anyio
+    async def test_update_moves_conversation_out_of_a_project(self, service: ConversationService):
+        conversation = MockConversation()
+        data = ConversationUpdate(project_id=None)
+        with (
+            patch.object(service, "get_conversation", AsyncMock(return_value=conversation)),
+            patch(
+                "app.services.project.ProjectService.check_can_start", new_callable=AsyncMock
+            ) as check,
+            patch.object(
+                conversation_repo, "update_conversation", AsyncMock(return_value=conversation)
+            ) as update,
+        ):
+            await service.update_conversation(conversation.id, data, organization_id=TEST_ORG_ID)
+
+        check.assert_not_awaited()
+        assert "project_id" in update.await_args.kwargs["update_data"]
+        assert update.await_args.kwargs["update_data"]["project_id"] is None
+
+    @pytest.mark.anyio
+    async def test_omitted_project_id_does_not_change_project(self, service: ConversationService):
+        conversation = MockConversation()
+        data = ConversationUpdate(title="Renamed")
+        with (
+            patch.object(service, "get_conversation", AsyncMock(return_value=conversation)),
+            patch.object(
+                conversation_repo, "update_conversation", AsyncMock(return_value=conversation)
+            ) as update,
+        ):
+            await service.update_conversation(conversation.id, data, organization_id=TEST_ORG_ID)
+
+        assert "project_id" not in update.await_args.kwargs["update_data"]
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "failure",
+        [
+            NotFoundError(message="Project not found"),
+            AuthorizationError(message="Cannot use project"),
+        ],
+    )
+    async def test_update_rejects_projects_the_caller_cannot_use(
+        self, service: ConversationService, failure: Exception
+    ):
+        conversation = MockConversation()
+        project_id = uuid4()
+        ctx = AuthContext(user_id=uuid4(), organization_id=TEST_ORG_ID, role="member")
+        with (
+            patch.object(service, "get_conversation", AsyncMock(return_value=conversation)),
+            patch(
+                "app.services.project.ProjectService.check_can_start",
+                new_callable=AsyncMock,
+                side_effect=failure,
+            ),
+            patch.object(
+                conversation_repo, "update_conversation", new_callable=AsyncMock
+            ) as update,
+            pytest.raises(type(failure)),
+        ):
+            await service.update_conversation(
+                conversation.id,
+                ConversationUpdate(project_id=project_id),
+                organization_id=TEST_ORG_ID,
+                ctx=ctx,
+            )
+
+        update.assert_not_awaited()
+
+    @pytest.mark.anyio
+    async def test_project_assignment_requires_an_access_context(
+        self, service: ConversationService
+    ):
+        conversation = MockConversation()
+        with (
+            patch.object(service, "get_conversation", AsyncMock(return_value=conversation)),
+            patch.object(
+                conversation_repo, "update_conversation", new_callable=AsyncMock
+            ) as update,
+            pytest.raises(AuthorizationError),
+        ):
+            await service.update_conversation(
+                conversation.id,
+                ConversationUpdate(project_id=uuid4()),
+                organization_id=TEST_ORG_ID,
+            )
+
+        update.assert_not_awaited()
 
 
 class TestConversationServiceArchive:
