@@ -176,7 +176,7 @@ export function ArtifactViewer({
         ? error
         : null;
     return (
-      <div className={VIEWER}>
+      <div className={cn(VIEWER, BAR_CLEARANCE)}>
         <ArtifactViewerBar artifact={null} />
         <div className={cn("flex min-h-0 flex-1", !isLoading && "items-center justify-center p-6")}>
           {isLoading ? (
@@ -223,7 +223,7 @@ export function ArtifactViewer({
   // is left of it here is when it was archived, the way back, and Delete.
   if (artifact.archived_at !== null) {
     return (
-      <div className={VIEWER}>
+      <div className={cn(VIEWER, BAR_CLEARANCE)}>
         <ArtifactViewerBar artifact={artifact} onDelete={() => setConfirming(true)} />
         <div className="flex flex-1 items-center justify-center p-6">
           <ArchivedArtifactNotice
@@ -241,7 +241,7 @@ export function ArtifactViewer({
   // owner has not confirmed sharing, and the caller is only its audience.
   if (artifact.current_version === null) {
     return (
-      <div className={VIEWER}>
+      <div className={cn(VIEWER, BAR_CLEARANCE)}>
         <ArtifactViewerBar artifact={null} />
         <div className="flex flex-1 items-center justify-center p-6">
           <EmptyState
