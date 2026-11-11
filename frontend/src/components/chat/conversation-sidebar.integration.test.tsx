@@ -1298,6 +1298,29 @@ describe("the Chats | Agents toggle", () => {
     expect(within(writer).getByTestId("row-agents")).toHaveAttribute("data-names", "Writer");
   });
 
+  it("puts each agent's face on its collapsed rail band, but not Other", async () => {
+    serve([
+      answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" }),
+      answeredBy("c-2", "Launch copy", { id: "a-2", name: "Writer" }),
+      conversation("c-3", "Brand new chat"),
+    ]);
+    mount();
+    await screen.findAllByText("Revenue deck");
+    await userEvent.click(screen.getByRole("button", { name: "Agents", pressed: false }));
+    await userEvent.click(
+      within(list()).getByRole("button", { name: "Collapse conversations sidebar" }),
+    );
+
+    const rail = screen.getByRole("button", { name: "Expand conversations sidebar" }).parentElement!
+      .parentElement as HTMLElement;
+    const analyst = within(rail).getByRole("button", { name: "Analyst" });
+    const writer = within(rail).getByRole("button", { name: "Writer" });
+    const other = within(rail).getByRole("button", { name: "Other" });
+    expect(within(analyst).getByTestId("row-agents")).toHaveAttribute("data-names", "Analyst");
+    expect(within(writer).getByTestId("row-agents")).toHaveAttribute("data-names", "Writer");
+    expect(within(other).queryByTestId("row-agents")).toBeNull();
+  });
+
   it("folds one agent's threads away from its heading, and opens them again", async () => {
     serve([answeredBy("c-1", "Revenue deck", { id: "a-1", name: "Analyst" })]);
     mount();
