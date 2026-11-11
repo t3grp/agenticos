@@ -21,11 +21,6 @@ vi.mock("@/hooks/use-project-folder", () => ({
     scopeKey: id ? `alice:org:${id}` : null,
   }),
 }));
-const shared = vi.hoisted(() => ({ ids: [] as string[] }));
-vi.mock("@/hooks/use-conversation-shares", () => ({
-  useSharedConversation: (id: string | null) =>
-    id !== null && shared.ids.includes(id) ? { id } : undefined,
-}));
 const params = vi.fn(() => new URLSearchParams());
 vi.mock("next/navigation", () => ({
   useSearchParams: () => params(),
@@ -59,7 +54,7 @@ vi.mock("@/components/projects/project-picker-dialog", () => ({
     ) : null,
 }));
 
-function chip(conversationId: string | null, pickerOpen = false) {
+function chip(conversationId: string | null, pickerOpen = false, readOnly = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -67,6 +62,7 @@ function chip(conversationId: string | null, pickerOpen = false) {
         conversationId={conversationId}
         pickerOpen={pickerOpen}
         onPickerOpenChange={vi.fn()}
+        readOnly={readOnly}
       />
     </QueryClientProvider>,
   );
@@ -76,7 +72,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   desktop.enabled = false;
   desktop.folder = null;
-  shared.ids = [];
   useWorkOnStore.setState({ byConversation: {}, draft: null, draftProjectKey: null });
   params.mockReturnValue(new URLSearchParams());
   useConversationStore.getState().setPendingProjectId(null);
@@ -190,10 +185,11 @@ describe("ProjectChip", () => {
     );
   });
 
-  it("shows a shared thread's project read-only, with no move action", async () => {
-    shared.ids = ["c-shared"];
-    vi.mocked(apiClient.get).mockResolvedValue({ id: "c-shared", project_id: "p-1" });
-    chip("c-shared");
+  it("shows a shared thread's project read-only when its access says so, with no move action", async () => {
+    // The access result marks this thread as somebody else's; the sidebar's
+    // first-50 shares list does not hold it, so only the access result can say so.
+    vi.mocked(apiClient.get).mockResolvedValue({ id: "c-deep", project_id: "p-1" });
+    chip("c-deep", false, true);
 
     expect(await screen.findByText("Launch")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change project" })).toBeNull();

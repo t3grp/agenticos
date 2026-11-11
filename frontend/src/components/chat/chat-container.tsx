@@ -266,6 +266,9 @@ export function ChatContainer({
   const isArchived = listed?.is_archived ?? access.archived;
   const viewOnly = access.viewOnly;
   const readOnly = isArchived || viewOnly || !access.known;
+  // Somebody else's thread: its project is read-only until the access result says
+  // otherwise. Owned threads need no access read, so they are never read-only here.
+  const projectReadOnly = needsAccess && (!access.known || access.conversation?.user_id !== meId);
 
   // The one agent a conversation used, when it used exactly one. Recovered from the
   // conversation rather than the message, which is the only source history has left.
@@ -1902,6 +1905,7 @@ function ChatUI({
                                       conversationId={conversationId}
                                       pickerOpen={projectPickerOpen}
                                       onPickerOpenChange={setProjectPickerOpen}
+                                      readOnly={projectReadOnly}
                                     />
                                   </span>
                                 </>

@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
-import { useSharedConversation } from "@/hooks/use-conversation-shares";
 import { useProjectFolder } from "@/hooks/use-project-folder";
 import { useShell } from "@/hooks/use-shell";
 import { isDesktopShell } from "@/lib/desktop/shell";
@@ -36,10 +35,13 @@ export function ProjectChip({
   conversationId,
   pickerOpen,
   onPickerOpenChange,
+  readOnly = false,
 }: {
   conversationId: string | null;
   pickerOpen: boolean;
   onPickerOpenChange: (open: boolean) => void;
+  /** The thread is somebody else's, or its access is not known yet: the project can't be moved. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("projects");
   const queryClient = useQueryClient();
@@ -53,10 +55,6 @@ export function ProjectChip({
 
   const { data: started } = useProjectOfConversation(conversationId);
   const projectId = conversationId === null ? pending : (started ?? null);
-  // A thread somebody shared with the reader is theirs: its project is read-only,
-  // the same check the sidebar uses for owner-only actions. The server refuses a
-  // move on it (PATCH /conversations/{id} needs ownership), so no picker is offered.
-  const sharedWithReader = useSharedConversation(conversationId) !== undefined;
 
   const move = useMutation({
     mutationFn: (nextProjectId: string | null) =>
@@ -129,7 +127,7 @@ export function ProjectChip({
             >
               {project.name}
             </Link>
-          ) : sharedWithReader ? (
+          ) : readOnly ? (
             <span className="truncate text-sm font-medium">{project.name}</span>
           ) : (
             <button
