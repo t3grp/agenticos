@@ -74,6 +74,20 @@ remaining source files. It downloads missing files and does not install software
    review and passing checks, merge with upstream ancestry intact. Promotion to
    any running deployment is a separate step with its own acceptance evidence.
 
+### Migration-number collisions to expect
+
+Three `0296` revisions already exist on `t3`, all with
+`down_revision = "0295_tool_approval_consent"`: `0296_personal_model_connections`,
+`0296_sync_source_connected_account` and upstream's `0296_tool_identity`,
+joined by the merge migrations `0299_merge_personal_composio` and
+`0302_merge_upstream`. Upstream PR #2805 (native business-app tools) adds a
+fourth, `0296_integration_watch_cursor` (also down `0295`). When that PR lands
+in a sync, its migration needs a renumbered merge migration on top of the
+then-current head — do not renumber the existing three — and its
+check-constraint replacements (`ck_trigger_event_source`,
+`ck_trigger_shape`) must be rebased onto whatever the current head did to
+those constraints, because the PR's `_OLD_CHECKS` assume the pre-0296 state.
+
 This is a documented manual update procedure, not an installed sync automation.
 
 ## Contribute improvements upstream
