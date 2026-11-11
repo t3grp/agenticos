@@ -127,6 +127,41 @@ describe("stepping to a neighbour", () => {
     expect(screen.queryByText(/malformed arguments/)).toBeNull();
   });
 
+  it("says why a failed run stopped, in the run's own words", () => {
+    serve({
+      run: run({
+        status: "failed",
+        error: "The run did not finish (ModelHTTPError, HTTP 400)",
+      }),
+    });
+    renderRun();
+    // The label and the sentence are separate spans, so each is read on its
+    // own rather than as one string.
+    expect(screen.getByText(/Why it stopped/)).toBeInTheDocument();
+    expect(
+      screen.getByText("The run did not finish (ModelHTTPError, HTTP 400)"),
+    ).toBeInTheDocument();
+  });
+
+  it("says why a budget stop stopped it, not only that it did", () => {
+    serve({ run: run({ status: "budget_exceeded", error: "Monthly budget reached" }) });
+    renderRun();
+    expect(screen.getByText(/Why it stopped/)).toBeInTheDocument();
+    expect(screen.getByText("Monthly budget reached")).toBeInTheDocument();
+  });
+
+  it("says nothing about why when the run has no error to explain", () => {
+    serve({ run: run({ status: "failed" }) });
+    renderRun();
+    expect(screen.queryByText(/Why it stopped/)).toBeNull();
+  });
+
+  it("does not draw a held error as the live run's reason", () => {
+    serve({ run: run({ status: "running", error: "The run did not finish" }) });
+    renderRun();
+    expect(screen.queryByText(/Why it stopped/)).toBeNull();
+  });
+
   it("says how much of the input the cache served, when it did (#2170)", () => {
     serve({ run: run({ cache_read_tokens: 900, cache_write_tokens: 100 }) });
     renderRun();

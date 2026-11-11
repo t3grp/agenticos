@@ -3312,6 +3312,7 @@
       "versionsCaption": "Ostatnie 30 dni, więc wersja może pokazywać mniej runów niż cała historia w tabeli poniżej. Ukończone liczy każdy status - nic nie jest wykluczone, więc czyta się tak samo jak donut Wyników na dashboardzie. Runy obejmują to, co ta wersja zrobiła jako delegat.",
       "versionsTitle": "Według wersji",
       "whatWentIn": "Co trafiło do modelu",
+      "whyItStopped": "Dlaczego się zatrzymał",
       "whatYourAgentsDid2": "Co zrobili Twoi agenci, ile to kosztowało i co czeka na człowieka.",
       "whereTheMoneyWent": "Na co poszły pieniądze",
       "whoIsSpendingCouldNotBeRead": "Nie udało się odczytać, kto wydaje.",

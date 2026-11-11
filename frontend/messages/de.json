@@ -6470,6 +6470,7 @@
       "versionsCaption": "Die letzten 30 Tage, eine Version kann hier also weniger Runs zeigen als die ganze Historie in der Tabelle darunter. „Abgeschlossen“ zählt jeden Status – nichts ausgenommen, es liest sich also wie der Ergebnis-Donut des Dashboards. Die Runs schließen ein, was diese Version als Delegat getan hat.",
       "versionsTitle": "Nach Version",
       "whatWentIn": "Was hineinging",
+      "whyItStopped": "Warum er stoppte",
       "whatYourAgentsDid2": "Was Ihre Agents getan haben, was es gekostet hat und was auf einen Menschen wartet.",
       "whereTheMoneyWent": "Wohin das Geld geflossen ist",
       "whoIsSpendingCouldNotBeRead": "Wer ausgibt, konnte nicht gelesen werden.",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Activity,
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   CornerLeftUp,
@@ -36,8 +37,22 @@ import { ApiError } from "@/lib/api-client";
 import { ROUTES } from "@/lib/constants";
 import { cn, formatDateTime, formatRunDuration, timeAgo } from "@/lib/utils";
 import { Perm } from "@/types/permissions";
-import type { AgentRun } from "@/types/runs";
+import type { AgentRun, RunStatus } from "@/types/runs";
 import { RunTable } from "./run-table";
+
+/**
+ * The statuses after which a run has nothing left to say - the only ones
+ * whose `error` is an explanation rather than a stale field. There is no
+ * `timed_out` status: a run that hits its timeout fails, so it is covered
+ * by `failed`.
+ */
+const TERMINAL_RUN_STATUSES: readonly RunStatus[] = [
+  "failed",
+  "cancelled",
+  "budget_exceeded",
+  "guardrail_blocked",
+  "loop_stopped",
+];
 
 /**
  * One run as a trace: what went in, what the agent did, what it cost, and the
@@ -297,6 +312,23 @@ export function FocusedRun({
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <Wrench className="size-3.5 shrink-0" aria-hidden />
             {t("toolArgsRepaired", { count: run.tool_args_repaired })}
+          </p>
+        )}
+
+        {/* Why it stopped, where the operator looks first. The row has
+            carried `error` all along and nothing in the console rendered
+            it, so a failed run read as a badge with no reason - the
+            transcript or the server log was the only way to learn why.
+            Terminal runs only: a live or parked run has no error to
+            explain, and a `cancelled` run without one was stopped, not
+            failed. */}
+        {run.error !== null && TERMINAL_RUN_STATUSES.includes(run.status) && (
+          <p className="text-destructive flex items-start gap-1.5 text-xs">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>
+              <span className="font-medium">{t("whyItStopped")}: </span>
+              {run.error}
+            </span>
           </p>
         )}
 

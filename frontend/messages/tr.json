@@ -4548,6 +4548,7 @@
       "versionsCaption": "Son 30 gün gösterilir; bu nedenle sürümün run sayısı aşağıdaki tüm geçmiş tablosundakinden az olabilir. Tamamlananlar tüm durumları sayar; hiçbiri hariç tutulmaz ve bu nedenle Kontrol Panelindeki Sonuçlar halkasıyla eşleşir. Runlara, bu sürümün temsilci olarak yaptığı işler de dahildir.",
       "versionsTitle": "Sürüme göre",
       "whatWentIn": "Neler girdi",
+      "whyItStopped": "Neden durdu",
       "whatYourAgentsDid2": "Agentlarınızın yaptıkları, maliyetleri ve kullanıcı bekleyen işler.",
       "whereTheMoneyWent": "Harcamaların dağılımı",
       "whoIsSpendingCouldNotBeRead": "Kimin harcama yaptığı okunamadı.",
