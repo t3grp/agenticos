@@ -1638,6 +1638,10 @@
       "filters": "Filtern und sortieren",
       "show": "Anzeigen",
       "backToActive": "Zurück zu aktiven",
+      "modeLabel": "Gespräche anzeigen nach",
+      "modeChats": "Chats",
+      "modeAgents": "Agenten",
+      "otherAgents": "Sonstige",
       "age": {
         "today": "Heute",
         "yesterday": "Gestern",
