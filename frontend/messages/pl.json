@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 207769)
-Total output lines: 13736
-
 {
   "appConnections": {
     "enable": "Włącz",
@@ -6811,7 +6808,469 @@ Total output lines: 13736
       },
       "artifacts-groups": {
         "title": "Po dziale",
-        "body": "Zawę…7769 tokens truncated…ntNeedsLabel": "Masz już konto w tym serwisie. Nazwij to, żeby je od siebie odróżnić.",
+        "body": "Zawęź listę do tego, co dostała jedna grupa. Grupa decyduje, do kogo coś trafia, więc według niej też grupuje się listę."
+      },
+      "knowledge-groups": {
+        "title": "Po dziale",
+        "body": "Zawęź listę do tego, co dostała jedna grupa. Grupa decyduje, do kogo coś trafia, więc według niej też grupuje się listę."
+      },
+      "sign-in-to-site": {
+        "title": "Zaloguj się do strony",
+        "body": "Otwórz przeglądarkę na stronie tylko dla siebie, zaloguj się i oddaj ją z Keep me signed in - przeglądarka Twoich agentów będzie tam odtąd startować zalogowana."
+      },
+      "my-sign-ins": {
+        "title": "Strony, na których zostajesz zalogowany",
+        "body": "Gdy zalogujesz się podczas przeglądania i zapamiętasz logowanie, przeglądarka Twoich agentów następnym razem startuje tam zalogowana. Zapomnij stronę, a kolejne przeglądanie zacznie się wylogowane."
+      },
+      "agent-identity": {
+        "title": "Nadaj mu rozpoznawalną nazwę",
+        "body": "Nazwę wybiera się w czacie i znajduje w katalogu. Duplikat zaczyna od nazwy źródła z dopiskiem, więc zmień ją tutaj; handle, przez który inne agenty do niego trafiają, pozostaje ten sam."
+      },
+      "projects-new": {
+        "title": "Załóż projekt",
+        "body": "Daj bieżącej pracy dom: instrukcje, które czyta każdy agent w nim, i pliki wspólne dla każdego czatu."
+      },
+      "projects-list": {
+        "title": "Twoje projekty",
+        "body": "Projekty, które masz, i te udostępnione tobie lub twoim działom. Każdy czat w projekcie mogą czytać i dołączyć do niego wszyscy jego członkowie."
+      },
+      "project-tabs": {
+        "title": "Czaty, pliki i instrukcje",
+        "body": "Zacznij czat w projekcie, dodaj pliki i foldery, na których pracują jego agenci, i ustaw, co każdy agent tu dostaje. W aplikacji desktopowej możesz też podłączyć lokalny folder bez przesyłania jego plików."
+      },
+      "chat-visual": {
+        "title": "Rysunki",
+        "body": "Agent z Visuals rysuje tu diagramy, explainery i sceny 3D, na żywo, w trakcie pisania. Otwórz rysunek na pełnym ekranie, pobierz go, zapytaj o niego albo zapisz jako aplikację z linkiem do udostępnienia."
+      },
+      "chat-voice-call": {
+        "title": "Porozmawiaj z agentem",
+        "body": "Rozpocznij rozmowę głosową. Agent odpowiada na głos, używa swoich narzędzi i pyta Cię, zanim coś zrobi; każda wypowiedź zostaje tu zapisana jako tekst."
+      },
+      "settings-appearance": {
+        "title": "Wygląd",
+        "body": "Wybierz motyw, animację pola czatu podczas dyktowania i natężenie animacji w konsoli. Każda zmiana działa od razu w tej przeglądarce."
+      },
+      "org-voice": {
+        "title": "Głos",
+        "body": "Wybierz providera zamiany mowy na tekst, klucz i język, które dziedziczą agenci i boty kanałowe. Dyktowanie i rozmowy głosowe włącza się w każdym agencie."
+      },
+      "agent-voice": {
+        "title": "Głos",
+        "body": "Na karcie Rozmowy głosowe ustaw model realtime i głos do rozmów, a na karcie Dyktowanie zdecyduj, czy mikrofon w czacie korzysta z providera, czy z przeglądarki."
+      },
+      "artifact-strip": {
+        "title": "Ta strona",
+        "body": "Nazwa strony, kto może ją otworzyć i Udostępnij. Gdy strona czegoś od Ciebie potrzebuje, na przykład danych do potwierdzenia albo prośby do rozpatrzenia, pojawia się to tutaj."
+      },
+      "artifact-consent": {
+        "title": "Potwierdzanie danych strony",
+        "body": "Gdy strona pokazuje dane tabel na żywo, jej właściciel decyduje, kto jeszcze je widzi. Do tego czasu to ostrzeżenie mówi, co widzą inni. Potwierdź dane pokazuje dokładnie, co jest udostępniane i komu, zanim się zgodzisz."
+      },
+      "artifact-requests": {
+        "title": "Prośby",
+        "body": "Prośby dotyczące tej strony czekają tutaj: ktoś prosi o jej otwarcie albo szersze udostępnienie, albo wersja edytora, która pokazuje inne dane. Przegląd porównuje ją z wersją, którą teraz widzą inni."
+      },
+      "artifact-review": {
+        "title": "Przegląd zmiany danych",
+        "body": "Edytor opublikował wersję, która pokazuje inne dane. Sprawdź zmianę danych porównuje ją z wersją, którą teraz widzą inni, i zaznacza wszystko, co nowe. Zatwierdź ją udostępnia; Odrzuć zostawia wcześniejszą wersję."
+      },
+      "artifact-actions": {
+        "title": "Workflowy, które strona może uruchomić",
+        "body": "Jeśli strona może uruchamiać workflowy, są tu wymienione z linkiem do ich runów. Strona może tylko poprosić: każdy run czeka na Twoje potwierdzenie, działa jako Ty i pokazuje, co wyśle."
+      },
+      "artifact-change-owner": {
+        "title": "Zmiana właściciela",
+        "body": "Dane strony są odczytywane z uprawnieniami jej właściciela. Zmień właściciela przekazuje stronę innemu członkowi od razu, a jej dane pozostają ukryte, dopóki nowy właściciel ich nie potwierdzi."
+      },
+      "tables-catalog": {
+        "title": "Twoje tabele",
+        "body": "Każda tabela, którą możesz otworzyć: Twoje własne i te udostępnione Tobie. Każda przechowuje typowane rekordy, które czytają i zapisują ludzie, agenci i integracje."
+      },
+      "tables-new": {
+        "title": "Uporządkowane rekordy",
+        "body": "Tabela to zbiór rekordów z nazwanymi, typowanymi kolumnami. Utwórz ją tutaj, a potem edytuj jej rekordy w konsoli albo pozwól agentom i API je czytać i zapisywać."
+      },
+      "table-columns": {
+        "title": "Jej kolumny",
+        "body": "Dodaj kolumnę, zmień jej nazwę, wybierz typ i to, czy jest opcjonalna, albo zarchiwizuj tę, której już nie używasz. Każdy zapis to nowa wersja schematu, a rekordy zachowują swoje wartości."
+      },
+      "table-triggers": {
+        "title": "Gdy przybędzie rekord",
+        "body": "Uruchamiaj opublikowany workflow dla każdego rekordu dodanego do tej tabeli, niezależnie od tego, jak go dodano. Wybierz filtrami, które rekordy go uruchamiają, i od czego startuje jego uruchomienie."
+      },
+      "table-view-tabs": {
+        "title": "Trzy sposoby patrzenia",
+        "body": "Te same rekordy jako tabela, jako tablica kanban pogrupowana według kolumny typu Wybór pojedynczy albo jako lista. Zapisz widok, żeby zachować jego filtry, sortowanie i grupowanie."
+      },
+      "flow-table-create": {
+        "title": "Utwórz tabelę",
+        "body": "Wybierz Nowa tabela — otworzy się formularz, a my przejdziemy go razem, pole po polu."
+      },
+      "flow-table-field-name": {
+        "title": "Nazwij ją",
+        "body": "Nazwij ją od tego, czym jest jeden rekord — Zamówienia, Leady, Zgłoszenia — żeby każdy, kto ją czyta lub zapisuje, wiedział, co do niej należy. Potem wybierz Dalej."
+      },
+      "flow-table-field-columns": {
+        "title": "Dodaj kolumny",
+        "body": "Wybierz Dodaj kolumnę dla każdego pola, które ma rekord, i wybierz jego typ — tekst, liczbę, datę, listę wyboru. Możesz je później zmienić. Potem wybierz Dalej."
+      },
+      "flow-table-field-visibility": {
+        "title": "Kto ją widzi",
+        "body": "Otwórz Więcej opcji, aby zmienić widoczność. Prywatna tabela jest tylko dla Ciebie; Zespół i Organizacja udostępniają ją szerzej. Później możesz udostępnić ją konkretnym osobom. Następnie wybierz Dalej."
+      },
+      "flow-table-field-create": {
+        "title": "Utwórz ją",
+        "body": "Wybierz Utwórz tabelę. Przejdziemy dalej w chwili, gdy powstanie."
+      },
+      "flow-routine-create": {
+        "body": "Wybierz Nowy harmonogram, żeby uruchamiać agenta według zegara, albo Nowy wyzwalacz zdarzenia, żeby uruchamiać go, gdy coś się wydarzy. Przejdziemy dalej, gdy tylko powstanie.",
+        "title": "Utwórz rutynę"
+      },
+      "workflows-runs": {
+        "title": "Przebiegi wszystkich workflow",
+        "body": "Co się uruchomiło we wszystkich workflow, które widzisz, od najnowszego. Zawęź do nieudanych przebiegów, testów wersji roboczych albo tego, co uruchomił jeden wyzwalacz. Otwórz przebieg, żeby zobaczyć dane każdego kroku, ponowić go od nieudanego kroku albo przenieść jego dane do edytora."
+      },
+      "workflow-stats": {
+        "title": "Jak to idzie",
+        "body": "Prawdziwe runy tego workflow z ostatniego tygodnia, miesiąca lub kwartału: ile zakończyło się dobrze, ile trwały, ile kosztowały na tle miesięcznego budżetu i z których kroków wziął się koszt i błędy."
+      },
+      "workflow-run-history": {
+        "title": "Jego runy",
+        "body": "Każdy run tego workflow, od najnowszego. Zawęź listę do nieudanych lub testowych runów i otwórz jeden, by zobaczyć dane każdego kroku albo ponowić go od kroku, który zawiódł."
+      },
+      "workflow-logs": {
+        "title": "Jego log",
+        "body": "Wiersze, które kroki tego workflow zapisały szybkim logiem, od najnowszych. Zawęź je według kroku, wyniku lub czasu, przeszukaj wiadomość i dodaj uruchomienia testowe. Wiersz otwiera uruchomienie, które go zapisało."
+      },
+      "workflow-log-alerts": {
+        "title": "Jego alerty",
+        "body": "Reguły, które powiadamiają osoby, gdy ten dziennik przekroczy próg: ile pasujących wierszy, w jakim czasie i kto się o tym dowie. Kto może edytować workflow, dodaje je, zmienia i usuwa."
+      },
+      "org-public-live-data": {
+        "title": "Dane na żywo na stronach publicznych",
+        "body": "Czy publiczne linki i osadzenia mogą pokazywać dane tabel osobom bez konta. Domyślnie wyłączone, a właściciel każdej strony nadal musi potwierdzić swoją stronę."
+      },
+      "artifact-public-data": {
+        "title": "Potwierdź dane publiczne ponownie",
+        "body": "Dane pokazywane przez stronę się zmieniły, więc jej publiczny link nie pokazuje żadnych, dopóki nie zostaną potwierdzone ponownie. Potwierdź dane pokazuje, co link by udostępnił i komu."
+      },
+      "routines-watches": {
+        "title": "Co obserwuje twoje konta",
+        "body": "Obserwacje czytają twoje własne połączone konta według harmonogramu - review czekające na ciebie, przypisane ci issues - i wrzucają to, co nowe, do twojego inboksu. Każdy wiersz mówi, kiedy ostatnio sprawdzała i ile z tego, co znalazła, wciąż czeka."
+      },
+      "agent-starters": {
+        "title": "Pierwsze wiadomości",
+        "body": "To, co czat proponuje komuś, kto otwiera tego agenta, zanim cokolwiek napisze. Nowa osoba dowiaduje się z nich, do czego jest agent, bardziej niż z opisu, więc niech każda będzie prawdziwym pytaniem, na które agent dobrze odpowiada."
+      },
+      "inbox-filters": {
+        "title": "Co przyszło do ciebie samo",
+        "body": "Znaleziska twoich obserwacji i nocne sugestie, pilne najpierw. Filtruj po źródle albo otwórz Załatwione, żeby przywrócić coś, co odrzuciłeś."
+      },
+      "org-governance": {
+        "title": "Budżet i zgody",
+        "body": "Ustaw limit wydatków organizacji i zarządzaj zwolnieniami z akceptacji. Dostępne opcje zależą od Twoich uprawnień."
+      },
+      "org-proactivity-model": {
+        "title": "Wybierz model proaktywności",
+        "body": "Wybierz dostawcę, model i klucz z Vault, a potem dodaj profil modelu. Utworzenie profilu zapisuje go od razu; Save stosuje go do nocnych sugestii i obserwacji MCP. Te zadania korzystają z tego modelu niezależnie od agenta startowego AgenticOS widocznego w Activity."
+      },
+      "org-proactivity": {
+        "title": "Proaktywność",
+        "body": "Skonfiguruj nocne sugestie, obserwowanie połączeń i proaktywne powitania w czacie. Tutaj wybierzesz model, harmonogram i budżet na osobę."
+      },
+      "project-file-location": {
+        "title": "Twój komputer czy wspólne pliki",
+        "body": "Ten komputer pokazuje zatwierdzony lokalny folder. Wspólne pliki projektu to wgrane kopie dla osób z dostępem do projektu. Te miejsca nie synchronizują się automatycznie."
+      },
+      "routine-access": {
+        "title": "Przejrzyj dostęp rutyny",
+        "body": "Otwórz tarczę przy swojej rutynie, aby przejrzeć konta i zasoby źródłowe, a następnie osobno wybrać stałe wyjątki dla działań."
+      },
+      "project-tracking": {
+        "title": "Pilnuj projektu",
+        "body": "Przejrzyj opublikowanego agenta i jego konta, a następnie jawnie opublikuj prywatnego opiekuna z tabelą zadań i zwykłą rutyną projektu."
+      },
+      "flow-project-tracker-create": {
+        "title": "Skonfigurować opiekuna projektu?",
+        "body": "Przejrzyj opublikowanego agenta, którego możesz edytować, i jego konta. Następnie jawnie opublikuj prywatnego opiekuna z tabelą zadań i cyklicznymi sprawdzeniami."
+      },
+      "channels-phone": {
+        "title": "Skonfiguruj telefonię",
+        "body": "Wybierz bota SMS Twilio, publiczną rozmowę głosową dla połączeń przychodzących, limity i dozwolone kontakty przekierowań. Skopiuj adresy webhooków do Twilio. Zgody członków są osobne."
+      },
+      "phone-contact": {
+        "title": "Twoje zgody telefoniczne",
+        "body": "Wybierz zweryfikowany numer SMS i osobno zezwól na rozmowy, raporty głosowe lub przekierowania. Ustaw język raportów i godziny ciszy; zmiana lub wygaśnięcie powiązania numeru wymaga ponownego zatwierdzenia."
+      },
+      "phone-dial": {
+        "title": "Zadzwoń na swój numer",
+        "body": "Wybierz skonfigurowany numer i opublikowanego agenta głosowego lub przygotuj raport. Zlecenie trafia do kolejki raz; niepewna akceptacja dostawcy nie powoduje automatycznego ponowienia."
+      },
+      "channels-discord-roles": {
+        "title": "Role Discorda",
+        "body": "Zmapuj rolę z serwera Discorda na grupę tutaj. Połączeni członkowie, którzy mają tę rolę, dołączają do grupy i opuszczają ją, gdy rola zostanie im odebrana."
+      },
+      "desktop-local-agents": {
+        "title": "Coding agents na tym komputerze",
+        "body": "Sprawdź instalację i logowanie Claude Code oraz Codex. Desktop otwiera ich własne komendy logowania w terminalu. Aby uruchomić lokalne zadanie, wybierz On this computer w capability agenta i folder w Work on."
+      },
+      "chat-local-skills": {
+        "title": "Twoje lokalne skills i instrukcje",
+        "body": "Wybierz źródła dostępne w tej rozmowie. Skills pozostają na komputerze; wśród włączonych źródeł kolizje rozstrzyga kolejność .agents, .claude, .codex. AGENTS.md i CLAUDE.md zawierają instrukcje projektu. Nowe czaty mają źródła wyłączone."
+      },
+      "project-file-fullscreen": {
+        "title": "Więcej miejsca na pliki",
+        "body": "Otwórz plik i powiększ czytnik, aby wykorzystać ekran. Strzałka wstecz wraca do listy folderów."
+      },
+      "workspace-file-fullscreen": {
+        "title": "Więcej miejsca na pliki",
+        "body": "Otwórz plik i powiększ czytnik, aby wykorzystać ekran. Strzałka wstecz wraca do listy folderów."
+      },
+      "agent-editor-fullscreen": {
+        "title": "Powiększ edytor",
+        "body": "Przycisk powiększania pozwala wygodnie czytać i edytować dokument. Zamknięcie powiększonego edytora zachowuje bieżący szkic."
+      },
+      "skill-editor-fullscreen": {
+        "title": "Powiększ edytor",
+        "body": "Przycisk powiększania pozwala wygodnie czytać i edytować dokument. Zamknięcie powiększonego edytora zachowuje bieżący szkic."
+      },
+      "context-editor-fullscreen": {
+        "title": "Powiększ edytor",
+        "body": "Przycisk powiększania pozwala wygodnie czytać i edytować dokument. Zamknięcie powiększonego edytora zachowuje bieżący szkic."
+      },
+      "workflow-canvas-fullscreen": {
+        "title": "Pracuj na pełnym ekranie",
+        "body": "Pływający przycisk powiększa diagram. Naciśnij go ponownie, aby wrócić do nagłówka workflow; szkic pozostaje zachowany."
+      },
+      "chat-local-coding": {
+        "title": "Agent programistyczny",
+        "body": "Wybierz Claude Code lub Codex na tym komputerze dla tej rozmowy, również gdy agent nie ma capability Coding agent. Istniejące reguły zatwierdzania i trybu tylko do odczytu nadal obowiązują. Każde zadanie wymaga natywnego potwierdzenia."
+      },
+      "workflow-step-view": {
+        "title": "Skup się na jednym panelu",
+        "body": "Na telefonie wybierz ustawienia kroku, wejście albo wynik, aby przeznaczyć dostępne miejsce na jeden panel. Przełączanie zachowuje szkic."
+      },
+      "chat-coding-settings": {
+        "title": "Model i poziom myślenia",
+        "body": "Wybierz model i poziom myślenia dostępny w zainstalowanym agencie kodującym. Ustawienia dotyczą tej rozmowy; puste pola zachowują ustawienia agenta."
+      },
+      "chat-background-tasks": {
+        "title": "Tematy w tle",
+        "body": "Niezależne zadanie otwiera nowy temat w tym projekcie. Kontynuuj rozmowę tutaj; agent wróci z wynikiem. Z tego paska otworzysz lub zatrzymasz zadanie."
+      },
+      "project-graph": {
+        "title": "Poznaj powiązane notatki",
+        "body": "Widok grafu wyznacza linki i odnośniki zwrotne z Markdown i metadanych. Odświeża się, gdy jest otwarty, korzystając wyłącznie z plików, które możesz odczytać w tej lokalizacji."
+      },
+      "workspace-graph": {
+        "title": "Poznaj powiązane notatki",
+        "body": "Widok grafu wyznacza linki i odnośniki zwrotne z Markdown i metadanych. Odświeża się, gdy jest otwarty, korzystając wyłącznie z plików, które możesz odczytać w tej lokalizacji."
+      },
+      "memory-views": {
+        "title": "Dwa rodzaje pamięci",
+        "body": "Wspomnienia to fakty, preferencje i decyzje. Notatki to dłuższe pliki i checklisty. Przeszukaj cały zbiór i otwórz wpis, aby sprawdzić źródło lub zmienić jego używanie."
+      },
+      "routine-advanced": {
+        "title": "Zostaw domyślne lub dostosuj",
+        "body": "Formularze rutyn i obserwacji zaczynają od standardowych ustawień wykonania i powiadomień. Rozwiń opcje zaawansowane, aby wybrać wersję, środowisko, budżet lub sposób dostarczania."
+      },
+      "workspace-background": {
+        "title": "Praca w tle",
+        "body": "Śledź tematy, nad którymi pracują Twoi agenci, i wracaj do wyników."
+      },
+      "org-system-agents": {
+        "title": "Usługi w tle",
+        "body": "Wybierz modele i budżety usług platformy oraz sprawdź ich użycie. Ustawienia dziennych podsumowań znajdziesz w Proaktywności."
+      },
+      "personal-coding-accounts": {
+        "title": "Konta do programowania",
+        "body": "Podłącz własne konto do kodowania i jawnie zezwól na jego użycie. Prywatne zadania w chmurze zwracają diff i archiwum wyników bez automatycznej zmiany wspólnych plików projektu."
+      },
+      "chat-coding-accounts": {
+        "title": "Twoje konta coding",
+        "body": "Podłącz Codex lub Claude Code bez wychodzenia z chatu. To Twoje prywatne konta do zadań w chmurze; lokalne narzędzia desktopowe mają osobne logowanie."
+      },
+      "claude-subscription-connect": {
+        "title": "Połącz swoją subskrypcję Claude",
+        "body": "Otwórz logowanie do Claude, ukończ je na własnym koncie i wklej otrzymany kod. Po połączeniu dodaj model subskrypcji i wybierz go w agencie lub czacie."
+      },
+      "chat-subscription-model": {
+        "title": "Użyj swojej subskrypcji Claude",
+        "body": "Wybierz jeden z zapisanych modeli subskrypcji Claude dla tego czatu. Połączenie pozostaje osobiste; zarządzaj nim w Ustawienia → Połączenia AI."
+      },
+      "workflow-run-questions": {
+        "title": "Odpowiedz agentowi",
+        "body": "Agent w tym workflow może poprosić o wyjaśnienie. Odpowiedz tutaj, aby wznowić zapisaną rozmowę i kontynuować workflow."
+      },
+      "workflow-input-contract": {
+        "title": "Określ oczekiwane dane wejściowe",
+        "body": "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema Draft 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu." 
+      }
+    },
+    "chooseLanguage": "Język",
+    "chooseRole": "Czym się zajmujesz? Twoi agenci będą to wiedzieć.",
+    "roles": {
+      "leadership": "Zarząd",
+      "sales": "Sprzedaż",
+      "marketing": "Marketing",
+      "support": "Obsługa klienta",
+      "operations": "Operacje",
+      "finance": "Finanse",
+      "people": "HR",
+      "engineering": "IT i inżynieria"
+    }
+  },
+  "hosted": {
+    "placeholder": "Zadaj pytanie…",
+    "send": "Wyślij",
+    "thinking": "Pracuję nad tym…",
+    "tooManyConnections": "Zbyt wiele połączeń stąd w ostatniej minucie. Spróbuj ponownie za chwilę.",
+    "unavailable": "Ten asystent jest teraz niedostępny.",
+    "connectionLost": "Połączenie zostało przerwane.",
+    "reconnect": "Połącz ponownie",
+    "newConversation": "Nowa rozmowa",
+    "startDictation": "Dyktuj",
+    "stopDictation": "Zakończ dyktowanie",
+    "attach": "Załącz plik",
+    "removeAttachment": "Usuń {name}",
+    "uploadFailed": "Nie udało się załączyć tego pliku.",
+    "uploading": "Załączam…",
+    "dictation": {
+      "dismiss": "Zamknij",
+      "discard": "Odrzuć",
+      "retry": "Ponów",
+      "retryCountdown": "Ponów za {seconds} s",
+      "tryAgain": "Spróbuj ponownie",
+      "recordAgain": "Nagraj ponownie",
+      "announceInserted": "{count, plural, one {Wstawiono 1 słowo} few {Wstawiono # słowa} many {Wstawiono # słów} other {Wstawiono # słowa}}",
+      "hint": {
+        "requesting": "<strong>Zezwól na mikrofon</strong> w okienku przeglądarki, aby zacząć nagrywanie.",
+        "micDenied": "<strong>Mikrofon jest zablokowany dla tej strony.</strong> Kliknij ikonę po lewej stronie paska adresu, ustaw Mikrofon na Zezwalaj i spróbuj ponownie.",
+        "micInsecure": "<strong>Ta strona nie może użyć mikrofonu.</strong> Przeglądarki udostępniają mikrofon tylko na bezpiecznych stronach (HTTPS). Zamiast tego napisz wiadomość.",
+        "micNotFound": "<strong>Nie znaleziono mikrofonu.</strong> Podłącz mikrofon albo sprawdź, czy system pozwala przeglądarce z niego korzystać, i spróbuj ponownie.",
+        "micBusy": "<strong>Mikrofon się nie uruchomił.</strong> Może go używać inna aplikacja. Zamknij ją i spróbuj ponownie.",
+        "nearLimit": "<strong>Zostało {remaining}.</strong> Po {limit} nagranie zatrzyma się i zostanie przepisane.",
+        "nearLimitSpoken": "<strong>Nagranie zaraz się zatrzyma.</strong> Po {limit} zatrzyma się i zostanie przepisane.",
+        "stoppedAtLimit": "<strong>Nagranie osiągnęło limit {limit}.</strong> Całe dotychczasowe nagranie zostanie przepisane.",
+        "silent": "<strong>Nie słychać Cię - czy mikrofon jest wyciszony?</strong> Nagrywanie trwa dalej.",
+        "tooShort": "<strong>To trwało krócej niż sekundę,</strong> więc nic nie zostało wysłane. Naciśnij mikrofon, powiedz coś, a potem naciśnij Zatrzymaj.",
+        "empty": "<strong>W nagraniu nie wykryto mowy.</strong> Sprawdź, czy mikrofon nie jest wyciszony, i nagraj ponownie.",
+        "tooLarge": "<strong>To nagranie jest za długie do przepisania.</strong> Nagraj krótszą wiadomość.",
+        "signedOut": "<strong>Sesja na tej stronie wygasła.</strong> Odśwież stronę i spróbuj ponownie.",
+        "forbidden": "<strong>Wprowadzanie głosowe nie jest tu dostępne.</strong> Zamiast tego napisz wiadomość.",
+        "unsupported": "<strong>Ta przeglądarka nagrywa dźwięk w formacie, którego nie przyjmujemy.</strong> Użyj aktualnej wersji Chrome'a albo Firefoksa.",
+        "failedTitle": "Transkrypcja się nie zakończyła.",
+        "providerErrorBody": "Usługa transkrypcji odpowiedziała błędem.",
+        "timeoutBody": "Usługa transkrypcji nie odpowiedziała na czas.",
+        "offlineBody": "Nie udało się połączyć z serwerem.",
+        "rateLimitedBody": "Za dużo nagrań w ciągu minuty.",
+        "keptBody": "Twoje nagranie ({duration}) poczeka, aż ponowisz próbę albo je odrzucisz.",
+        "notSetUpTitle": "Wprowadzanie głosowe jest teraz niedostępne.",
+        "notSetUpBody": "Zamiast tego napisz wiadomość."
+      }
+    },
+    "voice": {
+      "view": {
+        "mediaFailed": "<strong>Nie udało się przesłać dźwięku rozmowy,</strong> więc rozmowa została zakończona. Twoja sieć może go blokować. Wszystko, co zostało powiedziane do tej chwili, jest zapisane powyżej.",
+        "refused": "<strong>Rozmowa się nie rozpoczęła.</strong> {reason}",
+        "tryAgain": "Spróbuj ponownie",
+        "dismiss": "Zamknij",
+        "ending": {
+          "timeLimit": "Rozmowa się kończy: osiągnięto limit czasu",
+          "budget": "Rozmowa się kończy: połączenia głosowe są teraz niedostępne",
+          "unavailable": "Rozmowa się kończy: połączenia głosowe są teraz niedostępne"
+        },
+        "strip": {
+          "ending": {
+            "timeLimit": "<strong>Osiągnięto limit czasu.</strong> Asystent zaraz o tym powie i zakończy rozmowę.",
+            "budget": "<strong>Rozmowy są teraz niedostępne.</strong> Asystent zaraz o tym powie i zakończy rozmowę."
+          }
+        }
+      },
+      "failure": {
+        "micInsecure": "<strong>Ta strona nie może użyć mikrofonu.</strong> Przeglądarki udostępniają mikrofon tylko na bezpiecznych stronach (HTTPS). Zamiast tego napisz wiadomość.",
+        "micDenied": "<strong>Mikrofon jest zablokowany dla tej strony.</strong> Kliknij ikonę po lewej stronie paska adresu, ustaw Mikrofon na Zezwalaj i spróbuj ponownie.",
+        "micNotFound": "<strong>Nie znaleziono mikrofonu.</strong> Podłącz mikrofon albo sprawdź, czy system pozwala przeglądarce z niego korzystać, i spróbuj ponownie.",
+        "micBusy": "<strong>Mikrofon się nie uruchomił.</strong> Może go używać inna aplikacja. Zamknij ją i spróbuj ponownie.",
+        "connectionFailed": "<strong>Nie udało się połączyć.</strong> Sprawdź połączenie i spróbuj ponownie."
+      },
+      "ended": {
+        "timeLimit": "Rozmowa osiągnęła limit czasu.",
+        "budget": "Ten asystent nie może teraz odbierać rozmów. Zamiast tego napisz wiadomość.",
+        "revoked": "Rozmowy zostały tu wyłączone.",
+        "guardrail": "Rozmowę zakończyła reguła dotycząca treści.",
+        "shutdown": "Serwer został uruchomiony ponownie. Spróbuj jeszcze raz.",
+        "busy": "Z tej strony trwa już rozmowa.",
+        "lineBusy": "Wszystkie linie są zajęte. Spróbuj ponownie za kilka minut albo napisz wiadomość.",
+        "forbidden": "Rozmowy są tu teraz niedostępne. Zamiast tego napisz wiadomość.",
+        "notConfigured": "Rozmowy są tu teraz niedostępne. Zamiast tego napisz wiadomość.",
+        "notPriced": "Rozmowy są tu teraz niedostępne. Zamiast tego napisz wiadomość.",
+        "resumeRefused": "Rozmowa została przerwana i nie udało się jej wznowić.",
+        "generic": "Rozmowa niespodziewanie się zakończyła. Spróbuj ponownie.",
+        "unavailable": "Ten asystent nie może teraz odbierać rozmów. Zamiast tego napisz wiadomość."
+      },
+      "notice": {
+        "limitWarning": "{seconds, plural, =60 {Została 1 minuta rozmowy} one {Została # sekunda rozmowy} few {Zostały # sekundy rozmowy} many {Zostało # sekund rozmowy} other {Zostało # sekundy rozmowy}}",
+        "guardrail": "Reguła dotycząca treści przerwała odpowiedź.",
+        "providerError": "W rozmowie wystąpił problem.",
+        "timeLimit": "Rozmowa osiągnęła limit czasu i się kończy.",
+        "budget": "Rozmowy są teraz niedostępne. Rozmowa się kończy.",
+        "unavailable": "Rozmowy są teraz niedostępne. Rozmowa się kończy."
+      }
+    }
+  },
+  "mcp": {
+    "accessToken": "Token dostępu",
+    "accountsOnThisServer": "Każde konto podłączone do tego serwera i gdzie może być użyte.",
+    "addCustomServer": "Dodaj własny serwer",
+    "noLongerMainAccount": "To już nie jest Twoje główne konto dla agentów",
+    "nowMainAccount": "Teraz to Twoje główne konto dla agentów",
+    "mainAccount": "Główne konto dla agentów",
+    "allCategories": "Wszystkie kategorie",
+    "anyState": "Dowolny stan",
+    "authApiToken": "Token API",
+    "authChoiceNone": "Brak",
+    "authNoCredentials": "Brak danych uwierzytelniających",
+    "authNoneHint": "Serwer jest otwarty albo stoi w sieci, do której tylko Ty masz dostęp.",
+    "authOauth": "OAuth",
+    "authOauthHint": "Zaloguj się u providera. Odkrywane z metadanych samego serwera - zwykle nie ma tu czego konfigurować.",
+    "authTokenHint": "Stałe dane uwierzytelniające, wysyłane jako `Authorization: Bearer`.",
+    "authentication": "Uwierzytelnianie",
+    "authentication2": "Uwierzytelnianie",
+    "authorize": "Autoryzuj",
+    "boundByAgents": "Jedyny rodzaj, który można związać z agentem.",
+    "cancel": "Anuluj",
+    "cancel2": "Anuluj",
+    "category": "Kategoria",
+    "checkConnection": "Sprawdź połączenie",
+    "checkFailed": "Sprawdzenie się nie powiodło",
+    "checkItOnTheServersPage": "Sprawdź go na stronie serwerów MCP, a potem wróć.",
+    "clientSecretNeedsId": "Client secret wymaga client ID, do którego należy.",
+    "connect": "Podłącz dla",
+    "connect2": "Podłącz dla",
+    "connectAction": "Podłącz",
+    "connectAnother": "Dodaj konto",
+    "connectCheck": "Podłącz i sprawdź",
+    "connectCustomForScope": "Dodaj serwer MCP dla {scope, select, organization {organizacji} other {siebie}}",
+    "connectForScope": "Podłącz {name} dla {scope, select, organization {organizacji} other {siebie}}",
+    "connected": "Podłączony",
+    "connectedForOrg": "{name} jest teraz dostępny dla agentów tej organizacji.",
+    "connectedForYou": "{name} jest podłączony dla Twojego asystenta.",
+    "connectionState": "Stan połączenia",
+    "couldNotDisconnect": "Nie udało się odłączyć",
+    "couldNotSaveServer": "Nie udało się zapisać serwera",
+    "couldNotSaveTool": "Nie udało się zapisać wyboru narzędzi",
+    "couldNotStartSign": "Nie udało się rozpocząć logowania",
+    "customAddedByOrg": "Dodany przez tę organizację, nie z katalogu.",
+    "customAddedByYou": "Dodany przez Ciebie, nie z katalogu.",
+    "customServer": "Własny serwer",
+    "disconnect": "Odłącz",
+    "disconnectOrgWarning": "Odłączyć „{name}”? Agenci z nim związani działają dalej, bez jego narzędzi.",
+    "disconnectServerTitle": "Odłączyć serwer?",
+    "disconnectWarning": "Odłączyć „{name}”?",
+    "displayName": "Nazwa",
+    "displayNameHint": "Jak to połączenie nazywa się na ekranie. Opcjonalne - bez niej jest pokazywane pod swoim prefiksem narzędzi.",
+    "secondAccountNeedsLabel": "Masz już konto w tym serwisie. Nazwij to, żeby je od siebie odróżnić.",
     "displayNamePlaceholder": "Firmowa wiki",
     "documentation": "Dokumentacja",
     "edit": "Edytuj",
