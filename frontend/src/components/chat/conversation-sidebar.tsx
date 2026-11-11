@@ -54,7 +54,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { InboxIcon as Inbox, ChatIcon as MessageSquare } from "@/components/icons/product-icons";
-import type { Conversation } from "@/types";
+import type { Conversation, ConversationAgent } from "@/types";
 import {
   ConversationFilters,
   DEFAULT_SORT,
@@ -474,7 +474,9 @@ export function byAge(
 interface Band {
   key: string;
   heading: string | null;
-  icon: "star" | "unread" | "shared" | "project" | null;
+  icon: "star" | "unread" | "shared" | "project" | "agent" | null;
+  /** The agent an agent band is named for; its face heads the band. */
+  agent?: ConversationAgent;
   rows: Conversation[];
 }
 
@@ -530,7 +532,8 @@ export function byAgent(conversations: Conversation[], unnamed: string): Band[] 
     const band = bands.get(agent.id) ?? {
       key: `agent:${agent.id}`,
       heading: agent.name,
-      icon: null,
+      icon: "agent",
+      agent,
       rows: [],
     };
     band.rows.push(conversation);
@@ -858,7 +861,7 @@ function ConversationList({
                 {ts("counted", { count: total })}
               </p>
             )}
-            {bands.map(({ key, heading, icon, rows }) => (
+            {bands.map(({ key, heading, icon, agent, rows }) => (
               <div key={key} className="space-y-0.5">
                 {heading !== null && (
                   // A heading that folds its band away and opens it again; folded,
@@ -873,6 +876,9 @@ function ConversationList({
                     {icon === "unread" && <Inbox className="h-3.5 w-3.5" aria-hidden />}
                     {icon === "shared" && <Users className="h-3.5 w-3.5" aria-hidden />}
                     {icon === "project" && <ProjectAvatar name={heading} />}
+                    {icon === "agent" && agent && (
+                      <ConversationAgents agents={[agent]} showName={false} size="sm" unframed />
+                    )}
                     <span className="min-w-0 flex-1 truncate">{heading}</span>
                     {isFolded(key) && (
                       <span className="text-muted-foreground/70 tabular-nums">{rows.length}</span>
@@ -1346,7 +1352,7 @@ function CollapsedSidebar({
             <Archive className="h-3.5 w-3.5" aria-hidden />
           </span>
         )}
-        {bands.map(({ key, heading, icon, rows }, index) => {
+        {bands.map(({ key, heading, icon, agent, rows }, index) => {
           const folded = heading !== null && isFolded(key);
           return (
             <div key={key} className="flex flex-col items-center gap-0.5">
@@ -1370,6 +1376,14 @@ function CollapsedSidebar({
                     <Users className="h-3.5 w-3.5" aria-hidden />
                   ) : icon === "project" ? (
                     <ProjectAvatar name={heading} />
+                  ) : icon === "agent" && agent ? (
+                    <ConversationAgents
+                      agents={[agent]}
+                      showName={false}
+                      size="sm"
+                      unframed
+                      compact
+                    />
                   ) : (
                     <span
                       aria-hidden
