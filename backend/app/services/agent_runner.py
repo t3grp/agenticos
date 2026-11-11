@@ -348,6 +348,7 @@ from app.services.device_hub import LocalTarget
 from app.services.mcp_catalog import get_entry as mcp_catalog_entry
 from app.services.mcp_connection import (
     AccountNote,
+    ManagedAppNote,
     PersonalServiceGapKind,
     UnavailableBinding,
     UnavailablePersonalService,
@@ -2420,6 +2421,19 @@ def _with_account_notes(spec: AgentSpec, notes: Sequence[AccountNote]) -> AgentS
     return spec.model_copy(update={"instructions": f"{spec.instructions}\n\n{added}"})
 
 
+def _with_managed_app_notes(spec: AgentSpec, apps: Sequence[ManagedAppNote]) -> AgentSpec:
+    if not apps:
+        return spec
+    lines = [
+        f"{app.app} is connected for this person (account {app.account}); its tools are "
+        f"prefixed `{app.prefix}_`. If they aren't visible, find them with search_tools "
+        "before saying the app is unavailable."
+        for app in apps
+    ]
+    added = "\n".join(lines)
+    return spec.model_copy(update={"instructions": f"{spec.instructions}\n\n{added}"})
+
+
 def _connect_on_use(
     unavailable: Sequence[UnavailableBinding],
     *,
@@ -4058,6 +4072,7 @@ class AgentRunnerService:
             )
         spec = _with_personal_service_gaps(spec, briefed, surface, sender_present=sender_present)
         spec = _with_account_notes(spec, resolved.accounts)
+        spec = _with_managed_app_notes(spec, resolved.managed_apps)
         if routine is not None and routine.routine_kind == "trigger":
             assert routine.source_policy is not None
             if (
@@ -5477,6 +5492,7 @@ class AgentRunnerService:
             sender_present=delegation.sender_present,
         )
         runnable = _with_account_notes(runnable, resolved.accounts)
+        runnable = _with_managed_app_notes(runnable, resolved.managed_apps)
         secrets = await self.secrets.resolve_for_bindings(ctx, _secret_ids(runnable))
         return ResolvedSubagent(
             name=delegate.slug,

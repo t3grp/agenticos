@@ -214,6 +214,7 @@ async def managed_connection_spec(
         approval="all" if dynamic or approval == "all" else "writes",
         include_instructions=False,
         account=account_name,
+        managed_app_name=app.name,
         source_connection_id=connection.id,
         authorization_generation=connection.authorization_generation,
         source_url=connection.url,

@@ -196,6 +196,8 @@ class McpServerSpec:
     # a labelled connection, or one of several accounts on one service. Shown
     # beside the call on an approval, so "Send mail" says from which mailbox.
     account: str | None = None
+    # Human-facing name for a runtime-only managed app connection.
+    managed_app_name: str | None = None
     # This deployment's own server (`/mcp`), reached through the application in
     # this process rather than over the network - never probed, never dialled out.
     in_process: bool = False
