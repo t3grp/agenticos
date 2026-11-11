@@ -2056,6 +2056,11 @@
       "failed": "Der Browser war nicht erreichbar"
     },
     "conversationActions": "Aktionen der Konversation",
+    "changeProject": "Projekt ändern",
+    "moveToProject": "In Projekt verschieben…",
+    "removeFromProject": "Aus Projekt entfernen",
+    "projectMoved": "Konversation verschoben",
+    "projectMoveFailed": "Konversation konnte nicht verschoben werden",
     "imageNotLoaded": "Bild (nicht geladen)",
     "whileWorking": {
       "steersWaiting": "In die Aufgabe gesendet - sie liest es beim nächsten Schritt"
@@ -12289,6 +12294,9 @@
     "created": "Projekt {name} erstellt",
     "saved": "Projekt gespeichert",
     "deleted": "Projekt gelöscht. Seine Chats sind jetzt normale Chats.",
+    "moved": "Konversation verschoben",
+    "moveFailed": "Konversation konnte nicht verschoben werden",
+    "changeProject": "Projekt ändern",
     "uploaded": "{count, plural, =1 {1 Datei hinzugefügt} other {# Dateien hinzugefügt}}",
     "removed": "Entfernt",
     "filesUnreadable": "Die Dateien des Projekts konnten nicht gelesen werden",
