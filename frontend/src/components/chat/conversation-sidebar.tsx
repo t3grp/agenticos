@@ -54,7 +54,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { InboxIcon as Inbox, ChatIcon as MessageSquare } from "@/components/icons/product-icons";
-import type { Conversation } from "@/types";
+import type { Conversation, ConversationAgent } from "@/types";
 import {
   ConversationFilters,
   DEFAULT_SORT,
@@ -467,7 +467,7 @@ export function byAge(
 interface Band {
   key: string;
   heading: string | null;
-  icon: "star" | "unread" | "shared" | "project" | null;
+  icon: "star" | "unread" | "shared" | "project" | "agent" | null;\n  /** The agent an agent band is named for; its face heads the band. */\n  agent?: ConversationAgent;
   rows: Conversation[];
 }
 
@@ -850,7 +850,7 @@ function ConversationList({
                 {ts("counted", { count: total })}
               </p>
             )}
-            {bands.map(({ key, heading, icon, rows }) => (
+            {bands.map(({ key, heading, icon, agent, rows }) => (
               <div key={key} className="space-y-0.5">
                 {heading !== null && (
                   // A heading that folds its band away and opens it again; folded,
@@ -1320,7 +1320,7 @@ function CollapsedSidebar({
             <Archive className="h-3.5 w-3.5" aria-hidden />
           </span>
         )}
-        {bands.map(({ key, heading, icon, rows }, index) => {
+        {bands.map(({ key, heading, icon, agent, rows }, index) => {
           const folded = heading !== null && isFolded(key);
           return (
             <div key={key} className="flex flex-col items-center gap-0.5">
