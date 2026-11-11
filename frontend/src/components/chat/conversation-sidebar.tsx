@@ -900,7 +900,11 @@ function ConversationList({
                       onRename={(title) => onRename(conversation.id, title)}
                       onShare={() => setShareConversationId(conversation.id)}
                       onMoveProject={() => setProjectConversationId(conversation.id)}
-                      shared={shared?.some((entry) => entry.id === conversation.id) === true}
+                      shared={
+                        conversation.share_permission !== undefined
+                          ? conversation.share_permission !== null
+                          : shared?.some((entry) => entry.id === conversation.id) === true
+                      }
                       onLeave={() => onLeaveShared?.(conversation.id)}
                     />
                   ))}
