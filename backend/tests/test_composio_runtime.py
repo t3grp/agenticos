@@ -844,7 +844,9 @@ async def test_any_agent_resolves_the_senders_gmail_and_gets_its_managed_app_not
     assert "Gmail is connected for this person" not in spec.instructions
 
 
-def test_dynamic_bindings_keep_an_explicit_agents_approval_ceiling():
+async def test_dynamic_bindings_keep_an_explicit_tool_ceiling_and_resolve_approval(
+    monkeypatch, provider
+):
     explicit = PersonalMcpServerRef(
         account="personal",
         catalog_key="composio-google_sheets",
@@ -869,11 +871,44 @@ def test_dynamic_bindings_keep_an_explicit_agents_approval_ceiling():
     ]
     assert len(dynamic) == 1
     assert dynamic[0].allowed_tools == [_DYNAMIC_TOOLS[1]]
-    assert dynamic[0].approval == "none"
     assert not any(
         isinstance(ref, PersonalMcpServerRef) and ref.catalog_key == "composio-invalid toolkit"
         for ref in updated.mcp_servers
     )
+
+    sender_id = uuid4()
+    connection = _dynamic_connection(user_id=sender_id)
+    monkeypatch.setattr(
+        mcp_connection.mcp_connection_repo,
+        "list_user_scoped_by_catalog_key",
+        AsyncMock(return_value=[connection]),
+    )
+
+    def result() -> str:
+        return "read"
+
+    inner = FunctionToolset(
+        [
+            Tool(
+                result,
+                name=_DYNAMIC_TOOLS[1],
+                metadata={"annotations": {"readOnlyHint": True}},
+            )
+        ]
+    )
+    monkeypatch.setattr(mcp, "MCPToolset", MagicMock(return_value=inner))
+    monkeypatch.setattr(mcp, "probe_mcp_server", AsyncMock(return_value=[]))
+    resolved = await mcp_connection.build_toolsets_for_agent(
+        AsyncMock(),
+        organization_id=uuid4(),
+        refs=updated.mcp_servers,
+        sender_user_id=sender_id,
+    )
+    ctx = RunContext(deps=object(), model=TestModel(), usage=RunUsage())
+    tools = await resolved.toolsets[0].get_tools(ctx)
+
+    assert list(tools) == [f"{tool_prefix(dynamic[0].catalog_key)}_{_DYNAMIC_TOOLS[1]}"]
+    assert tools[next(iter(tools))].tool_def.metadata[mcp.NEEDS_APPROVAL] is True
 
 
 @pytest.mark.parametrize("missing", ["key", "blank_key", "configs", "blank_config", "reviewed_app"])
