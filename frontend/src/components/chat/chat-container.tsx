@@ -930,6 +930,7 @@ export function ChatContainer({
         }
         isArchived={isArchived}
         readOnly={readOnly}
+        projectReadOnly={projectReadOnly}
         viewOnly={viewOnly}
         accessState={access.failed ? "error" : !access.known ? "checking" : undefined}
         onRetryAccess={access.retry}
@@ -1064,6 +1065,8 @@ interface ChatUIProps {
   isArchived?: boolean;
   viewOnly?: boolean;
   readOnly: boolean;
+  /** Somebody else's thread, or its access is unknown: its project chip is read-only. */
+  projectReadOnly: boolean;
   accessState?: "checking" | "error";
   onRetryAccess: () => void;
   sendMessage: (
@@ -1151,6 +1154,7 @@ function ChatUI({
   isArchived,
   viewOnly = false,
   readOnly,
+  projectReadOnly,
   accessState,
   onRetryAccess,
   sendMessage,
