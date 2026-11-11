@@ -21,6 +21,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- Apps can be favourited per person; the app list can return only apps the caller has favourited, newest star first.
 - An opt-in finance and accounting pack with 15 agent templates and 43 skills, including all ten Anthropic financial-services agents and five community Agency Agents roles. Templates install as editable organization-owned drafts. The included installer supports read-only planning, organization checks and idempotent re-runs, and refuses conflicts with edited copies. Bundled references retain pinned sources and licences. Configure the model, client knowledge, connectors and artifact runtime, then review before publishing. See the [pack guide](https://github.com/t3grp/agenticos/blob/t3/integrations/accounting-firm/README.md).
 - A usable `/onboarding` page, linked from the account menu, with optional
   Composio app connections and a direct path into the workspace. App consent
