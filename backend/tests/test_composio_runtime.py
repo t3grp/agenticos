@@ -963,7 +963,9 @@ async def test_non_assistant_run_without_sender_gets_no_personal_apps(monkeypatc
     monkeypatch.setattr(agent_registry.mcp_connection_repo, "list_composio_for_user", lookup)
     spec = AgentSpec(name="Researcher")
 
-    actual = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(agent, spec)
+    actual = await agent_registry.AgentRegistryService(AsyncMock()).with_assistant_guidance(
+        agent, spec
+    )
 
     assert actual is spec
     assert not any(isinstance(ref, PersonalMcpServerRef) for ref in actual.mcp_servers)
@@ -981,9 +983,7 @@ async def test_non_assistant_sender_without_a_gmail_account_resolves_no_gmail_to
     )
     ref = PersonalMcpServerRef(account="personal", catalog_key="composio-gmail")
 
-    specs, status = await mcp_connection._personal_specs(
-        AsyncMock(), ref, sender_user_id=sender_id
-    )
+    specs, status = await mcp_connection._personal_specs(AsyncMock(), ref, sender_user_id=sender_id)
 
     assert specs == []
     assert status == "not_connected"

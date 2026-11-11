@@ -3890,9 +3890,13 @@ class AgentRegistryService:
         from app.services.app_connections.runtime import with_app_connection_bindings
 
         runtime_spec = spec
-        if sender_user_id is not None and await member_repo.get_active(
-            self.db, organization_id=agent.organization_id, user_id=sender_user_id
-        ) is not None:
+        if (
+            sender_user_id is not None
+            and await member_repo.get_active(
+                self.db, organization_id=agent.organization_id, user_id=sender_user_id
+            )
+            is not None
+        ):
             dynamic_catalog_keys: set[str] = set()
             for connection in await mcp_connection_repo.list_composio_for_user(
                 self.db, user_id=sender_user_id
@@ -3939,7 +3943,9 @@ class AgentRegistryService:
             platform.allowed_tools
         )
         additions = (
-            [guidance] if project_tools_available and guidance not in runtime_spec.instructions else []
+            [guidance]
+            if project_tools_available and guidance not in runtime_spec.instructions
+            else []
         )
         workflow_tools = {"list_workflow_nodes", "create_workflow_draft", "list_virtual_tables"}
         if platform.allowed_tools is None or workflow_tools.issubset(platform.allowed_tools):
