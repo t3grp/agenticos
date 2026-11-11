@@ -21,6 +21,11 @@ vi.mock("@/hooks/use-project-folder", () => ({
     scopeKey: id ? `alice:org:${id}` : null,
   }),
 }));
+const shared = vi.hoisted(() => ({ ids: [] as string[] }));
+vi.mock("@/hooks/use-conversation-shares", () => ({
+  useSharedConversation: (id: string | null) =>
+    id !== null && shared.ids.includes(id) ? { id } : undefined,
+}));
 const params = vi.fn(() => new URLSearchParams());
 vi.mock("next/navigation", () => ({
   useSearchParams: () => params(),
@@ -71,6 +76,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   desktop.enabled = false;
   desktop.folder = null;
+  shared.ids = [];
   useWorkOnStore.setState({ byConversation: {}, draft: null, draftProjectKey: null });
   params.mockReturnValue(new URLSearchParams());
   useConversationStore.getState().setPendingProjectId(null);
@@ -180,6 +186,16 @@ describe("ProjectChip", () => {
     await waitFor(() =>
       expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", { project_id: null }),
     );
+  });
+
+  it("shows a shared thread's project read-only, with no move action", async () => {
+    shared.ids = ["c-shared"];
+    vi.mocked(apiClient.get).mockResolvedValue({ id: "c-shared", project_id: "p-1" });
+    chip("c-shared");
+
+    expect(await screen.findByText("Launch")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Change project for Launch" })).toBeNull();
+    expect(apiClient.patch).not.toHaveBeenCalled();
   });
 });
 
