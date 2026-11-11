@@ -86,22 +86,16 @@ nieodtwarzalny: „case does not reproduce - the old text already passes".
 Werdykty są oceniane w momencie odczytu próby, nigdy nie są przechowywane.
 Przebieg, który wciąż trwa, pozostawia swój przypadek jako oczekujący.
 
-Próba może wskazywać propozycję zamiast nadpisania instrukcji: uruchamia
-nowy tekst propozycji, więc próba jest dowodem, według którego propozycja
-jest oceniana. Propozycji skierowanej do skilla nie można wypróbować —
-skille nie mają nadpisania na poziomie przebiegu — i wypróbować można tylko
-propozycję w wersji roboczej.
+Próba może wskazywać roboczą propozycję zamiast nadpisania instrukcji:
+uruchamia proponowany tekst instrukcji albo treść skilla. Próba skilla używa
+proponowanej treści jako nadpisania w pamięci podczas przebiegu testowego i
+nie zapisuje jej w skillu. Zapisuje też sumę SHA-256 sprawdzonej treści;
+zastosowanie musi dotyczyć dokładnie tej propozycji.
 
-Próba działa synchronicznie w żądaniu, więc duża próba — pięć przypadków po
-pięć próbek to pięćdziesiąt przebiegów — trwa minuty i może przekroczyć
-limit czasu HTTP. Przeniesienie wykonywania prób do zadania w tle zostało
-ocenione w fazie 2 i nie zostało wdrożone: ścieżka workera — zadanie
-`run-eval-try`, które odtwarza uprawnienia pytającego, uruchamia strony i
-uzupełnia wiersz próby, podczas gdy żądanie zwraca 201 z próbą oczekującą —
-nie mogła zostać tutaj zweryfikowana, gdzie nie działa ani Postgres, ani
-worker, a niezweryfikowana ścieżka workera jest gorsza niż wolne żądanie.
-Do czasu jej wdrożenia trzymaj próby małe — jeden lub dwa przypadki, jedna
-próbka.
+Próba działa synchronicznie i jest ograniczona do dziesięciu wywołań modelu
+(dwie strony na przypadek i próbkę). Większe żądania są odrzucane, zanim
+rozpocznie się wywołanie modelu. Wykonywanie w tle pozostaje osobnym,
+przyszłym zadaniem.
 
 ## Propozycje { #proposals }
 
@@ -119,12 +113,9 @@ kontrolną SHA-256 jako bazę. Lista zastosowanych zmian to lista propozycji
 odfiltrowana do `status=applied`: każdy wpis zawiera wersję, którą
 opublikował, oraz próbę, która go potwierdziła.
 
-Cele dotyczące skilli są sprawdzane wyłącznie przez człowieka. Żadna próba
-nie może potwierdzić zmiany skilla, więc propozycja dotycząca skilla nigdy
-nie jest ograniczona bramą ewaluacyjną, a każda powierzchnia, która ją
-pokazuje, oznacza ją jako nieobjętą bramą. Najpierw zastosuj regułę jako
-zmianę instrukcji u danego agenta, a przenieś ją do współdzielonego skilla,
-gdy już się tam sprawdzi.
+Propozycje dotyczące skilli również wymagają zaliczonej próby
+ewaluacyjnej. Proponowana treść skilla działa jako nadpisanie w pamięci po
+stronie testowej; zapisany skill pozostaje bez zmian.
 
 ## Stosowanie propozycji { #applying-a-proposal }
 
@@ -151,12 +142,12 @@ to zamrożony nowy tekst, a propozycja zapisuje ją jako uchwyt wycofania.
 Powiązany wpis rejestru, jeśli istnieje, jest oznaczany jako rozwiązany, a
 wpis audytu zapisuje propozycję, wersję, próbę i wersję bazową.
 
-Zastosowanie skilla odmawia z kodem 409, chyba że bieżąca treść skilla wciąż
-ma sumę kontrolną równą bazowej sumie propozycji, a następnie edytuje skill
-na żywo. Ta edycja dociera do każdego agenta powiązanego ze skillem
-natychmiast i nie ma wycofania skilla — złe zastosowanie cofa się nową
-edycją, nie przywróceniem wersji. Wpis audytu zapisuje sumę kontrolną
-zastosowanej treści, ponieważ wiersz propozycji nie wskazuje żadnej wersji.
+Zastosowanie skilla wymaga zaliczonej próby dla dokładnie proponowanej
+treści i odmawia z kodem 409, jeśli bieżąca treść skilla nie odpowiada już
+bazowej sumie propozycji. Przed edycją na żywo poprzednia treść jest
+zapisywana w propozycji. Jednorazowy endpoint przywracania odtwarza tę treść
+tylko wtedy, gdy skill nadal ma zastosowaną sumę kontrolną; późniejsze
+zmiany nie są nadpisywane. Przywrócenie trafia do audytu.
 
 Cofnięcie zastosowania instrukcji to istniejące wycofanie: opublikuj nową
 wersję skopiowaną z wersji bazowej zapisanej przez propozycję. Nie ma do
@@ -210,11 +201,9 @@ Wybranie propozycji pokazuje zmianę jako porównanie, dowód ewaluacyjny
 wraz z werdyktami bramy dla każdego przypadku oraz akcje zastosowania i
 odrzucenia. Propozycja instrukcji stosuje się dopiero, gdy jej próba
 przeszła bramę, a kontrolkę zastosowania widzi tylko posiadacz
-`agents:publish`. Propozycja skilla jest oznaczana jako nieobjęta bramą
-wszędzie, gdzie się pojawia: nigdy nie była próbowna, dociera do każdego
-agenta powiązanego ze skillem i nie ma wycofania. Zastosowana propozycja
-zapisuje opublikowaną przez siebie wersję wraz ze wskazówką wycofania —
-cofnij ją, wycofując się do zapisanej przez nią wersji bazowej.
+`agents:publish`. Propozycja skilla również wymaga zaliczonej próby dla
+jej dokładnej treści. Przywrócenie odtwarza zapisany poprzedni skill, o ile
+nikt go od zastosowania nie zmienił.
 
 ### Ile reguł działa { #how-many-rules-are-live }
 
@@ -245,8 +234,8 @@ wydobywanie, nie taki, który zaakceptował kurator.
 
 Odbiorca to konfiguracja, nie wartość domyślna. Ustaw
 `FAILURE_LEARNING_DIGEST_RECIPIENT` na adres, na który mają trafiać
-podsumowania; póki jest pusty, zadanie nie robi nic — nie tworzy roboczych
-wpisów i nie wysyła maili. To jeden adres dla całego wdrożenia, więc
+podsumowania; póki jest pusty, zadanie zapisuje w logu brak działania i nie tworzy
+roboczych wpisów ani nie wysyła maili. To jeden adres dla całego wdrożenia, więc
 widzi podsumowania każdej organizacji: niech to będzie adres operatora,
 nie członka. Zobacz [odniesienie do ustawień](configuration.md#email-smtp).
 
@@ -304,10 +293,9 @@ uczenie się od samego siebie.
 
 ### Dlaczego moja próba trwała tak długo? { #why-did-my-try-take-so-long }
 
-Próby działają synchronicznie: każdy przypadek jest uruchamiany dwukrotnie
-na próbkę, jedno wywołanie modelu po drugim, wewnątrz żądania. Trzymaj próby
-małe — jeden lub dwa przypadki, jedna próbka — dopóki wykonanie w tle nie
-zostanie wdrożone.
+Próby działają synchronicznie: każdy przypadek jest uruchamiany dwa razy
+na próbkę, jedno wywołanie modelu po drugim. Żądanie może rozpocząć
+najwyżej dziesięć wywołań modelu.
 
 ### Czy próba może zmienić to, co mówi mój agent? { #can-a-try-change-what-my-agent-says }
 
@@ -323,18 +311,15 @@ publikację.
 
 ### Jak cofnąć zastosowanie? { #how-do-i-undo-an-apply }
 
-Wycofaj się do wersji bazowej zapisanej przez propozycję: istniejące
-wycofanie publikuje nową wersję skopiowaną z niej, więc oś czasu pokazuje,
-że wycofanie miało miejsce. Zastosowanie skilla nie ma wycofania — cofnij je
-nową edycją skilla.
+Cofnij propozycję instrukcji do zapisanej wersji bazowej. Zastosowanie
+skilla można raz przywrócić do zapisanej poprzedniej treści, jeśli skill
+pozostał bez zmian.
 
 ### Co się dzieje, gdy zastosuję zmianę skilla? { #what-happens-when-i-apply-a-skill-change }
 
 Każdy agent powiązany ze skillem uruchamia nową treść przy następnym
-przebiegu, bez bramy ewaluacyjnej i bez wersji, do której można wrócić.
-Dlatego propozycje dotyczące skilli są oznaczane jako nieobjęte bramą i
-dlatego zmiana instrukcji u jednego agenta jest bezpieczniejszym pierwszym
-krokiem.
+przebiegu. Propozycja wymaga zaliczonej próby dla dokładnie tej treści i
+można ją raz przywrócić, jeśli nikt nie zmienił skilla od zastosowania.
 
 ### Gdzie widzę nowe wzorce każdego dnia? { #where-do-i-see-the-new-patterns-each-day }
 

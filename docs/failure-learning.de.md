@@ -90,23 +90,17 @@ alte Seite bereits besteht, wird der Fall als nicht reproduzierbar gemeldet:
 Urteile werden beim Lesen des Versuchs gefällt, nie gespeichert. Ein Lauf,
 der noch läuft, lässt seinen Fall ausstehend.
 
-Ein Versuch kann einen Vorschlag nennen statt einer
-Anweisungsüberschreibung: Er führt den neuen Text des Vorschlags aus, also
-ist der Versuch der Beleg, nach dem der Vorschlag beurteilt wird. Ein
-Vorschlag mit Skill-Ziel kann nicht versucht werden — Skills haben keine
-Überschreibung pro Lauf — und nur ein Vorschlag im Entwurf kann versucht
-werden.
+Ein Versuch kann einen Entwurfsvorschlag statt einer
+Anweisungsüberschreibung nennen: Er führt den vorgeschlagenen Anweisungstext
+oder Skill-Inhalt aus. Skill-Versuche verwenden den vorgeschlagenen Inhalt
+als In-Memory-Überschreibung im Testlauf und speichern ihn nicht im Skill.
+Der Lauf hält den SHA-256-Hash des getesteten Inhalts fest; beim Anwenden
+muss er zu genau diesem Vorschlag passen.
 
-Ein Versuch läuft synchron in der Anfrage, also dauert ein großer Versuch —
-fünf Fälle mit fünf Stichproben sind fünfzig Läufe — Minuten und kann ein
-HTTP-Timeout treffen. Die Ausführung von Versuchen in einem Hintergrundjob
-wurde in Phase 2 geprüft und nicht ausgeliefert: Der Worker-Pfad — ein
-`run-eval-try`-Job, der die Berechtigung des Fragenden wiederherstellt, die
-Seiten ausführt und die Versuchszeile füllt, während die Anfrage 201 mit dem
-ausstehenden Versuch zurückgibt — konnte hier nicht verifiziert werden, wo
-weder Postgres noch ein Worker läuft, und ein unverifizierter Worker-Pfad
-ist schlimmer als eine langsame Anfrage. Bis er landet, halte Versuche
-klein — ein oder zwei Fälle, eine Stichprobe.
+Ein Versuch läuft synchron und ist auf zehn Modellaufrufe begrenzt (zwei
+Seiten je Fall und Stichprobe). Größere Anfragen werden abgelehnt, bevor
+ein Modell aufgerufen wird. Hintergrundausführung bleibt ein separates
+Folgethema.
 
 ## Vorschläge { #proposals }
 
@@ -124,12 +118,9 @@ SHA-256-Hash als Basis fest. Die Liste der angewendeten Änderungen ist die
 Vorschlagsliste, gefiltert auf `status=applied`: Jeder Eintrag trägt die
 Version, die er veröffentlicht hat, und den Versuch, der ihn belegt hat.
 
-Skill-Ziele werden nur von Menschen geprüft. Kein Versuch kann eine
-Skill-Änderung belegen, also ist ein Skill-Vorschlag nie evaluierungsgestützt,
-und jede Oberfläche, die einen zeigt, kennzeichnet ihn als ungeprüft. Ziehe
-die Regel zuerst als Anweisungsänderung auf dem betroffenen Agenten vor und
-verschiebe sie erst in den gemeinsamen Skill, wenn sie sich dort bewährt
-hat.
+Auch Skill-Vorschläge brauchen einen erfolgreichen Evaluierungsversuch.
+Die vorgeschlagene Skill-Fassung läuft dabei als In-Memory-Überschreibung
+auf der Testseite; der gespeicherte Skill bleibt unverändert.
 
 ## Einen Vorschlag anwenden { #applying-a-proposal }
 
@@ -158,13 +149,13 @@ Rollback-Griff fest. Der verknüpfte Verzeichniseintrag, falls es einen gibt,
 wird als gelöst markiert, und der Audit-Eintrag hält Vorschlag, Version,
 Versuch und Basisversion fest.
 
-Ein Skill-Anwenden verweigert mit 409, es sei denn, der aktuelle Inhalt des
-Skills hasht noch auf den Basishash des Vorschlags, und bearbeitet den Skill
-dann live. Diese Bearbeitung erreicht jeden Agenten, der an den Skill
-gebunden ist, sofort, und es gibt kein Skill-Rollback — ein schlechtes
-Anwenden wird durch eine neue Bearbeitung rückgängig gemacht, nicht durch
-eine Versionswiederherstellung. Der Audit-Eintrag hält den Hash des
-angewendeten Inhalts fest, da die Vorschlagszeile auf keine Version zeigt.
+Ein Skill-Anwenden benötigt einen erfolgreichen Versuch für genau den
+vorgeschlagenen Inhalt und verweigert mit 409, wenn der aktuelle Skill nicht
+mehr dem Basishash des Vorschlags entspricht. Vor der Live-Änderung wird
+der vorherige Inhalt im Vorschlag gespeichert. Der einmalige
+Wiederherstellungs-Endpunkt setzt diesen Inhalt nur zurück, wenn der Skill
+noch den angewendeten Hash hat; spätere Änderungen werden nicht überschrieben.
+Die Wiederherstellung wird auditiert.
 
 Das Rückgängigmachen eines Anweisungs-Anwendens ist das bestehende
 Rollback: Veröffentliche eine neue Version, die aus der Basisversion
@@ -222,12 +213,10 @@ Wer einen Vorschlag auswählt, sieht die Änderung als Diff, den
 Evaluierungsbeleg mit seinen Torurteilen je Fall und die Aktionen zum
 Anwenden und Ablehnen. Ein Anweisungsvorschlag wird erst angewendet,
 wenn sein Versuch das Evaluierungstor passiert hat, und nur ein Inhaber
-von `agents:publish` sieht die Anwenden-Schaltfläche. Ein Skill-Vorschlag
-wird überall, wo er erscheint, als ungeprüft gekennzeichnet: Er wurde
-nie versucht, er erreicht jeden Agenten, an den der Skill gebunden ist,
-und er hat kein Rollback. Ein angewendeter Vorschlag vermerkt die Version,
-die er veröffentlicht hat, mit dem Rollback-Hinweis — mache ihn rückgängig,
-indem du auf die Basisversion zurückrollst, die er festgehalten hat.
+von `agents:publish` sieht die Anwenden-Schaltfläche. Auch ein
+Skill-Vorschlag braucht einen erfolgreichen Versuch für genau seinen Inhalt.
+Seine Wiederherstellung setzt den gespeicherten Skill-Inhalt zurück, sofern
+niemand den Skill seit dem Anwenden geändert hat.
 
 ### Wie viele Regeln leben { #how-many-rules-are-live }
 
@@ -259,8 +248,8 @@ das Schürfen gefunden hat, nicht eines, das ein Kurator angenommen hat.
 
 Der Empfänger ist Konfiguration, kein Standardwert. Setze
 `FAILURE_LEARNING_DIGEST_RECIPIENT` auf die Adresse, an die die
-Zusammenfassungen gehen; solange sie leer ist, tut der Job überhaupt
-nichts — er legt keine Entwurfseinträge an und schickt keine Mail. Es
+Zusammenfassungen gehen; solange sie leer ist, protokolliert der Job einen
+No-op und legt keine Entwurfseinträge an oder schickt Mail. Es
 ist eine Adresse für das ganze Deployment, also sieht sie die
 Zusammenfassung jeder Organisation: Mach sie zu einer
 Operatoradresse, nicht zu der eines Mitglieds. Siehe
@@ -323,9 +312,8 @@ beides zu schürfen hieße, von sich selbst zu lernen.
 ### Warum hat mein Versuch so lange gedauert? { #why-did-my-try-take-so-long }
 
 Versuche laufen synchron: Jeder Fall wird zweimal pro Stichprobe ausgeführt,
-ein Modellaufruf nach dem anderen, innerhalb der Anfrage. Halte Versuche
-klein — ein oder zwei Fälle, eine Stichprobe — bis die Hintergrundausführung
-landet.
+ein Modellaufruf nach dem anderen. Eine Anfrage kann höchstens zehn
+Modellaufrufe starten.
 
 ### Kann ein Versuch ändern, was mein Agent sagt? { #can-a-try-change-what-my-agent-says }
 
@@ -341,19 +329,16 @@ neuere Veröffentlichung zu überschreiben.
 
 ### Wie mache ich ein Anwenden rückgängig? { #how-do-i-undo-an-apply }
 
-Rolle auf die Basisversion zurück, die der Vorschlag festgehalten hat: Das
-bestehende Rollback veröffentlicht eine neue Version, die aus ihr kopiert
-ist, sodass die Zeitachse zeigt, dass ein Rollback stattgefunden hat. Ein
-Skill-Anwenden hat kein Rollback — mache es mit einer neuen Skill-Bearbeitung
-rückgängig.
+Rolle einen Anweisungs-Vorschlag auf seine gespeicherte Basisversion
+zurück. Ein Skill-Anwenden lässt sich einmal auf den gespeicherten vorherigen
+Inhalt zurücksetzen, solange der Skill seitdem unverändert ist.
 
 ### Was passiert, wenn ich eine Skill-Änderung anwende? { #what-happens-when-i-apply-a-skill-change }
 
 Jeder Agent, der an den Skill gebunden ist, führt den neuen Inhalt bei
-seinem nächsten Lauf aus, ohne Evaluierungstor und ohne Version, auf die
-man zurückrollen könnte. Darum werden Skill-Vorschläge als ungeprüft
-gekennzeichnet, und darum ist eine Anweisungsänderung auf einem Agenten der
-sicherere erste Schritt.
+seinem nächsten Lauf aus. Der Vorschlag braucht einen erfolgreichen Versuch
+für genau diesen Inhalt und kann einmal wiederhergestellt werden, wenn seit
+seiner Anwendung niemand den Skill geändert hat.
 
 ### Wo sehe ich die neuen Muster jeden Tag? { #where-do-i-see-the-new-patterns-each-day }
 
