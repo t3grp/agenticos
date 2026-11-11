@@ -688,6 +688,10 @@
       "filters": "Filtruj i sortuj",
       "show": "Pokaż",
       "backToActive": "Wróć do aktywnych",
+      "modeLabel": "Pokaż rozmowy jako",
+      "modeChats": "Rozmowy",
+      "modeAgents": "Agenci",
+      "otherAgents": "Inne",
       "age": {
         "today": "Dzisiaj",
         "yesterday": "Wczoraj",

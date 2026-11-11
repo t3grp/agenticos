@@ -9046,6 +9046,10 @@
       "filters": "Filtrele ve sırala",
       "show": "Göster",
       "backToActive": "Etkin konuşmalara dön",
+      "modeLabel": "Konuşmaları şöyle göster",
+      "modeChats": "Konuşmalar",
+      "modeAgents": "Ajanlar",
+      "otherAgents": "Diğer",
       "age": {
         "today": "Bugün",
         "yesterday": "Dün",

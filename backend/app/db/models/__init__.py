@@ -161,6 +161,7 @@ from app.db.models.virtual_table_trigger import (
     VirtualTableTriggerRevision,
 )
 from app.db.models.artifact_share_request import ArtifactShareRequest
+from app.db.models.artifact_favourite import ArtifactFavourite
 
 __all__ = [
     "TaskBoard",
@@ -189,6 +190,7 @@ __all__ = [
     "OAuthRefreshToken",
     "Artifact",
     "ArtifactFollower",
+    "ArtifactFavourite",
     "ArtifactMediaType",
     "ArtifactShareRequest",
     "ArtifactVersion",
