@@ -1351,8 +1351,9 @@ El servidor MCP explica las mismas distinciones que los agentes: Desktop puede u
 
 - Un servidor MCP es **una URL que alguien pegó**, y sus herramientas aparecen sin
   un despliegue de código.
-- Las conexiones **personales** llegan al asistente de un miembro; solo las
-  conexiones de **organización** puede nombrarlas un spec publicado.
+- Las conexiones **personales** se resuelven en tiempo de ejecución según quién
+  envía el mensaje y pueden llegar a cualquier agente; un spec publicado solo
+  nombra conexiones de organización, nunca la conexión personal de un miembro.
 - Cada dirección de un flujo OAuth se **comprueba y se fija**, incluidas las que
   eligió el servidor remoto.
 - Un token nunca sigue a una URL que se movió, una conexión deshabilitada no

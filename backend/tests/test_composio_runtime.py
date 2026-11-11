@@ -876,16 +876,17 @@ async def test_every_member_agent_receives_apps_but_only_the_registered_assistan
     monkeypatch.setattr(
         agent_registry.mcp_connection_repo, "list_composio_for_user", dynamic_lookup
     )
-    spec = AgentSpec(
-        name="Assistant", mcp_servers=[PlatformMcpServerRef(account="platform", allowed_tools=[])]
+    platform_ref = PlatformMcpServerRef(
+        account="platform", allowed_tools=None if identity == "registered" else []
     )
+    spec = AgentSpec(name="Assistant", mcp_servers=[platform_ref])
     db = AsyncMock()
     actual = await agent_registry.AgentRegistryService(db).with_assistant_guidance(
         agent, spec, sender_user_id=sender_id
     )
     personal = [ref for ref in actual.mcp_servers if isinstance(ref, PersonalMcpServerRef)]
 
-    assert spec.mcp_servers == [PlatformMcpServerRef(account="platform", allowed_tools=[])]
+    assert spec.mcp_servers == [platform_ref]
     assert {ref.catalog_key for ref in personal} == {
         "composio-gmail",
         "composio-slack",

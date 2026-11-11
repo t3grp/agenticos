@@ -1295,8 +1295,9 @@ The platform MCP server explains the same app and environment distinctions as ag
 
 - An MCP server is **a URL somebody pasted**, and its tools appear without a
   deploy.
-- **Personal** connections reach one member's assistant; only **organization**
-  connections may be named by a published spec.
+- **Personal** connections are resolved from the active sender at run time and may
+  reach any agent; a published spec names only an organization connection, never
+  a member's personal connection.
 - Every address in an OAuth flow is **checked and pinned**, including the ones the
   remote server chose.
 - A token never follows a moved URL, a disabled connection hands out none, and

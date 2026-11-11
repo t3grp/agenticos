@@ -1368,9 +1368,9 @@ Der MCP-Server erklärt dieselben Unterschiede wie Agentenläufe: Desktop kann e
 
 - Ein MCP-Server ist **eine URL, die jemand eingefügt hat**, und seine Tools
   erscheinen ohne ein Deploy.
-- **Persönliche** Connections erreichen den Assistenten eines Mitglieds; nur
-  **Organisations-Connections** dürfen von einem veröffentlichten Spec benannt
-  werden.
+- **Persönliche** Connections werden zur Laufzeit anhand des aktiven Absenders
+  aufgelöst und können jeden Agent erreichen; ein veröffentlichter Spec nennt nur
+  eine Organisationsverbindung, niemals die persönliche Verbindung eines Mitglieds.
 - Jede Adresse in einem OAuth-Flow wird **geprüft und gepinnt**, auch die, die der
   entfernte Server gewählt hat.
 - Ein Token folgt nie einer verschobenen URL, eine deaktivierte Connection gibt

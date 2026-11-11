@@ -1310,8 +1310,9 @@ Serwer MCP wyjaśnia te same rozróżnienia co instrukcje agentów: Desktop moż
 
 - Serwer MCP to **URL, który ktoś wkleił**, a jego narzędzia pojawiają się bez
   deploymentu.
-- Połączenia **osobiste** docierają do asystenta jednego członka; tylko
-  połączenia **organizacji** może wskazać opublikowany spec.
+- Połączenia **osobiste** są rozwiązywane w czasie działania na podstawie
+  aktywnego nadawcy i mogą być używane przez dowolnego agenta; opublikowany spec
+  wskazuje wyłącznie połączenia organizacji, nigdy osobiste połączenie członka.
 - Każdy adres we flow OAuth jest **sprawdzany i przypinany**, łącznie z tymi,
   które wybrał zdalny serwer.
 - Token nigdy nie podąża za przeniesionym URL-em, wyłączone połączenie nie wydaje
