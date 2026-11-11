@@ -348,6 +348,20 @@ it("preserves explicit main-agent run denial", () => {
   expect(state.refetchAgents).not.toHaveBeenCalled();
 });
 
+it("selects a runnable app publisher when the viewer supplies one", async () => {
+  state.agents = [agent("a1", "Internal assistant name"), agent("app-agent", "App agent")];
+  render(
+    windowTree("a1", {
+      page: {
+        ...windowProps.page,
+        resource: { kind: "app", id: "app-1", title: "App", agent_id: "app-agent" },
+      },
+    }),
+  );
+  await act(async () => undefined);
+  expect(scope!.selection.getState().selectedAgentId).toBe("app-agent");
+});
+
 it("waits until the panel opens before refreshing an absent main agent", () => {
   state.agents = [agent("a2", "Scheduler")];
   const { rerender } = render(windowTree("a1", { open: false }));

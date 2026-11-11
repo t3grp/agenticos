@@ -3,6 +3,7 @@ import { ActiveOrgGuard } from "@/components/layout/active-org-guard";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 /**
  * A signed-in page that is the whole window, with none of the console around it.
@@ -21,6 +22,7 @@ export default function ViewerLayout({ children }: { children: React.ReactNode }
     <AuthGuard>
       <ActiveOrgGuard />
       <OnboardingTour />
+      <AssistantWidget />
       <div className="bg-background flex h-dvh flex-col">
         {/* This layout replaces the sidebar, including its native controls row.
             Keep the traffic lights above the viewer's back button and title. */}

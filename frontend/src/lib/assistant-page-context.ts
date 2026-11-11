@@ -5,7 +5,7 @@ export interface AssistantPageContext {
   path: string;
   title: string;
   captured_at: string;
-  resource?: { kind: string; id: string; title?: string };
+  resource?: { kind: string; id: string; title?: string; agent_id?: string };
   view?: string;
   filters?: Record<string, string>;
   selected_ids?: string[];
@@ -47,8 +47,14 @@ export function sanitizeAssistantPageDetails(value: unknown): AssistantPageDetai
     const kind = text(value.resource.kind, 64);
     const id = text(value.resource.id, 128);
     const resourceTitle = text(value.resource.title, 240);
+    const agentId = text(value.resource.agent_id, 128);
     if (kind && id)
-      details.resource = { kind, id, ...(resourceTitle ? { title: resourceTitle } : {}) };
+      details.resource = {
+        kind,
+        id,
+        ...(resourceTitle ? { title: resourceTitle } : {}),
+        ...(agentId ? { agent_id: agentId } : {}),
+      };
   }
   const view = text(value.view, 120);
   if (view) details.view = view;

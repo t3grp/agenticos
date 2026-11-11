@@ -393,6 +393,7 @@ export function ArtifactViewer({
       <div className="flex min-h-0 flex-1 flex-col">
         <ArtifactFrame
           artifactId={artifact.id}
+          agentId={artifact.agent_id}
           theme={theme}
           versionId={versionId}
           title={artifact.title}

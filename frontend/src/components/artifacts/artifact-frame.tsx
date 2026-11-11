@@ -385,6 +385,7 @@ export function LinkRequestDialog({
 interface ArtifactFrameProps {
   theme?: ArtifactTheme;
   artifactId: string;
+  agentId?: string | null;
   /** A kept version to show, or null for the current one. */
   versionId: string | null;
   title: string;
@@ -423,6 +424,7 @@ interface ArtifactFrameProps {
  */
 export function ArtifactFrame({
   artifactId,
+  agentId = null,
   versionId,
   title,
   className,
@@ -466,12 +468,12 @@ export function ArtifactFrame({
     return {
       ...currentDetails,
       title,
-      resource: { kind: "app", id: artifactId, title },
+      resource: { kind: "app", id: artifactId, title, ...(agentId ? { agent_id: agentId } : {}) },
       view: currentDetails?.view ?? "app",
       // First so the host-owned version survives the bounded filter allowlist.
       filters: { version: resolvedVersionId, ...filters },
     };
-  }, [currentDetails, title, artifactId, resolvedVersionId]);
+  }, [currentDetails, title, artifactId, agentId, resolvedVersionId]);
   useEffect(() => {
     if (!primaryPage || !nonce || view.isError) return;
     const listen = (event: MessageEvent) => {

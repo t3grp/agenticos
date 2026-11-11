@@ -60,6 +60,7 @@ export function AssistantWindow({
   const t = useTranslations("assistantWidget");
   const tPicker = useTranslations("chat.agentPicker");
   const selectedAgentId = useAgentSelectionStore((state) => state.selectedAgentId);
+  const selectAgent = useAgentSelectionStore((state) => state.select);
   const { agents, isLoading, isFetching, error, refetch } = useAgents({ includeArchived: true });
   const selected = agents.find((agent) => agent.id === selectedAgentId);
   const canSend = selected?.status === "published" && selected.can_run === true;
@@ -75,6 +76,12 @@ export function AssistantWindow({
     () => (includePage ? getPageContext() : null),
     [includePage, getPageContext],
   );
+
+  useEffect(() => {
+    const appAgentId = page.resource?.kind === "app" ? page.resource.agent_id : undefined;
+    const appAgent = appAgentId ? agents.find((agent) => agent.id === appAgentId) : undefined;
+    if (appAgent?.status === "published" && appAgent.can_run === true) selectAgent(appAgent.id);
+  }, [agents, page.resource, selectAgent]);
 
   // /assistant can install and publish after another surface cached the list.
   // Refresh that stale registry once; an explicit permission refusal stays put.
