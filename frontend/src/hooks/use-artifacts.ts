@@ -41,6 +41,8 @@ export interface ArtifactQuery {
    * the whole organization - the sidebar's list. Off for the management page.
    */
   mineOrShared?: boolean;
+  /** Only the apps the caller starred; the sidebar's favourites list. */
+  favourites?: boolean;
   /** Off when the caller may not list apps, so no request is made. Defaults to on. */
   enabled?: boolean;
 }
@@ -61,6 +63,7 @@ export function useArtifacts({
   groupId = null,
   projectId = null,
   mineOrShared = false,
+  favourites = false,
   enabled = true,
 }: ArtifactQuery = {}) {
   const { data, isLoading, error, refetch } = useQuery({
@@ -73,6 +76,7 @@ export function useArtifacts({
       groupId: groupId ?? "",
       ...(projectId ? { projectId } : {}),
       ...(mineOrShared ? { mineOrShared } : {}),
+      ...(favourites ? { favourites } : {}),
     }),
     enabled,
     queryFn: () => {
@@ -85,6 +89,7 @@ export function useArtifacts({
       if (groupId) params.set("group_id", groupId);
       if (projectId) params.set("project_id", projectId);
       if (mineOrShared) params.set("mine_or_shared", "true");
+      if (favourites) params.set("favourites", "true");
       return apiClient.get<ArtifactList>(`/apps?${params}`);
     },
     placeholderData: (previous) => previous,
@@ -144,6 +149,67 @@ export function useArtifactListActions() {
   });
 
   return { archive, unarchive, remove };
+}
+
+/** The list entries a star change lands in: lists, and the detail held under the id. */
+function isListKey(key: readonly unknown[]): boolean {
+  return key[1] === "list";
+}
+
+/**
+ * Star or unstar an app. The change shows at once in every list and in the
+ * app's own detail; a refused change is put back and says why. Each list is then
+ * refetched, so a favourites list drops an app that was unstarred and the total
+ * is right again.
+ */
+export function useToggleArtifactFavourite() {
+  const tErrors = useTranslations("errors");
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, favourite }: { id: string; favourite: boolean }) =>
+      favourite
+        ? apiClient.post<ArtifactDetail>(`/apps/${id}/favourite`)
+        : apiClient.delete<ArtifactDetail>(`/apps/${id}/favourite`),
+    onMutate: async ({ id, favourite }) => {
+      await queryClient.cancelQueries({ queryKey: qk.artifacts.all() });
+      const snapshot = queryClient.getQueriesData<ArtifactList | ArtifactDetail>({
+        queryKey: qk.artifacts.all(),
+      });
+      for (const [key, data] of snapshot) {
+        if (!data) continue;
+        if (isListKey(key) && "items" in data) {
+          // The favourites list drops an app once it is unstarred; the others flip its mark.
+          const onlyFavourites =
+            (key[2] as { favourites?: boolean } | undefined)?.favourites === true;
+          const removed = onlyFavourites && !favourite;
+          const items = removed
+            ? data.items.filter((item) => item.id !== id)
+            : data.items.map((item) =>
+                item.id === id ? { ...item, is_favourite: favourite } : item,
+              );
+          queryClient.setQueryData<ArtifactList>(key, {
+            ...data,
+            items,
+            total: removed ? Math.max(0, data.total - 1) : data.total,
+          });
+        } else if (key.length === 2 && key[1] === id && !("items" in data)) {
+          queryClient.setQueryData<ArtifactDetail>(key, { ...data, is_favourite: favourite });
+        }
+      }
+      return { snapshot };
+    },
+    onError: (error, _variables, context) => {
+      for (const [key, data] of context?.snapshot ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+      toast.error(getErrorMessage(error, tErrors));
+    },
+    onSuccess: (artifact) => {
+      queryClient.setQueryData(qk.artifacts.detail(artifact.id), artifact);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: qk.artifacts.all() }),
+  });
 }
 
 /**

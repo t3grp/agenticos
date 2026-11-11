@@ -37,9 +37,8 @@ const push = vi.fn();
 const replace = vi.fn();
 const sharingPanel = vi.fn();
 const pathname = vi.fn(() => "/apps/a1");
-const registerAssistantPageContext = vi.fn<
-  (details: AssistantPageDetails | null, enabled?: boolean) => void
->();
+const registerAssistantPageContext =
+  vi.fn<(details: AssistantPageDetails | null, enabled?: boolean) => void>();
 vi.mock("@/hooks/use-assistant-page-context", () => ({
   useRegisterAssistantPageContext: (details: AssistantPageDetails | null, enabled?: boolean) =>
     registerAssistantPageContext(details, enabled),
@@ -54,6 +53,7 @@ vi.mock("@/hooks/use-artifacts", () => ({
   useArtifactReasons: (...args: unknown[]) => useArtifactReasonsMock(...args),
   useArtifactDisclosure: (...args: unknown[]) => useArtifactDisclosureMock(...args),
   usePublicDataDisclosure: (...args: unknown[]) => usePublicDataDisclosureMock(...args),
+  useToggleArtifactFavourite: () => ({ isPending: false, mutate: vi.fn() }),
 }));
 // What the console does with a page's requests has its own tests
 // (`artifact-actions.test.tsx`); here the viewer only draws what it is lent.
@@ -1888,7 +1888,6 @@ describe("what a page can run, in the viewer", () => {
   });
 });
 
-
 describe("the app frame's assistant context", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1905,9 +1904,7 @@ describe("the app frame's assistant context", () => {
   });
 
   function openFrame() {
-    return render(
-      <ArtifactFrame artifactId="a1" versionId={null} title="Weekly report" />,
-    );
+    return render(<ArtifactFrame artifactId="a1" versionId={null} title="Weekly report" />);
   }
 
   function lastDetails() {
@@ -1919,7 +1916,8 @@ describe("the app frame's assistant context", () => {
     expect(lastDetails()).toMatchObject({
       title: "Weekly report",
       resource: { kind: "app", id: "a1", title: "Weekly report" },
-      view: "app", filters: { version: "v1" },
+      view: "app",
+      filters: { version: "v1" },
     });
     const frame = screen.getByTitle("Weekly report") as HTMLIFrameElement;
     const post = vi.spyOn(frame.contentWindow!, "postMessage");
@@ -1928,20 +1926,25 @@ describe("the app frame's assistant context", () => {
 
     const selected_ids = ["deal-1"];
     postFromFrame({
-      type: "assistant_context", n: "n",
+      type: "assistant_context",
+      n: "n",
       context: {
         title: "Forged title",
         resource: { kind: "other", id: "secret", title: "Other" },
-        view: "pipeline", filters: { stage: "won", version: "forged" },
-        selected_ids, summary: "One deal",
+        view: "pipeline",
+        filters: { stage: "won", version: "forged" },
+        selected_ids,
+        summary: "One deal",
       },
     });
     selected_ids.push("deal-2");
     expect(lastDetails()).toMatchObject({
       title: "Weekly report",
       resource: { kind: "app", id: "a1", title: "Weekly report" },
-      view: "pipeline", filters: { version: "v1", stage: "won" },
-      selected_ids: ["deal-1"], summary: "One deal",
+      view: "pipeline",
+      filters: { version: "v1", stage: "won" },
+      selected_ids: ["deal-1"],
+      summary: "One deal",
     });
     postFromFrame({ type: "assistant_context", n: "n", context: null });
     expect(lastDetails()?.summary).toBeUndefined();
@@ -1960,7 +1963,10 @@ describe("the app frame's assistant context", () => {
       new MessageEvent("message", { data, source: window }),
       new MessageEvent("message", { data: { ...data, n: "old" }, source: frame.contentWindow }),
       new MessageEvent("message", { data: { ...data, context: [] }, source: frame.contentWindow }),
-      new MessageEvent("message", { data: { ...data, context: "text" }, source: frame.contentWindow }),
+      new MessageEvent("message", {
+        data: { ...data, context: "text" },
+        source: frame.contentWindow,
+      }),
       new MessageEvent("message", { data: null, source: frame.contentWindow }),
     ]) {
       expect(assistantContextFrom(event, frame, "n")).toBeNull();
@@ -1986,7 +1992,10 @@ describe("the app frame's assistant context", () => {
     useArtifactViewMock.mockReturnValue({
       ...STATIC_VIEW,
       data: {
-        ...STATIC_VIEW.data, url: "https://api/c/new", nonce: "new", version: { id: "v2" },
+        ...STATIC_VIEW.data,
+        url: "https://api/c/new",
+        nonce: "new",
+        version: { id: "v2" },
       },
     });
     rendered.rerender(<ArtifactFrame artifactId="a1" versionId={null} title="Weekly report" />);
@@ -1995,10 +2004,14 @@ describe("the app frame's assistant context", () => {
     expect(lastDetails()?.summary).toBeUndefined();
     expect(lastDetails()?.filters?.version).toBe("v2");
     fireEvent.load(current);
-    act(() => window.dispatchEvent(new MessageEvent("message", {
-      source: previousWindow,
-      data: { type: "assistant_context", n: "new", context: { summary: "Old frame" } },
-    })));
+    act(() =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source: previousWindow,
+          data: { type: "assistant_context", n: "new", context: { summary: "Old frame" } },
+        }),
+      ),
+    );
     postFromFrame({ type: "assistant_context", n: "n", context: { summary: "Old nonce" } });
     expect(lastDetails()?.summary).toBeUndefined();
     postFromFrame({ type: "assistant_context", n: "new", context: { summary: "Current" } });

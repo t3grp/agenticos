@@ -2522,7 +2522,7 @@
     "accessChecking": "Checking conversation access…",
     "accessFailed": "Could not verify access to this conversation",
     "accessRetry": "Retry",
-    "forking": "Forking conversation…" 
+    "forking": "Forking conversation…"
   },
   "common": {
     "archiveNamedConfirm": "Archive {name}?",
@@ -4531,7 +4531,8 @@
     "whatsNewDone": "Got it",
     "backgroundWork": "Background work",
     "connectors": "Connections",
-    "onboarding": "Onboarding"
+    "onboarding": "Onboarding",
+    "noFavouriteApps": "Star an app to pin it here. <link>All apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5513,7 +5514,7 @@
       },
       "workflow-input-contract": {
         "title": "Define the expected input",
-        "body": "A Manual, API or Called by a workflow trigger can use simple fields or a JSON Schema Draft 2020-12 contract. The schema supports nested values and is checked before a run starts." 
+        "body": "A Manual, API or Called by a workflow trigger can use simple fields or a JSON Schema Draft 2020-12 contract. The schema supports nested values and is checked before a run starts."
       }
     },
     "chooseLanguage": "Language",
@@ -10516,7 +10517,11 @@
       "blockedLink": "The page has no public link. Turn it on first."
     },
     "lightTheme": "Use light app theme",
-    "darkTheme": "Use dark app theme"
+    "darkTheme": "Use dark app theme",
+    "addFavourite": "Add to favourites",
+    "removeFavourite": "Remove from favourites",
+    "addFavouriteNamed": "Add {name} to favourites",
+    "removeFavouriteNamed": "Remove {name} from favourites"
   },
   "tables": {
     "cells": {
