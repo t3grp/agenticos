@@ -143,11 +143,13 @@ describe("ProjectChip", () => {
     vi.mocked(apiClient.get).mockResolvedValue({ id: "c-1", project_id: "p-2" });
     const onPickerOpenChange = vi.fn();
     render(
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
         <ProjectChip conversationId="c-1" pickerOpen={false} onPickerOpenChange={onPickerOpenChange} />
       </QueryClientProvider>,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Change project for Treasury" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Change project" }));
     expect(onPickerOpenChange).toHaveBeenCalledWith(true);
     expect(screen.queryByRole("button", { name: /Start outside/ })).not.toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith("/conversations/c-1/metadata");
@@ -194,7 +196,7 @@ describe("ProjectChip", () => {
     chip("c-shared");
 
     expect(await screen.findByText("Launch")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Change project for Launch" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change project" })).toBeNull();
     expect(apiClient.patch).not.toHaveBeenCalled();
   });
 });
@@ -228,7 +230,7 @@ it("does not apply a computer's project folder in a browser or to an existing co
   desktop.enabled = true;
   vi.mocked(apiClient.get).mockResolvedValue({ id: "c-existing", project_id: "p-1" });
   chip("c-existing");
-  await screen.findByRole("link");
+  await screen.findByRole("button", { name: "Change project" });
   expect(useWorkOnStore.getState().targetFor("c-existing")).toBeNull();
 });
 
