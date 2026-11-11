@@ -45,6 +45,13 @@ import type { ArtifactShareRequest } from "@/types/artifact";
  * with - the maintenance gate's gap - opens a band between them.
  */
 const VIEWER = "flex min-h-0 flex-1 flex-col";
+/**
+ * On a phone the viewer bar is fixed over the top of the page: its 44px button
+ * sits 12px below the shell inset, so the page starts 64px down to clear it.
+ * Keep in step with the bar's `max-sm:top-[...]` in artifact-viewer-bar.tsx.
+ */
+const BAR_CLEARANCE =
+  "max-sm:pt-[calc(max(var(--shell-inset-top,0px),env(safe-area-inset-top))+4rem)]";
 
 interface ArtifactViewerProps {
   artifactId: string;
@@ -274,7 +281,7 @@ export function ArtifactViewer({
   );
 
   return (
-    <div className={VIEWER}>
+    <div className={cn(VIEWER, BAR_CLEARANCE)}>
       <ArtifactViewerBar
         artifact={artifact}
         live={

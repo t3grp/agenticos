@@ -3,7 +3,7 @@
 import { AudioLines, AudioLinesOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { Button, Popover, PopoverAnchor, PopoverContent } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,13 @@ export function VoiceCallButton({
   const closing = useRef<number | null>(null);
   const content = useRef<HTMLDivElement>(null);
   const link = useRef<HTMLAnchorElement>(null);
+  // The reason opens above the whole composer, not above this small button: over
+  // the button it covers the text box until it is closed (phone, 390px).
+  const [composer, setComposer] = useState<HTMLElement | null>(null);
+  const trigger = useCallback(
+    (node: HTMLButtonElement | null) => setComposer(node?.closest("form") ?? null),
+    [],
+  );
   const keepOpen = () => {
     if (closing.current !== null) window.clearTimeout(closing.current);
     closing.current = null;
@@ -100,8 +107,9 @@ export function VoiceCallButton({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor asChild>
+      <PopoverAnchor asChild virtualRef={composer ? { current: composer } : undefined}>
         <Button
+          ref={trigger}
           type="button"
           variant="ghost"
           size="icon"
