@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
-import { useSharedConversation } from "@/hooks/use-conversation-shares";
+import { useConversationAccess } from "@/hooks/use-conversation-shares";
 import { useProjectFolder } from "@/hooks/use-project-folder";
 import { useShell } from "@/hooks/use-shell";
 import { isDesktopShell } from "@/lib/desktop/shell";
@@ -56,7 +56,7 @@ export function ProjectChip({
   // A thread somebody shared with the reader is theirs: its project is read-only,
   // the same check the sidebar uses for owner-only actions. The server refuses a
   // move on it (PATCH /conversations/{id} needs ownership), so no picker is offered.
-  const sharedWithReader = useSharedConversation(conversationId) !== undefined;
+  const { conversation: accessConversation } = useConversationAccess(conversationId, conversationId !== null);\n  const sharedWithReader = accessConversation?.share_permission != null;
 
   const move = useMutation({
     mutationFn: (nextProjectId: string | null) =>
