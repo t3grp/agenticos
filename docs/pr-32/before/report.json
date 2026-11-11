@@ -1,0 +1,78 @@
+{
+  "label": "before",
+  "base": "http://127.0.0.1:3217",
+  "captures": [
+    {
+      "width": 1440,
+      "state": "list",
+      "file": "/work/.pr32-evidence/before/before-list-1440.png",
+      "text_checks": {
+        "Not eval-gated": false,
+        "Try this text": false,
+        "Revert": false,
+        "Skill reverted (reverted state)": false
+      },
+      "page_errors": 0
+    },
+    {
+      "width": 1440,
+      "state": "skill-try",
+      "file": "/work/.pr32-evidence/before/before-skill-try-1440.png",
+      "text_checks": {
+        "Not eval-gated": true,
+        "Try this text": false,
+        "Revert": false,
+        "Skill reverted (reverted state)": false
+      },
+      "page_errors": 0
+    },
+    {
+      "width": 1440,
+      "state": "applied-revert",
+      "file": "/work/.pr32-evidence/before/before-applied-revert-1440.png",
+      "text_checks": {
+        "Not eval-gated": true,
+        "Try this text": false,
+        "Revert": false,
+        "Skill reverted (reverted state)": false
+      },
+      "page_errors": 0
+    },
+    {
+      "width": 390,
+      "state": "list",
+      "file": "/work/.pr32-evidence/before/before-list-390.png",
+      "text_checks": {
+        "Not eval-gated": false,
+        "Try this text": false,
+        "Revert": false,
+        "Skill reverted (reverted state)": false
+      },
+      "page_errors": 0
+    },
+    {
+      "width": 390,
+      "state": "skill-try",
+      "file": "/work/.pr32-evidence/before/before-skill-try-390.png",
+      "text_checks": {
+        "Not eval-gated": true,
+        "Try this text": false,
+        "Revert": false,
+        "Skill reverted (reverted state)": false
+      },
+      "page_errors": 0
+    },
+    {
+      "width": 390,
+      "state": "applied-revert",
+      "file": "/work/.pr32-evidence/before/before-applied-revert-390.png",
+      "text_checks": {
+        "Not eval-gated": true,
+        "Try this text": false,
+        "Revert": false,
+        "Skill reverted (reverted state)": false
+      },
+      "page_errors": 0
+    }
+  ]
+}
