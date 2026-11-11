@@ -53,7 +53,10 @@ vi.mock("@/components/agents/conversation-agents", () => ({
     agents: Array<{ name: string }>;
     showName?: boolean;
   }) => (
-    <span data-testid="row-agents">
+    <span
+      data-testid="row-agents"
+      data-names={agents.map((agent) => agent.name).join(", ")}
+    >
       {showName ? agents.map((agent) => agent.name).join(", ") : null}
     </span>
   ),
