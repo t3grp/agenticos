@@ -638,8 +638,14 @@ function MessageBody({
   const workingSince = useWorkingStore((state) =>
     message.isStreaming && message.conversationId ? state.since[message.conversationId] : undefined,
   );
+  const workingHeartbeat = useWorkingStore((state) =>
+    message.isStreaming && message.conversationId
+      ? state.heartbeatAt[message.conversationId]
+      : undefined,
+  );
   const startedAt =
     (workingSince ? new Date(workingSince) : message.runStartedAt) ?? message.timestamp;
+  const lastHeartbeatAt = workingHeartbeat ? new Date(workingHeartbeat) : undefined;
   const t = useTranslations("chat");
   const parts = message.parts ?? [];
   const useParts = !isUser && parts.length > 0;
@@ -684,6 +690,7 @@ function MessageBody({
           durationMs={endsTurn ? message.runDurationMs : undefined}
           stopped={message.wasStopped === true}
           waitingFor={message.runWaitingFor}
+          lastHeartbeatAt={lastHeartbeatAt}
         />
       ) : (
         /* Legacy fallback: user / pre-parts messages. */

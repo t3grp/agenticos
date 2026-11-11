@@ -67,6 +67,7 @@ export function TurnParts({
   durationMs,
   stopped = false,
   waitingFor,
+  lastHeartbeatAt,
 }: {
   parts: MessagePart[];
   isStreaming: boolean;
@@ -86,6 +87,8 @@ export function TurnParts({
   stopped?: boolean;
   /** Includes a delegate paused outside the parent's own tool parts. */
   waitingFor?: "approval" | "answer";
+  /** When the run behind this turn last stamped itself alive, if known. */
+  lastHeartbeatAt?: Date;
 }) {
   const runs = runsOf(parts);
   const waiting =
@@ -188,6 +191,7 @@ export function TurnParts({
         running={isStreaming && !waiting}
         activity={activity}
         waiting={waiting}
+        lastHeartbeatAt={lastHeartbeatAt}
       >
         {split.folded.map((run, index) => {
           const previous = split.folded[index - 1];

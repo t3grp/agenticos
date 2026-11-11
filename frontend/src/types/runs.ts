@@ -11,7 +11,9 @@ export type RunStatus =
   | "budget_exceeded"
   | "guardrail_blocked"
   /** Stopped for looping on its tool calls after it was warned (#2086). */
-  | "loop_stopped";
+  | "loop_stopped"
+  /** A model request went past its deadline without answering. */
+  | "timed_out";
 
 /** One call as Activity shows it: every connection of it, summed (#54). */
 export interface VoiceChain {
