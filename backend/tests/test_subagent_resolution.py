@@ -392,6 +392,10 @@ async def _prepare(
         ) as fetch_version,
         patch(f"{RUNNER}.agent_repo.get", new=AsyncMock(side_effect=get_agent)),
         patch(f"{RUNNER}.agent_run_repo.create_run", new=AsyncMock(return_value=run)),
+        patch(
+            "app.services.agent_registry.mcp_connection_repo.list_composio_for_user",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(f"{RUNNER}.build_agent") as build,
     ):
         prepared = await service.prepare(

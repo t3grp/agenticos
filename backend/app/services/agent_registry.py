@@ -3903,7 +3903,14 @@ class AgentRegistryService:
         )
 
         connected_catalog_keys: set[str] = set()
-        if sender_user_id is not None and allow_personal_apps:
+        if sender_user_id is None or not allow_personal_apps:
+            if not is_assistant or platform is None:
+                return with_app_connection_bindings(
+                    spec,
+                    include_configured_apps=False,
+                    allow_personal_apps=allow_personal_apps,
+                )
+        else:
             connections = await mcp_connection_repo.list_composio_for_user(
                 self.db, user_id=sender_user_id
             )

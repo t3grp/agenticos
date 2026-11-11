@@ -142,6 +142,17 @@ def _nobody_the_account_describes(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_managed_personal_apps(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These runs use mocked sessions; managed connections are covered by registry tests."""
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "app.services.agent_registry.mcp_connection_repo.list_composio_for_user",
+        AsyncMock(return_value=[]),
+    )
+
+
+@pytest.fixture(autouse=True)
 def _in_no_group(monkeypatch: pytest.MonkeyPatch) -> None:
     """Nobody here is in a group; `test_prompt_variables` covers `{{groups}}`."""
     from unittest.mock import AsyncMock
