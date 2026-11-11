@@ -21,6 +21,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- A run now records whether a fallback model served it. The run row carries `fallback_used` and `serving_model` (the bare model id that answered last), derived from the per-request models in the run manifest, and the run detail view shows them. Until now a fallback was invisible in the run record: the row named the primary profile however the turn was answered.
 - Apps can be favourited per person; the app list can return only apps the caller has favourited, newest star first.
 - Chats can be assigned to a project or removed from one after creation. The association changes without moving chat files or project workspace contents.
 - An opt-in finance and accounting pack with 15 agent templates and 43 skills, including all ten Anthropic financial-services agents and five community Agency Agents roles. Templates install as editable organization-owned drafts. The included installer supports read-only planning, organization checks and idempotent re-runs, and refuses conflicts with edited copies. Bundled references retain pinned sources and licences. Configure the model, client knowledge, connectors and artifact runtime, then review before publishing. See the [pack guide](https://github.com/t3grp/agenticos/blob/t3/integrations/accounting-firm/README.md).
