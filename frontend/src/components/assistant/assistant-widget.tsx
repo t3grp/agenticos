@@ -50,7 +50,10 @@ let visits = 0;
  * Shown only to somebody who may run agents - the assistant is an agent like any
  * other. Before it has a model it walks through connecting one instead.
  */
-export function AssistantWidget({ defaultAgentId }: { defaultAgentId?: string | null } = {}) {
+export function AssistantWidget({
+  defaultAgentId,
+  viewer = false,
+}: { defaultAgentId?: string | null; viewer?: boolean } = {}) {
   // A failed read leaves the corner empty on every page rather than an error
   // following the reader around; Settings → Assistant is where it is said.
   const { assistant } = useAssistant();
@@ -64,6 +67,7 @@ export function AssistantWidget({ defaultAgentId }: { defaultAgentId?: string | 
         assistant={assistant}
         agentId={assistant.agent_id}
         defaultAgentId={defaultAgentId ?? assistant.agent_id}
+        viewer={viewer}
       />
     );
   }
@@ -109,10 +113,16 @@ function usePhone(): boolean {
   return phone;
 }
 
-function ReadyWidget({ assistant, agentId, defaultAgentId }: {
+function ReadyWidget({
+  assistant,
+  agentId,
+  defaultAgentId,
+  viewer,
+}: {
   assistant: AssistantState;
   agentId: string;
   defaultAgentId: string;
+  viewer: boolean;
 }) {
   const t = useTranslations("assistantWidget");
   const pathname = usePathname();
@@ -304,6 +314,7 @@ function ReadyWidget({ assistant, agentId, defaultAgentId }: {
       <AssistantLauncher
         assistant={assistant}
         agentId={agentId}
+        viewer={viewer}
         open={open}
         docked={docked}
         waiting={(docked || phone) && bubble !== null && isProactive(bubble) && !preferences.off}

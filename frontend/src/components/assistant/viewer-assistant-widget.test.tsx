@@ -15,10 +15,22 @@ vi.mock("next/navigation", () => ({ useParams: () => ({ id: "app-1" }) }));
 vi.mock("@/hooks/use-artifacts", () => ({
   useArtifact: () => ({ artifact: state.artifact, isLoading: false }),
 }));
-vi.mock("@/hooks/use-agents", () => ({ useAgents: () => ({ agents: state.agents, isLoading: false }) }));
+vi.mock("@/hooks/use-agents", () => ({
+  useAgents: () => ({ agents: state.agents, isLoading: false }),
+}));
 vi.mock("./assistant-widget", () => ({
-  AssistantWidget: ({ defaultAgentId }: { defaultAgentId?: string | null }) => (
-    <div data-testid="assistant" data-default-agent={defaultAgentId ?? state.assistantDefault} />
+  AssistantWidget: ({
+    defaultAgentId,
+    viewer,
+  }: {
+    defaultAgentId?: string | null;
+    viewer?: boolean;
+  }) => (
+    <div
+      data-testid="assistant"
+      data-default-agent={defaultAgentId ?? state.assistantDefault}
+      data-viewer={viewer}
+    />
   ),
 }));
 
@@ -32,6 +44,7 @@ describe("viewer assistant launcher", () => {
   it("starts with the publishing agent when it is runnable", () => {
     render(<ViewerAssistantWidget />);
     expect(screen.getByTestId("assistant")).toHaveAttribute("data-default-agent", "publisher");
+    expect(screen.getByTestId("assistant")).toHaveAttribute("data-viewer", "true");
   });
 
   it.each([
@@ -46,16 +59,26 @@ describe("viewer assistant launcher", () => {
   it("does not look up an app for another viewer page", () => {
     state.pathname = "/oauth/consent";
     render(<ViewerAssistantWidget />);
-    expect(screen.getByTestId("assistant")).toHaveAttribute("data-default-agent", "missing");
+    expect(screen.queryByTestId("assistant")).not.toBeInTheDocument();
   });
 });
 
 describe("viewerChatAgentId", () => {
   it("requires a published agent that the current member can run", () => {
-    expect(viewerChatAgentId("publisher", [{ id: "publisher", status: "published", can_run: true }], "assistant"))
-      .toBe("publisher");
-    expect(viewerChatAgentId("publisher", [{ id: "publisher", status: "published", can_run: false }], "assistant"))
-      .toBe("assistant");
+    expect(
+      viewerChatAgentId(
+        "publisher",
+        [{ id: "publisher", status: "published", can_run: true }],
+        "assistant",
+      ),
+    ).toBe("publisher");
+    expect(
+      viewerChatAgentId(
+        "publisher",
+        [{ id: "publisher", status: "published", can_run: false }],
+        "assistant",
+      ),
+    ).toBe("assistant");
     expect(viewerChatAgentId(null, [], "assistant")).toBe("assistant");
   });
 });

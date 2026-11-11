@@ -14,17 +14,20 @@ export function viewerChatAgentId(
   publisherId: string | null | undefined,
   agents: Pick<Agent, "id" | "status" | "can_run">[],
   fallback: string | null,
-): string {
-  return publisherId && agents.some(
-    (agent) => agent.id === publisherId && agent.status === "published" && agent.can_run,
-  ) ? publisherId : fallback;
+): string | null {
+  return publisherId &&
+    agents.some(
+      (agent) => agent.id === publisherId && agent.status === "published" && agent.can_run,
+    )
+    ? publisherId
+    : fallback;
 }
 
 export function ViewerAssistantWidget() {
   const pathname = usePathname();
   const page = pageOf(pathname);
   const params = useParams<{ id?: string }>();
-  if (!page.startsWith("/apps/") || !params.id) return <AssistantWidget />;
+  if (!page.startsWith("/apps/") || !params.id) return null;
   return <AppAssistantWidget artifactId={params.id} />;
 }
 
@@ -34,8 +37,6 @@ function AppAssistantWidget({ artifactId }: { artifactId: string }) {
   if (artifactLoading || agentsLoading) return null;
 
   return (
-    <AssistantWidget
-      defaultAgentId={viewerChatAgentId(artifact?.agent_id, agents, null)}
-    />
+    <AssistantWidget defaultAgentId={viewerChatAgentId(artifact?.agent_id, agents, null)} viewer />
   );
 }
