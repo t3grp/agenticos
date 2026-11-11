@@ -257,7 +257,8 @@
     "whatsNewDone": "Rozumiem",
     "backgroundWork": "Praca w tle",
     "connectors": "Połączenia",
-    "onboarding": "Wprowadzenie"
+    "onboarding": "Wprowadzenie",
+    "noFavouriteApps": "Oznacz aplikację gwiazdką, aby ją tu przypiąć. <link>Wszystkie aplikacje</link>"
   },
   "auth": {
     "agreeToTerms": "Tworząc konto, akceptujesz nasz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>.",
@@ -7099,7 +7100,7 @@
       },
       "workflow-input-contract": {
         "title": "Określ oczekiwane dane wejściowe",
-        "body": "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema Draft 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu." 
+        "body": "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema Draft 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu."
       }
     },
     "chooseLanguage": "Język",
@@ -11182,7 +11183,11 @@
       "blockedLink": "Strona nie ma publicznego linku. Najpierw go włącz."
     },
     "lightTheme": "Użyj jasnego motywu aplikacji",
-    "darkTheme": "Użyj ciemnego motywu aplikacji"
+    "darkTheme": "Użyj ciemnego motywu aplikacji",
+    "addFavourite": "Dodaj do ulubionych",
+    "removeFavourite": "Usuń z ulubionych",
+    "addFavouriteNamed": "Dodaj {name} do ulubionych",
+    "removeFavouriteNamed": "Usuń {name} z ulubionych"
   },
   "tables": {
     "cells": {
