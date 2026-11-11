@@ -658,6 +658,17 @@ class ConversationRead(ConversationBase, TimestampSchema):
             "a run parked on an approval is waiting, not working, and is not counted."
         ),
     )
+    running_heartbeat_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When the run still at work in this conversation last stamped "
+            "itself alive, or null when none is. A live run beats every 15 "
+            "seconds; a beat older than that by a wide margin means the "
+            "process behind the run has gone quiet, and the chat shows the "
+            "run as stalled. A hung model call keeps beating, so this does "
+            "not catch a hang - the per-request timeout ends that instead."
+        ),
+    )
     agents: list[ConversationAgent] = Field(
         default_factory=list,
         description=(
