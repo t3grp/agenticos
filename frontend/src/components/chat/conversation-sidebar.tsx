@@ -467,7 +467,9 @@ export function byAge(
 interface Band {
   key: string;
   heading: string | null;
-  icon: "star" | "unread" | "shared" | "project" | "agent" | null;\n  /** The agent an agent band is named for; its face heads the band. */\n  agent?: ConversationAgent;
+  icon: "star" | "unread" | "shared" | "project" | "agent" | null;
+  /** The agent an agent band is named for; its face heads the band. */
+  agent?: ConversationAgent;
   rows: Conversation[];
 }
 
