@@ -63,6 +63,7 @@ import {
 import { ShareDialog } from "./share-dialog";
 import { useTurnElapsed } from "./work-fold";
 import { formatElapsed } from "@/lib/elapsed";
+import { ConversationProjectPicker } from "./conversation-project-picker";
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -73,6 +74,7 @@ interface ConversationItemProps {
   onUnarchive: () => void;
   onRename: (title: string) => void;
   onShare: () => void;
+  onMoveProject: () => void;
   onFavourite: (favourite: boolean) => void;
   /** Somebody else's thread shared with the reader: theirs to rename, share, archive or delete. */
   shared?: boolean;
@@ -93,6 +95,7 @@ function ConversationItem({
   onUnarchive,
   onRename,
   onShare,
+  onMoveProject,
   onFavourite,
   shared = false,
   onLeave,
@@ -347,6 +350,10 @@ function ConversationItem({
                   {t("share")}
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onSelect={onMoveProject}>
+                <ProjectAvatar name={conversation.project_id ?? t("moveToProject")} />
+                {conversation.project_id ? t("removeFromProject") : t("moveToProject")}
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => onFavourite(conversation.is_favourite !== true)}>
                 <Star
                   className={cn("h-4 w-4", conversation.is_favourite && "text-warning fill-current")}
@@ -641,6 +648,7 @@ function ConversationList({
   const t = useTranslations("chat");
   const ts = useTranslations("chat.sidebar");
   const [shareConversationId, setShareConversationId] = useState<string | null>(null);
+  const [projectConversationId, setProjectConversationId] = useState<string | null>(null);
 
   const handleSelect = (id: string) => {
     onSelect(id);
@@ -812,6 +820,7 @@ function ConversationList({
                       onFavourite={(favourite) => onFavourite(conversation.id, favourite)}
                       onRename={(title) => onRename(conversation.id, title)}
                       onShare={() => setShareConversationId(conversation.id)}
+                      onMoveProject={() => setProjectConversationId(conversation.id)}
                       shared={shared?.some((entry) => entry.id === conversation.id) === true}
                       onLeave={() => onLeaveShared?.(conversation.id)}
                     />
@@ -831,6 +840,19 @@ function ConversationList({
           }}
         />
       )}
+      <ConversationProjectPicker
+        conversationId={projectConversationId}
+        projectId={
+          projectConversationId === null
+            ? null
+            : (conversations.find((conversation) => conversation.id === projectConversationId)
+                ?.project_id ?? null)
+        }
+        open={projectConversationId !== null}
+        onOpenChange={(open) => {
+          if (!open) setProjectConversationId(null);
+        }}
+      />
     </>
   );
 }
