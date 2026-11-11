@@ -373,6 +373,7 @@
     "workspace": "Workspace",
     "workspaces": "Workspace'ler",
     "allOrganizations": "Tüm organizasyonlar",
+    "noFavouriteApps": "Bir uygulamayı burada sabitlemek için yıldız ekleyin. <link>Tüm uygulamalar</link>",
     "context": "Bağlam",
     "deploymentSettings": "Dağıtım",
     "routines": "Rutinler",
@@ -2037,6 +2038,10 @@
     }
   },
   "artifacts": {
+    "addFavourite": "Favorilere ekle",
+    "removeFavourite": "Favorilerden çıkar",
+    "addFavouriteNamed": "{name} favorilere eklensin",
+    "removeFavouriteNamed": "{name} favorilerden çıkarılsın",
     "actions": {
       "why": "“{page}” sayfası, bu workflow’u sizin erişiminiz ve budget’ınızla çalıştırmak istiyor. Devam etmeden önce neler göndereceğini kontrol edin.",
       "pageWording": "Sayfanın kullandığı ad",
@@ -8634,7 +8639,7 @@
       },
       "workflow-input-contract": {
         "title": "Beklenen girdiyi tanımlayın",
-        "body": "Manuel, API veya Bir workflow tarafından çağrılan tetikleyicileri, basit alanları veya JSON Schema Draft 2020-12 sözleşmesini kullanabilir. Şema iç içe değerleri destekler ve run başlamadan önce doğrulanır." 
+        "body": "Manuel, API veya Bir workflow tarafından çağrılan tetikleyicileri, basit alanları veya JSON Schema Draft 2020-12 sözleşmesini kullanabilir. Şema iç içe değerleri destekler ve run başlamadan önce doğrulanır."
       }
     }
   },
