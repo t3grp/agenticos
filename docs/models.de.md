@@ -1,5 +1,5 @@
 ---
-source_sha: "1991069bf88d"
+source_sha: "46ab128249f6"
 ---
 
 # Modelle und Provider { #models-and-providers }
@@ -247,16 +247,27 @@ Ein Profile kann Fallback-Profiles auflisten, die der Reihe nach versucht werden
 Der Ausfall eines Providers sollte die Agents einer Organisation nicht lahmlegen,
 wenn sie einen zweiten Key oder einen zweiten Provider konfiguriert hat.
 
-!!! warning "Ein Fallback ist im Run-Datensatz unsichtbar"
+Ein Fallback ist im Run-Datensatz nicht mehr unsichtbar. Wenn ein
+Fallback-Modell eine Anfrage des Runs bedient, zeichnet die Run-Zeile
+`fallback_used` und die reine Modell-Id, die die letzte erfolgreiche Anfrage
+beantwortet hat, als `serving_model` auf, und die Detailansicht des Runs zeigt
+unter den Fakten „Beantwortet von … (Fallback)". Die Zeile wird weiterhin vor
+der ersten Anfrage geschrieben, also nennt sie bis zum Abschluss des Runs das
+primäre Profil; ein geparkter Run trägt, was seine abgeschlossenen Segmente
+bisher aufgezeichnet haben.
 
-    Die Run-Zeile wird vor der ersten Anfrage geschrieben und trägt Label, Provider
-    und Secret-Id des **primären** Profiles. Hat ein Fallback den Zug bedient, nennt
-    der Run trotzdem das primäre.
+Zwei blinde Flecken bleiben, bevor Sie sich während eines Ausfalls auf die Zahlen
+verlassen:
 
-    "Was haben wir bei OpenAI ausgegeben" und "welcher Key kostet am meisten"
-    antworten also mit dem Profile, das zuerst *gefragt* wurde, nicht mit dem, das
-    geantwortet hat. Wissenswert, bevor Sie sich während eines Ausfalls auf diese
-    Zahlen verlassen.
+- „Was haben wir bei OpenAI ausgegeben" und „welcher Key kostet am meisten"
+  beantwortet weiterhin das primäre Profil, das zuerst *gefragt* wurde, nicht
+  das, das geantwortet hat — die Kosten werden dem primären Profil zugeordnet.
+  Die neuen Spalten sagen, welches Modell geantwortet hat, nicht welches Profil
+  bezahlt hat.
+- Ein Fehler **nach** dem ersten gestreamten Ereignis löst nie einen Fallback
+  aus. Pydantic AI übergibt den Stream beim ersten Ereignis an den Aufrufer,
+  also beendet ein Fehler mitten im Stream den Run, statt das nächste Modell
+  der Kette zu versuchen.
 
 ### Model Settings { #model-settings }
 

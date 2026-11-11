@@ -210,15 +210,24 @@ used by the runner and checked at publish. One provider's outage should
 not take an organization's agents down when it has a second key or a second
 provider configured.
 
-!!! warning "A fallback is invisible in the run record"
+A fallback is no longer invisible in the run record. When a fallback model
+serves any request of the run, the run row records `fallback_used` and the bare
+model id that answered the last successful request as `serving_model`, and the
+run detail view says "Served by … (fallback)" under the facts strip. The row
+is still written before the first request, so it names the primary profile
+until the run finishes; a run parked awaiting approval carries what its
+finished segments recorded so far.
 
-    The run row is written before the first request, carrying the **primary**
-    profile's label, provider and secret id. If a fallback served the turn, the run
-    still names the primary.
+Two blind spots remain, worth knowing before trusting the numbers during an
+outage:
 
-    So "what did we spend at OpenAI" and "which key is costing the most" answer
-    with the profile that was *asked* first, not the one that answered. Worth
-    knowing before you rely on those numbers during an outage.
+- "What did we spend at OpenAI" and "which key is costing the most" are still
+  answered by the profile that was *asked* first, not the one that answered —
+  cost is attributed to the primary's profile. The new columns say which model
+  answered, not which profile paid.
+- A failure **after** the first streamed event never fails over. Pydantic AI
+  hands the stream over to the caller at the first event, so a mid-stream
+  failure ends the run rather than trying the next model in the chain.
 
 ### Model settings
 

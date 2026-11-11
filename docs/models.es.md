@@ -1,5 +1,5 @@
 ---
-source_sha: "1991069bf88d"
+source_sha: "46ab128249f6"
 ---
 
 # Modelos y providers { #models-and-providers }
@@ -229,15 +229,25 @@ Un perfil puede listar perfiles de fallback, probados en orden. La caída de un
 provider no debería tumbar los agents de una organización cuando esta tiene una
 segunda clave o un segundo provider configurados.
 
-!!! warning "Un fallback es invisible en el registro del run"
+Un fallback ya no es invisible en el registro del run. Cuando un modelo de
+fallback atiende alguna petición del run, la fila del run registra
+`fallback_used` y el id de modelo que respondió a la última petición correcta
+como `serving_model`, y la vista de detalle del run muestra «Servido por …
+(fallback)» bajo los datos. La fila se sigue escribiendo antes de la primera
+petición, así que nombra el perfil primario hasta que el run termina; un run
+aparcado lleva lo que sus segmentos terminados han registrado hasta ahora.
 
-    La fila del run se escribe antes de la primera petición, y lleva la etiqueta,
-    el provider y el id de secreto del perfil **primario**. Si un fallback
-    atendió el turno, el run sigue nombrando al primario.
+Quedan dos puntos ciegos que conviene conocer antes de fiarte de esos números
+durante una caída:
 
-    Así que «cuánto gastamos en OpenAI» y «qué clave está costando más» responden
-    con el perfil al que se *preguntó* primero, no con el que respondió. Conviene
-    saberlo antes de fiarte de esos números durante una caída.
+- «Cuánto gastamos en OpenAI» y «qué clave está costando más» se siguen
+  respondiendo con el perfil primario al que se *preguntó* primero, no con el
+  que respondió: el coste se atribuye al perfil primario. Las nuevas columnas
+  dicen qué modelo respondió, no qué perfil pagó.
+- Un fallo **después** del primer evento en streaming nunca activa el
+  fallback. Pydantic AI entrega el stream al llamador en el primer evento, así
+  que un fallo a mitad de stream termina el run en lugar de probar el siguiente
+  modelo de la cadena.
 
 ### Ajustes del modelo { #model-settings }
 
