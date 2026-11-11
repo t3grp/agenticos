@@ -10,10 +10,11 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, and_, delete, false, func, or_, select, true
+from sqlalchemy import ColumnElement, and_, delete, exists, false, func, or_, select, true
 from sqlalchemy import update as sql_update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import with_expression
 
 from app.core.permissions import Scope
 from app.db.models.agent import Agent
@@ -26,6 +27,7 @@ from app.db.models.artifact import (
     ArtifactVersion,
     ConsentState,
 )
+from app.db.models.artifact_favourite import ArtifactFavourite
 from app.db.models.conversation import Conversation
 from app.db.models.resource_grant import Visibility
 from app.repositories._search import contains_ci
@@ -52,6 +54,37 @@ async def get(db: AsyncSession, artifact_id: UUID, *, organization_id: UUID) -> 
         )
     )
     return result.scalar_one_or_none()
+
+
+async def is_favourite(db: AsyncSession, *, user_id: UUID, artifact_id: UUID) -> bool:
+    result = await db.scalar(
+        select(
+            exists().where(
+                ArtifactFavourite.user_id == user_id,
+                ArtifactFavourite.artifact_id == artifact_id,
+            )
+        )
+    )
+    return bool(result)
+
+
+async def set_favourite(
+    db: AsyncSession, *, user_id: UUID, artifact_id: UUID, favourite: bool
+) -> None:
+    if favourite:
+        await db.execute(
+            pg_insert(ArtifactFavourite)
+            .values(user_id=user_id, artifact_id=artifact_id)
+            .on_conflict_do_nothing(index_elements=["user_id", "artifact_id"])
+        )
+    else:
+        await db.execute(
+            delete(ArtifactFavourite).where(
+                ArtifactFavourite.user_id == user_id,
+                ArtifactFavourite.artifact_id == artifact_id,
+            )
+        )
+    await db.flush()
 
 
 async def get_by_ids(
@@ -210,6 +243,7 @@ async def list_visible(
     agent_id: UUID | None = None,
     only_ids: Sequence[UUID] | None = None,
     project_id: UUID | None = None,
+    favourites: bool = False,
     skip: int = 0,
     limit: int = 50,
 ) -> tuple[list[Artifact], int]:
@@ -239,6 +273,12 @@ async def list_visible(
         archived_reach=_editable(user_id=user_id, scope=edit_scope, grant_ids=edit_ids or []),
         team_visible=team_visible,
     )
+    favourite = exists().where(
+        ArtifactFavourite.user_id == user_id,
+        ArtifactFavourite.artifact_id == Artifact.id,
+    )
+    if favourites:
+        where.append(favourite)
     if search:
         where.append(or_(contains_ci(Artifact.title, search), contains_ci(Artifact.name, search)))
     if agent_id is not None:
@@ -259,6 +299,8 @@ async def list_visible(
         )
     items = await db.execute(
         select(Artifact)
+        .options(with_expression(Artifact.is_favourite, favourite))
+        .execution_options(populate_existing=True)
         .where(*where)
         .order_by(Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc())
         .offset(skip)

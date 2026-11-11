@@ -1350,7 +1350,8 @@ class TestAgentFilter:
         with (
             patch(f"{PATH}.visible_resource_ids", new=AsyncMock(return_value=None)),
             patch(
-                f"{PATH}.artifact_repo.list_visible", new=AsyncMock(return_value=([artifact], 1))
+                f"{PATH}.artifact_repo.list_visible",
+                new=AsyncMock(return_value=([artifact], 1)),
             ) as listing,
             patch(f"{PATH}.artifact_repo.latest_versions", new=AsyncMock(return_value={})),
             patch(

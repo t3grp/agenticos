@@ -47,7 +47,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, query_expression
 
 from app.db.base import Base, TimestampMixin
 from app.db.models.resource_grant import Visibility
@@ -108,6 +108,8 @@ class Artifact(Base, TimestampMixin):
     """One published page, and who may open it."""
 
     __tablename__ = "artifacts"
+
+    is_favourite: Mapped[bool | None] = query_expression()
 
     id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

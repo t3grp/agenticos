@@ -2380,7 +2380,37 @@ class ArtifactService:
         )
         if archived_hidden(artifact, can_edit=can_edit):
             raise NotFoundError(message="App not found", details={"artifact_id": str(artifact_id)})
-        return await self._detail(ctx, artifact, can_edit=can_edit)
+        user_id = ctx.personal_user_id
+        return await self._detail(
+            ctx,
+            artifact,
+            can_edit=can_edit,
+            is_favourite=(
+                await artifact_repo.is_favourite(
+                    self.db, user_id=user_id, artifact_id=artifact.id
+                )
+                if user_id is not None
+                else False
+            ),
+        )
+
+    async def set_favourite(
+        self, ctx: AuthContext, artifact_id: UUID, *, favourite: bool
+    ) -> None:
+        """Set the caller's favourite after the same visibility check as opening the app."""
+        artifact = await self.get(ctx, artifact_id)
+        user_id = ctx.personal_user_id
+        if user_id is None:
+            raise AuthorizationError(
+                message="Favouriting an app requires a signed-in person",
+                details={"subject": "non_person"},
+            )
+        await artifact_repo.set_favourite(
+            self.db,
+            user_id=user_id,
+            artifact_id=artifact.id,
+            favourite=favourite,
+        )
 
     async def load(self, ctx: AuthContext, artifact_id: UUID) -> Artifact:
         """The artifact in the caller's organization, for the sharing routes to check further.
@@ -2463,7 +2493,12 @@ class ArtifactService:
         return await self.read(ctx, artifact.id)
 
     async def _detail(
-        self, ctx: AuthContext, artifact: Artifact, *, can_edit: bool
+        self,
+        ctx: AuthContext,
+        artifact: Artifact,
+        *,
+        can_edit: bool,
+        is_favourite: bool = False,
     ) -> ArtifactDetail:
         """The artifact at the version `ctx` is served, with its consent for one served the latest."""
         view = await served(self.db, ctx, artifact, can_edit=can_edit)
@@ -2479,7 +2514,9 @@ class ArtifactService:
             else None
         )
         return ArtifactDetail(
-            **self._read(artifact, current, names).model_dump(),
+            **self._read(
+                artifact, current, names, is_favourite=is_favourite
+            ).model_dump(),
             can_edit=can_edit,
             following=ctx.user_id is not None
             and await artifact_repo.is_following(
@@ -2548,10 +2585,15 @@ class ArtifactService:
 
     @staticmethod
     def _read(
-        artifact: Artifact, current: ArtifactVersion | None, environment_names: dict[UUID, str]
+        artifact: Artifact,
+        current: ArtifactVersion | None,
+        environment_names: dict[UUID, str],
+        *,
+        is_favourite: bool = False,
     ) -> ArtifactRead:
         return ArtifactRead(
             id=artifact.id,
+            is_favourite=is_favourite,
             name=artifact.name,
             title=artifact.title,
             visibility=artifact.visibility,
@@ -2592,6 +2634,7 @@ class ArtifactService:
         agent_id: UUID | None = None,
         group_id: UUID | None = None,
         project_id: UUID | None = None,
+        favourites: bool = False,
         skip: int = 0,
         limit: int = 50,
     ) -> ArtifactList:
@@ -2659,6 +2702,7 @@ class ArtifactService:
                 self.db, ctx, resource_type=ARTIFACT, group_id=group_id
             ),
             project_id=project_id,
+            favourites=favourites,
             skip=skip,
             limit=limit,
         )
@@ -2672,7 +2716,7 @@ class ArtifactService:
         return ArtifactList(
             items=[
                 self._read(item, current.get(item.id), names).model_copy(
-                    update={"shared_groups": groups[item.id]}
+                    update={"shared_groups": groups[item.id], "is_favourite": bool(item.is_favourite)}
                 )
                 for item in items
             ],

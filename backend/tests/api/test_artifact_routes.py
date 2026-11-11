@@ -66,6 +66,7 @@ def _nobody_follows(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.repositories import artifact as artifact_repo
 
     monkeypatch.setattr(artifact_repo, "is_following", AsyncMock(return_value=False))
+    monkeypatch.setattr(artifact_repo, "is_favourite", AsyncMock(return_value=False))
     monkeypatch.setattr(artifact_repo, "follower_ids", AsyncMock(return_value=[]))
 
 
@@ -201,11 +202,66 @@ class TestFollowing:
         follow.assert_not_called()
 
 
+class TestFavourites:
+    async def test_favourite_and_unfavourite_are_idempotent_no_content_writes(
+        self, client: OpenClient
+    ) -> None:
+        row = _artifact()
+        store = AsyncMock()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=row)),
+            patch(f"{PATH}.artifact_repo.set_favourite", new=store),
+        ):
+            async with client() as http:
+                starred = await http.post(_url(f"/{row.id}/favourite"))
+                starred_again = await http.post(_url(f"/{row.id}/favourite"))
+                unstarred = await http.delete(_url(f"/{row.id}/favourite"))
+                unstarred_again = await http.delete(_url(f"/{row.id}/favourite"))
+        assert [r.status_code for r in (starred, starred_again, unstarred, unstarred_again)] == [
+            204,
+            204,
+            204,
+            204,
+        ]
+        assert store.await_count == 4
+        assert [call.kwargs["favourite"] for call in store.await_args_list] == [
+            True,
+            True,
+            False,
+            False,
+        ]
+
+    @pytest.mark.security
+    async def test_an_invisible_app_cannot_be_favourited(self, client: OpenClient) -> None:
+        store = AsyncMock()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=None)),
+            patch(f"{PATH}.artifact_repo.set_favourite", new=store),
+        ):
+            async with client() as http:
+                response = await http.post(_url(f"/{uuid.uuid4()}/favourite"))
+        assert response.status_code == 404
+        store.assert_not_awaited()
+
+    async def test_get_includes_the_callers_favourite(self, client: OpenClient) -> None:
+        row = _artifact()
+        with (
+            patch(f"{PATH}.artifact_repo.get", new=AsyncMock(return_value=row)),
+            patch(f"{PATH}.artifact_repo.latest_version", new=AsyncMock(return_value=None)),
+            patch(f"{PATH}.artifact_repo.is_favourite", new=AsyncMock(return_value=True)),
+        ):
+            async with client() as http:
+                response = await http.get(_url(f"/{row.id}"))
+        assert response.status_code == 200
+        assert response.json()["is_favourite"] is True
+
+
 class TestMembers:
     async def test_the_listing_carries_each_artifact_s_current_version(
         self, client: OpenClient
     ) -> None:
         row = _artifact()
+        row.is_favourite = True
         with (
             patch(f"{PATH}.artifact_repo.list_visible", new=AsyncMock(return_value=([row], 1))),
             patch(
@@ -220,6 +276,7 @@ class TestMembers:
         assert body["total"] == 1
         assert body["items"][0]["current_version"]["number"] == 3
         assert body["items"][0]["public_url"] is None
+        assert body["items"][0]["is_favourite"] is True
 
     async def test_the_listing_narrows_to_a_project_the_caller_can_see(
         self, client: OpenClient
@@ -237,6 +294,26 @@ class TestMembers:
                 response = await http.get(_url(f"?project_id={project_id}"))
         assert response.status_code == 200
         assert listing.await_args.kwargs["project_id"] == project_id
+
+    async def test_favourites_filter_composes_with_other_list_filters(
+        self, client: OpenClient
+    ) -> None:
+        listing = AsyncMock(return_value=([], 0))
+        agent_id = uuid.uuid4()
+        with (
+            patch(f"{PATH}.artifact_repo.list_visible", new=listing),
+            patch(f"{PATH}.artifact_repo.latest_versions", new=AsyncMock(return_value={})),
+        ):
+            async with client() as http:
+                response = await http.get(
+                    _url(f"?favourites=true&q=weekly&agent_id={agent_id}&skip=2&limit=8")
+                )
+        assert response.status_code == 200
+        assert listing.await_args.kwargs["favourites"] is True
+        assert listing.await_args.kwargs["search"] == "weekly"
+        assert listing.await_args.kwargs["agent_id"] == agent_id
+        assert listing.await_args.kwargs["skip"] == 2
+        assert listing.await_args.kwargs["limit"] == 8
 
     @pytest.mark.security
     async def test_an_artifact_in_another_organization_is_not_found(

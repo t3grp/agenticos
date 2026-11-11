@@ -566,6 +566,7 @@ class ArtifactVersionList(BaseSchema):
 
 class ArtifactRead(BaseSchema):
     id: UUID
+    is_favourite: bool = False
     name: str = Field(
         description="The handle the agent republishes it by; unique per agent and environment"
     )

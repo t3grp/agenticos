@@ -119,6 +119,7 @@ from app.db.models.artifact import (
     ArtifactMediaType,
     ArtifactVersion,
 )
+from app.db.models.artifact_favourite import ArtifactFavourite
 from app.db.models.voice_call import VoiceCall, VoiceEndReason
 from app.db.models.generated_media import GeneratedMedia, GeneratedMediaReservation
 from app.db.models.visual import Visual

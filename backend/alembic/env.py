@@ -22,6 +22,7 @@ from app.db.models.organization import Invitation, Organization, OrganizationMem
 from app.db.models.audit_log import AppAdminAuditLog  # noqa: F401
 from app.db.models.audit_checkpoint import AppAdminAuditCheckpoint  # noqa: F401
 from app.db.models.knowledge_base import KnowledgeBase  # noqa: F401
+from app.db.models.artifact_favourite import ArtifactFavourite  # noqa: F401
 
 config = context.config
 

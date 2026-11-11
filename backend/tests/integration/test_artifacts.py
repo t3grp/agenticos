@@ -30,10 +30,11 @@ from app.agents.capabilities.artifacts._toolset import (
     parse_published_artifact,
 )
 from app.agents.deps import AgentDeps
-from app.core.exceptions import AuthorizationError, BadRequestError
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.permissions import AuthContext, OrgRoleName
 from app.db.models.agent import Agent
 from app.db.models.artifact import Artifact, ArtifactMediaType, ArtifactVersion
+from app.db.models.artifact_favourite import ArtifactFavourite
 from app.db.models.audit_log import AppAdminAuditLog
 from app.db.models.background_job import BackgroundJob
 from app.db.models.notification import Notification, NotificationEventType
@@ -1510,3 +1511,70 @@ async def test_another_conversation_edits_stored_source_without_the_original_san
     version = await artifact_repo.latest_version(db, first.artifact_id)
     assert version is not None
     assert await storage.load(version.storage_path) == b"<h1>Readable map</h1>"
+
+
+async def test_app_favourites_are_idempotent_private_and_filtered(
+    db: AsyncSession, storage: LocalFileStorage
+) -> None:
+    organization, user, agent = await _tenant(db)
+    other = await make_user(db)
+    db.add(
+        OrganizationMember(
+            id=uuid.uuid4(), organization_id=organization.id, user_id=other.id, role="member"
+        )
+    )
+    app = await _publish(db, organization, user, agent, body="<p>Shared</p>")
+    private = await _publish(
+        db, organization, user, agent, body="<p>Private</p>", name="private"
+    )
+    shared_app = await artifact_repo.get(db, app.artifact_id, organization_id=organization.id)
+    assert shared_app is not None
+    shared_app.visibility = Visibility.ORG.value
+    await db.flush()
+
+    owner_context = ctx_for(user, organization)
+    service = ArtifactService(db)
+    await service.set_favourite(owner_context, app.artifact_id, favourite=True)
+    await service.set_favourite(owner_context, app.artifact_id, favourite=True)
+    assert await artifact_repo.is_favourite(db, user_id=user.id, artifact_id=app.artifact_id)
+    assert not await artifact_repo.is_favourite(db, user_id=other.id, artifact_id=app.artifact_id)
+
+    listed, total = await artifact_repo.list_visible(
+        db,
+        organization_id=organization.id,
+        user_id=user.id,
+        see_all=True,
+        shared_ids=[],
+        favourites=True,
+    )
+    assert total == 1
+    assert [(row.id, row.is_favourite) for row in listed] == [(app.artifact_id, True)]
+    other_list, other_total = await artifact_repo.list_visible(
+        db,
+        organization_id=organization.id,
+        user_id=other.id,
+        see_all=True,
+        shared_ids=[],
+        favourites=True,
+    )
+    assert other_total == 0
+    assert other_list == []
+
+    detail = await service.read(owner_context, app.artifact_id)
+    assert detail.is_favourite is True
+    await service.set_favourite(owner_context, app.artifact_id, favourite=False)
+    await service.set_favourite(owner_context, app.artifact_id, favourite=False)
+    assert not await artifact_repo.is_favourite(db, user_id=user.id, artifact_id=app.artifact_id)
+
+    with pytest.raises(NotFoundError):
+        await ArtifactService(db).set_favourite(
+            ctx_for(other, organization, "member"), private.artifact_id, favourite=True
+        )
+
+    db.add(ArtifactFavourite(user_id=user.id, artifact_id=private.artifact_id))
+    await db.flush()
+    private_row = await db.get(Artifact, private.artifact_id)
+    assert private_row is not None
+    await db.delete(private_row)
+    await db.flush()
+    assert not await artifact_repo.is_favourite(db, user_id=user.id, artifact_id=private.artifact_id)

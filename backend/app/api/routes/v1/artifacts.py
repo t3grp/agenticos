@@ -99,6 +99,7 @@ async def list_artifacts(
     project_id: UUID | None = Query(
         None, description="Only the pages made in this project's chats"
     ),
+    favourites: bool = Query(False, description="Only apps this caller has favourited"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ) -> Any:
@@ -112,6 +113,7 @@ async def list_artifacts(
         agent_id=agent_id,
         group_id=group_id,
         project_id=project_id,
+        favourites=favourites,
         skip=skip,
         limit=limit,
     )
@@ -131,6 +133,22 @@ async def list_artifact_agents(service: ArtifactSvc, ctx: Auth) -> Any:
 async def get_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> Any:
     """One artifact. An archived one is found only by a caller who may edit it."""
     return await service.read(ctx, artifact_id)
+
+
+@router.post(
+    "/{artifact_id}/favourite", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
+async def favourite_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> None:
+    """Favourite an app the caller may open."""
+    await service.set_favourite(ctx, artifact_id, favourite=True)
+
+
+@router.delete(
+    "/{artifact_id}/favourite", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
+async def unfavourite_artifact(artifact_id: UUID, service: ArtifactSvc, ctx: Auth) -> None:
+    """Remove the caller's favourite for an app."""
+    await service.set_favourite(ctx, artifact_id, favourite=False)
 
 
 @router.patch("/{artifact_id}", response_model=ArtifactDetail)
