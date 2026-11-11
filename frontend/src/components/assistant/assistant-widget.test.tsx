@@ -80,7 +80,11 @@ vi.mock("@/hooks/use-assistant", () => ({
 vi.mock("@/hooks/use-assistant-signals", () => ({ useAssistantSignals: () => state.signals }));
 vi.mock("@/hooks/use-assistant-page-context", () => ({
   useAssistantPageContext: (path: string) => {
-    const page = { path, title: path, captured_at: "2026-01-01T00:00:00.000Z" };
+    const page = {
+      path,
+      title: path === "/apps/app-1" ? "Quarterly report" : path,
+      captured_at: "2026-01-01T00:00:00.000Z",
+    };
     return { page, getSnapshot: () => structuredClone(page) };
   },
 }));
@@ -775,6 +779,21 @@ describe("the Architect widget", () => {
 
 
 describe("page context in the floating window", () => {
+  it("shows the viewer app title and includes it by default", () => {
+    state.pathname = "/apps/app-1";
+    render(<AssistantWidget />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Architect" }));
+
+    expect(JSON.parse(chat().getAttribute("data-page-context")!)).toMatchObject({
+      path: "/apps/app-1",
+      title: "Quarterly report",
+    });
+    expect(screen.getByRole("switch", { name: "Use the current page" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
   it("follows navigation while the conversation remains open and supports opting out", () => {
     const { rerender } = render(<AssistantWidget />);
     fireEvent.click(screen.getByRole("button", { name: "Open Architect" }));
