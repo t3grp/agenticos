@@ -4415,7 +4415,8 @@
     "whatsNewDone": "Verstanden",
     "backgroundWork": "Arbeit im Hintergrund",
     "connectors": "Verbindungen",
-    "onboarding": "Einführung"
+    "onboarding": "Einführung",
+    "noFavouriteApps": "Markiere eine App mit dem Stern, um sie hier anzuheften. <link>Alle Apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5027,6 +5028,10 @@
         "title": "Veröffentlichte Seiten",
         "body": "Berichte und Dashboards, die Ihre Agents veröffentlicht haben. Öffnen Sie eines, wählen Sie eine frühere Version, teilen Sie es mit Kolleginnen und Kollegen oder geben Sie ihm einen öffentlichen Link."
       },
+      "nav-pinned": {
+        "title": "Angeheftete Apps",
+        "body": "Deine markierten Apps findest du hier in der Seitenleiste. Markiere eine App auf ihrer Karte oder Seite und entferne die Markierung genauso."
+      },
       "settings-api-keys": {
         "title": "Ihre API-Schlüssel",
         "body": "Ein Schlüssel lässt ein Skript, Postman oder einen MCP-Client ohne Browser in Ihrem Namen handeln. Wählen Sie, was er darf; er kann nie mehr als Sie und hört auf, sobald Sie ihn widerrufen."
@@ -5377,7 +5382,7 @@
       },
       "workflow-input-contract": {
         "title": "Erwartete Eingabe festlegen",
-        "body": "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft." 
+        "body": "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft."
       }
     },
     "chooseLanguage": "Sprache",
@@ -10325,7 +10330,11 @@
       "blockedLink": "Die Seite hat keinen öffentlichen Link. Schalten Sie ihn zuerst ein."
     },
     "lightTheme": "Helles App-Design verwenden",
-    "darkTheme": "Dunkles App-Design verwenden"
+    "darkTheme": "Dunkles App-Design verwenden",
+    "addFavourite": "Zu Favoriten hinzufügen",
+    "removeFavourite": "Aus Favoriten entfernen",
+    "addFavouriteNamed": "{name} zu Favoriten hinzufügen",
+    "removeFavouriteNamed": "{name} aus Favoriten entfernen"
   },
   "tables": {
     "cells": {

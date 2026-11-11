@@ -257,7 +257,8 @@
     "whatsNewDone": "Rozumiem",
     "backgroundWork": "Praca w tle",
     "connectors": "Połączenia",
-    "onboarding": "Wprowadzenie"
+    "onboarding": "Wprowadzenie",
+    "noFavouriteApps": "Oznacz aplikację gwiazdką, aby ją tu przypiąć. <link>Wszystkie aplikacje</link>"
   },
   "auth": {
     "agreeToTerms": "Tworząc konto, akceptujesz nasz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>.",
@@ -6758,6 +6759,10 @@
         "title": "Opublikowane strony",
         "body": "Raporty i dashboardy opublikowane przez Twoje agenty. Otwórz jeden, żeby go zobaczyć, wybierz wcześniejszą wersję, udostępnij go współpracownikom albo nadaj mu link publiczny."
       },
+      "nav-pinned": {
+        "title": "Przypięte aplikacje",
+        "body": "Oznaczone przez Ciebie aplikacje są tutaj, na pasku bocznym. Oznacz aplikację na jej karcie lub stronie, a odznaczysz ją w ten sam sposób."
+      },
       "settings-api-keys": {
         "title": "Twoje klucze API",
         "body": "Klucz pozwala skryptowi, Postmanowi albo klientowi MCP działać w twoim imieniu, bez przeglądarki. Wybierz, co może robić; nigdy nie zrobi więcej niż ty i przestaje działać, gdy go unieważnisz."
@@ -7108,7 +7113,7 @@
       },
       "workflow-input-contract": {
         "title": "Określ oczekiwane dane wejściowe",
-        "body": "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema Draft 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu." 
+        "body": "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema Draft 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu."
       }
     },
     "chooseLanguage": "Język",
@@ -11194,7 +11199,11 @@
       "blockedLink": "Strona nie ma publicznego linku. Najpierw go włącz."
     },
     "lightTheme": "Użyj jasnego motywu aplikacji",
-    "darkTheme": "Użyj ciemnego motywu aplikacji"
+    "darkTheme": "Użyj ciemnego motywu aplikacji",
+    "addFavourite": "Dodaj do ulubionych",
+    "removeFavourite": "Usuń z ulubionych",
+    "addFavouriteNamed": "Dodaj {name} do ulubionych",
+    "removeFavouriteNamed": "Usuń {name} z ulubionych"
   },
   "tables": {
     "cells": {

@@ -576,6 +576,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
     target: "artifacts-list",
     permission: Perm.artifactsView,
   },
+  // The reader's starred apps in the sidebar, present once at least one app is
+  // starred. The Apps heading and All apps link remain available when empty.
+  {
+    id: "nav-pinned",
+    page: ROUTES.DASHBOARD,
+    target: "nav-pinned",
+    permission: Perm.artifactsView,
+    optional: true,
+  },
   // Grouping by department (#2124): only where the organization has groups.
   {
     id: "artifacts-groups",

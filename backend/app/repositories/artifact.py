@@ -230,7 +230,8 @@ async def list_visible(
         only_ids: Narrow to these rows - the pages shared with one group.
         project_id: Narrow to the pages a run in one of this project's chats
             published a version of, on top of the visibility rules.
-        favourites_for: Restrict to this reader's favourites, newest favourite first.
+        favourites_for: Restrict to this reader's favourites, in the order they were
+            added to favourites.
     """
     where = _visible(
         organization_id=organization_id,
@@ -276,7 +277,9 @@ async def list_visible(
             )
             .scalar_subquery()
         )
-        ordering = [favourite_at.desc(), Artifact.id.asc()]
+        # Favourites take the place of the former pinned-app list. Preserve its
+        # stable pin order: the first app a person starred stays at the top.
+        ordering = [favourite_at.asc(), Artifact.id.asc()]
     else:
         ordering = [Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc()]
     items = await db.execute(
