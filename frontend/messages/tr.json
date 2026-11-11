@@ -8365,6 +8365,10 @@
         "title": "Yayımlanmış sayfalar",
         "body": "Agent’larınızın yayımladığı raporlar ve dashboard’lar. Görüntülemek için açın, önceki bir sürümü seçin, iş arkadaşlarınızla paylaşın veya herkese açık bağlantı oluşturun."
       },
+      "nav-pinned": {
+        "title": "Sabitlenmiş uygulamalar",
+        "body": "Yıldızladığınız uygulamalar burada, kenar çubuğunda görünür. Bir uygulamayı kartından veya sayfasından yıldızlayıp aynı şekilde kaldırabilirsiniz."
+      },
       "settings-api-keys": {
         "title": "API key’leriniz",
         "body": "Bir key, script’in, Postman’in veya MCP client’ının tarayıcı kullanmadan sizin adınıza işlem yapmasını sağlar. Yapabileceklerini seçin; sizin yapabileceklerinizin ötesine geçemez ve key’i iptal ettiğiniz anda çalışmayı bırakır."

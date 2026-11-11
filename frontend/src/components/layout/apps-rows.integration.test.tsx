@@ -70,13 +70,14 @@ describe("sidebar starred apps", () => {
       items: [app(), app({ id: "a2", title: "Budget" })],
       total: 2,
     });
-    render(<AppsRows collapsed={false} />, { wrapper });
+    const { container } = render(<AppsRows collapsed={false} />, { wrapper });
 
     expect(await screen.findByRole("link", { name: "Weekly report" })).toHaveAttribute(
       "href",
       "/apps/a1",
     );
     expect(screen.getByRole("link", { name: "Budget" })).toBeInTheDocument();
+    expect(container.querySelector('[data-tour="nav-pinned"]')).toBeTruthy();
     expect(screen.getByRole("link", { name: "All apps" })).toHaveAttribute("href", "/apps");
     const [request] = listRequests();
     expect(request).toContain("favourites=true");
@@ -85,11 +86,12 @@ describe("sidebar starred apps", () => {
 
   it("says how to pin an app and links to All apps when nothing is starred", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ items: [], total: 0 });
-    render(<AppsRows collapsed={false} />, { wrapper });
+    const { container } = render(<AppsRows collapsed={false} />, { wrapper });
 
     expect(
       await screen.findByText("Star an app to pin it here.", { exact: false }),
     ).toBeInTheDocument();
+    expect(container.querySelector('[data-tour="nav-pinned"]')).toBeNull();
     const links = screen.getAllByRole("link", { name: "All apps" });
     expect(links.length).toBeGreaterThan(0);
     expect(links[0]).toHaveAttribute("href", "/apps");

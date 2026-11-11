@@ -5028,6 +5028,10 @@
         "title": "Veröffentlichte Seiten",
         "body": "Berichte und Dashboards, die Ihre Agents veröffentlicht haben. Öffnen Sie eines, wählen Sie eine frühere Version, teilen Sie es mit Kolleginnen und Kollegen oder geben Sie ihm einen öffentlichen Link."
       },
+      "nav-pinned": {
+        "title": "Angeheftete Apps",
+        "body": "Deine markierten Apps findest du hier in der Seitenleiste. Markiere eine App auf ihrer Karte oder Seite und entferne die Markierung genauso."
+      },
       "settings-api-keys": {
         "title": "Ihre API-Schlüssel",
         "body": "Ein Schlüssel lässt ein Skript, Postman oder einen MCP-Client ohne Browser in Ihrem Namen handeln. Wählen Sie, was er darf; er kann nie mehr als Sie und hört auf, sobald Sie ihn widerrufen."

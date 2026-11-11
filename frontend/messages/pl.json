@@ -6759,6 +6759,10 @@
         "title": "Opublikowane strony",
         "body": "Raporty i dashboardy opublikowane przez Twoje agenty. Otwórz jeden, żeby go zobaczyć, wybierz wcześniejszą wersję, udostępnij go współpracownikom albo nadaj mu link publiczny."
       },
+      "nav-pinned": {
+        "title": "Przypięte aplikacje",
+        "body": "Oznaczone przez Ciebie aplikacje są tutaj, na pasku bocznym. Oznacz aplikację na jej karcie lub stronie, a odznaczysz ją w ten sam sposób."
+      },
       "settings-api-keys": {
         "title": "Twoje klucze API",
         "body": "Klucz pozwala skryptowi, Postmanowi albo klientowi MCP działać w twoim imieniu, bez przeglądarki. Wybierz, co może robić; nigdy nie zrobi więcej niż ty i przestaje działać, gdy go unieważnisz."

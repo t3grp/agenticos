@@ -5165,6 +5165,10 @@
         "title": "Published pages",
         "body": "Reports and dashboards your agents published. Open one to see it, pick an earlier version, share it with colleagues or give it a public link."
       },
+      "nav-pinned": {
+        "title": "Pinned apps",
+        "body": "Apps you starred sit here in the sidebar, one tap away. Star one from its card or page, and unstar it the same way."
+      },
       "settings-api-keys": {
         "title": "Your API keys",
         "body": "A key lets a script, Postman or an MCP client act as you, without a browser. Pick what it may do; it can never do more than you can, and it stops the moment you revoke it."

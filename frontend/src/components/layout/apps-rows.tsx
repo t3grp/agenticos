@@ -56,7 +56,10 @@ export function AppsRows({
   );
 
   return (
-    <div className={cn("flex flex-col gap-0.5", collapsed && "w-full items-center")}>
+    <div
+      data-tour={artifacts.length > 0 ? "nav-pinned" : undefined}
+      className={cn("flex flex-col gap-0.5", collapsed && "w-full items-center")}
+    >
       {collapsed ? (
         <div aria-hidden className="flex h-6 items-center">
           <span className="bg-border h-px w-5" />
