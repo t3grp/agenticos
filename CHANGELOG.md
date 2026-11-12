@@ -61,6 +61,7 @@ Two things are versioned separately from this file and worth knowing about:
 - Added opt-in systemd units for daily removal of Docker build cache unused for
   24 hours, independent of disk usage. This separate cache-only job leaves images,
   containers, volumes and networks intact.
+- A harness capability backs an agent with a Claude Code or Codex session in its sandbox, kept open across turns: `harness_start` opens a named session with a first prompt, `harness_prompt` sends it the next one, `harness_stop` closes it and `harness_sessions` lists the open ones. The session is the CLI's own, resumed by an id kept beside the work, and a prompt runs through the same detached execution, live narration, budget ledger and approval as a coding agent's task. A ChatGPT sign-in for Codex is not accepted yet; Codex runs on an OpenAI API key.
 
 ### Changed
 
