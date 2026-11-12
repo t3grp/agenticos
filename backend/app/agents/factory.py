@@ -49,6 +49,7 @@ from app.agents.capabilities.approval import (
     refuse_ungateable_approvals,
 )
 from app.agents.capabilities.artifacts import ARTIFACTS_CAPABILITY_ID
+from app.agents.capabilities.babysit_pr import BABYSIT_PR_RECORDER_RESOURCE
 from app.agents.capabilities.browser_use import BROWSER_CAPABILITY_ID, WebBrowser
 from app.agents.capabilities.budget import (
     BudgetGuard,
@@ -401,8 +402,8 @@ def build_agent(
     # Wrapped, so what the provider is handed is written down as it is handed
     # over. Reconstructing the prompt and the tool schemas from the spec
     # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because a run reviewer, code mode, sol-loop
-    # and `CacheWatch` write onto it.
+    # The run reviewer, code mode, sol-loop, `CacheWatch` and babysit-pr write
+    # onto it, and babysit-pr reads it through the resources below.
     recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
@@ -433,6 +434,9 @@ def build_agent(
             # Which tools' arguments are what the person is shown, so the output
             # guardrails screen them the way they screen the text around them.
             ANSWER_TOOLS_RESOURCE: answer_tools(bindings),
+            # Where a babysit-pr watch's events are recorded - the run's
+            # recorder, read by the capability, resolved by the runner.
+            BABYSIT_PR_RECORDER_RESOURCE: recorder,
             # Which model sol-loop's reviewer reviews on, and where its rounds
             # are recorded - resolved by the runner, read by the capability.
             SOL_LOOP_MODELS_RESOURCE: sol_loop_models,
@@ -524,6 +528,9 @@ def build_agent(
     # a side-effecting capability to a spec is the only thing that has to be
     # right for approval to apply.
     repairs = RepairTally()
+    # Wrapped, so what the provider is handed is written down as it is handed
+    # over. Reconstructing the prompt and the tool schemas from the spec
+    # afterwards would be a second implementation of everything above this line.
     asking = frozenset(
         name
         for name, kind in (

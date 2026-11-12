@@ -907,6 +907,12 @@
       "askingDelegateStop": "Prosi delegata o zatrzymanie",
       "availableContext": "Dostępny kontekst",
       "availableSteps": "Dostępne kroki",
+      "babysitPrCheck": "Sprawdzanie PR",
+      "babysitPrRateLimit": "Limit Babysit PR",
+      "babysitPrStop": "Zatrzymaj Babysit PR",
+      "checkingBabysitPr": "Sprawdzam pull request",
+      "checkingBabysitRateLimit": "Sprawdzam limit",
+      "stoppingBabysitPr": "Zatrzymuję obserwację PR",
       "browseWeb": "Przeglądanie stron",
       "browsingWeb": "Przegląda strony",
       "cancelTask": "Anuluj zadanie",
@@ -9752,6 +9758,16 @@
         "title": "Zezwalaj na załączniki plików",
         "description": "Czy ten agent może wysyłać pliki, które już przesłał, razem ze swoimi wiadomościami. Wyłączone oznacza tylko tekst; pliki już załączone pozostają czytelne."
       }
+    },
+    "babysit_pr": {
+      "poll_interval_seconds": {
+        "title": "Interwał odpytywania",
+        "description": "Sekundy między sprawdzeniami pull requestu. Co najmniej 60, by watcher nigdy nie odpytywał w ciasnej pętli i nie zużywał wspólnego limitu GitHub."
+      },
+      "max_watch_minutes": {
+        "title": "Obserwuj najwyżej",
+        "description": "Minuty, przez które jedna obserwacja może trwać, zanim zatrzyma się i zgłosi blokadę. Obserwacja, która przekroczy ten czas bez zielonego wyniku, nie została zatwierdzona — wygasła."
+      }
     }
   },
   "apiReference": {
@@ -12444,6 +12460,14 @@
       "example2": "Śledź log wdrożenia i zgłoś pierwszy błąd",
       "needs": "Przestrzeń robocza z powłoką, np. capability Sandbox albo folder na twoim komputerze.",
       "never": "Nigdy nie zostawia polecenia po końcu tury: każda obserwacja kończy się razem z przebiegiem."
+    },
+    "babysit_pr": {
+      "name": "Babysit PR",
+      "does": "Obserwuje pull request w CI i botach recenzujących, zgłasza tylko to, co się zmieniło, i kończy, gdy boty są zielone na najnowszym commicie.",
+      "example1": "Czy ten pull request jest już zielony?",
+      "example2": "Obserwuj ten PR i powiedz mi, gdy checki przejdą",
+      "needs": "Sposób odczytu checków PR, np. capability monitor z `gh pr checks`.",
+      "never": "Nigdy nie łączy, nie komentuje ani nie robi nic innego na PR: tylko obserwacja i zgłaszanie."
     },
     "background_tasks": {
       "name": "Tematy w tle",

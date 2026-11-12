@@ -87,6 +87,7 @@ in [Capabilities](capabilities.md).
 | Background topics | `background_tasks` |
 | Agent messages | `agent_messages` |
 | Watch a command | `monitor` |
+| Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
 | Sol-loop | `sol_loop` |

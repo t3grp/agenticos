@@ -1072,6 +1072,7 @@ def test_exactly_the_capabilities_a_call_cannot_run_live_say_so():
             "harness",
             "video_generation",
             "monitor",
+            "babysit_pr",
             "sol_loop",
         },
         "never": {"channel_tools", "follow_ups", "drafts"},
