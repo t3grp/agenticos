@@ -57,6 +57,7 @@ def _paused_state(*questions: str) -> dict[str, object]:
         "messages": ModelMessagesTypeAdapter.dump_python(
             [ModelResponse(parts=[call]) for call in calls], mode="json"
         ),
+        "tool_call_ids": {},
         "questions": [f"ask-{index}" for index in range(1, len(questions) + 1)],
     }
 

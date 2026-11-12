@@ -952,6 +952,7 @@ class PausedRunState(BaseModel):
         description="The conversation as of the parked call, in Pydantic AI's message format"
     )
     tool_call_ids: dict[str, str] = Field(
+        default_factory=dict,
         description="Approval id -> the tool call it parked, so a decision can be replayed"
     )
     guardrail_revision: int | None = Field(
@@ -1915,7 +1916,14 @@ def parked_question_items(paused_state: dict[str, Any] | None) -> list[ParkedQue
     """
     if paused_state is None:
         return []
-    state = PausedRunState.model_validate(paused_state)
+    # Older persisted parks can predate these fields, and malformed question
+    # references must not break an otherwise readable run list.
+    payload = dict(paused_state)
+    payload.setdefault("tool_call_ids", {})
+    question_ids = payload.get("questions", [])
+    if isinstance(question_ids, list):
+        payload["questions"] = [value for value in question_ids if isinstance(value, str)]
+    state = PausedRunState.model_validate(payload)
     if state.question_results:
         return []
     return [
