@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0304_resource_grant_expires_at"
-down_revision: str = "0303_artifact_favourites"
+down_revision: str = "0305_question_nudge"
 branch_labels: None = None
 depends_on: None = None
 
