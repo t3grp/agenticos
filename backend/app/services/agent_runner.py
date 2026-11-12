@@ -1905,6 +1905,29 @@ def _question_calls(state: PausedRunState) -> dict[str, ToolCallPart]:
     }
 
 
+def parked_question_items(paused_state: dict[str, Any] | None) -> list[ParkedQuestion]:
+    """Map parked call ids back to the question text shown to the person.
+
+    This is a pure mapping over the persisted state so a run list can derive
+    waiting text without querying once per row.
+    """
+    if paused_state is None:
+        return []
+    state = PausedRunState.model_validate(paused_state)
+    if state.question_results:
+        return []
+    return [
+        ParkedQuestion(
+            tool_call_id=tool_call_id,
+            questions=[
+                QuestionItem.model_validate(item)
+                for item in wire_questions(question_request(call))
+            ],
+        )
+        for tool_call_id, call in _question_calls(state).items()
+    ]
+
+
 def _classify_output(
     result: AgentRunResult[AgentOutput],
     *,
@@ -7443,19 +7466,7 @@ class AgentRunnerService:
             or not _key_may_continue(ctx, run)
         ):
             return []
-        state = PausedRunState.model_validate(run.paused_state)
-        if state.question_results:
-            return []
-        return [
-            ParkedQuestion(
-                tool_call_id=tool_call_id,
-                questions=[
-                    QuestionItem.model_validate(item)
-                    for item in wire_questions(question_request(call))
-                ],
-            )
-            for tool_call_id, call in _question_calls(state).items()
-        ]
+        return parked_question_items(run.paused_state)
 
     async def _decisions(
         self, ctx: AuthContext, *, run: AgentRun, state: PausedRunState

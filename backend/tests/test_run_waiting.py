@@ -10,6 +10,8 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelResponse, ToolCallPart
+
 from app.api.routes.v1.runs import waiting_update
 from app.core.config import settings
 from app.db.models.agent_run import AgentRun, RunStatus, RunSurface
@@ -42,7 +44,49 @@ def test_a_run_parked_on_an_answer_reports_its_questions_and_their_expiry() -> N
     run = _row(
         status=RunStatus.AWAITING_ANSWER.value,
         ended_at=parked_at,
-        paused_state={"questions": ["Which model should I use?", "And the budget?"]},
+        paused_state={
+            "messages": ModelMessagesTypeAdapter.dump_python(
+                [
+                    ModelResponse(
+                        parts=[
+                            ToolCallPart(
+                                "ask_user_question",
+                                {
+                                    "questions": [
+                                        {
+                                            "header": "Model",
+                                            "question": "Which model should I use?",
+                                            "options": [{"label": "A"}, {"label": "B"}],
+                                        }
+                                    ]
+                                },
+                                tool_call_id="question-1",
+                            )
+                        ]
+                    ),
+                    ModelResponse(
+                        parts=[
+                            ToolCallPart(
+                                "ask_user_question",
+                                {
+                                    "questions": [
+                                        {
+                                            "header": "Budget",
+                                            "question": "And the budget?",
+                                            "options": [{"label": "A"}, {"label": "B"}],
+                                        }
+                                    ]
+                                },
+                                tool_call_id="question-2",
+                            )
+                        ]
+                    ),
+                ],
+                mode="json",
+            ),
+            "tool_call_ids": {},
+            "questions": ["question-1", "question-2"],
+        },
     )
 
     update = waiting_update(run)
@@ -89,13 +133,37 @@ def test_a_parked_run_with_no_park_time_reports_nothing() -> None:
     assert waiting_update(run) == {}
 
 
-def test_only_string_questions_are_reported() -> None:
-    """A stored question that is not a string is a corrupt row, not a question
-    a person can answer - it is dropped rather than rendered."""
+def test_waiting_question_ids_are_mapped_to_the_question_text() -> None:
+    """The persisted ids identify tool calls; the person sees their question text."""
     run = _row(
         status=RunStatus.AWAITING_ANSWER.value,
         ended_at=datetime(2026, 11, 12, 8, 0, tzinfo=UTC),
-        paused_state={"questions": ["Which model should I use?", 42, None]},
+        paused_state={
+            "messages": ModelMessagesTypeAdapter.dump_python(
+                [
+                    ModelResponse(
+                        parts=[
+                            ToolCallPart(
+                                "ask_user_question",
+                                {
+                                    "questions": [
+                                        {
+                                            "header": "Prompt",
+                                            "question": "Only the text, please?",
+                                            "options": [{"label": "A"}, {"label": "B"}],
+                                        }
+                                    ]
+                                },
+                                tool_call_id="internal-tool-call-id",
+                            )
+                        ]
+                    )
+                ],
+                mode="json",
+            ),
+            "tool_call_ids": {},
+            "questions": ["internal-tool-call-id"],
+        },
     )
 
-    assert waiting_update(run)["waiting_questions"] == ["Which model should I use?"]
+    assert waiting_update(run)["waiting_questions"] == ["Only the text, please?"]

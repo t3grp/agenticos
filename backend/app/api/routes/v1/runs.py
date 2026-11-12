@@ -54,6 +54,7 @@ from app.schemas.agent_run import (
 from app.schemas.conversation import MessageList
 from app.schemas.run_manifest import RunManifestRead
 from app.services.channels.handback import continues_in_chat
+from app.services.agent_runner import parked_question_items
 
 router = APIRouter(dependencies=[PUBLIC])
 
@@ -62,17 +63,21 @@ def waiting_update(run: AgentRun) -> dict[str, Any]:
     """What a parked run is waiting on, for the run reads.
 
     A pure read of the loaded row - no query, no service call. Only a run
-    parked on an answer carries anything: its unanswered questions straight
-    out of `paused_state`, and the instant they expire, the park time plus
+    parked on an answer carries anything: the text mapped from its parked
+    question calls, and the instant they expire, the park time plus
     `QUESTION_EXPIRY_HOURS`, the same clock the expiry sweep reads. Anything
     else returns nothing and the read keeps its defaults - an empty list and
     no expiry - so a finished thread never looks as if it is still waiting.
     """
     if run.status != RunStatus.AWAITING_ANSWER or run.ended_at is None:
         return {}
-    questions = (run.paused_state or {}).get("questions") or []
+    questions = [
+        question.question
+        for parked in parked_question_items(run.paused_state)
+        for question in parked.questions
+    ]
     return {
-        "waiting_questions": [q for q in questions if isinstance(q, str)],
+        "waiting_questions": questions,
         "waiting_expires_at": run.ended_at + timedelta(hours=settings.QUESTION_EXPIRY_HOURS),
     }
 
