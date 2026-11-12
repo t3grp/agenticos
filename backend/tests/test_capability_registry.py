@@ -299,6 +299,28 @@ class TestToolDeclarations:
         "system_reminders": {"goal_reanchor": {}},
         # Builds `None` naming no workflow: one named is what makes it offer its tools.
         "workflows": {"workflow_ids": ["00000000-0000-0000-0000-000000000002"]},
+        # Members are required, with no default: one member is what makes the
+        # config valid, and the widest shape - three - is what the builder must
+        # still resolve without a model for any of them.
+        "council": {
+            "members": [
+                {
+                    "name": "Claude Opus",
+                    "provider": "anthropic",
+                    "model_profile_id": "00000000-0000-0000-0000-000000000003",
+                },
+                {
+                    "name": "GPT Sol",
+                    "provider": "openai",
+                    "model_profile_id": "00000000-0000-0000-0000-000000000004",
+                },
+                {
+                    "name": "Gemini Pro",
+                    "provider": "google",
+                    "model_profile_id": "00000000-0000-0000-0000-000000000005",
+                },
+            ]
+        },
     }
     """Configurations a capability needs before it offers anything.
 
@@ -1061,6 +1083,7 @@ def test_exactly_the_capabilities_a_call_cannot_run_live_say_so():
             "harness",
             "video_generation",
             "monitor",
+            "council",
         },
         "never": {"channel_tools", "follow_ups", "drafts"},
     }

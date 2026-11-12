@@ -1,5 +1,5 @@
 ---
-source_sha: "573be813d5ed"
+source_sha: "8c1dc819b3fa"
 ---
 
 # Glosario { #glossary }
@@ -77,6 +77,7 @@ se describe en [Capabilities](capabilities.md).
 | Coding agent | `coding_agent` |
 | Long conversations | `compaction` |
 | Computer use | `computer_use` |
+| Consejo | `council` |
 | Context | `context` |
 | Past conversations | `conversation_search` |
 | Follow-ups | `follow_ups` |

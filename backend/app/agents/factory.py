@@ -64,6 +64,10 @@ from app.agents.capabilities.compaction import (
     build_gauge,
 )
 from app.agents.capabilities.conversation_search import CONVERSATION_SEARCH_CAPABILITY_ID
+from app.agents.capabilities.council import (
+    COUNCIL_MODELS_RESOURCE,
+    COUNCIL_RECORDER_RESOURCE,
+)
 from app.agents.capabilities.drafts._spec import draft_tool_names
 from app.agents.capabilities.guardrails import (
     ANSWER_TOOLS_RESOURCE,
@@ -253,6 +257,7 @@ def build_agent(
     resources: dict[str, Any] | None = None,
     secrets: Mapping[UUID, StorableSecret] | None = None,
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    council_models: Mapping[UUID, ModelRequestSpec] | None = None,
     extra_toolsets: list[AbstractToolset[Any]] | None = None,
     extra_capabilities: Sequence[AbstractCapability[AgentDeps]] = (),
     agent_period_spend: PeriodSpendLookup | None = None,
@@ -384,6 +389,12 @@ def build_agent(
     # N requests in a chat of one-request turns. The reminders capability mutates
     # this during the run; the runner writes it back after.
     reminder_state = ReminderState.seed(recorded_reminder_state)
+    # Wrapped, so what the provider is handed is written down as it is handed
+    # over. Reconstructing the prompt and the tool schemas from the spec
+    # afterwards would be a second implementation of everything above this line.
+    # Made before the capabilities, because a run reviewer, code mode, the
+    # council and `CacheWatch` write onto it.
+    recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
         granted_scopes=granted_scopes,
@@ -413,6 +424,10 @@ def build_agent(
             # Which tools' arguments are what the person is shown, so the output
             # guardrails screen them the way they screen the text around them.
             ANSWER_TOOLS_RESOURCE: answer_tools(bindings),
+            # Which models the council's members review on, and where its rounds
+            # are recorded - resolved by the runner, read by the capability.
+            COUNCIL_MODELS_RESOURCE: council_models,
+            COUNCIL_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
@@ -500,12 +515,6 @@ def build_agent(
     # a side-effecting capability to a spec is the only thing that has to be
     # right for approval to apply.
     repairs = RepairTally()
-    # Wrapped, so what the provider is handed is written down as it is handed
-    # over. Reconstructing the prompt and the tool schemas from the spec
-    # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because a run reviewer, code mode and
-    # `CacheWatch` write onto it.
-    recorder = RunRecorder()
     asking = frozenset(
         name
         for name, kind in (

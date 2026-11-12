@@ -154,6 +154,10 @@ class RunRecorder:
     #: Each `run_code` script code mode ran, and every tool call it made (#2107) -
     #: one `run_code` step otherwise hides all of them.
     code_runs: list[dict[str, Any]] = field(default_factory=list)
+    #: Each council review round the run recorded (#5) - one entry per round,
+    #: with every delegate's score, so the PR table is rendered from what the
+    #: run actually heard rather than remembered.
+    council_rounds: list[dict[str, Any]] = field(default_factory=list)
 
     def observe_request(
         self,
@@ -400,6 +404,7 @@ def as_payload(recorder: RunRecorder) -> dict[str, Any]:
         "messages": recorder.messages,
         "reviews": list(recorder.reviews),
         "code_runs": list(recorder.code_runs),
+        "council_rounds": list(recorder.council_rounds),
     }
 
 
@@ -410,6 +415,11 @@ its size ceiling (#2106)."""
 RECORDED_SCRIPTS = 30
 """How many code-mode scripts one run's manifest keeps, so it stays within its
 size ceiling (#2107)."""
+
+MAX_RECORDED_COUNCIL_ROUNDS = 10
+"""How many council review rounds a run's manifest keeps, so it stays within
+its size ceiling. A capability caps rounds per agent at five, so ten is two
+agents' worth of reviewing in one run."""
 
 
 def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -424,14 +434,17 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     """
     earlier_reviews = previous.get("reviews") or []
     earlier_scripts = previous.get("code_runs") or []
-    if not earlier_reviews and not earlier_scripts:
+    earlier_rounds = previous.get("council_rounds") or []
+    if not earlier_reviews and not earlier_scripts and not earlier_rounds:
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
+    rounds = [*earlier_rounds, *payload.get("council_rounds", [])]
     return {
         **payload,
         "reviews": reviews[:MAX_RECORDED_REVIEWS],
         "code_runs": scripts[:RECORDED_SCRIPTS],
+        "council_rounds": rounds[:MAX_RECORDED_COUNCIL_ROUNDS],
     }
 
 
