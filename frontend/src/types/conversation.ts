@@ -60,6 +60,13 @@ export interface Conversation {
   /** When that run last stamped itself alive; null when none is. Listings only. */
   running_heartbeat_at?: string | null;
   running_run_ids?: string[];
+  /** When the run parked in it stopped to wait; null when none is parked. Listings only. */
+  waiting_since?: string | null;
+  /** What the parked run waits on: an unanswered question or an undecided approval. */
+  waiting_status?: "awaiting_answer" | "awaiting_approval" | null;
+  /** The parked run's first unanswered question; null when it parked on an approval alone. */
+  waiting_question?: string | null;
+  waiting_run_ids?: string[];
   /**
    * The conversation this one was forked from (#2762). Only ever set for a caller
    * who owns both, so a fork shared with somebody else does not name its source.

@@ -34,7 +34,7 @@ import {
 import { useAuthStore } from "@/stores";
 import { ApiError } from "@/lib/api-client";
 import { ROUTES } from "@/lib/constants";
-import { cn, formatDateTime, formatRunDuration, timeAgo } from "@/lib/utils";
+import { cn, formatDateTime, formatRunDuration, timeAgo, timeUntil } from "@/lib/utils";
 import { Perm } from "@/types/permissions";
 import type { AgentRun } from "@/types/runs";
 import { RunTable } from "./run-table";
@@ -101,6 +101,9 @@ export function FocusedRun({
   const settling = run !== undefined && run.id !== runId;
   const prevRunId = settling ? null : (run?.prev_run_id ?? null);
   const nextRunId = settling ? null : (run?.next_run_id ?? null);
+  // How long the parked question has left to be answered, for the waiting
+  // section below; null when this run is not parked on one.
+  const waitingExpiresIn = timeUntil(run?.waiting_expires_at);
   // Warmed on arrival, so the step itself is a cache hit rather than a request.
   usePrefetchRuns([prevRunId, nextRunId]);
 
@@ -292,6 +295,31 @@ export function FocusedRun({
           </Fact>
           <Fact label={t("took")}>{formatRunDuration(run.started_at, run.ended_at)}</Fact>
         </dl>
+
+        {/* A run parked on a question is not finished, and the detail is where
+            the whole question is read rather than the row's first line: every
+            unanswered question, and how long is left to answer it. The answer
+            goes in the chat behind the run - the button below - not here. */}
+        {run.status === "awaiting_answer" && (run.waiting_questions?.length ?? 0) > 0 && (
+          <section
+            aria-label={t("waitingSection")}
+            className="space-y-1.5 rounded-xl border px-3 py-2.5"
+          >
+            <h3 className="text-foreground text-sm font-semibold">{t("waitingSection")}</h3>
+            <ul className="space-y-1">
+              {(run.waiting_questions ?? []).map((question, index) => (
+                <li key={index} className="text-sm">
+                  {question}
+                </li>
+              ))}
+            </ul>
+            {waitingExpiresIn !== null && (
+              <p className="text-muted-foreground text-xs">
+                {t("questionExpiresIn", { duration: waitingExpiresIn })}
+              </p>
+            )}
+          </section>
+        )}
 
         {!!run.tool_args_repaired && (
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">

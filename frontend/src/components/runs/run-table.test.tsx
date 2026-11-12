@@ -77,6 +77,31 @@ describe("a run history row", () => {
     expect(within(row()).getByText("Delegated · 4f2a1b8c")).toBeVisible();
   });
 
+  it("says what a run parked on a question is waiting on, and how long is left", () => {
+    // The row is where a parked run must not look finished: the question and
+    // its expiry, with the chat behind it one column over.
+    render(
+      <RunTable
+        runs={[
+          run({
+            status: "awaiting_answer",
+            waiting_questions: ["Which model should I use?"],
+            waiting_expires_at: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+          }),
+        ]}
+      />,
+    );
+
+    expect(within(row()).getByText("Which model should I use?")).toBeVisible();
+    expect(within(row()).getByText(/Expires in 1 d/)).toBeVisible();
+  });
+
+  it("says nothing about waiting for a run that is not parked on a question", () => {
+    render(<RunTable runs={[run({ status: "completed" })]} />);
+
+    expect(within(row()).queryByText(/Expires in/)).toBeNull();
+  });
+
   it("still marks an orphaned delegation, without a handle it cannot honour", () => {
     // Deleting the parent nulls the handle - the transcript it named went with
     // the parent - but the row is still a delegation and still must not be read

@@ -23,8 +23,10 @@ from app.api.public_api import INTERNAL, PUBLIC
 from app.api.responses import csv_response
 from app.api.routes.v1._chat_file_bytes import chat_file_response
 from app.api.routes.v1._run_results import run_result
+from app.core.config import settings
 from app.core.permissions import Perm
 from app.db.models.agent_run import (
+    AgentRun,
     ApprovalStatus,
     RunOrder,
     RunRating,
@@ -54,6 +56,25 @@ from app.schemas.run_manifest import RunManifestRead
 from app.services.channels.handback import continues_in_chat
 
 router = APIRouter(dependencies=[PUBLIC])
+
+
+def waiting_update(run: AgentRun) -> dict[str, Any]:
+    """What a parked run is waiting on, for the run reads.
+
+    A pure read of the loaded row - no query, no service call. Only a run
+    parked on an answer carries anything: its unanswered questions straight
+    out of `paused_state`, and the instant they expire, the park time plus
+    `QUESTION_EXPIRY_HOURS`, the same clock the expiry sweep reads. Anything
+    else returns nothing and the read keeps its defaults - an empty list and
+    no expiry - so a finished thread never looks as if it is still waiting.
+    """
+    if run.status != RunStatus.AWAITING_ANSWER or run.ended_at is None:
+        return {}
+    questions = (run.paused_state or {}).get("questions") or []
+    return {
+        "waiting_questions": [q for q in questions if isinstance(q, str)],
+        "waiting_expires_at": run.ended_at + timedelta(hours=settings.QUESTION_EXPIRY_HOURS),
+    }
 
 
 @router.get("/runs", response_model=AgentRunList, dependencies=[Depends(require(Perm.RUNS_VIEW))])
@@ -175,7 +196,11 @@ async def list_runs(
     return AgentRunList(
         items=[
             AgentRunRead.model_validate(run).model_copy(
-                update={"down_rated": run.id in down_rated, "voice_chain": chains.get(run.id)}
+                update={
+                    "down_rated": run.id in down_rated,
+                    "voice_chain": chains.get(run.id),
+                    **waiting_update(run),
+                }
             )
             for run in items
         ],
@@ -265,6 +290,7 @@ async def get_run(run_id: UUID, service: AgentRunnerSvc, ctx: Auth) -> Any:
             "prev_run_id": prev_run_id,
             "next_run_id": next_run_id,
             "continues_in_chat": continues_in_chat(run, ctx),
+            **waiting_update(run),
         }
     )
 

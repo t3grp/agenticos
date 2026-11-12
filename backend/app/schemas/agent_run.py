@@ -128,6 +128,23 @@ class AgentRunRead(BaseSchema):
             "and a client should not resume it itself. Never true for an API key"
         ),
     )
+    waiting_questions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The run's unanswered `ask_user` questions, in the order they were asked. "
+            "Empty unless the run is parked on an answer: a finished thread has "
+            "nothing to answer, and a run parked on an approval alone asked nothing. "
+            "What the Runs view shows instead of a bare 'waiting' badge."
+        ),
+    )
+    waiting_expires_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When the parked question expires unanswered and the run ends cancelled, "
+            "the park time plus `QUESTION_EXPIRY_HOURS`. Null unless the run is "
+            "parked on an answer."
+        ),
+    )
     error: str | None = None
     conversation_id: UUID | None = Field(
         default=None,

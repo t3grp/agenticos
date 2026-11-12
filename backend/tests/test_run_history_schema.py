@@ -79,3 +79,15 @@ def test_an_orphaned_delegation_reports_no_task_id() -> None:
 
     assert read.parent_run_id is None
     assert read.subagent_task_id is None
+
+
+def test_a_run_read_declares_its_waiting_fields() -> None:
+    """The waiting questions and their expiry are declared on the read, so the
+    API sends them rather than dropping them silently - the failure this file
+    exists for. The values themselves are set by the route's `waiting_update`,
+    not by validation, so a bare read carries the empty answer: no questions,
+    no expiry."""
+    read = AgentRunRead.model_validate(_row())
+
+    assert read.waiting_questions == []
+    assert read.waiting_expires_at is None
