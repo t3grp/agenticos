@@ -41,6 +41,11 @@ An event trigger adds one more refusal at its edge: a webhook whose signature do
 not verify against the trigger's own secret is a 403 that never reaches the runner
 at all.
 
+The failures the platform records also feed the
+[failure-learning loop](failure-learning.md), which mines repeating failures
+into a ledger and proves a fix against the old behaviour before anything is
+applied.
+
 ## Routine delivery
 
 A routine created from a private chat through the platform MCP answers in that

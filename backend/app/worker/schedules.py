@@ -141,6 +141,10 @@ SCHEDULES: tuple[Schedule, ...] = (
     # would be a week nobody is ever sent.
     Schedule("weekly-usage-report", jobs.WEEKLY_USAGE_REPORT, 7 * _DAY, overlap=Overlap.QUEUE),
     Schedule("monthly-usage-report", jobs.MONTHLY_USAGE_REPORT, 30 * _DAY, overlap=Overlap.QUEUE),
+    # Daily: the digest snapshots the last 7 days, so one that arrives while
+    # the last is still sending waits rather than being dropped - a skipped
+    # tick would be a day nobody is told about new failures.
+    Schedule("failure-ledger-digest", jobs.FAILURE_LEDGER_DIGEST, _DAY, overlap=Overlap.QUEUE),
 )
 
 

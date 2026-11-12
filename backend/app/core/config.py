@@ -1130,6 +1130,12 @@ class Settings(BaseSettings):
     S3_RAG_REGION: str = "us-east-1"
 
     EMAIL_PROVIDER: str = "smtp"
+    # Where the daily failure-ledger digest goes. Empty means no recipient
+    # has been chosen, and the digest job does nothing at all - it creates
+    # no draft entries and sends no mail. One address for the whole
+    # deployment: it sees every organization's digest, so it must be an
+    # operator address, not a member's.
+    FAILURE_LEARNING_DIGEST_RECIPIENT: str = ""
     EMAIL_FROM: str = "noreply@agenticos.com"
     EMAIL_FROM_NAME: str = "agenticos"
     EMAIL_REPLY_TO: str | None = None

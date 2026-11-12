@@ -225,6 +225,7 @@ retranslated is how a stale translation stops being visible.
 | Groups, directory group mappings, LDAP and Kerberos sign-in | `docs/directory.md` |
 | Departments: groups as audiences, the group page, where an agent's knowledge comes from | `docs/departments.md` |
 | Budgets, approvals, alerts, audit | `docs/governance.md` |
+| Failure learning: mining, ledger, eval cases, tries | `docs/failure-learning.md` |
 | What ships as a capability, its tools and config | `docs/reference/capabilities.md` |
 | The agent spec, field by field | `docs/reference/spec.md` |
 | Every workflow node: config, ports, errors, retries | `docs/reference/workflow-nodes.md` |
