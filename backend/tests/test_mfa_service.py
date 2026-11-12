@@ -7,6 +7,7 @@ stored) rather than the envelope. The codes themselves are real TOTP codes
 from the core module.
 """
 
+import time
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -19,6 +20,10 @@ from app.core.vault import SealedSecret
 from app.services.mfa import MfaService
 
 pytestmark = pytest.mark.anyio
+
+
+def _next_code(secret):
+    return code_now(secret, at=time.time() + 30)
 
 
 def _user(**overrides):
@@ -143,8 +148,19 @@ class TestEnable:
 
         assert len(codes) == 10
         assert user.totp_enabled is True
+        assert user.totp_last_counter is not None
         assert user.totp_recovery_hashes == [hash_recovery_code(code) for code in codes]
         assert audit.await_args.kwargs["action"] == "mfa.enabled"
+
+    async def test_the_enable_code_is_rejected_as_a_challenge(self, service):
+        mfa, _, _ = service
+        user = _user()
+        await mfa.begin_setup(user)
+        code = code_now(user.totp_secret_encrypted)
+
+        await mfa.enable(user, code)
+
+        assert await mfa.verify_challenge(user, code) is False
 
     async def test_a_wrong_code_leaves_it_off(self, service):
         mfa, _, audit = service
@@ -177,16 +193,31 @@ class TestVerifyChallenge:
         user = _user()
         await _enrolled(mfa, user)
 
-        assert await mfa.verify_challenge(user, code_now(user.totp_secret_encrypted)) is True
+        assert await mfa.verify_challenge(user, _next_code(user.totp_secret_encrypted)) is True
 
     async def test_the_same_authenticator_code_fails_the_second_time(self, service):
         mfa, _, _ = service
         user = _user()
         await _enrolled(mfa, user)
-        code = code_now(user.totp_secret_encrypted)
+        code = _next_code(user.totp_secret_encrypted)
 
         assert await mfa.verify_challenge(user, code) is True
         assert await mfa.verify_challenge(user, code) is False
+
+    async def test_an_earlier_step_fails_after_a_later_counter_is_claimed(self, service):
+        mfa, _, _ = service
+        user = _user()
+        await _enrolled(mfa, user)
+        user.totp_last_counter = None
+
+        with patch(
+            "app.services.mfa.verify_code",
+            side_effect=lambda secret, code: {"later": 100, "earlier": 99}.get(code),
+        ):
+            assert await mfa.verify_challenge(user, "later") is True
+            assert await mfa.verify_challenge(user, "earlier") is False
+
+        assert user.totp_last_counter == 100
 
     async def test_a_wrong_code_fails(self, service):
         mfa, _, _ = service
@@ -230,7 +261,7 @@ class TestDisable:
         user = _user()
         await _enrolled(mfa, user)
 
-        await mfa.disable(user, code_now(user.totp_secret_encrypted))
+        await mfa.disable(user, _next_code(user.totp_secret_encrypted))
 
         assert user.totp_enabled is False
         assert user.totp_secret_encrypted is None
@@ -269,7 +300,7 @@ class TestRegenerateRecoveryCodes:
         user = _user()
         old = await _enrolled(mfa, user)
 
-        new = await mfa.regenerate_recovery_codes(user, code_now(user.totp_secret_encrypted))
+        new = await mfa.regenerate_recovery_codes(user, _next_code(user.totp_secret_encrypted))
 
         assert len(new) == 10
         assert set(new) != set(old)

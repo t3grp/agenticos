@@ -82,7 +82,8 @@ class MfaService:
         again. Only their digests are stored.
         """
         secret = self._pending_secret(user)
-        if not verify_code(secret, code):
+        counter = verify_code(secret, code)
+        if counter is None:
             raise AuthenticationError(
                 message="That code did not match - try the code your authenticator shows now"
             )
@@ -92,6 +93,7 @@ class MfaService:
             db_user=user,
             update_data={
                 "totp_enabled": True,
+                "totp_last_counter": counter,
                 "totp_recovery_hashes": [hash_recovery_code(code) for code in codes],
             },
         )
