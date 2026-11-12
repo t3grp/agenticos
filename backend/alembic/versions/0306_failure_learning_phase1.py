@@ -27,7 +27,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0306_failure_learning_phase1"
-down_revision: str | None = "0305_mfa_totp"
+down_revision: str | None = "0305a_totp_last_counter"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
