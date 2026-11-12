@@ -8,6 +8,7 @@ outside (#1773).
 import base64
 import logging
 from typing import Any
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
@@ -26,6 +27,7 @@ from app.api.routes.v1._directory_handoff import (
     negotiate_token,
     return_url,
 )
+from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.security import create_access_token, create_mfa_token, create_refresh_token
 from app.schemas.directory import DirectoryLogin
@@ -109,6 +111,19 @@ async def kerberos_login(
         user, response_token = await sign_in.sign_in_with_ticket(
             token, invitation_token=invitation_token
         )
+        if user.totp_enabled:
+            mfa_token = create_mfa_token(
+                subject=str(user.id), credential_version=user.credential_version
+            )
+            callback = f"{settings.FRONTEND_URL.rstrip('/')}/auth/callback"
+            response = RedirectResponse(
+                url=f"{callback}#{urlencode({'mfa_token': mfa_token})}"
+            )
+            if response_token:
+                response.headers["WWW-Authenticate"] = (
+                    f"Negotiate {base64.b64encode(response_token).decode('ascii')}"
+                )
+            return response
         code = await issue_sign_in_code(
             request, user, exchange_service=exchange_service, session_service=session_service
         )

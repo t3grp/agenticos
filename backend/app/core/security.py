@@ -153,7 +153,6 @@ def create_mfa_token(
     expires_delta: timedelta | None = None,
     *,
     return_to: str | None = None,
-    jti: str | None = None,
 ) -> str:
     """The short-lived proof a password check passed, awaiting the second factor.
 
@@ -174,7 +173,6 @@ def create_mfa_token(
         "sub": str(subject),
         "type": "mfa",
         "cv": credential_version,
-        "jti": jti or secrets.token_urlsafe(32),
     }
     if return_to is not None:
         to_encode["rt"] = return_to

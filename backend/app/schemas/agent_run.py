@@ -216,6 +216,10 @@ class AgentRunRead(BaseSchema):
             "so a surface that sums a page of rows double-counts every delegation."
         ),
     )
+    retry_of_run_id: UUID | None = Field(
+        default=None,
+        description="The earlier run this top-level run retries, or null when it is not a retry.",
+    )
     subagent_task_id: str | None = Field(
         default=None,
         description=(

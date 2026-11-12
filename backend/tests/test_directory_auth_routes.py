@@ -200,6 +200,25 @@ class TestKerberosLogin:
         # The session row carries the id the access token names, chosen up front.
         assert sessions.await_args.kwargs["session_id"] is not None
 
+    async def test_a_ticket_for_an_mfa_user_stops_at_the_second_factor(
+        self, client: AsyncClient, sign_in: MagicMock, sessions: AsyncMock
+    ) -> None:
+        user = _user()
+        user.totp_enabled = True
+        sign_in.sign_in_with_ticket = AsyncMock(return_value=(user, None))
+
+        resp = await client.get(
+            _KERBEROS,
+            headers={"Authorization": f"Negotiate {base64.b64encode(b'ticket').decode()}"},
+        )
+
+        location = urlparse(resp.headers["location"])
+        assert resp.status_code == 307
+        assert location.path == "/auth/callback"
+        assert "mfa_token" in parse_qs(location.fragment)
+        assert not location.query
+        sessions.assert_not_awaited()
+
     async def test_the_desktop_shell_gets_its_deep_link(
         self, client: AsyncClient, sign_in: MagicMock, sessions: AsyncMock
     ) -> None:

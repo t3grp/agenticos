@@ -340,6 +340,14 @@ class AgentRun(Base, TimestampMixin):
         nullable=True,
         index=True,
     )
+    # A retry is a new top-level run, so its cost belongs to its own ledger.
+    # Keep its origin without making it look like a delegation.
+    retry_of_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("agent_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     # The task id the delegation library handed the parent's model, so a row
     # joins to the handle the parent saw - `check_task('4f2a1b8c')` in a
     # transcript and this row are then the same delegation rather than two

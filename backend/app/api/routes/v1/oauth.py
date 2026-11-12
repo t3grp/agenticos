@@ -265,7 +265,18 @@ async def provider_callback(
             )
         if groups is not None:
             await directory_sync.apply(user.id, groups, provider=provider)
-
+        if getattr(user, "totp_enabled", False):
+            # OAuth proves the external identity, but does not complete this
+            # account's enrolled second factor. Apply directory changes first,
+            # then stop before session creation or token exchange. The
+            # challenge stays in the URL fragment, which the browser can read
+            # but never sends in an HTTP request.
+            mfa_token = create_mfa_token(
+                subject=str(user.id), credential_version=user.credential_version
+            )
+            return RedirectResponse(
+                url=f"{frontend}/auth/callback#{urlencode({'mfa_token': mfa_token})}"
+            )
         refresh_token = create_refresh_token(subject=str(user.id))
 
         # An OAuth sign-in is an ordinary session, so the access token names its

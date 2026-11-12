@@ -38,6 +38,7 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
     started_at: "2026-08-04T09:00:00Z",
     ended_at: "2026-08-04T09:00:30Z",
     parent_run_id: null,
+    retry_of_run_id: null,
     subagent_task_id: null,
     modality: "text",
     voice_chain: null,
@@ -67,6 +68,29 @@ describe("a run history row", () => {
     render(<RunTable runs={[run()]} />);
 
     expect(within(row()).queryByText(/Delegated/)).toBeNull();
+  });
+
+  it("carries a failed run's reason on the row's hover, not in a column", () => {
+    // The row has no room for the sentence - a column for it would make every
+    // row taller - so the status cell holds it as a hover, and the detail view
+    // carries the full rendering.
+    render(
+      <RunTable
+        runs={[run({ status: "failed", error: "The run did not finish (ModelHTTPError, HTTP 400)" })]}
+      />,
+    );
+
+    const statusCell = within(row()).getAllByRole("cell")[0]!;
+    expect(
+      statusCell.querySelector('[title="The run did not finish (ModelHTTPError, HTTP 400)"]'),
+    ).not.toBeNull();
+  });
+
+  it("carries no reason on a run that has none", () => {
+    render(<RunTable runs={[run()]} />);
+
+    const statusCell = within(row()).getAllByRole("cell")[0]!;
+    expect(statusCell.querySelector("[title]")).toBeNull();
   });
 
   it("marks a delegated run with the delegation that produced it", () => {

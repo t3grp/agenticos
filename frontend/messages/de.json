@@ -1752,6 +1752,7 @@
       "delegating": "Delegiert",
       "edited": "{named, select, no {Bearbeitet …} other {{subject} bearbeitet}}",
       "editing": "{named, select, no {Bearbeitet …} other {Bearbeitet {subject}}}",
+      "evalToolTuning": "Eval-Tool-Tuning",
       "executed": "{named, select, no {Ausgeführt …} other {{subject} ausgeführt}}",
       "executing": "{named, select, no {Führt aus …} other {Führt {subject} aus}}",
       "failedToLoadSkill": "Skill konnte nicht geladen werden.",
@@ -1806,6 +1807,7 @@
       "readingPlan": "Liest den Plan",
       "readingSkillFiles": "Liest die Dateien eines Skills",
       "readingToolResult": "Liest ein gespeichertes Tool-Ergebnis",
+      "recordingEvalToolTuning": "Bewertet ein Tool anhand von Eval-Fällen",
       "relevanceScore": "Relevanz: {score}",
       "removeStep": "Schritt entfernen",
       "removingStep": "Entfernt einen Schritt",
@@ -6429,6 +6431,12 @@
       "solLoopFinding": "{id} [{severity}] {location} — {claim}",
       "solLoopFix": "Fix: {fix}",
       "solLoopOutcome": "Ergebnis: {outcome}",
+      "evalToolTuningRuns": "{count, plural, =1 {1 Eval-Tool-Tuning-Run} other {# Eval-Tool-Tuning-Runs}}",
+      "evalToolTuningRun": "{tool} · {passed}/{total} bestanden",
+      "evalToolTuningDominantFailure": "Häufigster Fehler: {failure}",
+      "evalToolTuningCase": "{name} · {classification}",
+      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposalEvidence": "Belege: {evidence} · {status}",
       "cacheBust": "Cache gebrochen",
       "cacheExpired": "Cache abgelaufen",
       "cacheBustDetail": "{missed, number} gecachte Tokens nicht aus dem Cache gelesen - davor im Prompt hat sich etwas geändert",
@@ -6438,6 +6446,8 @@
       "resizeRunDetail": "Die Größe der Run-Details ändern",
       "resumeFailed": "Der Run konnte nicht fortgesetzt werden.",
       "resumeRun": "Fortsetzen",
+      "retryFailed": "Der Run konnte nicht erneut versucht werden.",
+      "retryRun": "Erneut versuchen",
       "runCouldNotBeRead": "Dieser Run konnte nicht gelesen werden",
       "runCount": "{count, plural, =1 {1 Run} other {# Runs}}",
       "runDetail": "Run-Details",
@@ -6445,6 +6455,7 @@
       "runHistoryCouldNot": "Die Run-Historie konnte nicht gelesen werden",
       "runHistoryDescription": "Jeder Run hält die Agent-<em>Version</em> fest, die er ausgeführt hat, was letzte Woche passiert ist, bleibt also beantwortbar, nachdem der Agent umgeschrieben wurde.",
       "runResumed": "Run fortgesetzt – der Agent hat dort weitergemacht, wo er geparkt hat.",
+      "runRetried": "Run erneut versucht – der Agent beantwortet dieselbe Frage noch einmal.",
       "runs": "Runs",
       "runs2": "Runs",
       "runsViewIsMissing": "Run-Historie und Ausgaben zu lesen braucht die Berechtigung runs:view, die dieses Konto nicht hat. Es ist nichts fehlgeschlagen – die Seite hat gar nicht gefragt.",
@@ -6498,6 +6509,7 @@
       "versionsCaption": "Die letzten 30 Tage, eine Version kann hier also weniger Runs zeigen als die ganze Historie in der Tabelle darunter. „Abgeschlossen“ zählt jeden Status – nichts ausgenommen, es liest sich also wie der Ergebnis-Donut des Dashboards. Die Runs schließen ein, was diese Version als Delegat getan hat.",
       "versionsTitle": "Nach Version",
       "whatWentIn": "Was hineinging",
+      "whyItStopped": "Warum er stoppte",
       "whatYourAgentsDid2": "Was Ihre Agents getan haben, was es gekostet hat und was auf einen Menschen wartet.",
       "whereTheMoneyWent": "Wohin das Geld geflossen ist",
       "whoIsSpendingCouldNotBeRead": "Wer ausgibt, konnte nicht gelesen werden.",
@@ -11425,6 +11437,14 @@
       "needs": "Skills, unter Skills geschrieben und in diesem Bereich ausgewählt.",
       "never": "Ändert nie einen Skill; der Agent liest ihn nur."
     },
+    "eval_tool_tuning": {
+      "name": "Eval-Tool-Tuning",
+      "does": "Bewertet ein Tool anhand bereits beurteilter Eval-Fälle und entwirft je Fehlerklasse einen Tuning-Vorschlag: Prompt-Formulierung, Tool-Parameter oder Tool-Auswahl.",
+      "example1": "Warum verfehlt die Suche immer wieder die Summe?",
+      "example2": "Stimme das Nachschlage-Tool anhand der Fälle der letzten Woche ab",
+      "needs": "Eine Reihe beurteilter Eval-Fälle aus den Eval-Versuchen der Failure-Learning-Schleife.",
+      "never": "Beurteilt nie selbst eine Antwort und wendet nie einen Vorschlag an: Entwürfe sind zur Freigabe durch einen Menschen gedacht."
+    },
     "sol_loop": {
       "name": "Sol-loop",
       "does": "Lässt einen Prüfer die Arbeit in Runden beurteilen, bis sie besteht: Runde 1 prüft die ganze Änderung, spätere Runden nur den geänderten Code und die offenen Befunde.",
@@ -11901,6 +11921,12 @@
       "include_execute": {
         "title": "Shell-Befehle erlauben",
         "description": "Ob der Agent Shell-Befehle ausführen darf. Ausschalten lässt die Datei-Tools bestehen und entfernt die Shell vollständig, statt sie zu sperren."
+      }
+    },
+    "eval_tool_tuning": {
+      "max_tuning_runs": {
+        "title": "Tuning-Runs höchstens",
+        "description": "Wie viele Tuning-Runs ein Run höchstens aufzeichnen darf. Ein neuer Tuning-Run nach Anwendung eines Vorschlags ist ein neuer Run, und die Obergrenze verhindert, dass wiederholtes Bewerten den Umfang ausweitet."
       }
     },
     "sol_loop": {

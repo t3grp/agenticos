@@ -633,14 +633,14 @@ right when an agent moves to another model.
 !!! danger "Why it is stored rather than resolved per run"
 
     The request path must not call a provider, and the only thing it could
-    otherwise consult is the bundled price snapshot — which is wrong here in the
-    direction that breaks a run.
-
-    That snapshot records 1,000,000 for `anthropic:claude-sonnet-4-5` against a
-    real 200,000, so a trigger at 90% lands above the real ceiling and compaction
-    never fires before the provider refuses the request. A profile with fallbacks
-    is worse: it builds a `FallbackModel` whose composite id resolves to nothing at
-    all.
+    otherwise consult is the bundled price snapshot — a third-party bundle
+    whose numbers are not authoritative: an earlier snapshot recorded
+    1,000,000 for `anthropic:claude-sonnet-4-5` against a real 200,000, so a
+    trigger at 90% landed above the real ceiling and compaction never fired
+    before the provider refused the request (#773). The pinned snapshot
+    records the right 200,000 today, but a bundle bump can move a number
+    without this repo noticing. A profile with fallbacks is worse: it builds
+    a `FallbackModel` whose composite id resolves to nothing at all.
 
 Null means **not recorded**, not zero: a profile older than the column, a provider
 that publishes no length, a curated list, or a listing that could not be reached.

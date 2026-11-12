@@ -125,6 +125,8 @@ export interface AgentRun {
    * run's delegations, and this is how a row from that answer says so.
    */
   parent_run_id: string | null;
+  /** The original run this top-level retry repeats, or null when not a retry. */
+  retry_of_run_id: string | null;
   /**
    * Which delegation produced this run - the `task_id` its `subagent_*` frames
    * carried, so a panel in a transcript and a row here are visibly one thing.
@@ -309,6 +311,8 @@ export interface RunManifest {
   code_runs?: ManifestCodeRun[];
   /** Each sol-loop review round, with its verdict and findings (#6). */
   sol_loop_rounds?: ManifestSolLoopRound[];
+  /** Each eval-driven tool-tuning run, with its score and draft proposals (#11). */
+  eval_tool_tuning_runs?: ManifestEvalToolTuningRun[];
   /** Whether the record was trimmed to fit its size ceiling. */
   truncated: boolean;
 }
@@ -335,6 +339,46 @@ export interface ManifestSolLoopRound {
   stop_reason: string | null;
   reason: string | null;
   satisfied: boolean;
+}
+
+/** One eval case scored for one tool in a tuning run. */
+export interface ManifestEvalToolTuningCase {
+  name: string;
+  classification:
+    | "passed"
+    | "not_called"
+    | "wrong_tool"
+    | "transient"
+    | "authorization"
+    | "bad_arguments"
+    | "unknown"
+    | "wrong_answer";
+  passed: boolean;
+  shown: string;
+  detail: string;
+}
+
+/** One tuning proposal a tuning run drafted - a draft, never applied. */
+export interface ManifestEvalToolTuningProposal {
+  kind: "prompt_wording" | "tool_parameters" | "tool_choice";
+  tool: string;
+  title: string;
+  current: string;
+  proposed: string;
+  rationale: string;
+  evidence: string[];
+  status: "draft";
+}
+
+/** One eval-driven tool-tuning run. */
+export interface ManifestEvalToolTuningRun {
+  tool: string;
+  total: number;
+  passed: number;
+  pass_rate: number;
+  dominant_failure: string | null;
+  cases: ManifestEvalToolTuningCase[];
+  proposals: ManifestEvalToolTuningProposal[];
 }
 
 /** One correction a run reviewer sent while the run went. */
@@ -652,6 +696,23 @@ export interface ResumedRun {
   cache_read_tokens?: number;
   /** Of `input_tokens`, those written to the provider's cache. */
   cache_write_tokens?: number;
+}
+
+/** What `POST /runs/{id}/retry` answers with: the new run, and what it said.
+
+The new run's id is the point - the detail view steps to it - so the
+rest is the answer's shape rather than a second read: what it said, how
+it ended, what it cost.
+*/
+export interface RetriedRun {
+  run_id: string;
+  conversation_id: string | null;
+  output: string;
+  status: RunStatus;
+  cost_usd: string;
+  cost_is_partial: boolean;
+  input_tokens: number;
+  output_tokens: number;
 }
 
 /** One question as the server carries it, before the card's own shape (#2064). */

@@ -804,6 +804,17 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "reviewingWithSolLoop",
     displayNameKey: "solLoopReview",
   },
+
+  // eval tool tuning - one tuning run: a tool scored against judged cases,
+  // with draft proposals. The result is plain text - a JSON score with the
+  // per-case classifications and the drafts - so the step renders generic,
+  // like any other read-only text tool.
+  record_eval_tool_tuning: {
+    kind: "read",
+    render: "generic",
+    captionKey: "recordingEvalToolTuning",
+    displayNameKey: "evalToolTuning",
+  },
   create_agent: {
     kind: "delegate",
     render: "generic",
