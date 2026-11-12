@@ -6357,6 +6357,7 @@
       "modelFilter": "Nach Modell filtern",
       "modelRunHadNo": "Für ein Modell in diesem Run gab es keinen Preis, dies ist also eine Untergrenze",
       "toolArgsRepaired": "{count, plural, =1 {Die fehlerhaften Argumente eines Tool-Aufrufs wurden repariert statt wiederholt} other {Die fehlerhaften Argumente von # Tool-Aufrufen wurden repariert statt wiederholt}}",
+      "servedByFallback": "Beantwortet von {model} (Fallback)",
       "cacheSplit": "Von der Eingabe {read, number} aus dem Cache des Anbieters gelesen und {write, number} hineingeschrieben - getrennt bepreist",
       "modelSettings": "Modelleinstellungen",
       "monthToDate": "Monat bis heute",
