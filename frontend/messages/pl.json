@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 208434)
-Total output lines: 13776
+Warning: truncated output (original token count: 208423)
+Total output lines: 13774
 
 {
   "appConnections": {
@@ -467,7 +467,7 @@ Total output lines: 13776
       }
     },
     "conversationShared": "Konwersacja udostępniona",
-    "conversations": "Konwersacje…196434 tokens truncated…acy": "Dzwoniący pozostają anonimowi. Identyfikacja numeru nie odblokowuje prywatnego konta. Puste pole wyłącza przychodzące rozmowy z agentem.",
+    "conversations": "Konwersacje…196423 tokens truncated…acy": "Dzwoniący pozostają anonimowi. Identyfikacja numeru nie odblokowuje prywatnego konta. Puste pole wyłącza przychodzące rozmowy z agentem.",
     "max_call_seconds": "Maksymalny czas rozmowy w sekundach",
     "calls_per_hour": "Połączenia w ciągu ostatniej godziny",
     "calls_per_day": "Połączenia w ciągu ostatnich 24 godzin",

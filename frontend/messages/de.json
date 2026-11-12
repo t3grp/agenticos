@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 213479)
-Total output lines: 13673
+Warning: truncated output (original token count: 213466)
+Total output lines: 13671
 
 {
   "appConnections": {
@@ -325,7 +325,7 @@ Total output lines: 13673
     "delegationModeSync": "Darauf warten",
     "delegationModeSyncDetail": "Der Eltern-Agent hält an, bis der Delegat antwortet. Der Standard, und das, was eine Delegation wie einen Funktionsaufruf wirken lässt.",
     "delegationOffButConfigured": "Delegation ist ausgeschaltet, nichts davon wird also erreicht. Die Delegaten unten bleiben im Spec und werden beim Veröffentlichen weiterhin geprüft – schalten Sie sie oben ein, oder entfernen Sie sie.",
-    "delegationPolicyDetail": "Was jede Del…201479 tokens truncated…rTargets": "Erlaubte Weiterleitungskontakte",
+    "delegationPolicyDetail": "Was jede Del…201466 tokens truncated…rTargets": "Erlaubte Weiterleitungskontakte",
     "saveRouting": "Telefonrouting speichern",
     "endpointId": "Endpunkt-ID für die Agentenfähigkeit",
     "inboundUrl": "Twilio-Sprachwebhook-URL (POST)",

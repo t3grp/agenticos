@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 196894)
-Total output lines: 14093
+Warning: truncated output (original token count: 196881)
+Total output lines: 14091
 
 {
   "appConnections": {
@@ -361,7 +361,7 @@ Total output lines: 14093
     "failedPromote": "Failed to promote",
     "failedReleaseMode": "The release mode could not be saved",
     "failedRemoveEnvironment": "Failed to remove environment",
-    "failedRenameEnvironment": "Failed to rename environm…184894 tokens truncated…"SMS",
+    "failedRenameEnvironment": "Failed to rename environm…184881 tokens truncated…"SMS",
     "imessage": "iMessage",
     "discord": "Discord"
   },

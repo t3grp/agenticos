@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 203773)
-Total output lines: 13223
+Warning: truncated output (original token count: 203758)
+Total output lines: 13221
 
 {
   "appConnections": {
@@ -458,7 +458,7 @@ Total output lines: 13223
     "desktopInstall": {
       "title": "Masaüstünüzde AgenticOS",
       "description": "Hızlı soru, ses ve yerel araçlarınız tek bir kısayolda.",
-      "do…191773 tokens truncated…ır; hiçbir zaman şu an oluşturan kişinin sahip olduğu izinleri aşamaz. Kendi rate limit’i vardır.",
+      "do…191758 tokens truncated…ır; hiçbir zaman şu an oluşturan kişinin sahip olduğu izinleri aşamaz. Kendi rate limit’i vardır.",
     "guide": "API nasıl çağrılır?",
     "download": "OpenAPI’yi indir (JSON)",
     "search": "Endpoint’lerde ara",
