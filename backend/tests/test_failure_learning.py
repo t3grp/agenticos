@@ -374,6 +374,35 @@ class TestMining:
         assert len(model_patterns) == 1
         assert model_patterns[0].count == 6
 
+    async def test_model_threshold_counts_failures_below_each_agent_threshold(
+        self, monkeypatch, mock_db_session
+    ):
+        service = _service(mock_db_session)
+        monkeypatch.setattr(
+            agent_run_repo,
+            "failure_groups",
+            AsyncMock(
+                return_value=[
+                    _group(uuid4(), count=2),
+                    _group(uuid4(), count=2),
+                    _group(uuid4(), count=1),
+                ]
+            ),
+        )
+        monkeypatch.setattr(agent_run_repo, "failure_group_samples", AsyncMock(return_value=[]))
+        monkeypatch.setattr(agent_run_repo, "stalled_runs", AsyncMock(return_value=[]))
+        monkeypatch.setattr(agent_run_repo, "down_rated_messages", AsyncMock(return_value=[]))
+        monkeypatch.setattr(failure_learning_repo, "open_entries", AsyncMock(return_value=[]))
+        monkeypatch.setattr(agent_repo, "list_by_ids", AsyncMock(return_value=([], 0)))
+
+        patterns = await service.list_org_patterns(_ctx())
+
+        model_patterns = [pattern for pattern in patterns.items if pattern.agent_id is None]
+        agent_patterns = [pattern for pattern in patterns.items if pattern.agent_id is not None]
+        assert len(model_patterns) == 1
+        assert model_patterns[0].count == 5
+        assert agent_patterns == []
+
     async def test_model_and_status_filters_narrow_the_list(self, monkeypatch, mock_db_session):
         service = _service(mock_db_session)
         agent_id = uuid4()

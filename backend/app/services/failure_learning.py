@@ -312,21 +312,58 @@ class FailureLearningService:
         # Per-model patterns: the same failures read across agents, for a
         # model whose failure mode follows it from agent to agent.
         if agent_id is None:
-            by_model: dict[tuple[str | None, str, str], list[FailurePattern]] = defaultdict(list)
-            for pattern in kept:
-                by_model[(pattern.model, pattern.status, pattern.error_class)].append(pattern)
+            # Apply the model threshold to every merged agent group. Per-agent
+            # patterns below MIN_COUNT_PER_AGENT still contribute to the
+            # cross-agent total.
+            by_model: dict[
+                tuple[str | None, str, str],
+                list[tuple[tuple[UUID, str | None, str, str], FailurePattern]],
+            ] = defaultdict(list)
+            for key, pattern in merged.items():
+                by_model[(pattern.model, pattern.status, pattern.error_class)].append(
+                    (key, pattern)
+                )
             for (model_label, model_status, error_class), members in by_model.items():
-                total = sum(member.count for member in members)
+                total = sum(member.count for _, member in members)
                 if total < MIN_COUNT_PER_MODEL:
                     continue
                 first = min(
-                    (member.first_seen for member in members if member.first_seen is not None),
+                    (
+                        member.first_seen
+                        for _, member in members
+                        if member.first_seen is not None
+                    ),
                     default=None,
                 )
                 last = max(
-                    (member.last_seen for member in members if member.last_seen is not None),
+                    (
+                        member.last_seen
+                        for _, member in members
+                        if member.last_seen is not None
+                    ),
                     default=None,
                 )
+                sample_run_ids = [
+                    run_id for _, member in members for run_id in member.sample_run_ids
+                ][:5]
+                for key, member in members:
+                    if len(sample_run_ids) == 5:
+                        break
+                    if member.sample_run_ids:
+                        continue
+                    for agent, member_model, member_status, error in group_keys[key]:
+                        sample_run_ids.extend(
+                            await agent_run_repo.failure_group_samples(
+                                self.db,
+                                organization_id=ctx.organization_id,
+                                agent_id=agent,
+                                model_label=member_model,
+                                status=member_status,
+                                error=error,
+                            )
+                        )
+                        if len(sample_run_ids) >= 5:
+                            break
                 kept.append(
                     FailurePattern(
                         agent_id=None,
@@ -337,9 +374,7 @@ class FailureLearningService:
                         count=total,
                         first_seen=first,
                         last_seen=last,
-                        sample_run_ids=[
-                            run_id for member in members for run_id in member.sample_run_ids
-                        ][:5],
+                        sample_run_ids=sample_run_ids[:5],
                     )
                 )
         stalled = await agent_run_repo.stalled_runs(
