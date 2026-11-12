@@ -1,76 +1,61 @@
 {
   "label": "before",
   "base": "http://127.0.0.1:3217",
+  "viewports": [
+    1440,
+    390
+  ],
+  "note": "Checks are read from the review panel element; only text visible in the screenshot is listed.",
   "captures": [
     {
       "width": 1440,
-      "state": "list",
-      "file": "/work/.pr32-evidence/before/before-list-1440.png",
-      "text_checks": {
-        "Not eval-gated": false,
-        "Try this text": false,
-        "Revert": false,
-        "Skill reverted (reverted state)": false
-      },
-      "page_errors": 0
-    },
-    {
-      "width": 1440,
       "state": "skill-try",
-      "file": "/work/.pr32-evidence/before/before-skill-try-1440.png",
-      "text_checks": {
-        "Not eval-gated": true,
-        "Try this text": false,
-        "Revert": false,
-        "Skill reverted (reverted state)": false
+      "file": "before-skill-try-1440.png",
+      "panel_checks": {
+        "Not eval-gated text": true,
+        "Try this text button visible": false,
+        "Apply button visible": true,
+        "Apply button disabled": false,
+        "Revert button visible": false
       },
       "page_errors": 0
     },
     {
       "width": 1440,
       "state": "applied-revert",
-      "file": "/work/.pr32-evidence/before/before-applied-revert-1440.png",
-      "text_checks": {
-        "Not eval-gated": true,
-        "Try this text": false,
-        "Revert": false,
-        "Skill reverted (reverted state)": false
-      },
-      "page_errors": 0
-    },
-    {
-      "width": 390,
-      "state": "list",
-      "file": "/work/.pr32-evidence/before/before-list-390.png",
-      "text_checks": {
-        "Not eval-gated": false,
-        "Try this text": false,
-        "Revert": false,
-        "Skill reverted (reverted state)": false
+      "file": "before-applied-revert-1440.png",
+      "panel_checks": {
+        "Not eval-gated text": true,
+        "Try this text button visible": false,
+        "Apply button visible": false,
+        "Apply button disabled": null,
+        "Revert button visible": false
       },
       "page_errors": 0
     },
     {
       "width": 390,
       "state": "skill-try",
-      "file": "/work/.pr32-evidence/before/before-skill-try-390.png",
-      "text_checks": {
-        "Not eval-gated": true,
-        "Try this text": false,
-        "Revert": false,
-        "Skill reverted (reverted state)": false
+      "file": "before-skill-try-390.png",
+      "panel_checks": {
+        "Not eval-gated text": true,
+        "Try this text button visible": false,
+        "Apply button visible": true,
+        "Apply button disabled": false,
+        "Revert button visible": false
       },
       "page_errors": 0
     },
     {
       "width": 390,
       "state": "applied-revert",
-      "file": "/work/.pr32-evidence/before/before-applied-revert-390.png",
-      "text_checks": {
-        "Not eval-gated": true,
-        "Try this text": false,
-        "Revert": false,
-        "Skill reverted (reverted state)": false
+      "file": "before-applied-revert-390.png",
+      "panel_checks": {
+        "Not eval-gated text": true,
+        "Try this text button visible": false,
+        "Apply button visible": false,
+        "Apply button disabled": null,
+        "Revert button visible": false
       },
       "page_errors": 0
     }
