@@ -294,9 +294,10 @@ class TestResolveCouncilMembers:
 
 
 class TestCouncilConfig:
-    def test_a_member_is_required(self):
-        with pytest.raises(ValidationError):
-            CouncilConfig.model_validate({"members": []})
+    def test_requires_three_members(self):
+        member = {"name": "A", "provider": "anthropic", "model_profile_id": str(uuid.uuid4())}
+        with pytest.raises(ValidationError, match="at least 3 items"):
+            CouncilConfig.model_validate({"members": [member]})
 
     def test_at_most_three_members(self):
         members = [
@@ -306,25 +307,31 @@ class TestCouncilConfig:
         with pytest.raises(ValidationError):
             CouncilConfig.model_validate({"members": members})
 
+    def test_requires_three_distinct_providers(self):
+        members = [
+            {"name": f"M{i}", "provider": "anthropic", "model_profile_id": str(uuid.uuid4())}
+            for i in range(3)
+        ]
+        with pytest.raises(ValidationError, match="three distinct providers"):
+            CouncilConfig.model_validate({"members": members})
+
     def test_threshold_is_one_to_ten(self):
-        member = {
-            "name": "A",
-            "provider": "p",
-            "model_profile_id": str(uuid.uuid4()),
-        }
+        member = [
+            {"name": f"M{i}", "provider": p, "model_profile_id": str(uuid.uuid4())}
+            for i, p in enumerate(("anthropic", "openai", "google"))
+        ]
         with pytest.raises(ValidationError):
-            CouncilConfig.model_validate({"members": [member], "agreement_threshold": 0})
+            CouncilConfig.model_validate({"members": member, "agreement_threshold": 0})
         with pytest.raises(ValidationError):
-            CouncilConfig.model_validate({"members": [member], "agreement_threshold": 11})
+            CouncilConfig.model_validate({"members": member, "agreement_threshold": 11})
 
     def test_max_rounds_is_one_to_five(self):
-        member = {
-            "name": "A",
-            "provider": "p",
-            "model_profile_id": str(uuid.uuid4()),
-        }
+        member = [
+            {"name": f"M{i}", "provider": p, "model_profile_id": str(uuid.uuid4())}
+            for i, p in enumerate(("anthropic", "openai", "google"))
+        ]
         with pytest.raises(ValidationError):
-            CouncilConfig.model_validate({"members": [member], "max_rounds": 6})
+            CouncilConfig.model_validate({"members": member, "max_rounds": 6})
 
 
 class TestManifest:
@@ -424,7 +431,9 @@ class TestCouncilTool:
                     "name": "Claude Opus",
                     "provider": "anthropic",
                     "model_profile_id": str(uuid.uuid4()),
-                }
+                },
+                {"name": "GPT", "provider": "openai", "model_profile_id": str(uuid.uuid4())},
+                {"name": "Gemini", "provider": "google", "model_profile_id": str(uuid.uuid4())},
             ],
             "agreement_threshold": 8,
             "max_rounds": 3,
@@ -460,7 +469,9 @@ class TestFactoryWiring:
                                 "name": "Claude Opus",
                                 "provider": "anthropic",
                                 "model_profile_id": str(profile_id),
-                            }
+                            },
+                            {"name": "GPT", "provider": "openai", "model_profile_id": str(uuid.uuid4())},
+                            {"name": "Gemini", "provider": "google", "model_profile_id": str(uuid.uuid4())},
                         ],
                         "agreement_threshold": 8,
                         "max_rounds": 3,
@@ -501,7 +512,7 @@ class TestFactoryWiring:
         council = next(
             capability for capability in built.capabilities if isinstance(capability, Council)
         )
-        assert len(council.members) == 1
+        assert len(council.members) == 3
         assert council.members[0].model is not None
         assert council.members[0].unavailable_reason is None
         assert council.recorder is built.recorder
@@ -528,6 +539,11 @@ class TestRunnerWiring:
                                 "name": "B",
                                 "provider": "openai",
                                 "model_profile_id": str(gone_id),
+                            },
+                            {
+                                "name": "C",
+                                "provider": "google",
+                                "model_profile_id": str(uuid.uuid4()),
                             },
                         ]
                     },

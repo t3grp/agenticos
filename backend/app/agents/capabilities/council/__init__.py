@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.agents.capabilities._registry import (
     CapabilityBuildContext,
@@ -54,9 +54,9 @@ class CouncilConfig(BaseModel):
         title="Council members",
         description=(
             "The delegates, one strong model from each of three different "
-            "providers at high reasoning effort. One to three members."
+            "providers at high reasoning effort. Exactly three members."
         ),
-        min_length=1,
+        min_length=3,
         max_length=3,
     )
     agreement_threshold: int = Field(
@@ -80,6 +80,13 @@ class CouncilConfig(BaseModel):
             "turning into scope creep."
         ),
     )
+
+    @model_validator(mode="after")
+    def require_distinct_providers(self) -> "CouncilConfig":
+        providers = {member.provider for member in self.members}
+        if len(providers) != 3:
+            raise ValueError("Council members must use three distinct providers")
+        return self
 
 
 @register(
