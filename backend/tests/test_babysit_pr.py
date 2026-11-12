@@ -191,6 +191,10 @@ class TestDiffChecks:
         )
         assert BabysitEvent.from_dict(event.to_dict()) == event
 
+    def test_an_event_with_an_unknown_state_is_refused(self):
+        with pytest.raises(ValueError):
+            BabysitEvent.from_dict({"check": "ci", "state": "bogus"})
+
 
 class TestDecideWatch:
     def test_failures_need_attention_with_real_and_flake_counts(self):

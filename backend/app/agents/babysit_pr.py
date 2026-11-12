@@ -226,10 +226,20 @@ class BabysitEvent:
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> BabysitEvent:
         """An event back from the manifest."""
+        state = raw.get("state")
+        if state not in (
+            "passed",
+            "failed",
+            "pending",
+            "cancelled",
+            "skipped",
+            "unknown",
+        ):
+            raise ValueError(f"unknown check state: {state!r}")
         return cls(
             check_name=str(raw["check"]),
             previous_state=raw.get("previous_state"),
-            state=str(raw["state"]),
+            state=state,
             failure_kind=raw.get("failure_kind"),
             reason=str(raw.get("reason") or ""),
             head_sha=str(raw.get("head_sha") or ""),

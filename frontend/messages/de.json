@@ -1717,6 +1717,12 @@
       "askingDelegateStop": "Bittet einen Delegaten anzuhalten",
       "availableContext": "Verfügbarer Kontext",
       "availableSteps": "Verfügbare Schritte",
+      "babysitPrCheck": "Babysit-PR-Prüfung",
+      "babysitPrRateLimit": "Babysit-PR-Rate-Limit",
+      "babysitPrStop": "Babysit PR stoppen",
+      "checkingBabysitPr": "Pull Request wird geprüft",
+      "checkingBabysitRateLimit": "Rate-Limit wird geprüft",
+      "stoppingBabysitPr": "PR-Beobachtung wird beendet",
       "browseWeb": "Im Web surfen",
       "browsingWeb": "Surft im Web",
       "cancelTask": "Aufgabe abbrechen",
@@ -11502,6 +11508,14 @@
       "needs": "Ein Arbeitsbereich mit Shell, etwa die Sandbox-Capability oder ein Ordner auf deinem Computer.",
       "never": "Lässt nie einen Befehl über das Ende der Runde hinaus laufen: Jede Beobachtung endet mit dem Lauf."
     },
+    "babysit_pr": {
+      "name": "Babysit PR",
+      "does": "Beobachtet einen Pull Request in CI und Review-Bots, meldet nur, was sich geändert hat, und stoppt, wenn die Bots auf dem neuesten Commit grün sind.",
+      "example1": "Ist dieser Pull Request schon grün?",
+      "example2": "Beobachte diesen PR und sag mir, wenn die Checks bestehen",
+      "needs": "Ein Weg, die Checks des PR zu lesen, etwa die Monitor-Capability mit `gh pr checks`.",
+      "never": "Mergt, kommentiert oder unternimmt nie etwas anderes auf dem PR: nur beobachten und melden."
+    },
     "background_tasks": {
       "name": "Hintergrundthemen",
       "does": "Startet unabhängige Arbeit in einem neuen Thema, während das Gespräch weitergeht, und meldet das Ergebnis dem ursprünglichen Agenten.",
@@ -12197,6 +12211,16 @@
       "allow_attachments": {
         "title": "Dateianhänge zulassen",
         "description": "Ob dieser Agent Dateien, die er bereits hochgeladen hat, zusammen mit seinen Nachrichten senden darf. Aus bedeutet nur Text; bereits angehängte Dateien bleiben lesbar."
+      }
+    },
+    "babysit_pr": {
+      "poll_interval_seconds": {
+        "title": "Abfrageintervall",
+        "description": "Sekunden zwischen den Prüfungen des Pull Requests. Mindestens 60, damit der Watcher nie in einer engen Schleife abfragt und das gemeinsame GitHub-Limit nicht verbraucht."
+      },
+      "max_watch_minutes": {
+        "title": "Höchstens beobachten",
+        "description": "Minuten, die eine Beobachtung laufen darf, bevor sie stoppt und blockiert meldet. Eine Beobachtung, die ohne Grün darüber hinaus läuft, wurde nicht freigegeben — sie ist abgelaufen."
       }
     }
   },

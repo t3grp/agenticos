@@ -1,5 +1,5 @@
 ---
-source_sha: "573be813d5ed"
+source_sha: "aaae5395a3d5"
 ---
 
 # Glosario { #glossary }
@@ -92,6 +92,7 @@ se describe en [Capabilities](capabilities.md).
 | Temas en segundo plano | `background_tasks` |
 | Mensajes de agentes | `agent_messages` |
 | Watch a command | `monitor` |
+| Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
 | Subagents | `subagents` |

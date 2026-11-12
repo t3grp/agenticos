@@ -541,6 +541,27 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     displayNameKey: "stopMonitor",
   },
 
+  // babysit-pr - one PR watched through CI: snapshots are classified, only
+  // changes are reported, and the watch stops when the bots are green.
+  babysit_pr_check: {
+    kind: "read",
+    render: "generic",
+    captionKey: "checkingBabysitPr",
+    displayNameKey: "babysitPrCheck",
+  },
+  babysit_pr_rate_limit: {
+    kind: "read",
+    render: "generic",
+    captionKey: "checkingBabysitRateLimit",
+    displayNameKey: "babysitPrRateLimit",
+  },
+  babysit_pr_stop: {
+    kind: "read",
+    render: "generic",
+    captionKey: "stoppingBabysitPr",
+    displayNameKey: "babysitPrStop",
+  },
+
   // code_execution
   run_python: {
     kind: "code",

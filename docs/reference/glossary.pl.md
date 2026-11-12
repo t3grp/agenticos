@@ -1,5 +1,5 @@
 ---
-source_sha: "573be813d5ed"
+source_sha: "aaae5395a3d5"
 ---
 
 # Słownik { #glossary }
@@ -90,6 +90,7 @@ w [Capabilities](capabilities.md).
 | Tematy w tle | `background_tasks` |
 | Wiadomości agentów | `agent_messages` |
 | Obserwuj polecenie | `monitor` |
+| Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skille | `skills` |
 | Subagenci | `subagents` |

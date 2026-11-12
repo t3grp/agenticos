@@ -15,6 +15,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   phone_calls: 195,
 
   monitor: 55,
+  babysit_pr: 160,
   drafts: 36,
   harness: 90,
 };
@@ -340,6 +341,17 @@ const HARNESS =
   '<text x="0" y="2.4" class="tx mono s7 mid b" >main</text></g></g>' +
   "</svg>";
 
+/** A pull request watched through CI: three checks, each ticking green in turn. */
+const BABYSIT_PR =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<polygon class="ict" points="120,35 195,78 120,121 45,78"/>' +
+  '<path class="igrid" d="M76 70L118 94L165 67M118 94V55"/>' +
+  '<g class="breathe"><circle class="inl" cx="80" cy="52" r="9"/><path class="igrid2" d="M76 52l3 3 5-6"/></g>' +
+  '<g class="bob"><circle class="inr" cx="160" cy="52" r="9"/><path class="igrid2" d="M156 52l3 3 5-6"/></g>' +
+  '<circle class="ict" cx="120" cy="30" r="9"/><path class="igrid2" d="M116 30l3 3 5-6"/>' +
+  "</svg>";
+
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
@@ -347,6 +359,7 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   agent_messages: AGENT_MESSAGES,
   workflows: WORKFLOWS,
   monitor: MONITOR,
+  babysit_pr: BABYSIT_PR,
   text_to_speech: TEXT_TO_SPEECH,
   computer_use: COMPUTER_USE,
   video_generation: VIDEO_GENERATION,
