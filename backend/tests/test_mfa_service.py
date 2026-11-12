@@ -77,7 +77,7 @@ def service():
         ),
         patch("app.services.mfa.record_audit", new=AsyncMock()) as audit,
     ):
-        yield MfaService(db=AsyncMock()), update, audit
+        yield MfaService(db=SimpleNamespace(users={})), update, audit
 
 
 async def _enrolled(service, user):
