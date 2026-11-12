@@ -131,6 +131,8 @@ async def finish_run(
     error: str | None = None,
     logfire_trace_id: str | None = None,
     paused_state: dict[str, Any] | None = None,
+    fallback_used: bool | None = None,
+    serving_model: str | None = None,
     tool_args_repaired: int | None = None,
     cache_read_tokens: int | None = None,
     cache_write_tokens: int | None = None,
@@ -154,6 +156,13 @@ async def finish_run(
     if tool_args_repaired is not None:
         run.tool_args_repaired = tool_args_repaired
     run.ended_at = ended_at
+    # Left alone by a caller that passes none - an approval that expired, a
+    # parked run being closed - so it does not wipe what the run's earlier
+    # segments recorded. A caller that ran the model passes both.
+    if fallback_used is not None:
+        run.fallback_used = fallback_used
+    if serving_model is not None:
+        run.serving_model = serving_model
     run.error = error
     # Written even when unchanged in memory: another writer may have set it since
     # the run was loaded - the voice sweep's error on a call whose teardown was

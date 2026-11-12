@@ -383,6 +383,21 @@ class AgentRun(Base, TimestampMixin):
     # a profile can be repointed at a different provider or key and the run's
     # own history must not change when it is. SET NULL on the key: deleting a
     # credential must not delete the record of what it spent.
+    #
+    # Whether a fallback model served any request of this run, and which model
+    # answered last. Until this change a fallback was invisible in the run
+    # record: the row named the primary profile however the turn was answered,
+    # so a bad answer could not be traced to the model that gave it. These are
+    # the run's own answer to that, derived from the per-request models in its
+    # manifest - never from `model_label`, which is a display name, not a model
+    # id. `fallback_used` is False on rows written before this was tracked;
+    # the console only renders the fallback line when it is True, so those rows
+    # read as they always did. `serving_model` is the serving model's bare id
+    # as the provider reported it, or null when no request succeeded.
+    fallback_used: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    serving_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     provider: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     secret_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),

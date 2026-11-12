@@ -66,6 +66,8 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
     status: "completed",
     model_label: "claude-sonnet-4-5",
     provider: "anthropic",
+    fallback_used: false,
+    serving_model: null,
     input_tokens: 1200,
     output_tokens: 340,
     cost_usd: "0.0182",
@@ -234,6 +236,22 @@ describe("stepping to a neighbour", () => {
     };
     options.onRetried("run-9");
     expect(onFocusRun).toHaveBeenCalledWith("run-9");
+  it("says when a fallback served the run, and which model answered", () => {
+    serve({ run: run({ fallback_used: true, serving_model: "gpt-5" }) });
+    renderRun();
+    expect(screen.getByText("Served by gpt-5 (fallback)")).toBeInTheDocument();
+  });
+
+  it("says nothing about a fallback for a run its primary served", () => {
+    serve({ run: run() });
+    renderRun();
+    expect(screen.queryByText(/fallback/)).toBeNull();
+  });
+
+  it("names the primary profile when no serving model was recorded", () => {
+    serve({ run: run({ fallback_used: true, serving_model: null }) });
+    renderRun();
+    expect(screen.getByText("Served by claude-sonnet-4-5 (fallback)")).toBeInTheDocument();
   });
 
   it("says how much of the input the cache served, when it did (#2170)", () => {
