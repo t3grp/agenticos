@@ -772,15 +772,16 @@ load-test:
 #     locally it runs against a database of its own on the throwaway Postgres,
 #     but it is slow and rarely needed, so `check` leaves it to a hand run.
 CHECK_DB_PORT ?= 5432
+CHECK_DB_HOST ?= $(if $(POSTGRES_HOST),$(POSTGRES_HOST),127.0.0.1)
 # Where `test` reached its database: the throwaway one, or the one `CHECK_DB_PORT` names.
 INTEGRATION_DB_PORT = $(if $(TEST_DB_START),$(TEST_DB_PORT),$(CHECK_DB_PORT))
 
 check: lint test db-check test-frontend-cov build-frontend docs-build docs-slug-check audit audit-frontend licenses-check
 	@echo ""
 	@echo "All checks passed — every CI job except e2e."
-	@if ! python3 -c 'import socket; socket.create_connection(("127.0.0.1", $(INTEGRATION_DB_PORT)), 1).close()' 2>/dev/null; then \
+	@if ! python3 -c 'import socket; socket.create_connection(("$(CHECK_DB_HOST)", $(INTEGRATION_DB_PORT)), 1).close()' 2>/dev/null; then \
 		echo ""; \
-		echo "⚠  No database on 127.0.0.1:$(INTEGRATION_DB_PORT), so tests/integration skipped itself"; \
+		echo "⚠  No database on $(CHECK_DB_HOST):$(INTEGRATION_DB_PORT), so tests/integration skipped itself"; \
 		echo "   — and CI's test job has one, so it did not. '$(if $(TEST_DB_START),make docker-test-db,make docker-db)' closes that gap."; \
 	fi
 
@@ -869,10 +870,10 @@ endif
 # the integration suite. CI always has a database, so there it runs for real,
 # after `test-migrations` has left it at head.
 db-check:
-	@if python3 -c 'import socket; socket.create_connection(("127.0.0.1", $(CHECK_DB_PORT)), 1).close()' 2>/dev/null; then \
+	@if python3 -c 'import socket; socket.create_connection(("$(CHECK_DB_HOST)", $(CHECK_DB_PORT)), 1).close()' 2>/dev/null; then \
 		uv run --directory backend alembic check; \
 	else \
-		echo "⚠  No database on 127.0.0.1:$(CHECK_DB_PORT), so 'alembic check' was skipped"; \
+		echo "⚠  No database on $(CHECK_DB_HOST):$(CHECK_DB_PORT), so 'alembic check' was skipped"; \
 		echo "   — and CI's test job has one, so it did not. 'make docker-db' closes that gap."; \
 	fi
 

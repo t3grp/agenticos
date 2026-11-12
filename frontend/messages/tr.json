@@ -373,6 +373,7 @@
     "workspace": "Workspace",
     "workspaces": "Workspace'ler",
     "allOrganizations": "Tüm organizasyonlar",
+    "noFavouriteApps": "Bir uygulamayı burada sabitlemek için yıldız ekleyin. <link>Tüm uygulamalar</link>",
     "context": "Bağlam",
     "deploymentSettings": "Dağıtım",
     "routines": "Rutinler",
@@ -2037,6 +2038,10 @@
     }
   },
   "artifacts": {
+    "addFavourite": "Favorilere ekle",
+    "removeFavourite": "Favorilerden çıkar",
+    "addFavouriteNamed": "{name} favorilere eklensin",
+    "removeFavouriteNamed": "{name} favorilerden çıkarılsın",
     "actions": {
       "why": "“{page}” sayfası, bu workflow’u sizin erişiminiz ve budget’ınızla çalıştırmak istiyor. Devam etmeden önce neler göndereceğini kontrol edin.",
       "pageWording": "Sayfanın kullandığı ad",
@@ -8360,6 +8365,10 @@
         "title": "Yayımlanmış sayfalar",
         "body": "Agent’larınızın yayımladığı raporlar ve dashboard’lar. Görüntülemek için açın, önceki bir sürümü seçin, iş arkadaşlarınızla paylaşın veya herkese açık bağlantı oluşturun."
       },
+      "nav-pinned": {
+        "title": "Sabitlenmiş uygulamalar",
+        "body": "Yıldızladığınız uygulamalar burada, kenar çubuğunda görünür. Bir uygulamayı kartından veya sayfasından yıldızlayıp aynı şekilde kaldırabilirsiniz."
+      },
       "settings-api-keys": {
         "title": "API key’leriniz",
         "body": "Bir key, script’in, Postman’in veya MCP client’ının tarayıcı kullanmadan sizin adınıza işlem yapmasını sağlar. Yapabileceklerini seçin; sizin yapabileceklerinizin ötesine geçemez ve key’i iptal ettiğiniz anda çalışmayı bırakır."
@@ -8634,7 +8643,7 @@
       },
       "workflow-input-contract": {
         "title": "Beklenen girdiyi tanımlayın",
-        "body": "Manuel, API veya Bir workflow tarafından çağrılan tetikleyicileri, basit alanları veya JSON Schema Draft 2020-12 sözleşmesini kullanabilir. Şema iç içe değerleri destekler ve run başlamadan önce doğrulanır." 
+        "body": "Manuel, API veya Bir workflow tarafından çağrılan tetikleyicileri, basit alanları veya JSON Schema Draft 2020-12 sözleşmesini kullanabilir. Şema iç içe değerleri destekler ve run başlamadan önce doğrulanır."
       }
     }
   },
