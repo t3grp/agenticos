@@ -29,10 +29,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from alembic import op
 
 revision: str = "0309_trigger_conversation_mode"
-down_revision: tuple[str, str] = (
-    "0305a_totp_last_counter",
-    "0306_run_retry_link",
-)
+down_revision: str | None = "0307_failure_learning_phase2"
 branch_labels: None = None
 depends_on: None = None
 
