@@ -21,6 +21,8 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
+- A run parked on an agent's unanswered question is reminded once, halfway to expiry (`QUESTION_NUDGE_HOURS`, default 12 of the 24-hour question window): the hourly sweep posts one notice to the chat the question came from, and stamps the run so the next sweep does not remind it again. Web runs get no chat notice - what tells their person is the waiting state the run already shows in the conversation list and run history. New migration `0304_question_nudge` (number also claimed by #31 and #47 on unmerged branches; re-numbered at merge time if one of them lands first).
+
 - Apps can be favourited per person; the app list can return only apps the caller has favourited, newest star first.
 - Chats can be assigned to a project or removed from one after creation. The association changes without moving chat files or project workspace contents.
 - An opt-in finance and accounting pack with 15 agent templates and 43 skills, including all ten Anthropic financial-services agents and five community Agency Agents roles. Templates install as editable organization-owned drafts. The included installer supports read-only planning, organization checks and idempotent re-runs, and refuses conflicts with edited copies. Bundled references retain pinned sources and licences. Configure the model, client knowledge, connectors and artifact runtime, then review before publishing. See the [pack guide](https://github.com/t3grp/agenticos/blob/t3/integrations/accounting-firm/README.md).
