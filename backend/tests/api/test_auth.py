@@ -41,6 +41,7 @@ class MockUser:
         self.role = role
         self.hashed_password = "hashed"
         self.credential_version = 0
+        self.totp_enabled = False
         self.avatar_url = None
         self.oauth_provider = None
         self.created_at = datetime.now(UTC)

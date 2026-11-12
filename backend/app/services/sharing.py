@@ -7,6 +7,7 @@ incident and the last thing anyone remembers.
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import NamedTuple, Protocol
 from uuid import UUID
 
@@ -121,6 +122,13 @@ def _shown_name(resource: OwnedResource) -> str:
     return str(getattr(resource, "title", None) or getattr(resource, "name", None) or resource.id)
 
 
+def _refuse_past_expiry(expires_at: datetime | None) -> None:
+    """A share that is already expired is a share that never works; refuse it
+    on the field rather than store a row the Sharing panel then shows as dead."""
+    if expires_at is not None and expires_at <= datetime.now(UTC):
+        raise refused_field("expires_at", "The expiry has to be in the future")
+
+
 class SharingService:
     """Read and change the sharing state of any owned resource."""
 
@@ -203,6 +211,7 @@ class SharingService:
         subject_user_id: UUID,
         level: GrantLevel,
         confirmed: str | None = None,
+        expires_at: datetime | None = None,
     ) -> ResourceGrant | Deferred:
         """Grant a member access to one resource.
 
@@ -216,6 +225,7 @@ class SharingService:
         """
         await self._require_edit(ctx, resource, resource_type)
         _require_level_for(resource_type, level)
+        _refuse_past_expiry(expires_at)
 
         membership = await member_repo.get(
             self.db, organization_id=ctx.organization_id, user_id=subject_user_id
@@ -242,7 +252,14 @@ class SharingService:
             resource_id=resource.id,
             level=level,
             created_by_user_id=ctx.user_id,
+            expires_at=expires_at,
         )
+        details = {
+            "subject_user_id": str(subject_user_id),
+            "level": level.value,
+        }
+        if expires_at is not None:
+            details["expires_at"] = expires_at.isoformat()
         await record_audit(
             self.db,
             actor_user_id=ctx.subject_id,
@@ -250,7 +267,7 @@ class SharingService:
             action="resource.share",
             target_type=resource_type.key,
             target_id=str(resource.id),
-            details={"subject_user_id": str(subject_user_id), "level": level.value},
+            details=details,
         )
         return grant
 
@@ -263,6 +280,7 @@ class SharingService:
         group_id: UUID,
         level: GrantLevel,
         confirmed: str | None = None,
+        expires_at: datetime | None = None,
     ) -> ResourceGrant | Deferred:
         """Grant every member of a group access to one resource.
 
@@ -279,6 +297,7 @@ class SharingService:
         """
         await self._require_edit(ctx, resource, resource_type)
         _require_level_for(resource_type, level)
+        _refuse_past_expiry(expires_at)
 
         group = await group_repo.get(
             self.db, organization_id=ctx.organization_id, group_id=group_id
@@ -305,8 +324,15 @@ class SharingService:
             resource_id=resource.id,
             level=level,
             created_by_user_id=ctx.user_id,
+            expires_at=expires_at,
         )
         await self._tell_the_group(ctx, resource, resource_type, group)
+        details = {
+            "subject_group_id": str(group.id),
+            "level": level.value,
+        }
+        if expires_at is not None:
+            details["expires_at"] = expires_at.isoformat()
         await record_audit(
             self.db,
             actor_user_id=ctx.subject_id,
@@ -314,7 +340,7 @@ class SharingService:
             action="resource.share",
             target_type=resource_type.key,
             target_id=str(resource.id),
-            details={"subject_group_id": str(group.id), "level": level.value},
+            details=details,
         )
         return grant
 

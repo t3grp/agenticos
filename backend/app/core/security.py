@@ -146,6 +146,38 @@ def read_uuid_claim(payload: dict[str, Any], name: str) -> UUID | None:
         return None
 
 
+def create_mfa_token(
+    subject: str | Any,
+    credential_version: int,
+    expires_delta: timedelta | None = None,
+    *,
+    return_to: str | None = None,
+) -> str:
+    """The short-lived proof a password check passed, awaiting the second factor.
+
+    Five minutes by default: long enough to open the authenticator and type
+    six digits, short enough that a token left in a log or a history entry is
+    dead before anybody finds it. The `type` claim is what stops it being
+    spent as an access token, and `cv` is what stops it surviving a password
+    change - the same claim the refresh gate uses, for the same reason: a
+    credential change since the challenge was minted invalidates it.
+
+    `return_to` rides along only when the challenge came from a magic link:
+    the link's destination was validated at mint, and the second step must
+    not be what drops it.
+    """
+    expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=5))
+    to_encode: dict[str, Any] = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "mfa",
+        "cv": credential_version,
+    }
+    if return_to is not None:
+        to_encode["rt"] = return_to
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
 def create_password_reset_token(
     subject: str | Any,
     expires_delta: timedelta | None = None,

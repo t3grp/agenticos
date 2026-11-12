@@ -1,5 +1,5 @@
 ---
-source_sha: "c3245b98d9c8"
+source_sha: "d04d063ac485"
 ---
 
 # Inicio de sesión con el directorio y grupos { #directory-sign-in-and-groups }
@@ -343,9 +343,11 @@ membresías que creó el otro, así que el proceso se niega a arrancar con ambos
   cuenta en el directorio detiene su siguiente inicio de sesión, y el siguiente
   inicio de sesión es cuando se vuelven a leer los mapeos. Una sesión ya abierta
   dura hasta que caduca su refresh token, que es `REFRESH_TOKEN_EXPIRE_MINUTES` y
-  siete días por defecto. Para terminarla antes, desactiva la cuenta en
-  **Admin → Users**, lo que la rechaza en todas partes a la vez. No hay SCIM ni
-  sincronización programada del directorio.
+  siete días por defecto, salvo que la sincronización elimine la membresía de la
+  persona, lo que cierra sus sesiones y pausa las exposiciones y los embeds que
+  publicó, en el mismo paso. Para terminar una sesión antes sin eliminar la
+  membresía, desactiva la cuenta en **Admin → Users**, lo que la rechaza en
+  todas partes a la vez. No hay SCIM ni sincronización programada del directorio.
 - **Una cuenta del directorio todavía puede usar el restablecimiento de contraseña
   y el enlace mágico.** Van a la dirección de la cuenta, como los de cualquier otra
   cuenta. Si el directorio tiene que ser la única vía de entrada, mantén esas

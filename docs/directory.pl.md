@@ -1,5 +1,5 @@
 ---
-source_sha: "c3245b98d9c8"
+source_sha: "d04d063ac485"
 ---
 
 # Logowanie katalogowe i grupy { #directory-sign-in-and-groups }
@@ -336,9 +336,11 @@ członkostwa nadane przez drugie, więc proces z oboma odmawia startu.
   katalogu zatrzymuje jego następne logowanie, a następne logowanie to moment,
   w którym mapowania są czytane od nowa. Sesja już otwarta trwa, dopóki nie
   wygaśnie jej refresh token, czyli `REFRESH_TOKEN_EXPIRE_MINUTES`, domyślnie
-  siedem dni. Żeby ją zakończyć wcześniej, dezaktywuj konto w **Admin → Users**,
-  co odrzuca je wszędzie naraz. Nie ma SCIM ani zaplanowanej synchronizacji
-  katalogu.
+  siedem dni - chyba że synchronizacja usunie członkostwo tej osoby, co w tym
+  samym kroku zamyka jej sesje oraz wstrzymuje opublikowane przez nią
+  ekspozycje i embedy. Żeby zakończyć sesję wcześniej bez usuwania członkostwa,
+  dezaktywuj konto w **Admin → Users**, co odrzuca je wszędzie naraz. Nie ma
+  SCIM ani zaplanowanej synchronizacji katalogu.
 - **Konto katalogowe nadal może używać resetu hasła i magic linka.** Trafiają one
   na adres konta, jak w przypadku każdego innego konta. Jeśli katalog ma być
   jedyną drogą wejścia, trzymaj te adresy pod kontrolą samej firmy, tak jak

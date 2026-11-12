@@ -417,6 +417,32 @@ class OrganizationSecretService:
             if row.usage_scope != "personal"
         }
 
+    async def require_view(self, ctx: AuthContext, secret_id: UUID) -> OrganizationSecret:
+        """The secret, if this caller may view it — otherwise refused.
+
+        The gate for *naming* a secret id in a write: attaching it to a
+        sandbox connection, or probing a service with it. A missing row and
+        an unviewable row are answered alike, so the refusal says nothing
+        about which it was.
+
+        This is deliberately not enforced inside `resolve_for_bindings`:
+        at run time the runner resolves the bindings of a published spec for
+        whoever may run the agent, and the spec's secrets were checked
+        against the publisher at publish. Checking here, at attach time, is
+        the gate — see `docs/permissions.md`.
+        """
+        secret = await organization_secret_repo.get(
+            self.db, secret_id, organization_id=ctx.organization_id
+        )
+        if secret is None or not await resolve_access(
+            self.db, ctx, secret, Perm.SECRETS_VIEW, resource_type=SECRET
+        ):
+            raise AuthorizationError(
+                message="You do not have access to that secret",
+                details={"secret_id": str(secret_id)},
+            )
+        return secret
+
     async def listing_key(
         self, ctx: AuthContext, provider: str, *, secret_id: UUID | None = None
     ) -> str | None:

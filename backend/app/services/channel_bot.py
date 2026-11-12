@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 12523)
+Total output lines: 1082
+
 """ChannelBotService - business logic for bot management (PostgreSQL async).
 
 A bot token is sealed with :mod:`app.core.vault`, bound to the organization the
@@ -18,6 +21,7 @@ from pydantic import JsonValue, SecretStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import record_audit
 from app.core.background import spawn_after_commit
 from app.core.exceptions import AuthorizationError, BadRequestError, ConflictError, NotFoundError
 from app.core.field_errors import refused_field
@@ -207,6 +211,31 @@ class ChannelBotService:
             )
         return self.organization_id
 
+    async def _audit(
+        self,
+        action: str,
+        bot: ChannelBot,
+        ctx: AuthContext | None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Record a management change to a bot, in the request's transaction.
+
+        A bot holds the credentials a channel answers with, so creating one,
+        replacing its token, switching it off, or pointing its webhook elsewhere
+        is an access change the trail should show - who did it, to which bot.
+        The actor is the caller when the call has one; a management call without
+        a person names nobody rather than inventing one.
+        """
+        await record_audit(
+            self.db,
+            actor_user_id=ctx.user_id if ctx is not None else None,
+            organization_id=self._org_id,
+            action=action,
+            target_type="channel_bot",
+            target_id=str(bot.id),
+            details={"platform": bot.platform, "name": bot.name, **(details or {})},
+        )
+
     def _reopen_stream(self, bot: ChannelBot) -> None:
         """Make this bot's inbound connection match the row it now has.
 
@@ -303,7 +332,7 @@ class ChannelBotService:
                 return
             raise
 
-    async def create(self, data: ChannelBotCreate) -> ChannelBot:
+    async def create(self, data: ChannelBotCreate, ctx: AuthContext | None = None) -> ChannelBot:
         """Create a new channel bot with its credentials sealed, and open its stream.
 
         A polling bot is reached over a connection this process holds, and only
@@ -365,6 +394,7 @@ class ChannelBotService:
             step_display=data.step_display,
             rate_answers=data.rate_answers,
         )
+        await self._audit("channel_bot.created", bot, ctx)
         self._reopen_stream(bot)
         return bot
 
@@ -517,60 +547,7 @@ class ChannelBotService:
                 "api_base_url",
                 f"A server URL is for a self-hosted platform - a {platform} bot "
                 "has one address for everybody",
-                platform=platform,
-            )
-
-    @staticmethod
-    def _check_imessage_reaction(platform: str, reaction: str | None) -> None:
-        if (
-            platform == "imessage"
-            and reaction is not None
-            and reaction not in TAPBACK_REACTIONS | {"eyes"}
-        ):
-            raise refused_field(
-                "ack_reaction", "Choose a supported iMessage tapback or turn it off"
-            )
-
-    @staticmethod
-    def _check_sms(data: ChannelBotCreate) -> None:
-        """An SMS bot is a Twilio number: webhook only, and a token that can sign and send."""
-        if data.platform != "sms":
-            return
-        if not data.webhook_mode:
-            raise refused_field(
-                "webhook_mode", "SMS arrives only by webhook; there is no connection to open"
-            )
-        ChannelBotService._check_sms_token(data.platform, data.token)
-
-    @staticmethod
-    def _check_sms_token(platform: str, token: str) -> None:
-        """A replacement token for an SMS bot must still be one that can sign and send."""
-        if platform != "sms":
-            return
-        try:
-            split_credentials(token)
-        except ChannelNotConfigured as exc:
-            raise refused_field("token", exc.message) from exc
-
-    @staticmethod
-    def _check_email(data: ChannelBotCreate) -> None:
-        """An e-mail bot is an address and a relay: webhook only, signed with a secret it was given."""
-        if data.platform != "email":
-            return
-        if not data.webhook_mode:
-            raise refused_field(
-                "webhook_mode", "E-mail arrives only through the relay's webhook; nothing to poll"
-            )
-        ChannelBotService._check_email_token(data.platform, data.token)
-        if data.webhook_secret is None:
-            raise refused_field(
-                "webhook_secret", "Give the secret the mail relay will sign its requests with"
-            )
-
-    @staticmethod
-    def _check_email_token(platform: str, token: str) -> None:
-        """An e-mail bot's token is the address its replies come from."""
-        if platform == "email" and not is_address(token):
+                platform=platf…523 tokens truncated…== "email" and not is_address(token):
             raise refused_field("token", "An e-mail bot's token is the address it sends from")
 
     @staticmethod
@@ -895,6 +872,12 @@ class ChannelBotService:
             if value is not None and hasattr(value, "model_dump"):
                 update_data[field] = value.model_dump()
         updated = await channel_bot_repo.update(self.db, db_bot=bot, update_data=update_data)
+        await self._audit(
+            "channel_bot.updated",
+            updated,
+            ctx,
+            {"fields": sorted(update_data)},
+        )
         self._reopen_stream(updated)
         return updated
 
@@ -923,6 +906,11 @@ class ChannelBotService:
         bot = await self.get(bot_id, for_update=True)
         await self._refuse_unless_mappings_removable(bot, ctx)
         platform = bot.platform
+        # Before the row goes: the audit reads the bot's name and platform, and
+        # a deleted row no longer answers for them. The entry shares the
+        # request's transaction, so a delete that fails afterwards takes it
+        # back with it.
+        await self._audit("channel_bot.deleted", bot, ctx)
         await channel_bot_repo.delete(self.db, bot_id, organization_id=self._org_id)
         # After the commit, and read out first: the row is gone by then, so the
         # platform has to be a string this coroutine already holds.
@@ -954,16 +942,17 @@ class ChannelBotService:
                     details={"bot_id": bot.id, "role": mapping.role},
                 )
 
-    async def activate(self, bot_id: UUID) -> ChannelBot:
+    async def activate(self, bot_id: UUID, ctx: AuthContext | None = None) -> ChannelBot:
         """Set is_active = True, and open the stream it is reached over."""
         bot = await self.get(bot_id)
         activated = await channel_bot_repo.update(
             self.db, db_bot=bot, update_data={"is_active": True}
         )
+        await self._audit("channel_bot.activated", activated, ctx)
         self._reopen_stream(activated)
         return activated
 
-    async def deactivate(self, bot_id: UUID) -> ChannelBot:
+    async def deactivate(self, bot_id: UUID, ctx: AuthContext | None = None) -> ChannelBot:
         """Set is_active = False, and close the stream, so it stops now.
 
         The mirror of `activate`, and the worse of the two to get wrong: a bot
@@ -986,6 +975,7 @@ class ChannelBotService:
         deactivated = await channel_bot_repo.update(
             self.db, db_bot=bot, update_data={"is_active": False}
         )
+        await self._audit("channel_bot.deactivated", deactivated, ctx)
         self._reopen_stream(deactivated)
         return deactivated
 
@@ -1009,7 +999,9 @@ class ChannelBotService:
         total = await channel_session_repo.count_by_bot(self.db, bot_id)
         return items, total
 
-    async def register_webhook(self, bot_id: UUID) -> dict[str, Any]:
+    async def register_webhook(
+        self, bot_id: UUID, ctx: AuthContext | None = None
+    ) -> dict[str, Any]:
         """Register a webhook URL with the bot's platform.
 
         Looks up the bot, picks the adapter for its platform, builds the platform-specific
@@ -1027,12 +1019,14 @@ class ChannelBotService:
         success = await adapter.register_webhook(
             token, url=webhook_url, secret=unseal_webhook_secret(bot)
         )
+        await self._audit("channel_bot.webhook_registered", bot, ctx, {"webhook_url": webhook_url})
         return {"success": success, "webhook_url": webhook_url}
 
-    async def delete_webhook(self, bot_id: UUID) -> dict[str, Any]:
+    async def delete_webhook(self, bot_id: UUID, ctx: AuthContext | None = None) -> dict[str, Any]:
         """Remove the webhook from the bot's platform (switches to polling mode)."""
         bot = await self.get(bot_id)
         adapter = get_adapter(bot.platform)
         token = self.get_decrypted_token(bot)
         success = await adapter.delete_webhook(token)
+        await self._audit("channel_bot.webhook_deleted", bot, ctx)
         return {"success": success}

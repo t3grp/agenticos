@@ -78,6 +78,19 @@ export const SIGN_IN_TIMEOUT_MS = 20_000;
 interface SignInResponse {
   user: User;
   access_token: string;
+  return_to?: string | null;
+}
+
+/**
+ * The password step passed and the sign-in is waiting on the second factor.
+ * Carried through `signIn` untouched - no user is adopted, nothing
+ * navigates - so the form that asked can show the code step instead.
+ */
+export interface MfaChallenge {
+  mfa_required: true;
+  mfa_token: string;
+  expires_in: number;
+  return_to?: string | null;
 }
 
 function ensureTokenRefresh(adopt: (u: User) => void): void {
@@ -297,12 +310,16 @@ export function useAuth() {
   }, [setUser, queryClient]);
 
   // Both sign-in forms end the same way - a user and a token in the answer - so
-  // they differ only in the request that gets them there.
+  // they differ only in the request that gets them there. A sign-in that stops
+  // at the second factor answers with a challenge instead, and that passes
+  // through untouched: no user is adopted, nothing navigates, and the form
+  // that asked shows the code step.
   const signIn = useCallback(
-    async (request: () => Promise<SignInResponse>, returnTo?: string | null) => {
+    async (request: () => Promise<SignInResponse | MfaChallenge>, returnTo?: string | null) => {
       setLoading(true);
       try {
         const response = await request();
+        if ("mfa_required" in response) return response;
         // A check that set out before this sign-in - the page's own /auth/me,
         // answering late over a slow network - must not land afterwards and
         // sign out the account that just arrived.
@@ -325,9 +342,29 @@ export function useAuth() {
     (credentials: LoginRequest, returnTo?: string | null) =>
       signIn(
         () =>
-          apiClient.post<SignInResponse>("/auth/login", credentials, {
+          apiClient.post<SignInResponse | MfaChallenge>("/auth/login", credentials, {
             signal: AbortSignal.timeout(SIGN_IN_TIMEOUT_MS),
           }),
+        returnTo,
+      ),
+    [signIn],
+  );
+
+  // Complete the second step: the challenge token from the password step,
+  // plus the authenticator code. It signs in through the same path as the
+  // password did, so a challenge that arrived by magic link still lands
+  // where the link was headed.
+  const verifyMfa = useCallback(
+    (mfaToken: string, code: string, returnTo?: string | null) =>
+      signIn(
+        () =>
+          apiClient.post<SignInResponse>(
+            "/auth/mfa/verify",
+            { mfa_token: mfaToken, code },
+            {
+              signal: AbortSignal.timeout(SIGN_IN_TIMEOUT_MS),
+            },
+          ),
         returnTo,
       ),
     [signIn],
@@ -347,7 +384,7 @@ export function useAuth() {
         : "/auth/ldap/login";
       return signIn(
         () =>
-          apiClient.post<SignInResponse>(path, credentials, {
+          apiClient.post<SignInResponse | MfaChallenge>(path, credentials, {
             signal: AbortSignal.timeout(SIGN_IN_TIMEOUT_MS),
           }),
         returnTo,
@@ -419,6 +456,7 @@ export function useAuth() {
     isLoading,
     login,
     loginWithDirectory,
+    verifyMfa,
     register,
     logout: handleLogout,
     refreshToken,

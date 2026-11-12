@@ -27,8 +27,9 @@ from app.api.routes.v1._directory_handoff import (
     return_url,
 )
 from app.core.exceptions import AppException
-from app.core.security import create_access_token, create_refresh_token
+from app.core.security import create_access_token, create_mfa_token, create_refresh_token
 from app.schemas.directory import DirectoryLogin
+from app.schemas.mfa import MfaRequired
 from app.schemas.token import Token
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/ldap/login", response_model=Token)
+@router.post("/ldap/login", response_model=Token | MfaRequired)
 async def ldap_login(
     request: Request,
     body: DirectoryLogin,
@@ -50,6 +51,9 @@ async def ldap_login(
     policy, and the person's memberships are reconciled with the directory group
     mappings on every one. Rate-limited per address and per username, like the
     password login beside it.
+
+    An account with a second factor enabled stops at the challenge, as the
+    password login does - the directory checked the password, not the factor.
     """
     await enforce_auth_limit(request, surface="auth_ldap_login", identifier=body.username)
     invitation_token = (
@@ -58,6 +62,12 @@ async def ldap_login(
     user = await sign_in.sign_in_with_password(
         body.username, body.password, invitation_token=invitation_token
     )
+    if user.totp_enabled:
+        return MfaRequired(
+            mfa_token=create_mfa_token(
+                subject=str(user.id), credential_version=user.credential_version
+            )
+        )
     refresh_token = create_refresh_token(
         subject=str(user.id), credential_version=user.credential_version
     )

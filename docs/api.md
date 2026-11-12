@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 13151)
+Total output lines: 939
+
 # The HTTP API
 
 Everything the console does, it does through this API. There is no private
@@ -44,8 +47,11 @@ The key is shown **once**, in the response that creates it. Only a SHA-256 of it
 is stored, and it never appears in a log line, an audit entry or an error body.
 Lists show its prefix (`aos_1a2b3c4d`), which is also how an audit entry names
 the key that acted — every entry recorded during a key-authenticated request
-carries `via_api_key` in its details. A key can have an expiry, and revoking it
-(`DELETE /api/v1/api-keys/{id}`) takes effect on its next request.
+carries `via_api_key` in its details. A key expires 90 days after it is issued
+unless an expiry is given with it, and revoking it
+(`DELETE /api/v1/api-keys/{id}`) takes effect on its next request. Rotating it
+(`POST /api/v1/api-keys/{id}/rotate`) replaces its secret at once: the old key
+stops working, and the response holds the new one, once.
 
 **A key is not its issuer's person.** A run it starts is owned, budgeted and
 audited as the issuer, but it reaches none of their personal state: no
@@ -136,6 +142,35 @@ back when `AGENT_ID` is set, and revokes the key on exit.
 ```bash
 BASE=http://localhost:8000 EMAIL=you@example.com PASSWORD=... bash docs/examples/public-api.sh
 ```
+
+### Two-factor authentication
+
+A second step at sign-in, from an authenticator app (TOTP, six digits over
+30 seconds). Enrol in the console at **Settings → Account**: the secret is
+shown once, for the app, and enabling it answers with ten single-use
+recovery codes, also shown once - the way back in if the authenticator is
+lost. Switching it off, or replacing the recovery codes, takes a code from
+the account, so a session left open on a shared screen cannot strip the
+factor that protects the next sign-in.
+
+A password, directory, or magic-link sign-in for an account with it enabled
+stops at a challenge instead of a session: the response carries
+`mfa_required`, a `mfa_token` and `expires_in` (five minutes), and no
+cookies are set. The client completes it at `POST /api/v1/auth/mfa/verify`
+with the token and the code, and the answer is the token pair - plus the
+magic link's destination, when the challenge came from one. The challenge
+token proves the password step and nothing else: it cannot call the API as
+a session, and a password change since it was minted invalidates it. A
+recovery code completes the step too, and is spent doing so; the spend is
+audited, so the account's owner can see a code was used.
+
+The secret is sealed in the vault under the account's own scope, and only
+digests of the recovery codes are stored - a database read alone yields
+neither. Enrolment is per account, not per deployment: whether the
+deployment requires it is a policy decision for the operator, not this
+mechanism. Sign-in through an external authenticator - an OAuth provider,
+or Kerberos - is authenticated there, and relies on that provider's own
+second-factor policy.
 
 ### Sessions and revocation
 
@@ -384,84 +419,7 @@ graph the run executes: its version's, or a test run's draft snapshot.
 ### Reading a workflow's log { #reading-a-workflows-log }
 
 The lines a workflow's [Quick Logs](workflows.md#the-logs-page) wrote can be read from
-outside the console - by a script, a spreadsheet, or a dashboard tool such as Grafana or
-Metabase - with an organization API key holding `workflows:view`.
-
-A key reads the lines of public-origin runs, including runs started by keys: those
-started by any organization key, those started from outside (a webhook, form, channel
-message, Gmail, Outlook or GitHub event) and any run in a chain one of those started.
-Lines of runs a member, a schedule, a table record, a chat, an agent or an app started
-are not included, so a scheduled workflow's log reads empty through a key and its counts
-differ from the console's. A workflow of another organization, or one the key's member
-may not view, answers `404`; a key without `workflows:view` is refused.
-
-```bash
-# The newest lines, 100 at a time (the most a page holds); test runs are left out
-curl "$BASE/api/v1/workflows/$WORKFLOW_ID/logs?outcome=error&from=2026-10-01T00:00:00Z&limit=100" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID"
-
-# How many lines each day left, by outcome, over the last 30 days in Warsaw's days
-curl "$BASE/api/v1/workflows/$WORKFLOW_ID/logs/summary?days=30&tz=Europe/Warsaw" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID"
-```
-
-`GET /api/v1/workflows/{id}/logs` lists newest first - by `created_at`, then by `seq`,
-the position a line took in the log as it was written. Narrow it with `node_instance_id`
-(one step), `outcome` (a port, or `error`; repeat it to match any of several, and a
-line that left by several ports matches each of them), `run` (a run id, or its first 4 or more
-characters), `q` (text in the message) and the time window `from` (inclusive) and `to`
-(exclusive); `include_test=true` adds the lines test runs wrote. `skip` and `limit` page
-through it - `limit` is at most 100 - and `total` counts every matching line, so a
-client pages until `skip` reaches it.
-
-`GET /api/v1/workflows/{id}/logs/summary` is the data a chart wants: for the last
-`days` days (7, 30 or 90, today included) it answers one entry per day, oldest first,
-with the count each outcome left, and a day with no lines is still present. `tz`, an
-IANA name, sets whose days are counted and is UTC by default; the other filters are the
-list's. To pull it into a dashboard tool, point a JSON data source at the route with the
-key as a bearer header and read `by_day`.
-
-```bash
-# Errors and timeouts per day for a month: one JSON data source for a dashboard panel
-curl "$BASE/api/v1/workflows/$WORKFLOW_ID/logs/summary?days=30&outcome=error&outcome=timeout" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID"
-```
-
-`GET /api/v1/workflow-runs/{id}/logs` lists one run's lines oldest first by `seq`
-(`limit` up to 500), and `GET /api/v1/workflow-logs` the newest lines across every
-workflow the key may view, each with its workflow's name, plus how many lines each
-outcome left in the last 24 hours. The alert rules on a log are not part of the public
-API.
-
-### Exporting and importing a workflow { #exporting-and-importing-a-workflow }
-
-`GET /api/v1/workflows/{id}/export` (`workflows:view`) returns the draft as a
-portable file: `name`, `description`, `tags`, `settings`, `graph` and
-`unresolved`, the step and field of every resource pin it left out. It carries no
-id of this deployment and no secret value. `POST /api/v1/workflows/import`
-(`workflows:create`) takes that file and answers `201` with the new draft
-`workflow` and its `unresolved` pins; a graph that does not parse, or names a step
-this deployment does not have, is a `400` and makes nothing.
-
-### Following a run over a WebSocket { #following-a-run-over-a-websocket }
-
-`/api/v1/ws/workflow-runs?organization_id=<org>` authenticates like the chat's
-socket, with the access token as the `access_token.<token>` subprotocol. Send
-`{"type": "start", "workflow_id": ..., "input": {...}}` to start a run, or
-`{"type": "attach", "run_id": ..., "after": <cursor>}` to follow one. The server
-sends `{"type": "run", "run": {...}}` when it starts following and again when the
-run ends, and `{"type": "event", "event": {...}, "cursor": ...}` for every event
-between. A refused frame gets `{"type": "error", "code": ..., "message": ...}`,
-and a revoked session closes the socket with `4001`. One socket follows one run;
-a new frame replaces the run it was following. A `start` frame spends the per-minute
-allowance `POST /workflow-runs` does, and past it gets `RATE_LIMIT_EXCEEDED`.
-
-### Webhooks and schedules { #workflow-webhooks-and-schedules }
-
-Webhook and GitHub delivery IDs survive run-content retention as minimal tombstones owned by the exposure and organization. A duplicate still returns the original run UUID after its content is deleted; its status and previous webhook response may no longer be available. Deleting the exposure or organization ends that deduplication lifetime. Migration `0230_webhook_delivery_tombstones.py` cannot restore claims already deleted by older retention; downgrading removes orphan tombstones before restoring the old cascading foreign key.
+outside …1151 tokens truncated…ones owned by the exposure and organization. A duplicate still returns the original run UUID after its content is deleted; its status and previous webhook response may no longer be available. Deleting the exposure or organization ends that deduplication lifetime. Migration `0230_webhook_delivery_tombstones.py` cannot restore claims already deleted by older retention; downgrading removes orphan tombstones before restoring the old cascading foreign key.
 
 Unattended trigger publication and authority changes require a member session (`403` for an organization API key). Keys may publish manual workflows, start runs within their scopes and pause exposures, but cannot enable them, rotate secrets/form links, retime schedules or choose a new error-workflow identity. These operations retain a user's authority for future events.
 

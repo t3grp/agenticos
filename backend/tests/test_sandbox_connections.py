@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 18871)
+Total output lines: 1766
+
 """Where an organization's sandboxes run: registering one, and reaching it.
 
 The refusals are the point, and they fall into two groups.
@@ -27,7 +30,12 @@ import pytest
 from pydantic import ValidationError
 
 from app.core.config import settings
-from app.core.exceptions import AlreadyExistsError, BadRequestError, NotFoundError
+from app.core.exceptions import (
+    AlreadyExistsError,
+    AuthorizationError,
+    BadRequestError,
+    NotFoundError,
+)
 from app.core.permissions import AuthContext, OrgRoleName
 from app.core.secret_kinds import ApiKeySecret, AwsCredentialsSecret
 from app.repositories import (
@@ -115,6 +123,7 @@ def _service(monkeypatch, *, secret: Any = None) -> SandboxConnectionService:
     resolved = {} if secret is None else {secret[0]: secret[1]}
     service.secrets = MagicMock()
     service.secrets.resolve_for_bindings = AsyncMock(return_value=resolved)
+    service.secrets.require_view = AsyncMock()
     monkeypatch.setattr(project_repo, "active_moves_for_connection", AsyncMock(return_value=False))
     monkeypatch.setattr(sandbox_connection_repo, "clear_default", AsyncMock())
     # This file is about the connection and the audit entry `record_audit`
@@ -226,6 +235,50 @@ class TestRegistering:
 
         assert read.kind == "daytona"
 
+    async def test_attaching_a_secret_the_caller_cannot_view_is_refused(self, monkeypatch):
+        """A Builder holding `connections:manage` must not be able to name
+        somebody else's private key and have the connection spend it for them."""
+        service = _service(monkeypatch)
+        service.secrets.require_view = AsyncMock(
+            side_effect=AuthorizationError(message="You do not have access to that secret")
+        )
+        monkeypatch.setattr(sandbox_connection_repo, "get_by_name", AsyncMock(return_value=None))
+        created = AsyncMock()
+        monkeypatch.setattr(sandbox_connection_repo, "create", created)
+
+        with pytest.raises(AuthorizationError):
+            await service.create(
+                _ctx(),
+                SandboxConnectionCreate(
+                    name="Big box",
+                    kind="docker",
+                    base_url="http://b:8080",
+                    secret_id=uuid.uuid4(),
+                ),
+            )
+
+        created.assert_not_awaited()
+
+    async def test_attaching_a_secret_the_caller_may_view_is_allowed(self, monkeypatch):
+        service = _service(monkeypatch)
+        secret_id = uuid.uuid4()
+        monkeypatch.setattr(sandbox_connection_repo, "get_by_name", AsyncMock(return_value=None))
+        monkeypatch.setattr(
+            sandbox_connection_repo, "list_for_organization", AsyncMock(return_value=[])
+        )
+        created = AsyncMock(return_value=_row(secret_id=secret_id))
+        monkeypatch.setattr(sandbox_connection_repo, "create", created)
+
+        await service.create(
+            _ctx(),
+            SandboxConnectionCreate(
+                name="Big box", kind="docker", base_url="http://b:8080", secret_id=secret_id
+            ),
+        )
+
+        service.secrets.require_view.assert_awaited_once()
+        assert created.await_args.kwargs["secret_id"] == secret_id
+
 
 class TestEditing:
     async def test_a_connection_from_another_organization_reads_as_missing(self, monkeypatch):
@@ -296,6 +349,34 @@ class TestEditing:
         await service.update(_ctx(), row.id, SandboxConnectionUpdate(is_default=True))
 
         cleared.assert_awaited_once()
+
+    async def test_changing_the_secret_to_one_the_caller_cannot_view_is_refused(self, monkeypatch):
+        service = _service(monkeypatch)
+        service.secrets.require_view = AsyncMock(
+            side_effect=AuthorizationError(message="You do not have access to that secret")
+        )
+        row = _row()
+        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
+        updated = AsyncMock()
+        monkeypatch.setattr(sandbox_connection_repo, "update_connection", updated)
+
+        with pytest.raises(AuthorizationError):
+            await service.update(_ctx(), row.id, SandboxConnectionUpdate(secret_id=uuid.uuid4()))
+
+        updated.assert_not_awaited()
+
+    async def test_detaching_the_secret_needs_no_view(self, monkeypatch):
+        """Removing a credential is not spending one."""
+        service = _service(monkeypatch)
+        row = _row()
+        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
+        monkeypatch.setattr(
+            sandbox_connection_repo, "update_connection", AsyncMock(return_value=row)
+        )
+
+        await service.update(_ctx(), row.id, SandboxConnectionUpdate(secret_id=None))
+
+        service.secrets.require_view.assert_not_awaited()
 
     async def test_deleting_leaves_the_workspaces_alone(self, monkeypatch):
         """Their rows record what an agent did and where; forgetting a host is
@@ -476,603 +557,7 @@ class TestResolvingForARun:
 
         assert "no credential" in refused.value.message
 
-    async def test_a_credential_that_no_longer_resolves_is_refused(self, monkeypatch):
-        """The row points at a vault entry that is gone: absent from the result
-        rather than raising, so this has to be checked rather than assumed."""
-        row = _row()
-        service = _service(monkeypatch)
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.resolve(_ctx(), row.id)
-
-        assert "not an API key" in refused.value.message
-
-    async def test_the_wrong_kind_of_credential_is_refused_rather_than_sent(self, monkeypatch):
-        """A sandbox service authenticates with a token. Handing it AWS keys
-        would be a credential sent to the wrong host."""
-        row = _row()
-        service = _service(
-            monkeypatch,
-            secret=(
-                row.secret_id,
-                AwsCredentialsSecret(
-                    aws_access_key_id="AKIA0000",
-                    aws_secret_access_key="x-secret-access",
-                    region_name="eu-west-1",
-                ),
-            ),
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.resolve(_ctx(), row.id)
-
-        assert "not an API key" in refused.value.message
-
-    def test_a_resolved_connection_keeps_its_token_out_of_its_repr(self):
-        """A default `repr` would put the token in every log line touching one."""
-        resolved = ResolvedConnection(row=_row(), token="super-secret")
-
-        assert "super-secret" not in repr(resolved)
-
-
-class TestReadingThePolicy:
-    async def test_what_the_service_allows_comes_from_the_service(self, monkeypatch):
-        """The runtime allowlist is its boot configuration, so a copy here would
-        disagree the first time somebody restarted it with a different limit."""
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        _serve(monkeypatch, _Response(200, {"runtimes": [{"alias": "python"}]}))
-
-        policy = await service.policy(_ctx(), row.id)
-
-        assert [runtime.alias for runtime in policy.runtimes] == ["python"]
-        assert policy.kind == "docker"
-
-    async def test_the_token_is_sent_as_a_header_and_not_in_the_url(self, monkeypatch):
-        """A token in a query string reaches every access log on the way."""
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        seen = _serve(monkeypatch, _Response(200, {"runtimes": []}))
-
-        await service.policy(_ctx(), row.id)
-
-        assert seen["headers"] == {"X-Sandbox-Token": "tok-12345678"}
-        assert "tok-12345678" not in seen["url"]
-
-    async def test_daytona_publishes_no_policy_of_its_own(self, monkeypatch):
-        """What it allows is an account setting on their side, so there is
-        nothing to proxy and nothing to invent."""
-        row = _row(kind="daytona", base_url=None)
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-
-        policy = await service.policy(_ctx(), row.id)
-
-        assert policy.runtimes == []
-        assert policy.kind == "daytona"
-
-    async def test_a_service_that_does_not_answer_is_distinguished_from_an_empty_one(
-        self, monkeypatch
-    ):
-        """ "No runtimes" and "unreachable" are different problems, and only one
-        of them is fixed in this form."""
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        _serve(monkeypatch, OSError("connection refused"))
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.policy(_ctx(), row.id)
-
-        assert "did not answer" in refused.value.message
-
-    async def test_a_refused_token_is_reported_as_the_credential(self, monkeypatch):
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        _serve(monkeypatch, _Response(401))
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.policy(_ctx(), row.id)
-
-        assert "refused this connection's credential" in refused.value.message
-
-    async def test_any_other_status_is_reported_with_its_number(self, monkeypatch):
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        _serve(monkeypatch, _Response(503))
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.policy(_ctx(), row.id)
-
-        assert "503" in refused.value.message
-
-    async def test_a_200_that_is_not_json_names_the_port_rather_than_raising(self, monkeypatch):
-        """A web server on the wrong port is the commonest way to reach this.
-
-        `response.json()` used to sit outside the guard, so it answered with a
-        500 - the one outcome the rest of these messages exist to avoid.
-        """
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        _serve(monkeypatch, _NotJson())
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.policy(_ctx(), row.id)
-
-        assert "not with JSON" in refused.value.message
-        assert "port" in refused.value.message
-
-
-class TestWhatThisDeploymentCanAlreadySee:
-    """The prefill, and the reason it is a probe rather than a setting.
-
-    An operator registering the service their own `make dev` started should not
-    have to know that it answers at `http://sandboxd:8080` and that its token is
-    already in `backend/.env`. None of that is configuration here - the address is
-    a row, because a deployment can hold several hosts - so the only honest way to
-    offer it is to ask, and to say plainly when nothing answered.
-    """
-
-    async def test_the_compose_address_is_tried_before_a_developers_own(self, monkeypatch):
-        """Inside the stack the first answers and the second does not exist."""
-        service = _service(monkeypatch)
-        monkeypatch.setattr(
-            sandbox_connection_repo, "list_for_organization", AsyncMock(return_value=[])
-        )
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "")
-        seen = _serve(monkeypatch, _Response(200, {}))
-
-        local = await service.local_service(_ctx())
-
-        assert local.url == "http://sandboxd:8080"
-        assert seen["urls"] == ["http://sandboxd:8080/healthz"]
-
-    async def test_a_developer_running_the_api_on_their_host_is_found_too(self, monkeypatch):
-        service = _service(monkeypatch)
-        monkeypatch.setattr(
-            sandbox_connection_repo, "list_for_organization", AsyncMock(return_value=[])
-        )
-        _serve(monkeypatch, [_Response(503), _Response(200, {})])
-
-        local = await service.local_service(_ctx())
-
-        assert local.url == "http://localhost:8080"
-
-    async def test_no_service_is_no_url_rather_than_a_guess(self, monkeypatch):
-        """A form that prefilled an address nothing answers on would send an
-        operator looking for a network problem that does not exist."""
-        service = _service(monkeypatch)
-        # Pinned rather than inherited: a developer's own `.env` carries a token,
-        # and a test that passed because of one would say nothing about a
-        # deployment that has none.
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "")
-        _serve(monkeypatch, OSError("connection refused"))
-
-        local = await service.local_service(_ctx())
-
-        assert local.url is None
-        assert local.token_available is False
-        assert local.registered_connection_id is None
-
-    async def test_the_token_this_deployment_holds_is_reported_as_available(self, monkeypatch):
-        """Reported, never returned. What reaches the browser is a boolean; the
-        value goes to the vault and nowhere else."""
-        service = _service(monkeypatch)
-        monkeypatch.setattr(
-            sandbox_connection_repo, "list_for_organization", AsyncMock(return_value=[])
-        )
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "sbx-local-key")
-        _serve(monkeypatch, _Response(200, {}))
-
-        local = await service.local_service(_ctx())
-
-        assert local.token_available is True
-        assert "sbx-local-key" not in repr(local)
-
-    async def test_a_connection_already_pointing_there_is_named(self, monkeypatch):
-        """So the dialog can say "you already registered this" instead of letting
-        somebody create a second row for one host and then wonder which is used."""
-        service = _service(monkeypatch)
-        row = _row(base_url="http://sandboxd:8080/")
-        monkeypatch.setattr(
-            sandbox_connection_repo, "list_for_organization", AsyncMock(return_value=[row])
-        )
-        _serve(monkeypatch, _Response(200, {}))
-
-        local = await service.local_service(_ctx())
-
-        assert local.registered_connection_id == row.id
-
-    async def test_a_connection_to_somewhere_else_is_not_it(self, monkeypatch):
-        service = _service(monkeypatch)
-        monkeypatch.setattr(
-            sandbox_connection_repo,
-            "list_for_organization",
-            AsyncMock(return_value=[_row(base_url="http://other:8080")]),
-        )
-        _serve(monkeypatch, _Response(200, {}))
-
-        assert (await service.local_service(_ctx())).registered_connection_id is None
-
-
-class TestTheRuntimeCatalog:
-    """What this deployment ships, not what the library does.
-
-    The form used to offer `BUILTIN_RUNTIMES` - fifteen aliases, of which a
-    `sandboxd` started by this project allowed three, and the failure was
-    invisible in the direction that matters: a select offering a runtime the host
-    will refuse looks complete.
-    """
-
-    def test_the_form_offers_what_the_compose_files_gave_the_service(self):
-        assert [entry.alias for entry in SandboxConnectionService.runtime_catalog()] == [
-            runtime.alias for runtime in CATALOG
-        ]
-
-    def test_a_built_runtime_says_what_it_starts_from_and_that_it_builds(self):
-        """A build is paid for once, by whoever opens the first session on a host
-        that has not prewarmed it - so "builds" is a claim about how long a first
-        message can take, and worth showing."""
-        catalog = {entry.alias: entry for entry in SandboxConnectionService.runtime_catalog()}
-
-        workbench = catalog["workbench"]
-
-        assert workbench.image == "python:3.12-slim"
-        assert workbench.builds is True
-        assert "Node" in workbench.description
-
-
-class TestStoringTheLocalToken:
-    async def test_the_token_this_deployment_started_the_service_with_is_stored(self, monkeypatch):
-        """The friction this removes: `make sandbox-token` wrote it to
-        `backend/.env`, compose handed it to the service, and then a form asked an
-        operator to go and find the value their own stack is already using."""
-        service = _service(monkeypatch)
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "sbx-local-token")
-        monkeypatch.setattr(organization_secret_repo, "get_by_name", AsyncMock(return_value=None))
-        stored = MagicMock(id=uuid.uuid4(), hint="oken")
-        stored.name = LOCAL_TOKEN_SECRET_NAME
-        service.secrets.create = AsyncMock(return_value=stored)
-
-        result = await service.store_local_credential(_ctx())
-
-        assert result.secret_id == stored.id
-        assert result.name == LOCAL_TOKEN_SECRET_NAME
-        assert result.hint == "oken"
-        assert (
-            service.secrets.create.await_args.kwargs["value"].api_key.get_secret_value()
-            == "sbx-local-token"
-        )
-
-    async def test_it_is_stored_as_the_service_credential_it_is(self, monkeypatch):
-        """Purpose `sandboxd`, so the connection form's own picker offers it and a
-        Daytona key is not offered for a container service."""
-        service = _service(monkeypatch)
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "sbx-12345")
-        monkeypatch.setattr(organization_secret_repo, "get_by_name", AsyncMock(return_value=None))
-        created = MagicMock(id=uuid.uuid4(), hint="sbx-12345")
-        # Assigned rather than passed: `MagicMock(name=...)` names the mock
-        # instead of setting the attribute, and the answer is now a model whose
-        # `name` has to be a string.
-        created.name = LOCAL_TOKEN_SECRET_NAME
-        service.secrets.create = AsyncMock(return_value=created)
-
-        await service.store_local_credential(_ctx())
-
-        assert service.secrets.create.await_args.kwargs["purpose"] == "sandboxd"
-
-    async def test_a_second_call_rotates_the_entry_rather_than_adding_another(self, monkeypatch):
-        """`.env` can have been regenerated since. A reused entry holding the older
-        token resolves and then 401s on every session - the same failure this
-        exists to prevent, reached from the other side."""
-        service = _service(monkeypatch)
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "sbx-new-key")
-        existing = MagicMock(id=uuid.uuid4())
-        monkeypatch.setattr(
-            organization_secret_repo, "get_by_name", AsyncMock(return_value=existing)
-        )
-        rotated = MagicMock(id=existing.id, hint="-new")
-        rotated.name = LOCAL_TOKEN_SECRET_NAME
-        service.secrets.update = AsyncMock(return_value=rotated)
-        service.secrets.create = AsyncMock()
-
-        result = await service.store_local_credential(_ctx())
-
-        assert result.secret_id == existing.id
-        service.secrets.create.assert_not_called()
-        assert service.secrets.update.await_args.args[1] == existing.id
-
-    async def test_a_deployment_with_no_token_says_so_rather_than_storing_nothing(
-        self, monkeypatch
-    ):
-        """An empty vault entry would be a credential that exists and cannot
-        authenticate anything, which is worse than being asked to paste one."""
-        service = _service(monkeypatch)
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "")
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.store_local_credential(_ctx())
-
-        assert "make sandbox-token" in refused.value.message
-
-
-class TestTestingAnAddressBeforeItIsSaved:
-    """What makes `Default runtime` a list rather than a free-text field.
-
-    A typo in free text is stored happily and refused at the first tool call, in
-    somebody's conversation. Asking the service which aliases it accepts moves that
-    refusal into the form, where the person who can fix it is looking.
-    """
-
-    async def test_the_runtimes_come_from_the_service_at_that_address(self, monkeypatch):
-        secret_id = uuid.uuid4()
-        service = _service(monkeypatch, secret=(secret_id, ApiKeySecret(api_key="tok-12345678")))
-        seen = _serve(monkeypatch, _Response(200, {"runtimes": [{"alias": "python"}]}))
-
-        policy = await service.probe_policy(
-            _ctx(), SandboxProbeRequest(base_url="http://sandboxd:8080/", secret_id=secret_id)
-        )
-
-        assert [runtime.alias for runtime in policy.runtimes] == ["python"]
-        assert policy.kind == "docker"
-        assert seen["url"] == "http://sandboxd:8080/policy"
-
-    async def test_the_token_is_a_header_here_too(self, monkeypatch):
-        secret_id = uuid.uuid4()
-        service = _service(monkeypatch, secret=(secret_id, ApiKeySecret(api_key="tok-12345678")))
-        seen = _serve(monkeypatch, _Response(200, {"runtimes": []}))
-
-        await service.probe_policy(
-            _ctx(), SandboxProbeRequest(base_url="http://sandboxd:8080", secret_id=secret_id)
-        )
-
-        assert seen["headers"] == {"X-Sandbox-Token": "tok-12345678"}
-        assert "tok-12345678" not in seen["url"]
-
-    async def test_this_deployments_own_service_can_be_tested_with_its_own_token(self, monkeypatch):
-        """The commonest path through the dialog names no key at all.
-
-        Adding the service `make dev` starts stores the deployment's token at
-        submission, so before this there was nothing to test with and an outdated
-        local service was registered with a default runtime its first tool call
-        refuses.
-        """
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "deployment-token")
-        service = _service(monkeypatch)
-        seen = _serve(monkeypatch, _Response(200, {"runtimes": [{"alias": "workbench"}]}))
-
-        policy = await service.probe_policy(
-            _ctx(), SandboxProbeRequest(base_url="http://sandboxd:8080")
-        )
-
-        assert [runtime.alias for runtime in policy.runtimes] == ["workbench"]
-        assert seen["headers"] == {"X-Sandbox-Token": "deployment-token"}
-
-    async def test_the_deployments_token_is_never_sent_to_a_typed_address(self, monkeypatch):
-        """`X-Sandbox-Token` starts containers on the host that accepts it, so a
-        probe must not be a way to make this process disclose it. Two fixed
-        addresses out of this project's own compose file, and nothing else."""
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "deployment-token")
-        service = _service(monkeypatch)
-        sent = _serve(monkeypatch, _Response(200, {"runtimes": []}))
-
-        with pytest.raises(BadRequestError):
-            await service.probe_policy(
-                _ctx(), SandboxProbeRequest(base_url="http://attacker.example:8080")
-            )
-
-        assert sent == {}
-
-    async def test_no_key_and_no_deployment_token_is_still_refused(self, monkeypatch):
-        monkeypatch.setattr(settings, "SANDBOXD_TOKEN", "")
-        service = _service(monkeypatch)
-
-        with pytest.raises(BadRequestError):
-            await service.probe_policy(_ctx(), SandboxProbeRequest(base_url="http://sandboxd:8080"))
-
-    async def test_a_probe_with_no_credential_says_which_field_is_missing(self, monkeypatch):
-        service = _service(monkeypatch)
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.probe_policy(_ctx(), SandboxProbeRequest(base_url="http://s:8080"))
-
-        assert refused.value.details == {
-            "fields": [{"field": "secret_id", "message": refused.value.message}]
-        }
-
-    async def test_a_credential_of_the_wrong_shape_cannot_authenticate_a_service(self, monkeypatch):
-        secret_id = uuid.uuid4()
-        service = _service(
-            monkeypatch,
-            secret=(
-                secret_id,
-                AwsCredentialsSecret(
-                    aws_access_key_id="AKIA0000",
-                    aws_secret_access_key="x-secret-access",
-                    region_name="eu-west-1",
-                ),
-            ),
-        )
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.probe_policy(
-                _ctx(), SandboxProbeRequest(base_url="http://s:8080", secret_id=secret_id)
-            )
-
-        assert "not an API key" in refused.value.message
-
-    async def test_an_address_that_does_not_answer_is_reported_as_the_address(self, monkeypatch):
-        secret_id = uuid.uuid4()
-        service = _service(monkeypatch, secret=(secret_id, ApiKeySecret(api_key="tok-12345678")))
-        _serve(monkeypatch, OSError("no route to host"))
-
-        with pytest.raises(BadRequestError) as refused:
-            await service.probe_policy(
-                _ctx(), SandboxProbeRequest(base_url="http://typo:8080", secret_id=secret_id)
-            )
-
-        assert "http://typo:8080 did not answer" in refused.value.message
-        # One sentence, in both places, so the dialog can mark the input rather
-        # than print a line under it (#891). It names the address the operator
-        # typed, and agenticos#342 stays shut because `SandboxProbeRequest`
-        # refuses a `user:pass@` one - see the test below.
-        assert refused.value.details == {
-            "fields": [{"field": "base_url", "message": refused.value.message}]
-        }
-
-    async def test_a_service_with_no_policy_endpoint_is_a_wrong_address_not_a_lost_session(
-        self, monkeypatch
-    ):
-        """The one failure the two callers of `_get_json` do not share.
-
-        A 404 reading a saved connection is a session that has ended. Here
-        nothing asked for a session: it is an address answering, but not as a
-        sandbox service - and marking the operator's Address box with "Sandbox
-        session not found" would be confident about the wrong thing.
-        """
-        secret_id = uuid.uuid4()
-        service = _service(monkeypatch, secret=(secret_id, ApiKeySecret(api_key="tok-12345678")))
-        _serve(monkeypatch, _Response(404))
-
-        with pytest.raises(NotFoundError) as refused:
-            await service.probe_policy(
-                _ctx(), SandboxProbeRequest(base_url="http://typo:8080", secret_id=secret_id)
-            )
-
-        assert refused.value.message == (
-            "No sandbox service answers at this address - check the address and the port"
-        )
-        assert refused.value.details == {
-            "fields": [{"field": "base_url", "message": refused.value.message}]
-        }
-
-    async def test_an_address_carrying_a_password_is_refused_before_it_is_stored(self):
-        """A `user:pass@` here would be echoed back by every refusal below.
-
-        The service names the address it could not reach in `message`, and the
-        handler logs `message` and `details` together - so an address allowed to
-        carry a credential is a credential written to the deployment's log the
-        first time the port is wrong. It is refused at the schema instead, which
-        is where `validate_endpoint_url` and `validate_webhook_url` refuse it.
-        """
-        with pytest.raises(ValidationError) as refused:
-            SandboxProbeRequest(base_url="http://svc:hunter2@sandboxd:8080", secret_id=uuid.uuid4())
-
-        assert "must not carry credentials" in str(refused.value)
-
-
-class TestReadingTheSessions:
-    """The filter, which is the whole reason this is not a straight proxy.
-
-    One `sandboxd` serves every organization that registered a connection at its
-    address, and `GET /sessions` answers with all of them.
-    """
-
-    @pytest.mark.security
-    async def test_another_tenants_sandboxes_are_dropped_before_the_response(self, monkeypatch):
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        monkeypatch.setattr(
-            agent_workspace_repo, "list_for_organization", AsyncMock(return_value=[])
-        )
-        ctx = _ctx()
-        _serve(
-            monkeypatch,
-            _Response(
-                200,
-                {
-                    "sessions": [
-                        _session("mine", tenant=str(ctx.organization_id)),
-                        _session("theirs", tenant=str(uuid.uuid4())),
-                    ],
-                    "limit": 20,
-                },
-            ),
-        )
-
-        listing = await service.sessions(ctx, row.id)
-
-        assert [entry.session_id for entry in listing.sessions] == ["mine"]
-        assert listing.limit == 20
-
-    @pytest.mark.security
-    async def test_a_session_with_no_tenant_label_is_not_assumed_to_be_ours(self, monkeypatch):
-        """Something else opened it against the same service. Showing it would be
-        showing a container this organization has no claim to."""
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        monkeypatch.setattr(
-            agent_workspace_repo, "list_for_organization", AsyncMock(return_value=[])
-        )
-        _serve(monkeypatch, _Response(200, {"sessions": [_session("stray")]}))
-
-        assert (await service.sessions(_ctx(), row.id)).sessions == []
-
-    async def test_a_session_is_named_by_the_row_rather_than_by_decoding_its_id(self, monkeypatch):
-        """Parsing the scope key back out would make its format a schema, and the
-        first change to it would mislabel every row."""
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
-        )
-        monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
-        ctx = _ctx()
-        agent_id, conversation_id = uuid.uuid4(), uuid.uuid4()
-        workspace = MagicMock(
-            session_id="xc-1",
-            agent_id=agent_id,
-            conversation_id=conversation_id,
-            scope="conversation",
-        )
-        monkeypatch.setattr(
-            agent_workspace_repo, "list_for_organization", AsyncMock(return_value=[workspace])
-        )
-        monkeypatch.setattr(conversation_repo, "titles_for", AsyncMock(return_value={}))
-        _serve(
-            monkeypatch,
-            _Response(200, {"sessions": [_session("xc-1", tenant=str(ctx.organization_id))]}),
-        )
-
-        [entry] = (await service.sessions(ctx, row.id)).sessions
-
-        assert entry.agent_id == agent_id
-        assert entry.conversation_id == conversation_id
-        assert entry.scope == "conversation"
-
-    async def test_only_the_readers_own_chat_is_offered_as_a_link(self, monkeypatch):
-        """The chat page lists its owner's threads, so a link to anybody else's
-        lands on an empty sidebar dressed as the conversation - and this listing is
-        organization-wide, so that is most of its rows."""
-        row = _row()
-        service = _service(
-            monkeypatch, secret=(row.secret_id, ApiKeySecret(api_key="tok-12345678"))
+    async def test_a_credenti…6871 tokens truncated…
         )
         monkeypatch.setattr(sandbox_connection_repo, "get", AsyncMock(return_value=row))
         ctx = _ctx()

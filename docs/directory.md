@@ -320,9 +320,12 @@ made, so the process refuses to start with both.
 - **Nothing re-checks the directory between sign-ins.** Disabling an account in
   the directory stops its next sign-in, and the next sign-in is when mappings are
   re-read. A session already open lasts until its refresh token expires, which is
-  `REFRESH_TOKEN_EXPIRE_MINUTES` and seven days by default. To end one sooner,
-  deactivate the account under **Admin → Users**, which refuses it everywhere at
-  once. There is no SCIM and no scheduled directory sync.
+  `REFRESH_TOKEN_EXPIRE_MINUTES` and seven days by default - unless the sync
+  removes the person's membership, which closes their sessions and pauses the
+  exposures and embeds they published, in the same step. To end a session
+  sooner without removing the membership, deactivate the account under
+  **Admin → Users**, which refuses it everywhere at once. There is no SCIM and
+  no scheduled directory sync.
 - **A directory account can still use the password reset and magic link.** They
   go to the account's address, like every other account's. If the directory is
   meant to be the only way in, keep those addresses under the company's own

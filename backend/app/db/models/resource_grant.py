@@ -2,9 +2,10 @@
 
 import enum
 import uuid
+from datetime import datetime
 from typing import Literal
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -69,6 +70,12 @@ class ResourceGrant(Base, TimestampMixin):
     `ck_resource_grant_one_subject` says so where no code path can forget it. A
     group grant reaches whoever is in the group when access is resolved, so
     leaving the group is losing the access, with nothing to revoke (#1773).
+
+    A grant is permanent unless `expires_at` is set. Past it, the grant gives
+    nothing: the repository's access reads exclude expired rows, so an expired
+    share stops widening listings and stops passing `resolve_access` without
+    anyone deleting the row - the row stays, so the share can be seen, renewed
+    or revoked from the Sharing panel.
     """
 
     __tablename__ = "resource_grants"
@@ -97,6 +104,7 @@ class ResourceGrant(Base, TimestampMixin):
     level: Mapped[GrantLevelLiteral] = mapped_column(
         String(16), nullable=False, default=GrantLevel.READ.value
     )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),

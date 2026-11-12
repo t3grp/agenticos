@@ -1,5 +1,5 @@
 ---
-source_sha: "c3245b98d9c8"
+source_sha: "d04d063ac485"
 ---
 
 # Verzeichnisanmeldung und Gruppen { #directory-sign-in-and-groups }
@@ -361,10 +361,13 @@ entfernen, die das andere angelegt hat, daher startet der Prozess mit beiden nic
   Verzeichnis zu deaktivieren verhindert seine nächste Anmeldung, und die nächste
   Anmeldung ist der Zeitpunkt, zu dem Zuordnungen neu gelesen werden. Eine bereits
   offene Session hält, bis ihr Refresh Token abläuft, was
-  `REFRESH_TOKEN_EXPIRE_MINUTES` ist und standardmäßig sieben Tage. Um eine
-  früher zu beenden, deaktivieren Sie das Konto unter **Admin → Users**, was es
-  überall sofort abweist. Es gibt kein SCIM und keine geplante
-  Verzeichnissynchronisierung.
+  `REFRESH_TOKEN_EXPIRE_MINUTES` ist und standardmäßig sieben Tage - es sei
+  denn, die Synchronisierung entfernt die Mitgliedschaft der Person, was ihre
+  Sessions im gleichen Schritt schließt und die von ihr veröffentlichten
+  Exposures und Embeds pausiert. Um eine Session früher zu beenden, ohne die
+  Mitgliedschaft zu entfernen, deaktivieren Sie das Konto unter
+  **Admin → Users**, was es überall sofort abweist. Es gibt kein SCIM und keine
+  geplante Verzeichnissynchronisierung.
 - **Ein Verzeichniskonto kann weiterhin Passwort-Reset und Magic Link nutzen.**
   Sie gehen an die Adresse des Kontos, wie bei jedem anderen Konto. Soll das
   Verzeichnis der einzige Weg hinein sein, halten Sie diese Adressen unter der

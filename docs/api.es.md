@@ -1,5 +1,8 @@
+Warning: truncated output (original token count: 14465)
+Total output lines: 988
+
 ---
-source_sha: "cc88ed3eb4e4"
+source_sha: "c0e30d22b606"
 ---
 
 # La API HTTP { #the-http-api }
@@ -51,8 +54,11 @@ SHA-256, y nunca aparece en una línea de log, una entrada de auditoría ni el
 cuerpo de un error. Las listas muestran su prefijo (`aos_1a2b3c4d`), que es
 también como una entrada de auditoría nombra la clave que actuó: cada entrada
 registrada durante una petición autenticada con clave lleva `via_api_key` en sus
-detalles. Una clave puede caducar, y revocarla (`DELETE /api/v1/api-keys/{id}`)
-surte efecto en su siguiente petición.
+detalles. Una clave caduca a los 90 días de ser emitida salvo que se le dé una
+caducidad al emitirla, y revocarla (`DELETE /api/v1/api-keys/{id}`) surte efecto
+en su siguiente petición. Rotarla (`POST /api/v1/api-keys/{id}/rotate`) sustituye
+su secreto de inmediato: la clave antigua deja de funcionar y la respuesta
+contiene la nueva, una sola vez.
 
 **Una clave no es la persona que la emitió.** Un run que inicia pertenece a quien
 la emitió, cuenta en su presupuesto y en su auditoría, pero no alcanza nada
@@ -152,6 +158,37 @@ run cuando `AGENT_ID` está definido, y revoca la clave al salir.
 BASE=http://localhost:8000 EMAIL=you@example.com PASSWORD=... bash docs/examples/public-api.sh
 ```
 
+
+### Autenticación en dos factores { #two-factor-authentication }
+
+Un segundo paso al iniciar sesión, desde una app autenticadora (TOTP, seis
+dígitos cada 30 segundos). Se configura en la consola, en
+**Ajustes → Cuenta**: el secreto se muestra una vez, para la app, y al
+activarlo se devuelven diez códigos de recuperación de un solo uso, también
+mostrados una vez - el camino de vuelta si se pierde la app autenticadora.
+Desactivarlo, o sustituir los códigos de recuperación, exige un código de la
+cuenta, así que una sesión dejada abierta en una pantalla compartida no puede
+quitar la protección del próximo inicio de sesión.
+
+Un inicio de sesión con contraseña, de directorio o con enlace mágico para
+una cuenta que lo tiene activado se detiene en un desafío en lugar de una
+sesión: la respuesta trae `mfa_required`, un `mfa_token` y `expires_in`
+(cinco minutos), y no se fijan cookies. El cliente lo completa en
+`POST /api/v1/auth/mfa/verify` con el token y el código, y la respuesta es el
+par de tokens - más el destino del enlace mágico, cuando el desafío vino de
+uno. El token de desafío prueba el paso de la contraseña y nada más: no puede
+llamar a la API como una sesión, y un cambio de contraseña desde que se emitió
+lo invalida. Un código de recuperación también completa el paso, y se gasta
+al hacerlo; el gasto queda auditado, así el titular de la cuenta puede ver
+que se usó un código.
+
+El secreto queda sellado en la bóveda bajo el ámbito propio de la cuenta, y
+de los códigos de recuperación solo se guardan resúmenes - una simple lectura
+de la base de datos no entrega ninguno. La configuración es por cuenta, no
+por despliegue: si el despliegue la exige es una decisión de política del
+operador, no de este mecanismo. El inicio de sesión a través de un
+autenticador externo - un proveedor OAuth, o Kerberos - se autentica allí, y
+depende de la propia política de segundo factor de ese proveedor.
 
 ### Sesiones y revocación { #sessions-and-revocation }
 
@@ -377,143 +414,7 @@ representación, por lo que validar solo el esquema no basta para esos campos;
 la admisión del servidor es definitiva. Los contratos JSON Schema sin procesar
 usan la semántica estándar de integer.
 
-El [contrato de entrada JSON Schema](reference/workflow-nodes.md#json-schema-input-contracts)
-opcional se comprueba antes de admitir el run. Una discrepancia responde
-`422 WORKFLOW_RUN_INPUT_INVALID` con rutas de campos y mensajes en `error.details.fields`;
-no se crea ningún run. Cada entrada tiene `field` y `message`; las rutas anidadas
-de la petición incluyen índices de arrays, por ejemplo `input.items.0.sku`.
-Para quienes ya usan la API, `error.details.problems` conserva también `field`,
-`message` y `type` con rutas relativas al objeto de entrada. El contrato procede
-de la versión publicada actual o del borrador para `"mode": "test"`. Se aplica
-igual por WebSocket y MCP y cuando llama otro workflow.
-
-`deadline_seconds` (hasta
-treinta días) fija un plazo que se comprueba cada vez que un nodo va a
-despacharse: el primer nodo pendiente tras cumplirse hace fallar el run con
-`DEADLINE_EXCEEDED`, mientras que un nodo ya en ejecución, o un run que espera
-una aprobación, no se interrumpe por ello. La ruta tiene un límite por llamante como
-la de runs de agents, y responde `429` con `Retry-After` al superarlo.
-
-`input` es lo que el trigger [`core.input`](reference/workflow-nodes.md#core-input)
-del grafo pasa adelante, como mucho `WORKFLOW_RUN_MAX_INPUT_BYTES` en JSON (`413`
-si lo supera). Aquí solo se inicia una versión que empieza por ese trigger o sin
-ninguno: cualquier otra responde `409 WORKFLOW_TRIGGER_MISMATCH`, porque la inicia un
-webhook, una programación, un mensaje del chat o un registro de tabla.
-
-`GET /api/v1/workflow-runs/{id}` devuelve el estado del run, `spent_cost`,
-`error` y, cuando su nodo [`core.output`](reference/workflow-nodes.md#core-output) ya se ha ejecutado, su `output`, y `POST /api/v1/workflow-runs/{id}/cancel` lo detiene. `GET
-/api/v1/workflow-runs/{id}/events?after=<cursor>` devuelve el flujo de eventos
-del run del más antiguo al más reciente, con un `next_cursor` que se devuelve
-como `after`: se mantiene igual mientras no exista nada más nuevo, así que
-consultar con él sigue un run en curso. Quién puede hacer cada cosa está en
-[Permisos](permissions.md#workflow-runs).
-
-`GET /api/v1/workflow-runs/{id}/nodes` enumera cada paso que dio el run,
-iteraciones de bucle incluidas, cada uno con su `scope_path`, estado, intentos,
-coste y el error tipado con el que falló por última vez, y `GET
-/api/v1/workflow-runs/{id}/graph` devuelve el grafo que ejecuta el run: el de su
-versión o la instantánea del draft de un run de prueba.
-
-### Leer el log de un workflow { #reading-a-workflows-log }
-
-Las líneas que escribieron los [Quick Logs](workflows.md#the-logs-page) de un workflow
-se pueden leer desde fuera de la consola - con un script, una hoja de cálculo o una
-herramienta de paneles como Grafana o Metabase - con una clave de API de la organización
-que tenga `workflows:view`.
-
-Una clave lee las líneas de los runs de origen público, incluidos los iniciados por
-claves: los iniciados por cualquier clave de la organización, desde fuera (webhook,
-formulario, mensaje de canal, Gmail, Outlook, GitHub) y cualquier run de una cadena que
-uno de ellos empezó. No están las líneas de los runs que inició un miembro, un horario,
-un registro de tabla, un chat, un agente o una app, así que el log de un workflow
-programado sale vacío con una clave y sus cuentas difieren de las de la consola. Un
-workflow de otra organización, o uno que el miembro de la clave no puede ver, responde
-`404`; una clave sin `workflows:view` es rechazada.
-
-```bash
-# Las líneas más recientes, de 100 en 100 (lo máximo de una página); los runs de prueba quedan fuera
-curl "$BASE/api/v1/workflows/$WORKFLOW_ID/logs?outcome=error&from=2026-10-01T00:00:00Z&limit=100" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID"
-
-# Cuántas líneas dejó cada día, por resultado, en los últimos 30 días de Varsovia
-curl "$BASE/api/v1/workflows/$WORKFLOW_ID/logs/summary?days=30&tz=Europe/Warsaw" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID"
-```
-
-`GET /api/v1/workflows/{id}/logs` lista de la más reciente a la más antigua - por
-`created_at` y luego por `seq`, la posición que ocupó una línea en el log al escribirse.
-Se acota con `node_instance_id` (un paso), `outcome` (un puerto o `error`; repítelo para coincidir con cualquiera de varios, y una
-línea que salió por varios puertos coincide con cada uno), `run` (un id de run o sus primeros 4 o más caracteres), `q` (texto en el mensaje) y la ventana de
-tiempo `from` (inclusive) y `to` (exclusivo); `include_test=true` añade las líneas que
-escribieron los runs de prueba.
-
-`skip` y `limit` paginan - `limit` como mucho 100 - y
-`total` cuenta todas las líneas que coinciden, así que un cliente pagina hasta que `skip`
-lo alcanza.
-
-`GET /api/v1/workflows/{id}/logs/summary` es el dato que quiere un gráfico: para los
-últimos `days` días (7, 30 o 90, hoy incluido) responde una entrada por día, la más
-antigua primero, con la cuenta de cada resultado; un día sin líneas también aparece.
-`tz`, un nombre IANA, fija de quién son los días que se cuentan, UTC por defecto; los
-demás filtros son los del listado. Para llevarlo a una herramienta de paneles, apunta una
-fuente de datos JSON a la ruta, envía la clave como cabecera bearer y lee `by_day`.
-
-```bash
-# Errores y timeouts por día durante un mes: una fuente JSON para un panel de dashboard
-curl "$BASE/api/v1/workflows/$WORKFLOW_ID/logs/summary?days=30&outcome=error&outcome=timeout" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID"
-```
-
-`GET /api/v1/workflow-runs/{id}/logs` lista las líneas de un run, la más antigua primero
-por `seq` (`limit` hasta 500), y `GET /api/v1/workflow-logs` las líneas más recientes de
-todos los workflows que la clave puede ver, cada una con el nombre de su workflow, y
-cuántas líneas dejó cada resultado en las últimas 24 horas. Las reglas de alerta sobre un
-log no forman parte de la API pública.
-
-### Exportar e importar un workflow { #exporting-and-importing-a-workflow }
-
-`GET /api/v1/workflows/{id}/export` (`workflows:view`) devuelve el borrador como un
-archivo portable: `name`, `description`, `tags`, `settings`, `graph` y
-`unresolved`, el paso y el campo de cada recurso fijado que dejó fuera. No lleva
-ningún id de este despliegue ni ningún valor de secreto.
-`POST /api/v1/workflows/import` (`workflows:create`) toma ese archivo y responde
-`201` con el borrador nuevo `workflow` y sus `unresolved`; un grafo que no se puede
-leer, o que nombra un paso que este despliegue no tiene, es un `400` y no crea nada.
-
-### Seguir un run por un WebSocket { #following-a-run-over-a-websocket }
-
-`/api/v1/ws/workflow-runs?organization_id=<org>` se autentica como el socket del
-chat, con el token de acceso como subprotocolo `access_token.<token>`. Envía
-`{"type": "start", "workflow_id": ..., "input": {...}}` para iniciar un run, o
-`{"type": "attach", "run_id": ..., "after": <cursor>}` para seguir uno. El servidor
-envía `{"type": "run", "run": {...}}` cuando empieza a seguirlo y otra vez cuando el
-run termina, y `{"type": "event", "event": {...}, "cursor": ...}` por cada evento
-intermedio. Un frame rechazado recibe `{"type": "error", "code": ..., "message":
-...}`, y una sesión revocada cierra el socket con `4001`. Un socket sigue un run; un
-frame nuevo sustituye el run que seguía. Un frame `start` gasta la misma cuota por
-minuto que `POST /workflow-runs`, y pasada esta recibe `RATE_LIMIT_EXCEEDED`.
-
-### Webhooks y programaciones { #workflow-webhooks-and-schedules }
-
-Los ID de entregas de webhook y GitHub sobreviven a la retención del contenido como registros mínimos pertenecientes a la exposición y organización. Un duplicado sigue devolviendo el UUID original tras borrar el contenido; el estado y la respuesta anterior pueden dejar de estar disponibles. Eliminar la exposición u organización termina la deduplicación. La migración `0230_webhook_delivery_tombstones.py` no recupera registros ya borrados; al revertirla se eliminan registros huérfanos antes de restaurar la clave externa con borrado en cascada.
-
-Publicar disparadores automáticos y cambiar su autoridad de ejecución requiere una sesión de miembro (`403` para claves API de organización). Las claves pueden publicar workflows manuales, iniciar ejecuciones dentro de sus ámbitos y pausar exposiciones, pero no activarlas, rotar secretos/enlaces de formularios, cambiar programaciones ni elegir una nueva identidad para el workflow de errores. Estas operaciones conservan la autoridad de un usuario para eventos futuros.
-
-Los formularios públicos aplican el límite de bytes de entrada al leer el flujo de la solicitud, antes de analizar JSON o buscar el token. Los cuerpos demasiado grandes, declarados o enviados por fragmentos, devuelven `413`; JSON mal formado y campos no válidos devuelven `422`. Cada entrada de `details.problems` de un `422` es `{field, message, type}`, donde `type` es el tipo de error propio del validador (`missing`, `int_type`, `extra_forbidden`, ...), de modo que un formulario puede decir, respuesta por respuesta, qué necesitaba.
-
-
-Un workflow cuyo nodo trigger es un webhook o una programación recibe su exposure al
-publicarse esa versión, y la respuesta de la publicación la lleva como `exposure`. El
-secreto de firma de un webhook está en el `webhook_secret` de la publicación que lo
-enciende por primera vez, y en ningún otro sitio. `GET /api/v1/workflows/{id}/exposure`
-la vuelve a leer, o devuelve `null` para un workflow que empieza de otra forma. `PATCH
-.../exposures/{exposure_id}` con `{"is_active": false}` la pausa, y `POST
-.../exposures/{exposure_id}/rotate-secret` sustituye el secreto de un webhook y
-devuelve el nuevo una vez. Ambos requieren `workflows:edit` y `workflows:run` sobre el
-workflow. La `webhook_url` de un webhook es la dirección a la que entrega el remitente:
+El [contrato de e…2465 tokens truncated… webhook es la dirección a la que entrega el remitente:
 
 ```bash
 BODY='{"lead": 42}'

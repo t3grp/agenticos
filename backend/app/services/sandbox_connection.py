@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 12257)
+Total output lines: 1055
+
 """Managing where an organization's sandboxes run, and reaching those places.
 
 Two jobs that belong together because both need the vault: the operator-facing
@@ -170,6 +173,11 @@ class SandboxConnectionService:
         """
         await self._refuse_duplicate_name(ctx, data.name)
         self._check_shape(kind=data.kind, base_url=data.base_url)
+        if data.secret_id is not None:
+            # Attaching is the moment a secret starts being spent: a Builder
+            # holding `connections:manage` must not be able to name somebody
+            # else's private key and have the connection spend it for them.
+            await self.secrets.require_view(ctx, data.secret_id)
 
         first = not await sandbox_connection_repo.list_for_organization(
             self.db, organization_id=ctx.organization_id
@@ -222,6 +230,8 @@ class SandboxConnectionService:
             )
         changes = writable(data, over=SandboxConnection)
 
+        if changes.get("secret_id") is not None:
+            await self.secrets.require_view(ctx, changes["secret_id"])
         if "name" in changes and changes["name"] != row.name:
             await self._refuse_duplicate_name(ctx, changes["name"])
         self._check_shape(
@@ -517,25 +527,7 @@ class SandboxConnectionService:
             base_url=data.base_url,
             token=token,
             path="/policy",
-            field="base_url",
-            not_found="No sandbox service answers at this address - check the address and the port",
-            context={},
-        )
-        return SandboxPolicyRead.model_validate({**payload, "kind": "docker"})
-
-    async def _probe_token(self, ctx: AuthContext, data: SandboxProbeRequest) -> str:
-        """What to authenticate a probe with, which is not always a vault key.
-
-        **This deployment's own token, for this deployment's own service, and for
-        nothing else.** Adding the service `make dev` starts is the commonest path
-        through this dialog and it names no key at all - `storeCredential` runs at
-        submission - so there was no way to check the address or read its runtime
-        allowlist before saving, and an outdated local service was registered with
-        a default runtime its first tool call refuses.
-
-        The address is compared against `LOCAL_SERVICE_URLS` rather than against
-        whatever `local_service` last answered, because a probe must not be a way
-        to make this process send `SANDBOXD_TOKEN` - root-equivalent on a sandbox
+            field=…257 tokens truncated…        to make this process send `SANDBOXD_TOKEN` - root-equivalent on a sandbox
         host - to an address somebody typed. Two fixed addresses out of this
         project's own compose file are not that.
 
@@ -550,6 +542,7 @@ class SandboxConnectionService:
             raise refused_field(
                 "secret_id", "Pick the key this service was started with before testing it"
             )
+        await self.secrets.require_view(ctx, data.secret_id)
         secrets = await self.secrets.resolve_for_bindings(ctx, [data.secret_id])
         secret = secrets.get(data.secret_id)
         if not isinstance(secret, ApiKeySecret):
