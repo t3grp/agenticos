@@ -157,6 +157,7 @@ from app.agents.capabilities.coding_agent import (
     CodingPreferences,
 )
 from app.agents.capabilities.context import CONTEXT_FILES_RESOURCE, context_config
+from app.agents.capabilities.council import CouncilConfig
 from app.agents.capabilities.drafts._spec import draft_tool_names
 from app.agents.capabilities.guardrails import (
     GuardrailBlocked,
@@ -2889,6 +2890,7 @@ def _delegate_builder(
     secrets: Mapping[UUID, StorableSecret],
     extra_toolsets: list[AbstractToolset[Any]],
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    council_models: Mapping[UUID, ModelRequestSpec] | None = None,
 ) -> Callable[[], PydanticAgent[Any, Any]]:
     """A closure that builds one delegate, with nothing left to look up.
 
@@ -2936,6 +2938,9 @@ def _delegate_builder(
             # models `_reviewers` leaves each one out, and an agent reviewed when
             # called directly would run unreviewed as a delegate.
             reviewer_models=reviewer_models,
+            # Its own council, resolved the same way: a delegate bound with a
+            # council reviews with it when called directly and as a delegate.
+            council_models=council_models,
             # The person waiting on the parent is the person a delegate has to
             # ask, so the gate reaches the same queue rather than refusing
             # because a delegation has no channel of its own.
@@ -3142,6 +3147,29 @@ def _browser_step_profile(spec: AgentSpec) -> UUID | None:
             config = WebBrowserConfig.model_validate(binding.config)
             return config.step_model_profile_id
     return None
+
+
+def _council_profile_ids(spec: AgentSpec) -> list[UUID]:
+    """The model profiles the agent's council members review on, if it has one.
+
+    A binding whose config no longer validates is left out with a warning
+    rather than taking the agent offline: the council is advisory, and a
+    stale config must cost the review, never the run.
+    """
+    profile_ids: list[UUID] = []
+    for binding in spec.capabilities:
+        if binding.id != "council" or not binding.enabled:
+            continue
+        try:
+            config = CouncilConfig.model_validate(binding.config)
+        except Exception:
+            logger.warning(
+                "Council binding has an invalid config; reviewing without it",
+                exc_info=True,
+            )
+            continue
+        profile_ids.extend(member.model_profile_id for member in config.members)
+    return profile_ids
 
 
 def _mirage_config(spec: AgentSpec) -> MirageConfig | None:
@@ -3623,6 +3651,30 @@ class AgentRunnerService:
                 )
         return models
 
+    async def _council_models(
+        self, ctx: AuthContext, spec: AgentSpec
+    ) -> dict[UUID, ModelRequestSpec]:
+        """Each council member's model, by profile id - those that still resolve.
+
+        A member is advisory to the run it reviews: one whose profile was
+        deleted since publish, or whose key no longer unseals, is left out with
+        a warning rather than taking the agent offline, and the council reports
+        it unavailable instead of substituting another provider.
+        """
+        models: dict[UUID, ModelRequestSpec] = {}
+        for profile_id in _council_profile_ids(spec):
+            if profile_id in models:
+                continue
+            try:
+                models[profile_id] = await self.models.resolve(ctx, profile_id=profile_id)
+            except AppException:
+                logger.warning(
+                    "Council member model %s cannot resolve; the run goes on without it",
+                    profile_id,
+                    exc_info=True,
+                )
+        return models
+
     async def _allowed_approval_mode(
         self, ctx: AuthContext, requested: ApprovalMode, *, surface: RunSurface
     ) -> ApprovalMode:
@@ -3991,6 +4043,7 @@ class AgentRunnerService:
         # from `resources`, which every capability reads and a log line may carry:
         # a resolved model holds its unsealed credential.
         reviewer_models = await self._reviewer_models(models_ctx, spec)
+        council_models = await self._council_models(models_ctx, spec)
         step_profile = _browser_step_profile(spec)
         if step_profile is not None:
             # Built here, where the vault and the session are: a fast model for
@@ -4660,6 +4713,7 @@ class AgentRunnerService:
                     resources=resources,
                     secrets=secrets,
                     reviewer_models=reviewer_models,
+                    council_models=council_models,
                     extra_toolsets=[*(extra_toolsets or []), *spec_toolsets],
                     request_approval=channel,
                     gate_every_tool=approval_mode is ApprovalMode.ASK_ALL,
@@ -4727,6 +4781,7 @@ class AgentRunnerService:
             resources=resources,
             secrets=secrets,
             reviewer_models=reviewer_models,
+            council_models=council_models,
             extra_toolsets=[
                 *(extra_toolsets or []),
                 *spec_toolsets,
@@ -5534,6 +5589,7 @@ class AgentRunnerService:
                 secrets=secrets,
                 extra_toolsets=toolsets,
                 reviewer_models=await self._reviewer_models(delegation.models_ctx, runnable),
+                council_models=await self._council_models(delegation.models_ctx, runnable),
             ),
             max_steps=runnable.max_steps,
             preferred_mode=ref.preferred_mode,

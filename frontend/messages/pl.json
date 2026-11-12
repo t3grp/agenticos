@@ -771,6 +771,7 @@
       "removeStep": "Usuń krok",
       "removingStep": "Usuwa krok",
       "result": "Wynik",
+      "reviewingWithCouncil": "Sprawdza pracę z radą",
       "runPython": "Uruchom Python",
       "running": "Działa…",
       "runningCalculations": "Liczy",
@@ -915,6 +916,7 @@
       "chunkCount": "{count, plural, one {1 chunk} few {# chunki} many {# chunków} other {# chunku}}",
       "chunkNumber": "chunk {number}",
       "collectionNamed": "Kolekcja: {name}",
+      "councilReview": "Ocena rady",
       "createSpecialist": "Utwórz specjalistę",
       "creating": "Tworzy",
       "creatingChart": "Tworzy wykres",
@@ -9205,6 +9207,20 @@
         "description": "Ile rozmów zwraca co najwyżej jedno wyszukiwanie. Każda przynosi krótki fragment, więc duża liczba kosztuje kontekst przy każdym wyszukiwaniu."
       }
     },
+    "council": {
+      "members": {
+        "title": "Członkowie rady",
+        "description": "Delegaci: po jednym silnym modelu od trzech różnych dostawców, przy wysokim wysiłku rozumowania. Od jednego do trzech członków."
+      },
+      "agreement_threshold": {
+        "title": "Próg zgodności",
+        "description": "Ocena w skali do 10, którą każdy delegat musi osiągnąć, żeby runda zadowoliła radę. Runda poniżej progu oznacza: popraw i poproś o ponowną ocenę."
+      },
+      "max_rounds": {
+        "title": "Maksymalnie rund",
+        "description": "Ile rund oceny może poprosić jeden run. Nowa ocena po poprawkach to nowa runda, a limit powstrzymuje kolejne oceny przed rozrostem zakresu."
+      }
+    },
     "guardrails": {
       "redact_secrets_in": {
         "title": "Ukryj sekrety w pytaniu",
@@ -12205,6 +12221,14 @@
       "example2": "Wrócić do zadania tam, gdzie skończył się ostatni czat",
       "needs": "Nic dodatkowego.",
       "never": "Nigdy nie czyta cudzych rozmów i jest wyłączone w czatach grupowych."
+    },
+    "council": {
+      "name": "Rada",
+      "does": "Prosi trzech recenzentów-delegatów, po jednym silnym modelu od trzech różnych dostawców, o ocenę pracy w skali do 10 w równoległych rundach, aż wszyscy się zgodzą.",
+      "example1": "Czy ten pull request jest gotowy do połączenia?",
+      "example2": "Oceń tę wersję roboczą propozycji, zanim zostanie wysłana",
+      "needs": "Jeden profil modelu na delegata, od trzech różnych dostawców.",
+      "never": "Nigdy nie zastępuje brakującego delegata ani nie wymyśla oceny: delegat, do którego nie można dotrzeć, jest zgłaszany jako niedostępny, a ten, który nie podał oceny, ma wpis „brak oceny”."
     },
     "guardrails": {
       "name": "Zabezpieczenia",
