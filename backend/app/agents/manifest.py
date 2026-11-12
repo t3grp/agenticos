@@ -168,6 +168,10 @@ class RunRecorder:
     #: the draft proposals, so the tuning is read from what the run actually
     #: scored rather than remembered.
     eval_tool_tuning_runs: list[dict[str, Any]] = field(default_factory=list)
+    #: Each proof scenario the run recorded (#8) - one entry per scenario, with
+    #: its attempts - so the proof for a change is read from what the run
+    #: actually observed rather than remembered.
+    proof_scenarios: list[dict[str, Any]] = field(default_factory=list)
 
     def observe_request(
         self,
@@ -417,6 +421,7 @@ def as_payload(recorder: RunRecorder) -> dict[str, Any]:
         "babysit_pr_events": list(recorder.babysit_pr_events),
         "sol_loop_rounds": list(recorder.sol_loop_rounds),
         "eval_tool_tuning_runs": list(recorder.eval_tool_tuning_runs),
+        "proof_scenarios": list(recorder.proof_scenarios),
     }
 
 
@@ -443,6 +448,12 @@ within its size ceiling. A capability caps tuning runs per agent at five, so
 ten is two agents' worth of tuning in one run."""
 
 
+MAX_RECORDED_PROOF_SCENARIOS = 20
+"""How many proof scenarios a run's manifest keeps, so it stays within its
+size ceiling. A change with more than twenty reproductions has a scope
+problem, not a proof problem."""
+
+
 def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """This segment's payload with what earlier segments of the run recorded and it cannot.
 
@@ -458,13 +469,17 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     earlier_events = previous.get("babysit_pr_events") or []
     earlier_rounds = previous.get("sol_loop_rounds") or []
     earlier_tuning = previous.get("eval_tool_tuning_runs") or []
-    if not any((earlier_reviews, earlier_scripts, earlier_events, earlier_rounds, earlier_tuning)):
+    earlier_proof = previous.get("proof_scenarios") or []
+    if not any(
+        (earlier_reviews, earlier_scripts, earlier_events, earlier_rounds, earlier_tuning, earlier_proof)
+    ):
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
     events = [*earlier_events, *payload.get("babysit_pr_events", [])]
     rounds = [*earlier_rounds, *payload.get("sol_loop_rounds", [])]
     tuning = [*earlier_tuning, *payload.get("eval_tool_tuning_runs", [])]
+    proof = [*earlier_proof, *payload.get("proof_scenarios", [])]
     return {
         **payload,
         "reviews": reviews[:MAX_RECORDED_REVIEWS],
@@ -472,6 +487,7 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
         "babysit_pr_events": events[:MAX_RECORDED_BABYSIT_PR_EVENTS],
         "sol_loop_rounds": rounds[:MAX_RECORDED_SOL_LOOP_ROUNDS],
         "eval_tool_tuning_runs": tuning[:MAX_RECORDED_EVAL_TOOL_TUNING_RUNS],
+        "proof_scenarios": proof[:MAX_RECORDED_PROOF_SCENARIOS],
     }
 
 

@@ -20,6 +20,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   harness: 90,
   sol_loop: 120,
   eval_tool_tuning: 150,
+  proof_scenario: 150,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -402,6 +403,27 @@ const EVAL_TOOL_TUNING =
   '<text x="0" y="2.4" class="tx mono s7 mid b" >DRAFT</text></g></g>' +
   "</svg>";
 
+/**
+ * Proof scenario: the same reproduction, run twice - failing before the fix,
+ * passing after it. The checkmark is the observed evidence, not the diff.
+ */
+const PROOF_SCENARIO =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/></g>' +
+  '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
+  '<g transform="matrix(0.9 0.5 0 1 66 42)">' +
+  '<rect x="4" y="4" width="86" height="34" rx="3" class="ac" />' +
+  '<text x="10" y="15" class="tx s7 b">before: FAILED</text>' +
+  '<text x="10" y="27" class="tx s7 b">after: PASSED</text></g>' +
+  '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
+  '<text x="0" y="2.4" class="tx mono s7 mid b" >PROVEN</text></g></g>' +
+  "</svg>";
+
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
@@ -419,4 +441,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   harness: HARNESS,
   sol_loop: SOL_LOOP,
   eval_tool_tuning: EVAL_TOOL_TUNING,
+  proof_scenario: PROOF_SCENARIO,
 };

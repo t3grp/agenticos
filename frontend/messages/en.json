@@ -1815,6 +1815,10 @@
       "removingStep": "Removing a step",
       "result": "Result",
       "reviewingWithSolLoop": "Reviewing with Sol-loop",
+      "checkingProofCoverage": "Checking the proof coverage",
+      "proofScenarioRecord": "Proof Scenario Record",
+      "proofScenarioVerdict": "Proof Scenario Verdict",
+      "recordingProofScenario": "Recording a proof attempt",
       "runPython": "Run Python",
       "running": "Running…",
       "runningCalculations": "Running calculations",
@@ -7303,6 +7307,12 @@
       "evalToolTuningCase": "{name} · {classification}",
       "evalToolTuningProposal": "[{kind}] {title}",
       "evalToolTuningProposalEvidence": "Evidence: {evidence} · {status}",
+      "proofScenarios": "{count, plural, =1 {1 proof scenario} other {# proof scenarios}}",
+      "proofScenario": "{id} {name} — {proven}",
+      "proofScenarioProven": "proven",
+      "proofScenarioUnproven": "unproven",
+      "proofScenarioCovers": "Covers: {files}",
+      "proofAttempt": "{phase} · {status} · {evidence}",
       "cacheBust": "cache bust",
       "cacheExpired": "cache expired",
       "cacheBustDetail": "{missed, number} cached tokens not read back from the cache - something before them in the prompt changed",
@@ -11905,6 +11915,14 @@
       "example2": "Watch this PR and tell me when the checks pass",
       "needs": "A way to read the PR's checks, such as the monitor capability running `gh pr checks`.",
       "never": "Never merges, comments, or takes any other action on the PR: watching and reporting only."
+    },
+    "proof_scenario": {
+      "name": "Proof scenario",
+      "does": "Proves a change with observed evidence: records a reproduction before the fix and after it, and reports which changed files have proof and which do not.",
+      "example1": "Did this change actually work?",
+      "example2": "Prove this fix before I merge it",
+      "needs": "A reproduction of the failure to run before and after the fix.",
+      "never": "Never merges, approves, or takes any other action on the change, and never counts a green unit test as proof."
     },
     "background_tasks": {
       "name": "Background topics",

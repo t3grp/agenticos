@@ -248,6 +248,51 @@ class ManifestEvalToolTuningRun(BaseSchema):
     cases: list[ManifestEvalToolTuningCase] = Field(default_factory=list)
     proposals: list[ManifestEvalToolTuningProposal] = Field(default_factory=list)
 
+class ManifestProofAttempt(BaseSchema):
+    """One observed run of a proof scenario (#8).
+
+    Attributes:
+        scenario_id: The scenario this attempt ran.
+        phase: `before_fix` or `after_fix`.
+        status: What was observed - `passed`, `failed`, or `inconclusive`.
+        evidence_kind: What kind of evidence this is - `command_output`,
+            `reproduction`, `screenshot`, `ui_observation`, or `unit_test`.
+            A unit-test run never counts as proof.
+        command: What was run or watched.
+        observed: What was actually seen, clipped before it was kept.
+        duration_ms: How long the attempt took, or 0 when not measured.
+        observed_at: When it ran, or `None` when not stamped.
+    """
+
+    scenario_id: str
+    phase: Literal["before_fix", "after_fix"]
+    status: Literal["passed", "failed", "inconclusive"]
+    evidence_kind: str
+    command: str = ""
+    observed: str = ""
+    duration_ms: int = 0
+    observed_at: datetime | None = None
+
+
+class ManifestProofScenario(BaseSchema):
+    """One reproduction for a change, and every attempt made at it (#8).
+
+    Attributes:
+        id: The scenario's stable id, e.g. `P1`.
+        name: What it reproduces, in one line.
+        kind: How it runs - `command`, `reproduction`, or `ui`.
+        command: What to run or watch, so the reproduction can be repeated.
+        covers: The diff files this scenario exercises.
+        attempts: Every attempt made at this scenario, oldest first.
+    """
+
+    id: str
+    name: str
+    kind: Literal["command", "reproduction", "ui"]
+    command: str = ""
+    covers: list[str] = Field(default_factory=list)
+    attempts: list[ManifestProofAttempt] = Field(default_factory=list)
+
 
 class RunManifestRead(BaseSchema):
     """The whole record, as `GET /runs/{run_id}/manifest` answers it.
@@ -289,4 +334,5 @@ class RunManifestRead(BaseSchema):
     code_runs: list[ManifestCodeRun] = Field(default_factory=list)
     sol_loop_rounds: list[ManifestSolLoopRound] = Field(default_factory=list)
     eval_tool_tuning_runs: list[ManifestEvalToolTuningRun] = Field(default_factory=list)
+    proof_scenarios: list[ManifestProofScenario] = Field(default_factory=list)
     truncated: bool = False

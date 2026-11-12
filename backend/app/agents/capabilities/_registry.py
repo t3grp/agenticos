@@ -746,6 +746,7 @@ def load_builtins() -> None:
         monitor,
         phone_calls,
         planning,
+        proof_scenario,
         sandbox,
         skills,
         sol_loop,

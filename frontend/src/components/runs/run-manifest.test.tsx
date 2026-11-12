@@ -263,6 +263,81 @@ describe("what the model was told", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows each proof scenario, its attempts, and whether it is proven (#8)", () => {
+    serve({
+      manifest: record({
+        proof_scenarios: [
+          {
+            id: "P1",
+            name: "reproduce the failure",
+            kind: "reproduction",
+            command: "pytest tests/test_widget.py -q",
+            covers: ["backend/app/widget.py"],
+            attempts: [
+              {
+                scenario_id: "P1",
+                phase: "before_fix",
+                status: "failed",
+                evidence_kind: "reproduction",
+                command: "pytest tests/test_widget.py -q",
+                observed: "AssertionError: widget did not render",
+                duration_ms: 120,
+                observed_at: "2026-11-12T06:00:00Z",
+              },
+              {
+                scenario_id: "P1",
+                phase: "after_fix",
+                status: "passed",
+                evidence_kind: "reproduction",
+                command: "pytest tests/test_widget.py -q",
+                observed: "1 passed",
+                duration_ms: 110,
+                observed_at: "2026-11-12T06:05:00Z",
+              },
+            ],
+          },
+          {
+            id: "P2",
+            name: "unit tests only",
+            kind: "command",
+            command: "pytest -q",
+            covers: ["frontend/src/widget.tsx"],
+            attempts: [
+              {
+                scenario_id: "P2",
+                phase: "after_fix",
+                status: "passed",
+                evidence_kind: "unit_test",
+                command: "pytest -q",
+                observed: "42 passed",
+                duration_ms: 900,
+                observed_at: "2026-11-12T06:06:00Z",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    renderManifest();
+
+    expect(screen.getByText("2 proof scenarios")).toBeInTheDocument();
+    expect(screen.getByText("P1 reproduce the failure — proven")).toBeInTheDocument();
+    expect(screen.getByText("Covers: backend/app/widget.py")).toBeInTheDocument();
+    expect(screen.getByText("Covers: frontend/src/widget.tsx")).toBeInTheDocument();
+    expect(screen.getByText("before_fix · failed · reproduction")).toBeInTheDocument();
+    expect(screen.getByText("AssertionError: widget did not render")).toBeInTheDocument();
+    expect(screen.getByText("after_fix · passed · reproduction")).toBeInTheDocument();
+    expect(screen.getByText("1 passed")).toBeInTheDocument();
+    // A unit-test attempt never counts as proof, so it reads as unproven.
+    expect(screen.getByText("P2 unit tests only — unproven")).toBeInTheDocument();
+  });
+
+  it("shows no proof section for a run that recorded no scenarios", () => {
+    serve({ manifest: record() });
+    renderManifest();
+    expect(screen.queryByText(/proof scenario/)).toBeNull();
+  });
+
   it("shows the prompt as it was sent, and the system parts beside it", () => {
     serve({
       manifest: record({

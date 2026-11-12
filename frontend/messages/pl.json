@@ -779,6 +779,10 @@
       "removingStep": "Usuwa krok",
       "result": "Wynik",
       "reviewingWithSolLoop": "Sprawdza pracę w sol-loop",
+      "checkingProofCoverage": "Sprawdzanie pokrycia dowodowego",
+      "proofScenarioRecord": "Zapis scenariusza dowodowego",
+      "proofScenarioVerdict": "Werdykt scenariusza dowodowego",
+      "recordingProofScenario": "Zapisywanie próby dowodowej",
       "runPython": "Uruchom Python",
       "running": "Działa…",
       "runningCalculations": "Liczy",
@@ -3280,6 +3284,12 @@
       "evalToolTuningCase": "{name} · {classification}",
       "evalToolTuningProposal": "[{kind}] {title}",
       "evalToolTuningProposalEvidence": "Dowody: {evidence} · {status}",
+      "proofScenarios": "{count, plural, =1 {1 scenariusz dowodowy} other {# scenariusze dowodowe}}",
+      "proofScenario": "{id} {name} — {proven}",
+      "proofScenarioProven": "udowodniony",
+      "proofScenarioUnproven": "nieudowodniony",
+      "proofScenarioCovers": "Obejmuje: {files}",
+      "proofAttempt": "{phase} · {status} · {evidence}",
       "cacheBust": "cache zerwany",
       "cacheExpired": "cache wygasł",
       "cacheBustDetail": "{missed, number} tokenów z cache nieodczytanych z cache - coś przed nimi w prompcie się zmieniło",
@@ -12494,6 +12504,14 @@
       "example2": "Obserwuj ten PR i powiedz mi, gdy checki przejdą",
       "needs": "Sposób odczytu checków PR, np. capability monitor z `gh pr checks`.",
       "never": "Nigdy nie łączy, nie komentuje ani nie robi nic innego na PR: tylko obserwacja i zgłaszanie."
+    },
+    "proof_scenario": {
+      "name": "Scenariusz dowodowy",
+      "does": "Udowadnia zmianę na podstawie zaobserwowanych dowodów: zapisuje odtworzenie błędu przed poprawką i po niej oraz zgłasza, które zmienione pliki mają dowód, a które nie.",
+      "example1": "Czy ta zmiana naprawdę zadziałała?",
+      "example2": "Udowodnij tę poprawkę, zanim ją scalę",
+      "needs": "Odtworzenie błędu do uruchomienia przed poprawką i po niej.",
+      "never": "Nigdy nie scala, nie zatwierdza ani nie podejmuje innych działań wobec zmiany i nigdy nie uznaje zielonego testu jednostkowego za dowód."
     },
     "background_tasks": {
       "name": "Tematy w tle",
