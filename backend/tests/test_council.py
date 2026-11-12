@@ -15,8 +15,7 @@ from pydantic_ai.toolsets import FunctionToolset
 from app.agents.capabilities import build as build_capabilities
 from app.agents.capabilities._registry import CapabilityBinding
 from app.agents.capabilities.council import CouncilConfig
-from app.agents.capabilities.council._capability import Council
-from app.agents.capabilities.council._capability import resolve_members
+from app.agents.capabilities.council._capability import Council, resolve_members
 from app.agents.capabilities.council._toolset import build_council_toolset
 from app.agents.council import (
     CouncilMemberReview,
