@@ -1,5 +1,5 @@
 ---
-source_sha: "8801e7d12091"
+source_sha: "99911adb55ad"
 ---
 
 # Modele i providery { #models-and-providers }
@@ -657,14 +657,14 @@ przenosi się na inny model.
 !!! danger "Dlaczego jest zapisywana, a nie rozwiązywana per run"
 
     Ścieżka żądania nie może wołać providera, a jedyne, co mogłaby poza tym
-    sprawdzić, to dołączona migawka cen — która jest tu błędna w kierunku
-    psującym run.
-
-    Ta migawka zapisuje 1 000 000 dla `anthropic:claude-sonnet-4-5` wobec
-    rzeczywistych 200 000, więc wyzwalacz przy 90% ląduje powyżej prawdziwego
-    sufitu i kompaktowanie nigdy nie odpala, zanim provider odrzuci żądanie.
-    Profil z fallbackami jest gorszy: buduje `FallbackModel`, którego złożone id
-    nie rozwiązuje się do niczego w ogóle.
+    sprawdzić, to dołączona migawka cen — bundle zewnętrzny, którego liczby nie
+    są autorytatywne: wcześniejsza migawka zapisywała 1 000 000 dla
+    `anthropic:claude-sonnet-4-5` wobec rzeczywistych 200 000, więc wyzwalacz
+    przy 90% lądował powyżej prawdziwego sufitu i kompaktowanie nigdy nie
+    odpalało, zanim provider odrzucił żądanie (#773). Przypięta migawka zapisuje
+    dziś poprawne 200 000, lecz aktualizacja bundla może przesunąć liczbę, a to
+    repo tego nie zauważy. Profil z fallbackami jest gorszy: buduje
+    `FallbackModel`, którego złożone id nie rozwiązuje się do niczego w ogóle.
 
 Null znaczy **niezapisane**, a nie zero: profil starszy niż ta kolumna, provider,
 który nie publikuje długości, lista kuratorowana albo listing, którego nie dało się

@@ -68,6 +68,14 @@ def test_a_run_somebody_started_reports_no_parent() -> None:
     assert read.subagent_task_id is None
 
 
+def test_a_retry_reports_its_origin_without_becoming_a_delegation() -> None:
+    origin_id = uuid.uuid4()
+    read = AgentRunRead.model_validate(_row(retry_of_run_id=origin_id))
+
+    assert read.retry_of_run_id == origin_id
+    assert read.parent_run_id is None
+
+
 def test_an_orphaned_delegation_reports_no_task_id() -> None:
     """Deleting the parent must not leave a handle pointing at nothing.
 

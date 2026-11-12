@@ -1,5 +1,5 @@
 ---
-source_sha: "8801e7d12091"
+source_sha: "99911adb55ad"
 ---
 
 # Modelle und Provider { #models-and-providers }
@@ -706,14 +706,15 @@ richtig bleibt, wenn ein Agent auf ein anderes Modell umzieht.
 !!! danger "Warum sie gespeichert und nicht pro Run aufgelöst wird"
 
     Der Anfragepfad darf keinen Provider aufrufen, und das Einzige, was er sonst
-    heranziehen könnte, ist der mitgelieferte Preis-Snapshot — der hier in genau der
-    Richtung falsch liegt, die einen Run kaputtmacht.
-
-    Dieser Snapshot verzeichnet 1.000.000 für `anthropic:claude-sonnet-4-5` gegen
-    reale 200.000, ein Auslöser bei 90 % landet also oberhalb der echten Obergrenze,
-    und die Verdichtung greift nie, bevor der Provider die Anfrage ablehnt. Ein
-    Profile mit Fallbacks ist schlimmer: es baut ein `FallbackModel`, dessen
-    zusammengesetzte Id auf gar nichts auflöst.
+    heranziehen könnte, ist der mitgelieferte Preis-Snapshot — ein Bundle eines
+    Drittanbieters, dessen Zahlen nicht maßgeblich sind: ein früherer Snapshot
+    verzeichnete 1.000.000 für `anthropic:claude-sonnet-4-5` gegen reale
+    200.000, ein Auslöser bei 90 % landete also oberhalb der echten Obergrenze,
+    und die Verdichtung griff nie, bevor der Provider die Anfrage ablehnte
+    (#773). Der angepinnte Snapshot verzeichnet heute die richtigen 200.000,
+    doch ein Bundle-Update kann eine Zahl verschieben, ohne dass dieses Repo es
+    bemerkt. Ein Profile mit Fallbacks ist schlimmer: es baut ein
+    `FallbackModel`, dessen zusammengesetzte Id auf gar nichts auflöst.
 
 Null bedeutet **nicht erfasst**, nicht null als Zahl: ein Profile, das älter ist
 als die Spalte, ein Provider, der keine Länge veröffentlicht, eine kuratierte

@@ -125,6 +125,8 @@ export interface AgentRun {
    * run's delegations, and this is how a row from that answer says so.
    */
   parent_run_id: string | null;
+  /** The original run this top-level retry repeats, or null when not a retry. */
+  retry_of_run_id: string | null;
   /**
    * Which delegation produced this run - the `task_id` its `subagent_*` frames
    * carried, so a panel in a transcript and a row here are visibly one thing.
@@ -652,6 +654,23 @@ export interface ResumedRun {
   cache_read_tokens?: number;
   /** Of `input_tokens`, those written to the provider's cache. */
   cache_write_tokens?: number;
+}
+
+/** What `POST /runs/{id}/retry` answers with: the new run, and what it said.
+
+The new run's id is the point - the detail view steps to it - so the
+rest is the answer's shape rather than a second read: what it said, how
+it ended, what it cost.
+*/
+export interface RetriedRun {
+  run_id: string;
+  conversation_id: string | null;
+  output: string;
+  status: RunStatus;
+  cost_usd: string;
+  cost_is_partial: boolean;
+  input_tokens: number;
+  output_tokens: number;
 }
 
 /** One question as the server carries it, before the card's own shape (#2064). */

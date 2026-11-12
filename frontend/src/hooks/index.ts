@@ -125,6 +125,7 @@ export {
   useApprovals,
   useDelegatedRuns,
   usePrefetchRuns,
+  useRetryRun,
   useRun,
   useRunManifest,
   useRuns,
