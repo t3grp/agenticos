@@ -79,12 +79,14 @@ leaves its case pending.
 
 A try may name a draft proposal instead of an instructions override: it runs
 the proposal's new instructions or skill content, so the try is evidence for
-that exact proposal. Skill tries record the tested content's SHA-256; apply
-refuses unless the linked passing try belongs to that proposal and hash.
+that exact proposal. Tries record the proposal id and tested content's
+SHA-256; apply refuses unless the linked passing try belongs to that proposal
+and hash.
 
-A try runs synchronously in the request and is capped at ten model calls
-(two sides per case sample). Larger requests are rejected before model
-calls start. Background execution remains a separate follow-up.
+A try runs synchronously in the request and is capped at ten agent runs
+(two sides per case sample). Each agent run may make multiple provider
+requests, so this is not a provider-request cap. Larger requests are rejected
+before agent runs start. Background execution remains a separate follow-up.
 
 ## Proposals
 
@@ -173,7 +175,7 @@ load its last user message, with the turns before it as history, then cut
 the message down to the failing part and write what the answer should
 say. A try runs over the cases checked, with a number of samples and
 either a draft proposal's new text or a typed override — never both.
-Requests above ten model calls are rejected before they run. A try that passes the gate offers its text as a proposal,
+Requests above ten agent runs are rejected before they run. A try that passes the gate offers its text as a proposal,
 pre-filled with the try as its evidence.
 
 ### Proposal review
@@ -271,8 +273,9 @@ are the loop's own tries — mining either would learn from itself.
 
 ### Why did my try take so long?
 
-Tries run synchronously: every case runs twice per sample, one model call
-after another, inside the request. A request can start at most ten calls.
+Tries run synchronously: every case runs twice per sample, one agent run
+after another, inside the request. A try can start at most ten agent runs;
+each run may make multiple provider requests.
 
 ### Can a try change what my agent says?
 

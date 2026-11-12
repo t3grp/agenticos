@@ -6,6 +6,7 @@ what is asserted here. The repository queries themselves are proved
 against Postgres in `tests/integration/test_failure_learning.py`.
 """
 
+import hashlib
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -881,7 +882,6 @@ class TestCases:
         monkeypatch.setattr(
             conversation_repo, "last_answer_of_run", AsyncMock(return_value="Here is the refund.")
         )
-
         listed = await service.list_cases(_ctx(), agent.id)
 
         assert listed.total == 2
@@ -1030,12 +1030,17 @@ class TestTries:
         monkeypatch.setattr(
             conversation_repo, "last_answer_of_run", AsyncMock(return_value="Here is the refund.")
         )
+        linked = AsyncMock()
+        monkeypatch.setattr(failure_learning_repo, "update_proposal", linked)
 
         tried = await service.start_try(
             _ctx(), agent.id, EvalTryCreate(case_ids=[case.id], proposal_id=proposal.id)
         )
 
         assert tried.proposal_id == proposal.id
+        assert tried.tested_content_sha256 == hashlib.sha256(b"Never draft.").hexdigest()
+        linked.assert_awaited_once()
+        assert linked.await_args.kwargs["update_data"]["eval_try_id"] == tried.id
         calls = service.runner.execute.await_args_list
         assert calls[1].kwargs["instructions_override"] == "Never draft."
 
@@ -1104,9 +1109,12 @@ class TestTries:
         }
         assert linked.await_args.kwargs["update_data"]["eval_try_id"] == tried.id
 
-    def test_eval_try_rejects_more_than_ten_model_calls(self):
-        with pytest.raises(PydanticValidationError, match="at most 10 model calls"):
+    def test_eval_try_rejects_more_than_ten_agent_runs(self):
+        with pytest.raises(PydanticValidationError, match="at most 10 agent runs"):
             EvalTryCreate(case_ids=[uuid4() for _ in range(6)])
+
+    def test_eval_try_allows_ten_agent_runs(self):
+        assert len(EvalTryCreate(case_ids=[uuid4()], samples=5).case_ids) == 1
 
     async def test_a_try_naming_a_decided_proposal_is_refused(self, monkeypatch, mock_db_session):
         service = _service(mock_db_session)
@@ -1991,8 +1999,12 @@ class TestApply:
         proposal_id=None,
         target_skill_id=None,
         tested_content_sha256=None,
+        proposal=None,
     ):
         """A linked try whose verdict is a pass, a fail, or still going."""
+        if proposal is not None:
+            proposal_id = proposal.id
+            tested_content_sha256 = hashlib.sha256(proposal.new_text.encode("utf-8")).hexdigest()
         case = _case_row(agent_id)
         old_run, new_run = SimpleNamespace(id=uuid4()), SimpleNamespace(id=uuid4())
         monkeypatch.setattr(
@@ -2040,7 +2052,7 @@ class TestApply:
     ):
         service = _service(mock_db_session)
         agent, proposal, applied, audited = self._setup_apply(service, monkeypatch)
-        self._gate_try(monkeypatch, agent.id)
+        self._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         read = await service.apply_proposal(_ctx(), agent.id, proposal.id)
 
@@ -2084,9 +2096,25 @@ class TestApply:
     async def test_applying_with_a_failed_try_is_refused(self, monkeypatch, mock_db_session):
         service = _service(mock_db_session)
         agent, proposal, _, _ = self._setup_apply(service, monkeypatch)
-        self._gate_try(monkeypatch, agent.id, passed=False)
+        self._gate_try(monkeypatch, agent.id, passed=False, proposal=proposal)
 
         with pytest.raises(BadRequestError, match="has not passed the eval gate"):
+            await service.apply_proposal(_ctx(), agent.id, proposal.id)
+        service.registry.publish.assert_not_awaited()
+
+    async def test_a_passing_try_on_different_instruction_text_does_not_clear_the_gate(
+        self, monkeypatch, mock_db_session
+    ):
+        service = _service(mock_db_session)
+        agent, proposal, _, _ = self._setup_apply(service, monkeypatch)
+        self._gate_try(
+            monkeypatch,
+            agent.id,
+            proposal_id=proposal.id,
+            tested_content_sha256=hashlib.sha256(b"Different passing text.").hexdigest(),
+        )
+
+        with pytest.raises(ConflictError, match="did not test this exact proposal"):
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
         service.registry.publish.assert_not_awaited()
 
@@ -2094,7 +2122,7 @@ class TestApply:
         """A run still going is not evidence the new text works."""
         service = _service(mock_db_session)
         agent, proposal, _, _ = self._setup_apply(service, monkeypatch)
-        self._gate_try(monkeypatch, agent.id, pending=True)
+        self._gate_try(monkeypatch, agent.id, pending=True, proposal=proposal)
 
         with pytest.raises(BadRequestError, match="has not passed the eval gate"):
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
@@ -2109,7 +2137,7 @@ class TestApply:
             eval_try_id=proposal.eval_try_id,
         )
         monkeypatch.setattr(failure_learning_repo, "get_proposal", AsyncMock(return_value=proposal))
-        self._gate_try(monkeypatch, agent.id)
+        self._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         with pytest.raises(ConflictError, match="republished"):
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
@@ -2124,7 +2152,7 @@ class TestApply:
         edited = AgentSpec(name="Support", model_profile_id=uuid4()).model_dump(mode="json")
         edited["instructions"] = "Something else entirely."
         agent.draft_spec = edited
-        self._gate_try(monkeypatch, agent.id)
+        self._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         with pytest.raises(ConflictError, match="unpublished draft edits"):
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
@@ -2148,7 +2176,7 @@ class TestApply:
         )
         updated_entry = AsyncMock()
         monkeypatch.setattr(failure_learning_repo, "update_entry", updated_entry)
-        self._gate_try(monkeypatch, agent.id)
+        self._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         await service.apply_proposal(_ctx(), agent.id, proposal.id)
 
@@ -2465,7 +2493,7 @@ class TestApplyBranches:
         service = _service(mock_db_session)
         agent, proposal, _, _ = TestApply()._setup_apply(service, monkeypatch)
         monkeypatch.setattr(agent_repo, "get_version", AsyncMock(return_value=None))
-        TestApply()._gate_try(monkeypatch, agent.id)
+        TestApply()._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         with pytest.raises(BadRequestError, match="missing version"):
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
@@ -2524,7 +2552,7 @@ class TestApplyBranches:
         )
         updated_entry = AsyncMock()
         monkeypatch.setattr(failure_learning_repo, "update_entry", updated_entry)
-        TestApply()._gate_try(monkeypatch, agent.id)
+        TestApply()._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         await service.apply_proposal(_ctx(), agent.id, proposal.id)
 

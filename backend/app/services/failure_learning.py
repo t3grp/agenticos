@@ -1016,17 +1016,16 @@ class FailureLearningService:
                     "eval_try_id": str(proposal.eval_try_id),
                 },
             )
-        if proposal.target_type == "skill":
-            expected_hash = hashlib.sha256(proposal.new_text.encode("utf-8")).hexdigest()
-            if (
-                run.proposal_id != proposal.id
-                or run.target_skill_id != proposal.skill_id
-                or run.tested_content_sha256 != expected_hash
-            ):
-                raise ConflictError(
-                    message="The linked eval try did not test this exact skill proposal",
-                    details={"proposal_id": str(proposal.id), "eval_try_id": str(run.id)},
-                )
+        expected_hash = hashlib.sha256(proposal.new_text.encode("utf-8")).hexdigest()
+        if (
+            run.proposal_id != proposal.id
+            or run.tested_content_sha256 != expected_hash
+            or (proposal.target_type == "skill" and run.target_skill_id != proposal.skill_id)
+        ):
+            raise ConflictError(
+                message="The linked eval try did not test this exact proposal",
+                details={"proposal_id": str(proposal.id), "eval_try_id": str(run.id)},
+            )
         judged = await self._judged(run)
         if judged.gate_passed is not True:
             raise BadRequestError(
@@ -1328,7 +1327,7 @@ class FailureLearningService:
                         details={"proposal_id": str(proposal.id)},
                     )
                 target_skill_id = skill.id
-                tested_content_sha256 = hashlib.sha256(new_text.encode("utf-8")).hexdigest()
+            tested_content_sha256 = hashlib.sha256(new_text.encode("utf-8")).hexdigest()
         else:
             new_text = data.instructions_override
         if new_text is None and target_skill_id is None:
@@ -1393,7 +1392,7 @@ class FailureLearningService:
             started_by_user_id=ctx.subject_id,
             cases=tried,
         )
-        if proposal is not None and target_skill_id is not None:
+        if proposal is not None:
             await failure_learning_repo.update_proposal(
                 self.db, proposal=proposal, update_data={"eval_try_id": run_row.id}
             )

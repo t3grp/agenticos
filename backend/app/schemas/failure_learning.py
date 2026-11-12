@@ -21,8 +21,8 @@ MAX_EVAL_CASES = 50
 MAX_SAMPLES = 5
 """The most samples per case in a try: Theo fails a case when half or more fail."""
 
-MAX_MODEL_CALLS_PER_TRY = 10
-"""Each case sample runs old and new content once."""
+MAX_AGENT_RUNS_PER_TRY = 10
+"""Each case sample starts one agent run for old and new content."""
 
 MAX_HISTORY_TURNS = 10
 """Prior turns a case carries, truncated - the failing part is the message."""
@@ -183,10 +183,10 @@ class EvalTryCreate(BaseSchema):
     samples: int = Field(default=1, ge=1, le=MAX_SAMPLES)
 
     @model_validator(mode="after")
-    def bound_model_calls(self) -> EvalTryCreate:
-        if len(self.case_ids) * self.samples * 2 > MAX_MODEL_CALLS_PER_TRY:
+    def bound_agent_runs(self) -> EvalTryCreate:
+        if len(self.case_ids) * self.samples * 2 > MAX_AGENT_RUNS_PER_TRY:
             raise ValueError(
-                f"A try can start at most {MAX_MODEL_CALLS_PER_TRY} model calls"
+                f"A try can start at most {MAX_AGENT_RUNS_PER_TRY} agent runs"
             )
         return self
 
