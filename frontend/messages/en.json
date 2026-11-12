@@ -1806,6 +1806,7 @@
       "removeStep": "Remove Step",
       "removingStep": "Removing a step",
       "result": "Result",
+      "reviewingWithSolLoop": "Reviewing with Sol-loop",
       "runPython": "Run Python",
       "running": "Running…",
       "runningCalculations": "Running calculations",
@@ -1821,6 +1822,7 @@
       "showFormatted": "Show the formatted view",
       "showRaw": "Show arguments and raw output",
       "skillResource": "Skill Resource",
+      "solLoopReview": "Sol-loop Review",
       "sourceCount": "{count, plural, =1 {1 source} other {# sources}}",
       "steeringDelegate": "Steering a delegate",
       "stopTask": "Stop Task",
@@ -7167,6 +7169,12 @@
       "codeRuns": "{count, plural, =1 {1 script} other {# scripts}}",
       "codeRunCalls": "{count, plural, =0 {It called no tools} =1 {It made 1 tool call} other {It made # tool calls}}",
       "codeRunOmittedCalls": "{count, plural, =1 {and 1 more call, not listed} other {and # more calls, not listed}}",
+      "solLoopRounds": "{count, plural, =1 {1 sol-loop round} other {# sol-loop rounds}}",
+      "solLoopRound": "Round {round} · {scope} · {verdict}",
+      "solLoopStopReason": "Stopped: {reason}",
+      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFix": "Fix: {fix}",
+      "solLoopOutcome": "Outcome: {outcome}",
       "cacheBust": "cache bust",
       "cacheExpired": "cache expired",
       "cacheBustDetail": "{missed, number} cached tokens not read back from the cache - something before them in the prompt changed",
@@ -11625,6 +11633,14 @@
       "needs": "Skills, written under Skills and picked in this panel.",
       "never": "Never changes a skill; the agent only reads it."
     },
+    "sol_loop": {
+      "name": "Sol-loop",
+      "does": "Asks one reviewer to judge the work in rounds until it passes: round 1 reviews the whole change, later rounds check only changed code and open findings.",
+      "example1": "Is this pull request ready to merge?",
+      "example2": "Review this draft before it goes out",
+      "needs": "One model profile for the reviewer, pointed at a Sol model.",
+      "never": "Never substitutes a missing reviewer or invents a verdict: a reviewer that cannot be reached is reported unavailable, and budget end is not approval."
+    },
     "subagents": {
       "name": "Subagents",
       "does": "Lets the agent hand part of a job to another agent and use its answer.",
@@ -12085,6 +12101,16 @@
       "include_execute": {
         "title": "Allow shell commands",
         "description": "Whether the agent may run shell commands. Turning it off leaves the file tools and removes the shell entirely, rather than gating it."
+      }
+    },
+    "sol_loop": {
+      "reviewer": {
+        "title": "Reviewer",
+        "description": "The one reviewer that judges the work, on its Sol model."
+      },
+      "max_rounds": {
+        "title": "Rounds at most",
+        "description": "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep. Extend to 5 only for security, permissions, auth, data loss, or state and concurrency, while a blocker or should stays open - or when the user asks."
       }
     },
     "subagents": {

@@ -1,5 +1,5 @@
 ---
-source_sha: "573be813d5ed"
+source_sha: "5a103c8e255a"
 ---
 
 # Glosario { #glossary }
@@ -94,6 +94,7 @@ se describe en [Capabilities](capabilities.md).
 | Watch a command | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |

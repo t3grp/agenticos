@@ -307,8 +307,34 @@ export interface RunManifest {
   reviews?: ManifestReview[];
   /** Each `run_code` script code mode ran, and the calls it made (#2107). */
   code_runs?: ManifestCodeRun[];
+  /** Each sol-loop review round, with its verdict and findings (#6). */
+  sol_loop_rounds?: ManifestSolLoopRound[];
   /** Whether the record was trimmed to fit its size ceiling. */
   truncated: boolean;
+}
+
+/** One finding in a sol-loop review round. */
+export interface ManifestSolLoopFinding {
+  id: string;
+  severity: "blocker" | "should" | "nit";
+  claim: string;
+  file: string;
+  line: number | null;
+  fix: string;
+  outcome: string | null;
+}
+
+/** One sol-loop review round. */
+export interface ManifestSolLoopRound {
+  round: number;
+  scope: string;
+  verdict: string;
+  model: string;
+  findings: ManifestSolLoopFinding[];
+  dispositions: Record<string, string>;
+  stop_reason: string | null;
+  reason: string | null;
+  satisfied: boolean;
 }
 
 /** One correction a run reviewer sent while the run went. */

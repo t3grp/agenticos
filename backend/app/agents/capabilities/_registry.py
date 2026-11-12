@@ -746,6 +746,7 @@ def load_builtins() -> None:
         planning,
         sandbox,
         skills,
+        sol_loop,
         subagents,
         system_reminders,
         text_to_speech,
