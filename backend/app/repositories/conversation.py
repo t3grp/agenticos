@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, defer, load_only, raiseload, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 
+from app.agents.ask_user import parked_question_texts
 from app.db.locks import LockScope, hold_subject
 from app.db.models.agent import Agent
 from app.db.models.agent_run import AgentRun, RunStatus, RunSurface
@@ -594,6 +595,71 @@ async def running_since(
         identifier: activity.since
         for identifier, activity in (await running_activity(db, conversation_ids)).items()
     }
+
+
+class WaitingActivity(NamedTuple):
+    since: datetime
+    status: str
+    question: str | None
+    run_ids: list[UUID]
+
+
+async def waiting_activity(
+    db: AsyncSession, conversation_ids: Collection[UUID]
+) -> dict[UUID, WaitingActivity]:
+    """Parked top-level runs and what they are waiting on, in one page query.
+
+    A run parked on an unanswered question or an undecided approval is not at
+    work, so `running_activity` never sees it - and from another tab or device
+    the thread then looks done, which is exactly the lie Theo's rule forbids:
+    a question the agent cannot answer must surface as a visible waiting state.
+    The park time is `ended_at`, the same clock the expiry sweep reads; a run
+    the sweep ends leaves this set with it, so no horizon is needed here.
+
+    One row per parked run, grouped in Python: the question is the first of
+    the run's unanswered `ask_user` questions, read out of `paused_state`,
+    and the earliest park is what the row reports.
+    """
+    if not conversation_ids:
+        return {}
+    result = await db.execute(
+        select(
+            AgentRun.conversation_id,
+            AgentRun.status,
+            AgentRun.ended_at,
+            AgentRun.paused_state,
+            AgentRun.id,
+        )
+        .where(
+            AgentRun.conversation_id.in_(list(conversation_ids)),
+            AgentRun.parent_run_id.is_(None),
+            AgentRun.status.in_([RunStatus.AWAITING_ANSWER, RunStatus.AWAITING_APPROVAL]),
+            AgentRun.ended_at.is_not(None),
+        )
+        .order_by(AgentRun.ended_at)
+    )
+    activity: dict[UUID, WaitingActivity] = {}
+    for conversation_id, status, ended_at, paused_state, run_id in result.all():
+        if conversation_id is None or ended_at is None:
+            continue
+        state = paused_state or {}
+        question_ids = state.get("questions") or []
+        questions = parked_question_texts(
+            state.get("messages") or [],
+            [question_id for question_id in question_ids if isinstance(question_id, str)],
+        )
+        question = next(iter(questions), None)
+        current = activity.get(conversation_id)
+        if current is None:
+            activity[conversation_id] = WaitingActivity(
+                since=ended_at,
+                status=status.value if isinstance(status, RunStatus) else str(status),
+                question=question,
+                run_ids=[run_id],
+            )
+        else:
+            current.run_ids.append(run_id)
+    return activity
 
 
 async def running_users(db: AsyncSession, conversation_ids: Collection[UUID]) -> dict[UUID, UUID]:

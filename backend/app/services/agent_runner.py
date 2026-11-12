@@ -951,6 +951,7 @@ class PausedRunState(BaseModel):
         description="The conversation as of the parked call, in Pydantic AI's message format"
     )
     tool_call_ids: dict[str, str] = Field(
+        default_factory=dict,
         description="Approval id -> the tool call it parked, so a decision can be replayed"
     )
     guardrail_revision: int | None = Field(
@@ -1904,6 +1905,48 @@ def _question_calls(state: PausedRunState) -> dict[str, ToolCallPart]:
         for part in message.parts
         if isinstance(part, ToolCallPart) and part.tool_call_id in wanted
     }
+
+
+def parked_question_items(paused_state: dict[str, Any] | None) -> list[ParkedQuestion]:
+    """Map parked call ids back to the question text shown to the person.
+
+    This is a pure mapping over the persisted state so a run list can derive
+    waiting text without querying once per row.
+    """
+    if paused_state is None:
+        return []
+    # Older persisted parks can predate these fields, and malformed question
+    # references must not break an otherwise readable run list.
+    payload = dict(paused_state)
+    payload.setdefault("tool_call_ids", {})
+    question_ids = payload.get("questions", [])
+    if not isinstance(question_ids, list):
+        logger.warning(
+            "run_paused_questions_malformed",
+            extra={"value_type": type(question_ids).__name__},
+        )
+        payload["questions"] = []
+    else:
+        valid_question_ids = [value for value in question_ids if isinstance(value, str)]
+        if len(valid_question_ids) != len(question_ids):
+            logger.warning(
+                "run_paused_questions_malformed",
+                extra={"invalid_count": len(question_ids) - len(valid_question_ids)},
+            )
+        payload["questions"] = valid_question_ids
+    state = PausedRunState.model_validate(payload)
+    if state.question_results:
+        return []
+    return [
+        ParkedQuestion(
+            tool_call_id=tool_call_id,
+            questions=[
+                QuestionItem.model_validate(item)
+                for item in wire_questions(question_request(call))
+            ],
+        )
+        for tool_call_id, call in _question_calls(state).items()
+    ]
 
 
 def _classify_output(
@@ -7516,19 +7559,7 @@ class AgentRunnerService:
             or not _key_may_continue(ctx, run)
         ):
             return []
-        state = PausedRunState.model_validate(run.paused_state)
-        if state.question_results:
-            return []
-        return [
-            ParkedQuestion(
-                tool_call_id=tool_call_id,
-                questions=[
-                    QuestionItem.model_validate(item)
-                    for item in wire_questions(question_request(call))
-                ],
-            )
-            for tool_call_id, call in _question_calls(state).items()
-        ]
+        return parked_question_items(run.paused_state)
 
     async def _decisions(
         self, ctx: AuthContext, *, run: AgentRun, state: PausedRunState

@@ -32,6 +32,10 @@ export interface AgentRun {
    * console must not resume it too.
    */
   continues_in_chat?: boolean;
+  /** The run's unanswered `ask_user` questions, in the order asked; empty unless parked on an answer. */
+  waiting_questions?: string[];
+  /** When the parked question expires unanswered; null unless parked on an answer. */
+  waiting_expires_at?: string | null;
   agent_version_id: string | null;
   user_id: string | null;
   surface: string;

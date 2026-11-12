@@ -439,6 +439,7 @@ class TestTheScheduledSweep:
     def _service(unanswered: int = 0) -> MagicMock:
         return MagicMock(
             expire_stale=AsyncMock(return_value=3),
+            nudge_unanswered=AsyncMock(return_value=0),
             expire_unanswered=AsyncMock(return_value=unanswered),
             end_stranded=AsyncMock(return_value=0),
         )
@@ -460,11 +461,13 @@ class TestTheScheduledSweep:
 
             assert await expire_approvals() == 3
 
-        # The unanswered questions are swept in the same pass (#2064), and the
-        # three sweeps each get a transaction of their own.
+        # The unanswered questions are swept in the same pass (#2064), reminded
+        # once halfway to expiry first, and the four sweeps each get a
+        # transaction of their own.
+        service.nudge_unanswered.assert_awaited_once()
         service.expire_unanswered.assert_awaited_once()
         service.end_stranded.assert_awaited_once()
-        assert db_context.call_count == 3
+        assert db_context.call_count == 4
 
     async def test_the_worker_registers_its_chat_adapters_before_sweeping(self):
         service = self._service()
