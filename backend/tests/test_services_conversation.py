@@ -863,6 +863,7 @@ class TestConversationServiceListConversations:
             mock_repo.agents_in_conversations = AsyncMock(return_value={})
             mock_repo.coding_agents_in_conversations = AsyncMock(return_value={})
             mock_repo.running_activity = AsyncMock(return_value={})
+            mock_repo.waiting_activity = AsyncMock(return_value={})
             mock_repo.unread_ids = AsyncMock(return_value=set())
 
             items, total = await service.list_conversations(
@@ -888,6 +889,7 @@ class TestConversationServiceListConversations:
             mock_repo.running_activity = AsyncMock(
                 return_value={busy.id: conversation_repo.RunningActivity(started, [uuid4()], beat)}
             )
+            mock_repo.waiting_activity = AsyncMock(return_value={})
 
             items, _total = await service.list_conversations(
                 skip=0, limit=50, organization_id=TEST_ORG_ID
@@ -895,6 +897,43 @@ class TestConversationServiceListConversations:
 
         assert [item.running_since for item in items] == [started, None]
         assert [item.running_heartbeat_at for item in items] == [beat, None]
+
+    @pytest.mark.anyio
+    async def test_a_listed_conversation_says_what_its_parked_run_is_waiting_on(
+        self, service: ConversationService
+    ):
+        """A thread parked on an unanswered question says so on the listing -
+        from any tab, not only the one the turn ran in, which only ever knew
+        through its own working store."""
+        waiting, idle = MockConversation(id=uuid4()), MockConversation(id=uuid4())
+        parked = datetime(2026, 11, 12, 8, 0, tzinfo=UTC)
+        run_id = uuid4()
+
+        with patch("app.services.conversation.conversation_repo") as mock_repo:
+            mock_repo.get_conversations_by_user = AsyncMock(return_value=[waiting, idle])
+            mock_repo.count_conversations = AsyncMock(return_value=2)
+            mock_repo.agents_in_conversations = AsyncMock(return_value={})
+            mock_repo.coding_agents_in_conversations = AsyncMock(return_value={})
+            mock_repo.running_activity = AsyncMock(return_value={})
+            mock_repo.waiting_activity = AsyncMock(
+                return_value={
+                    waiting.id: conversation_repo.WaitingActivity(
+                        parked, "awaiting_answer", "Which model should I use?", [run_id]
+                    )
+                }
+            )
+
+            items, _total = await service.list_conversations(
+                skip=0, limit=50, organization_id=TEST_ORG_ID
+            )
+
+        assert [item.waiting_since for item in items] == [parked, None]
+        assert [item.waiting_status for item in items] == ["awaiting_answer", None]
+        assert [item.waiting_question for item in items] == [
+            "Which model should I use?",
+            None,
+        ]
+        assert [item.waiting_run_ids for item in items] == [[run_id], []]
 
     @pytest.mark.anyio
     async def test_a_row_says_whether_it_holds_an_answer_its_reader_has_not_seen(
@@ -3202,6 +3241,7 @@ class TestAFavouriteBelongsToTheReader:
             conversation_repo, "agents_in_conversations", AsyncMock(return_value={})
         )
         monkeypatch.setattr(conversation_repo, "running_activity", AsyncMock(return_value={}))
+        monkeypatch.setattr(conversation_repo, "waiting_activity", AsyncMock(return_value={}))
         monkeypatch.setattr(conversation_repo, "unread_ids", AsyncMock(return_value=set()))
         asked = AsyncMock(return_value=set())
         monkeypatch.setattr(conversation_repo, "favourite_ids", asked)
@@ -3301,6 +3341,7 @@ class TestAFavouriteBelongsToTheReader:
             conversation_repo, "agents_in_conversations", AsyncMock(return_value={})
         )
         monkeypatch.setattr(conversation_repo, "running_activity", AsyncMock(return_value={}))
+        monkeypatch.setattr(conversation_repo, "waiting_activity", AsyncMock(return_value={}))
         monkeypatch.setattr(conversation_repo, "unread_ids", AsyncMock(return_value=set()))
         asked = AsyncMock(return_value=set())
         monkeypatch.setattr(conversation_repo, "favourite_ids", asked)

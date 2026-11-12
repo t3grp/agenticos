@@ -53,10 +53,7 @@ vi.mock("@/components/agents/conversation-agents", () => ({
     agents: Array<{ name: string }>;
     showName?: boolean;
   }) => (
-    <span
-      data-testid="row-agents"
-      data-names={agents.map((agent) => agent.name).join(", ")}
-    >
+    <span data-testid="row-agents" data-names={agents.map((agent) => agent.name).join(", ")}>
       {showName ? agents.map((agent) => agent.name).join(", ") : null}
     </span>
   ),
@@ -297,6 +294,29 @@ describe("what the sidebar says about the list", () => {
     expect(within(busy).getByText(/Working/)).toBeInTheDocument();
     const quiet = within(list()).getByText("Quiet one").closest("[class*='group']") as HTMLElement;
     expect(within(quiet).queryByText(/Working/)).toBeNull();
+  });
+
+  it("says a thread is waiting on its person, from the server's word alone", async () => {
+    // No turn ran in this tab: the run parked on a question somewhere else,
+    // and the thread must not look done for it.
+    serve([
+      {
+        ...conversation("c-1", "Waiting one"),
+        waiting_since: new Date(Date.now() - 60_000).toISOString(),
+        waiting_status: "awaiting_answer",
+        waiting_question: "Which model should I use?",
+      },
+      conversation("c-2", "Quiet one"),
+    ] as unknown as ReturnType<typeof conversation>[]);
+    mount();
+    await screen.findAllByText("Waiting one");
+
+    const waiting = within(list())
+      .getByText("Waiting one")
+      .closest("[class*='group']") as HTMLElement;
+    expect(within(waiting).getByText("Waiting for an answer")).toBeInTheDocument();
+    const quiet = within(list()).getByText("Quiet one").closest("[class*='group']") as HTMLElement;
+    expect(within(quiet).queryByText("Waiting for an answer")).toBeNull();
   });
 
   it("says a thread is at work the moment this tab asks in it, before the server does", async () => {

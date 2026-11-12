@@ -79,7 +79,8 @@ export function parseCodingReport(text: string): CodingReport | null {
       return { ...(parsed as Omit<CodingReport, "kind">), kind: "coding_agent" };
     }
   } catch {
-    // A refusal - no sandbox, the harness not installed - is a sentence, not a report.
+    // Text stored before failures became reports - a refusal from an older run -
+    // is a sentence, not a report, and still reads as one.
   }
   return null;
 }

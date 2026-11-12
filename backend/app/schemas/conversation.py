@@ -669,6 +669,35 @@ class ConversationRead(ConversationBase, TimestampSchema):
             "not catch a hang - the per-request timeout ends that instead."
         ),
     )
+    waiting_since: datetime | None = Field(
+        default=None,
+        description=(
+            "When the run parked in this conversation stopped to wait, or null when "
+            "none is parked. Set on a listing, so a sidebar can show which threads "
+            "are waiting on their person from any tab or device - a parked run is "
+            "not at work, so `running_since` never says it."
+        ),
+    )
+    waiting_status: str | None = Field(
+        default=None,
+        description=(
+            "What the parked run is waiting on - `awaiting_answer` for an unanswered "
+            "question, `awaiting_approval` for an undecided approval - or null when "
+            "none is parked."
+        ),
+    )
+    waiting_question: str | None = Field(
+        default=None,
+        description=(
+            "The parked run's first unanswered question, or null when it parked on "
+            "an approval with no question left open. The full list is on the run "
+            "read; a listing carries the one line a row can show."
+        ),
+    )
+    waiting_run_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Parked top-level runs, so one ending does not hide another.",
+    )
     agents: list[ConversationAgent] = Field(
         default_factory=list,
         description=(

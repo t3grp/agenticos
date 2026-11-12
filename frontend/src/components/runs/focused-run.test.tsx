@@ -448,3 +448,28 @@ describe("the header a run opens on", () => {
     expect(screen.queryByText(/ago$/)).toBeNull();
   });
 });
+
+describe("a run parked on a question", () => {
+  it("shows the unanswered questions and how long is left to answer them", () => {
+    serve({
+      run: run({
+        status: "awaiting_answer",
+        waiting_questions: ["Which model should I use?", "And the budget?"],
+        waiting_expires_at: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+      }),
+    });
+    renderRun();
+
+    expect(screen.getByRole("region", { name: "Waiting on you" })).toBeVisible();
+    expect(screen.getByText("Which model should I use?")).toBeVisible();
+    expect(screen.getByText("And the budget?")).toBeVisible();
+    expect(screen.getByText(/Expires in 1 d/)).toBeVisible();
+  });
+
+  it("shows no waiting section once the run has finished", () => {
+    serve({ run: run({ status: "completed" }) });
+    renderRun();
+
+    expect(screen.queryByRole("region", { name: "Waiting on you" })).toBeNull();
+  });
+});

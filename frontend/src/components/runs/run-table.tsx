@@ -15,7 +15,7 @@ import { Badge, DataTable, EntityAvatar, type Column } from "@/components/ui";
 import { useAuthStore } from "@/stores";
 import { ROUTES } from "@/lib/constants";
 import { modelShortName } from "@/lib/model-profiles";
-import { formatDateTime, formatRunDuration, timeAgo } from "@/lib/utils";
+import { formatDateTime, formatRunDuration, timeAgo, timeUntil } from "@/lib/utils";
 import type { AgentRun } from "@/types/runs";
 
 /** The orders `GET /runs` offers, matching `RunOrder` on the backend. */
@@ -44,6 +44,29 @@ export interface RunSort {
  * page of rows: the slowest run of a month is not in whichever twenty-five a
  * feed returned.
  */
+/** The question a parked run waits on, and how long is left to answer it. */
+function WaitingQuestion({ run }: { run: AgentRun }) {
+  const t = useTranslations("pages.runs");
+  if (run.status !== "awaiting_answer" || (run.waiting_questions?.length ?? 0) === 0) {
+    return null;
+  }
+  const remaining = timeUntil(run.waiting_expires_at);
+  return (
+    <span
+      className="text-muted-foreground block max-w-72 truncate text-xs"
+      title={(run.waiting_questions ?? []).join(" ")}
+    >
+      {(run.waiting_questions ?? [])[0]}
+      {remaining !== null && (
+        <span className="whitespace-nowrap">
+          {" · "}
+          {t("questionExpiresIn", { duration: remaining })}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function RunTable({
   runs,
   sort,
@@ -152,6 +175,11 @@ export function RunTable({
                 : t("delegatedTask", { taskId: run.subagent_task_id })}
             </Badge>
           )}
+          {/* A run parked on a question is not finished, so its row says what
+              it is waiting on rather than leaving the badge to say it alone.
+              The chat behind the run - the link in the last column - is where
+              the answer goes. */}
+          <WaitingQuestion run={run} />
           {/* On a phone the row is this cell and the cost: who ran and when,
               folded under the status rather than six columns swiped sideways.
               Bounded by the screen, or a long agent name widens the column and

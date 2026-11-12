@@ -469,6 +469,17 @@ class AgentRun(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
 
+    # Set when the hourly sweep reminded the chat once that an `ask_user`
+    # question is still unanswered, so the reminder is sent once and not on
+    # every sweep until the question expires. A column rather than a
+    # `paused_state` key for the same reason as `chat_notice_sent_at` above:
+    # `PausedRunState` is `extra="forbid"`, so a key there would make the run
+    # unreadable to an older process on a rollback or a rolling deploy.
+    # Cleared when the run leaves the queue, like the chat notice.
+    question_nudged_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     __table_args__ = (
         CheckConstraint(
             "routine_kind IN ('trigger', 'watch') AND "
