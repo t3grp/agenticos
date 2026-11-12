@@ -236,6 +236,8 @@ describe("stepping to a neighbour", () => {
     };
     options.onRetried("run-9");
     expect(onFocusRun).toHaveBeenCalledWith("run-9");
+  });
+
   it("says when a fallback served the run, and which model answered", () => {
     serve({ run: run({ fallback_used: true, serving_model: "gpt-5" }) });
     renderRun();
