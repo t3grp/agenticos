@@ -11955,7 +11955,7 @@
     "council": {
       "members": {
         "title": "Council members",
-        "description": "The delegates, one strong model from each of three different providers at high reasoning effort. One to three members."
+        "description": "The delegates, one strong model from each of three different providers at high reasoning effort. Exactly three members."
       },
       "agreement_threshold": {
         "title": "Agreement threshold",
