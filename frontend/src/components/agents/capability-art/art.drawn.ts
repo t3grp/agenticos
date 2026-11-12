@@ -20,6 +20,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   harness: 90,
   council: 280,
   sol_loop: 120,
+  eval_tool_tuning: 150,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -381,12 +382,11 @@ const SOL_LOOP =
   '<text x="0" y="2.4" class="tx mono s7 mid b" >APPROVE</text></g></g>' +
   "</svg>";
 
-
 /**
- * Council: three delegates score the same work, one card each on the board,
- * and the round settles under them - a score per delegate, nothing invented.
+ * Eval tool tuning: one tool scored against a row of eval cases - a pass
+ * tick, a miss, and the draft proposal written under the score.
  */
-const COUNCIL =
+const EVAL_TOOL_TUNING =
   '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
   '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
   '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
@@ -395,19 +395,12 @@ const COUNCIL =
   '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
   '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
   '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
-  '<g transform="matrix(0.9 0.5 -0.9 0.5 120 30)"><path class="igrid2" d="M21 3V81M42 3V81M63 3V81M3 21H81M3 42H81M3 63H81"/></g>' +
-  '<polygon class="int" points="91.2,10 148.8,42 146.6,43 89.4,11"/>' +
-  '<polygon class="inr" points="148.8,42 148.8,92 146.6,93 146.6,43"/>' +
-  '<polygon class="inl" points="89.4,61 146.6,93 146.6,43 89.4,11"/>' +
   '<g transform="matrix(0.9 0.5 0 1 89.4 11)">' +
-  '<rect x="6" y="6" width="10" height="8" rx="2" class="ac" />' +
-  '<text x="20" y="13" class="tx s7 b">9/10</text>' +
-  '<rect x="6" y="18" width="10" height="8" rx="2" class="ac" />' +
-  '<text x="20" y="25" class="tx s7 b">8/10</text>' +
-  '<g class="breathe" style="animation-delay:-0.8s"><rect x="6" y="30" width="10" height="8" rx="2" class="ac" /></g>' +
-  '<text x="20" y="37" class="tx s7 b">10/10</text></g>' +
+  '<text x="6" y="13" class="tx s7 b">✓ case 1</text>' +
+  '<text x="6" y="25" class="tx s7 b">✗ case 2</text>' +
+  '<text x="6" y="37" class="tx s7 b">✓ case 3</text></g>' +
   '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
-  '<text x="0" y="2.4" class="tx mono s7 mid b" >round 2</text></g></g>' +
+  '<text x="0" y="2.4" class="tx mono s7 mid b" >DRAFT</text></g></g>' +
   "</svg>";
 
 export const DRAWN_ART: Readonly<Record<string, string>> = {
@@ -427,4 +420,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   harness: HARNESS,
   council: COUNCIL,
   sol_loop: SOL_LOOP,
+  eval_tool_tuning: EVAL_TOOL_TUNING,
 };

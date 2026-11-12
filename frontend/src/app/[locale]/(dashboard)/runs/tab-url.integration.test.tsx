@@ -82,6 +82,7 @@ const RUN = {
   started_at: "2026-08-14T09:00:00Z",
   ended_at: "2026-08-14T09:00:04Z",
   parent_run_id: null,
+  retry_of_run_id: null,
   subagent_task_id: null,
 };
 

@@ -97,6 +97,7 @@ se describe en [Capabilities](capabilities.md).
 | Sandbox | `sandbox` |
 | Skills | `skills` |
 | Sol-loop | `sol_loop` |
+| Ajuste de herramientas con evals | `eval_tool_tuning` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |

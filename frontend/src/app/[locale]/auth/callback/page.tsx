@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Spinner } from "@/components/ui";
 import { apiClient } from "@/lib/api-client";
 import { invokeShell, readShellInfo, ShellError } from "@/lib/desktop/shell";
 import { useAdoptSession } from "@/hooks/use-auth";
+import type { MfaChallenge } from "@/hooks/use-auth";
+import { MfaCodeForm } from "@/components/auth/mfa-code-form";
 import { goToDestination, postSignInDestination } from "@/lib/auth-landing";
 import { takeReturnTo } from "@/lib/oauth-return";
 import type { User } from "@/types";
@@ -49,6 +51,8 @@ export default function AuthCallbackPage() {
   // a flag - keeping the message here means neither is written from an effect
   // synchronously, and the URL case is shown a render earlier than it was.
   const [exchangeFailed, setExchangeFailed] = useState(false);
+  const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge | null>(null);
+  const mfaChallengeRef = useRef<MfaChallenge | null>(null);
   // i18n-exempt: a sentinel nothing renders - what the branch below shows is
   // `t("signInFailedRedirecting")`, and the provider's own code is discarded the same way.
   const error = searchParams.get("error") ?? (exchangeFailed ? "Sign-in failed" : null);
@@ -56,6 +60,35 @@ export default function AuthCallbackPage() {
   const adoptSession = useAdoptSession();
 
   useEffect(() => {
+    // A fragment is not sent to the server. The OAuth callback uses it to
+    // carry a short-lived MFA challenge to this page without exposing it in
+    // access logs or referrers. Remove it before rendering the form.
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const mfaToken = fragment.get("mfa_token");
+    if (mfaToken) {
+      const challenge: MfaChallenge = {
+        mfa_required: true,
+        mfa_token: mfaToken,
+        expires_in: 300,
+        return_to: takeReturnTo(),
+      };
+      mfaChallengeRef.current = challenge;
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + window.location.search,
+      );
+      queueMicrotask(() => setMfaChallenge(challenge));
+      return;
+    }
+    // Effects are replayed in Strict Mode; the fragment has already been
+    // cleared, so retain the challenge in memory across that replay.
+    if (mfaChallengeRef.current) {
+      const challenge = mfaChallengeRef.current;
+      queueMicrotask(() => setMfaChallenge(challenge));
+      return;
+    }
+
     const code = searchParams.get("code");
     const errParam = searchParams.get("error");
 
@@ -100,7 +133,11 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
-      {error ? (
+      {mfaChallenge ? (
+        <div className="w-full max-w-sm px-4">
+          <MfaCodeForm challenge={mfaChallenge} onBack={() => router.replace("/login")} />
+        </div>
+      ) : error ? (
         <p className="text-foreground/65 text-sm">{t("signInFailedRedirecting")}</p>
       ) : (
         // A token exchange and a redirect. There is no layout to promise here,

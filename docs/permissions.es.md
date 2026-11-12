@@ -1,5 +1,5 @@
 ---
-source_sha: "0a37f530c461"
+source_sha: "960aa2ad5086"
 ---
 
 # Permisos { #permissions }
@@ -140,6 +140,16 @@ de lo que su emisor tiene ahora.
     protegida. Poner la clave de un perfil, o mover el endpoint de un perfil que
     tiene clave, requiere `secrets:view` sobre esa clave
     ([Modelos](models.md#changing-a-profiles-key-or-endpoint)).
+
+    Adjuntar un secreto a una conexión de sandbox, o probar un servicio con él,
+    también requiere `secrets:view` sobre ese secreto: la conexión gasta la clave
+    en nombre de toda la organización, así que nombrar la clave privada de otra
+    persona debe rechazarse ya en el momento de adjuntarla. La comprobación está
+    deliberadamente *fuera* de `resolve_for_bindings`: en tiempo de ejecución,
+    el runner resuelve los bindings de una spec publicada para cualquiera que
+    pueda ejecutar el agent, y los secretos de la spec se comprobaron contra
+    quien la publicó en el momento de publicarla. El vault se abre para un run;
+    la puerta es quién puede nombrar el secreto en una escritura.
 
     `connections:manage` es también lo que lista las integraciones de
     sincronización de la organización: las fuentes de todas las bases, con su
@@ -314,6 +324,12 @@ es perderlo. Una persona con varias concesiones sobre una fila - la suya propia 
 las de sus grupos - obtiene la más alta de ellas. La base de datos guarda cada
 concesión para exactamente un sujeto, una persona o un grupo, y un grupo de otra
 organización no alcanza a nadie aquí aunque una fila lo nombrara.
+
+Una concesión puede llevar una caducidad: pasada esta, la concesión no da nada,
+sin que nadie borre la fila - el panel de uso compartido sigue listándola, así
+que el propietario puede renovarla o revocarla. Eliminar a un miembro revoca
+sus concesiones directas con la membresía, así que volver a invitarlo no
+despierta ninguna de ellas.
 
 La tabla es deliberadamente genérica - `resource_type` + `resource_id`, sin clave
 foránea al objetivo - porque los agents, las colecciones, los skills, los

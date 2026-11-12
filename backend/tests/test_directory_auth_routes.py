@@ -46,7 +46,7 @@ class _FakeRedis:
 
 
 def _user() -> SimpleNamespace:
-    return SimpleNamespace(id=uuid4(), credential_version=2, is_active=True)
+    return SimpleNamespace(id=uuid4(), credential_version=2, is_active=True, totp_enabled=False)
 
 
 @pytest.fixture
@@ -84,6 +84,20 @@ class TestLdapLogin:
         assert sign_in.sign_in_with_password.await_args.args == ("jane", " pw ")
         assert sign_in.sign_in_with_password.await_args.kwargs == {"invitation_token": None}
         assert sessions.await_args.kwargs["user_id"] == user.id
+
+    async def test_a_second_factor_stops_the_sign_in_at_a_challenge(
+        self, client: AsyncClient, sign_in: MagicMock, sessions: AsyncMock
+    ) -> None:
+        user = _user()
+        user.totp_enabled = True
+        sign_in.sign_in_with_password = AsyncMock(return_value=user)
+
+        resp = await client.post(_LDAP, json={"username": "jane", "password": "pw"})
+
+        assert resp.status_code == 200
+        assert resp.json()["mfa_required"] is True
+        assert resp.json()["mfa_token"]
+        sessions.assert_not_awaited()
 
     async def test_a_staged_invitation_rides_along_by_its_handle(
         self, client: AsyncClient, sign_in: MagicMock, sessions: AsyncMock
@@ -185,6 +199,25 @@ class TestKerberosLogin:
         assert sign_in.sign_in_with_ticket.await_args.args == (b"ticket",)
         # The session row carries the id the access token names, chosen up front.
         assert sessions.await_args.kwargs["session_id"] is not None
+
+    async def test_a_ticket_for_an_mfa_user_stops_at_the_second_factor(
+        self, client: AsyncClient, sign_in: MagicMock, sessions: AsyncMock
+    ) -> None:
+        user = _user()
+        user.totp_enabled = True
+        sign_in.sign_in_with_ticket = AsyncMock(return_value=(user, None))
+
+        resp = await client.get(
+            _KERBEROS,
+            headers={"Authorization": f"Negotiate {base64.b64encode(b'ticket').decode()}"},
+        )
+
+        location = urlparse(resp.headers["location"])
+        assert resp.status_code == 307
+        assert location.path == "/auth/callback"
+        assert "mfa_token" in parse_qs(location.fragment)
+        assert not location.query
+        sessions.assert_not_awaited()
 
     async def test_the_desktop_shell_gets_its_deep_link(
         self, client: AsyncClient, sign_in: MagicMock, sessions: AsyncMock

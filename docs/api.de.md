@@ -1,5 +1,5 @@
 ---
-source_sha: "cc88ed3eb4e4"
+source_sha: "20738f21b704"
 ---
 
 # Die HTTP-API { #the-http-api }
@@ -53,9 +53,14 @@ Gespeichert wird nur sein SHA-256, und er erscheint nie in einer Logzeile, einem
 Audit-Eintrag oder einem Fehlertext. Listen zeigen sein Präfix (`aos_1a2b3c4d`),
 und so nennt auch ein Audit-Eintrag den Schlüssel, der gehandelt hat — jeder
 Eintrag, der während einer mit einem Schlüssel authentifizierten Anfrage
-geschrieben wird, trägt `via_api_key` in seinen Details. Ein Schlüssel kann ein
-Ablaufdatum haben, und sein Widerruf (`DELETE /api/v1/api-keys/{id}`) wirkt ab
-seiner nächsten Anfrage.
+geschrieben wird, trägt `via_api_key` in seinen Details. Standardmäßig läuft ein
+Schlüssel nach 90 Tagen ab; ein früheres Ablaufdatum ist möglich, aber keines,
+das mehr als 90 Tage entfernt liegt. Bei der Rotation eines älteren Schlüssels
+wird ein späteres Ablaufdatum des Ersatzschlüssels auf 90 Tage begrenzt. Sein
+Widerruf (`DELETE /api/v1/api-keys/{id}`) wirkt ab
+seiner nächsten Anfrage. Ihn zu rotieren (`POST /api/v1/api-keys/{id}/rotate`)
+ersetzt sein Secret sofort: Der alte Schlüssel funktioniert nicht mehr, und die
+Antwort enthält den neuen, einmal.
 
 **Ein Schlüssel ist nicht die Person, die ihn ausgestellt hat.** Ein Run, den er
 startet, gehört der ausstellenden Person, läuft über ihr Budget und ihr Audit,
@@ -156,6 +161,40 @@ widerruft den Schlüssel am Ende.
 BASE=http://localhost:8000 EMAIL=you@example.com PASSWORD=... bash docs/examples/public-api.sh
 ```
 
+
+### Zwei-Faktor-Authentifizierung { #two-factor-authentication }
+
+Ein zweiter Schritt bei der Anmeldung, aus einer Authenticator-App (TOTP,
+sechs Ziffern alle 30 Sekunden). Die Einrichtung erfolgt in der Konsole unter
+**Einstellungen → Konto**: Das Geheimnis wird einmal angezeigt, für die App,
+und die Aktivierung antwortet mit zehn einmal verwendbaren
+Wiederherstellungscodes, ebenfalls einmal angezeigt - der Weg zurück, wenn
+die Authenticator-App verloren geht. Das Deaktivieren oder das Ersetzen der
+Wiederherstellungscodes braucht einen Code des Kontos, sodass eine Sitzung,
+die auf einem gemeinsamen Bildschirm offen gelassen wurde, den Schutz der
+nächsten Anmeldung nicht entfernen kann.
+
+Eine Passwort-, Verzeichnis- oder Magic-Link-Anmeldung für ein Konto, bei dem
+sie aktiviert ist, hält stattdessen an einer Herausforderung an: Die Antwort
+enthält `mfa_required`, ein `mfa_token` und `expires_in` (fünf Minuten), und
+es werden keine Cookies gesetzt. Der Client schliesst sie mit
+`POST /api/v1/auth/mfa/verify` mit dem Token und dem Code ab, und die Antwort
+ist das Tokenpaar - plus das Ziel des Magic-Links, wenn die Herausforderung
+von einem kam. Das Herausforderungstoken beweist den Passwortschritt und
+nichts weiter: Es kann die API nicht als Sitzung aufrufen, und eine
+Passwortänderung seit seiner Ausstellung macht es ungültig. Ein
+Wiederherstellungscode schliesst den Schritt ebenfalls ab und wird dabei
+verbraucht; der Verbrauch wird auditiert, sodass der Kontoinhaber sehen kann,
+dass ein Code verwendet wurde.
+
+Das Geheimnis ist im Tresor im eigenen Bereich des Kontos versiegelt, und von
+den Wiederherstellungscodes werden nur Hashes gespeichert - ein blosser
+Datenbankzugriff ergibt keines von beiden. Die Einrichtung gilt pro Konto,
+nicht pro Deployment: Ob das Deployment sie verlangt, ist eine
+Richtlinienentscheidung des Betreibers, nicht dieses Mechanismus. Die
+Anmeldung über einen externen Authentifikator - einen OAuth-Anbieter oder
+Kerberos - wird dort authentifiziert und stützt sich auf dessen eigene
+Zwei-Faktor-Richtlinie.
 
 ### Sessions und Widerruf { #sessions-and-revocation }
 

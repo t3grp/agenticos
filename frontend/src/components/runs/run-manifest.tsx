@@ -235,6 +235,69 @@ export function RunManifest({ runId }: { runId: string }) {
         </Section>
       )}
 
+      {/* The eval tool-tuning runs: each run's score, every case's
+          classification, and the draft proposals with their evidence. A
+          proposal is a draft for a human to approve, never a fix that has
+          been made. */}
+      {!!manifest.eval_tool_tuning_runs?.length && (
+        <Section title={t("evalToolTuningRuns", { count: manifest.eval_tool_tuning_runs.length })}>
+          <ul className="space-y-3">
+            {manifest.eval_tool_tuning_runs.map((run, index) => (
+              <li key={`${run.tool}-${index}`} className="space-y-1.5">
+                <p className="text-sm font-medium">
+                  {t("evalToolTuningRun", {
+                    tool: run.tool,
+                    passed: run.passed,
+                    total: run.total,
+                  })}
+                </p>
+                {!!run.dominant_failure && (
+                  <p className="text-muted-foreground text-xs">
+                    {t("evalToolTuningDominantFailure", { failure: run.dominant_failure })}
+                  </p>
+                )}
+                {run.cases.length > 0 && (
+                  <ol className="space-y-1.5">
+                    {run.cases.map((c) => (
+                      <li key={c.name} className="space-y-0.5 text-sm">
+                        <p>
+                          {t("evalToolTuningCase", {
+                            name: c.name,
+                            classification: c.classification,
+                          })}
+                        </p>
+                        <p className="text-muted-foreground text-xs">{c.detail}</p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {run.proposals.length > 0 && (
+                  <ol className="space-y-1.5">
+                    {run.proposals.map((proposal) => (
+                      <li key={proposal.title} className="space-y-0.5 text-sm">
+                        <p>
+                          {t("evalToolTuningProposal", {
+                            kind: proposal.kind,
+                            title: proposal.title,
+                          })}
+                        </p>
+                        <p className="text-muted-foreground text-xs">{proposal.proposed}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {t("evalToolTuningProposalEvidence", {
+                            evidence: proposal.evidence.join(", "),
+                            status: proposal.status,
+                          })}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {manifest.messages.length > 0 && (
         <Section
           title={t("lastRequestContext")}

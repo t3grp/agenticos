@@ -735,6 +735,7 @@ def load_builtins() -> None:
         conversation_search,
         council,
         drafts,
+        eval_tool_tuning,
         follow_ups,
         guardrails,
         harness,

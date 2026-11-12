@@ -251,7 +251,12 @@ class ConversationService:
         self.db = db
 
     async def model_history(
-        self, conversation_id: UUID, *, limit: int, exclude_message_id: UUID | None = None
+        self,
+        conversation_id: UUID,
+        *,
+        limit: int,
+        exclude_message_id: UUID | None = None,
+        before_message_id: UUID | None = None,
     ) -> ModelHistory:
         """The thread as the model should read it, summary included.
 
@@ -268,16 +273,40 @@ class ConversationService:
         `exclude_message_id` is the turn being answered. The prompt is written
         before the run so a refusal cannot lose it, so it is a row by the time
         this reads - and left in, the model is asked the same question twice.
+
+        `before_message_id` is the turn the history stops before: that message
+        and everything written after it are left out. A retry re-issues an
+        earlier turn as the prompt, so the history must read as the thread did
+        when that turn was asked - the failed attempt's half-written answer,
+        and any tool call of it whose result never arrived, cannot be replayed
+        as history. A summary taken at or after that turn covers it, so the
+        summary half is dropped and the transcript half reads the window
+        before it instead.
         """
         conversation = await conversation_repo.get_conversation_by_id(
             self.db, conversation_id, include_summary=True, fresh=True
         )
         revision = None if conversation is None else conversation.guardrail_revision
         summary = None if conversation is None else conversation.summary_messages
-        if conversation is None or summary is None or conversation.summary_ordinal is None:
+        before_ordinal: int | None = None
+        if before_message_id is not None:
+            boundary = await conversation_repo.messages_by_id(self.db, {before_message_id})
+            message = boundary.get(before_message_id)
+            if message is None or message.conversation_id != conversation_id:
+                raise NotFoundError(
+                    message="Message not found",
+                    details={"message_id": str(before_message_id)},
+                )
+            before_ordinal = message.ordinal
+        if (
+            conversation is None
+            or summary is None
+            or conversation.summary_ordinal is None
+            or (before_ordinal is not None and conversation.summary_ordinal >= before_ordinal)
+        ):
             return ModelHistory(
                 await self._from_transcript(
-                    conversation_id, limit, exclude_message_id, conversation
+                    conversation_id, limit, exclude_message_id, conversation, before_message_id
                 ),
                 revision=revision,
             )
@@ -307,13 +336,19 @@ class ConversationService:
             )
             return ModelHistory(
                 await self._from_transcript(
-                    conversation_id, limit, exclude_message_id, conversation
+                    conversation_id, limit, exclude_message_id, conversation, before_message_id
                 ),
                 revision=revision,
             )
         since = await conversation_repo.get_messages_after(
             self.db, conversation_id, ordinal=conversation.summary_ordinal, limit=limit
         )
+        if before_ordinal is not None:
+            # The summary is older than the turn being retried, so only the
+            # rows between the two belong in this history. The window's loss
+            # profile is a normal turn's: `get_messages_after` already kept
+            # the most recent `limit`, and dropping the tail keeps its prefix.
+            since = [row for row in since if row.ordinal < before_ordinal]
         spoken = await self._spoken(since, conversation)
         history = [
             *replayed,
@@ -330,9 +365,27 @@ class ConversationService:
         limit: int,
         exclude_message_id: UUID | None,
         conversation: Conversation | None,
+        before_message_id: UUID | None = None,
     ) -> list[ModelMessage]:
-        """The recent window, which is what every surface read before #49."""
-        rows = await conversation_repo.get_recent_messages(self.db, conversation_id, limit=limit)
+        """The recent window, which is what every surface read before #49.
+
+        With `before_message_id` it is the recent window *before that turn*:
+        the newest `limit` messages older than it, still oldest first - the
+        thread as it stood when that turn was asked.
+        """
+        if before_message_id is not None:
+            rows = await conversation_repo.get_messages_by_conversation(
+                self.db,
+                conversation_id,
+                before=before_message_id,
+                latest=True,
+                limit=limit,
+                fresh=True,
+            )
+        else:
+            rows = await conversation_repo.get_recent_messages(
+                self.db, conversation_id, limit=limit
+            )
         spoken = await self._spoken(rows, conversation)
         history = build_message_history(_as_history(rows, exclude_message_id, spoken))
         return await self._restore_capability_loads(history, rows, exclude_message_id)

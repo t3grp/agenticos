@@ -128,6 +128,15 @@ subset of the permissions here, never more than its issuer holds now.
     `secrets:view` on that key
     ([Models](models.md#changing-a-profiles-key-or-endpoint)).
 
+    Attaching a secret to a sandbox connection, or probing a service with one,
+    needs `secrets:view` on that secret too: the connection spends the key for
+    the whole organization, so naming somebody else's private key must be
+    refused at attach time. The check is deliberately *not* inside
+    `resolve_for_bindings`: at run time the runner resolves the bindings of a
+    published spec for whoever may run the agent, and the spec's secrets were
+    checked against the publisher at publish. The vault opens for a run; the
+    gate is who may name the secret in a write.
+
     `connections:manage` is also what lists the organization's sync integrations:
     the sources of every base, with their configuration, the vault secret each
     uses and their last error, and the unassigned ones. `/org/integrations`
@@ -287,6 +296,11 @@ A person holding several grants on one row - their own and their groups' - gets
 the highest of them. The database holds a grant to exactly one subject, a person
 or a group, and a group from another organization reaches nobody here even if a
 row named one.
+
+A share can carry an expiry: past it, the grant gives nothing, without anyone
+deleting the row - the Sharing panel still lists it, so the owner can renew or
+revoke it. Removing a member revokes their direct grants with the membership,
+so inviting them back wakes none of them.
 
 The table is deliberately generic - `resource_type` + `resource_id`, with no
 foreign key to the target - because agents, collections, skills, context files,

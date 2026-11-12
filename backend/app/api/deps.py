@@ -83,6 +83,7 @@ Redis = Annotated[RedisClient, Depends(get_redis)]
 
 
 from app.services.mentions import MentionService
+from app.services.mfa import MfaService
 from app.services.personal_data import PersonalDataService
 from app.services.browser_sign_in import BrowserSignInService
 from app.services.user import UserService
@@ -121,6 +122,11 @@ def get_session_service(db: DBSession) -> SessionService:
     return SessionService(db)
 
 
+def get_mfa_service(db: DBSession) -> MfaService:
+    """Create MfaService instance with database session."""
+    return MfaService(db)
+
+
 def get_impersonation_service(db: DBSession) -> ImpersonationService:
     """Create ImpersonationService instance with database session."""
     return ImpersonationService(db)
@@ -139,6 +145,7 @@ def get_device_pairing_service(redis: Redis, db: DBSession) -> DevicePairingServ
 UserSvc = Annotated[UserService, Depends(get_user_service)]
 PersonalDataSvc = Annotated[PersonalDataService, Depends(get_personal_data_service)]
 SessionSvc = Annotated[SessionService, Depends(get_session_service)]
+MfaSvc = Annotated[MfaService, Depends(get_mfa_service)]
 ImpersonationSvc = Annotated[ImpersonationService, Depends(get_impersonation_service)]
 OAuthExchangeSvc = Annotated[OAuthExchangeService, Depends(get_oauth_exchange_service)]
 DevicePairingSvc = Annotated[DevicePairingService, Depends(get_device_pairing_service)]

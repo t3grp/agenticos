@@ -144,7 +144,11 @@ export function RunTable({
       header: t("status"),
       className: "pl-5",
       cell: (run) => (
-        <div className="space-y-1">
+        // The row has no room for the reason a run stopped - a sentence in
+        // this cell would make every row taller - so it rides on the hover
+        // instead: the detail view carries the full rendering, this is the
+        // one-line form for a list being scanned.
+        <div className="space-y-1" title={run.error ?? undefined}>
           <div className="flex items-center gap-1.5">
             <RunStatusBadge status={run.status} />
             {/* The reason this list is worth reading top to bottom: an

@@ -2685,6 +2685,109 @@ class TestTheThreadAModelIsGivenBack:
 
         assert history == []
 
+    async def test_a_retry_reads_the_thread_as_it_stood_when_asked(self, monkeypatch):
+        """A retry re-issues an earlier turn as the prompt, so the history must
+        stop before it: the turn itself and the failed attempt after it are
+        not read back, and the window is the newest turns before the turn."""
+        conversation = MockConversation()
+        prompt = self._row("user", "pay the invoice")
+        prompt.ordinal = 5
+        prompt.conversation_id = conversation.id
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
+        )
+        monkeypatch.setattr(
+            conversation_repo, "messages_by_id", AsyncMock(return_value={prompt.id: prompt})
+        )
+        window = AsyncMock(
+            return_value=[self._row("user", "hi"), self._row("assistant", "hello")]
+        )
+        monkeypatch.setattr(conversation_repo, "get_messages_by_conversation", window)
+
+        history = await ConversationService(AsyncMock()).model_history(
+            conversation.id, limit=50, before_message_id=prompt.id
+        )
+
+        assert [part.content for message in history for part in message.parts] == [
+            "hi",
+            "hello",
+        ]
+        assert window.await_args.kwargs["before"] == prompt.id
+        assert window.await_args.kwargs["latest"] is True
+
+    async def test_a_retry_after_a_summary_keeps_only_what_preceded_the_turn(
+        self, monkeypatch
+    ):
+        """The summary half is older than the turn, so it stands; the rows since
+        it are cut at the turn, dropping the question and its failed answer."""
+        conversation = MockConversation()
+        conversation.summary_messages = ModelMessagesTypeAdapter.dump_python(
+            [ModelRequest(parts=[SystemPromptPart(content="Summary.")])], mode="json"
+        )
+        conversation.summary_ordinal = 2
+        prompt = self._row("user", "pay the invoice")
+        prompt.ordinal = 5
+        prompt.conversation_id = conversation.id
+        failed = self._row("assistant", "Working on it, half done")
+        failed.ordinal = 6
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
+        )
+        monkeypatch.setattr(
+            conversation_repo, "messages_by_id", AsyncMock(return_value={prompt.id: prompt})
+        )
+        monkeypatch.setattr(
+            conversation_repo, "get_messages_after", AsyncMock(return_value=[prompt, failed])
+        )
+
+        history = await ConversationService(AsyncMock()).model_history(
+            conversation.id, limit=50, before_message_id=prompt.id
+        )
+
+        assert [part.content for message in history for part in message.parts] == ["Summary."]
+
+    async def test_a_summary_covering_the_turn_is_dropped_for_a_retry(self, monkeypatch):
+        """A summary taken at or after the turn already contains it, so it
+        cannot stand as the history before it - the transcript half reads the
+        window before the turn instead."""
+        conversation = MockConversation()
+        conversation.summary_messages = ModelMessagesTypeAdapter.dump_python(
+            [ModelRequest(parts=[SystemPromptPart(content="Summary.")])], mode="json"
+        )
+        conversation.summary_ordinal = 7
+        prompt = self._row("user", "pay the invoice")
+        prompt.ordinal = 5
+        prompt.conversation_id = conversation.id
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
+        )
+        monkeypatch.setattr(
+            conversation_repo, "messages_by_id", AsyncMock(return_value={prompt.id: prompt})
+        )
+        window = AsyncMock(return_value=[self._row("user", "hi")])
+        monkeypatch.setattr(conversation_repo, "get_messages_by_conversation", window)
+
+        history = await ConversationService(AsyncMock()).model_history(
+            conversation.id, limit=50, before_message_id=prompt.id
+        )
+
+        assert [part.content for message in history for part in message.parts] == ["hi"]
+        assert window.await_args.kwargs["before"] == prompt.id
+
+    async def test_a_retry_names_a_turn_that_is_not_in_the_thread(self, monkeypatch):
+        """The boundary has to be a message of this conversation: a foreign id
+        would otherwise read back an empty history and answer from nothing."""
+        conversation = MockConversation()
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
+        )
+        monkeypatch.setattr(conversation_repo, "messages_by_id", AsyncMock(return_value={}))
+
+        with pytest.raises(NotFoundError):
+            await ConversationService(AsyncMock()).model_history(
+                conversation.id, limit=50, before_message_id=uuid4()
+            )
+
     async def test_a_summary_is_recorded_against_everything_written_so_far(self, monkeypatch):
         """Including the turn that produced it. Stored short of the answer, the
         next turn would replay the summary and the answer already inside it."""

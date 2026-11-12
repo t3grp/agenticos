@@ -333,6 +333,7 @@ nav:
           - council.md
           - babysit-pr.md
           - sol-loop.md
+          - eval-tool-tuning.md
           - context.md
           - virtual-tables.md
           - workflows.md

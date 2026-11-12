@@ -1141,6 +1141,12 @@
     "loginFailedPleaseTry": "Login failed. Please try again.",
     "loginTimedOut": "The server did not answer in time. Check your connection and try again.",
     "loginSuccess": "Successfully logged in",
+    "mfaPrompt": "Your password checked out. Enter the code from your authenticator app to finish signing in.",
+    "mfaCode": "Authenticator code",
+    "mfaCodePlaceholder": "123456",
+    "mfaCodeHint": "Six digits from your authenticator app, or a recovery code if you lost it.",
+    "mfaVerify": "Verify and sign in",
+    "mfaBack": "Back to sign in",
     "emailChange": {
       "confirming": "Confirming this address…",
       "errorHeading": "Couldn't confirm this address",
@@ -1749,6 +1755,7 @@
       "delegating": "Delegating",
       "edited": "{named, select, no {Edited…} other {Edited {subject}}}",
       "editing": "{named, select, no {Editing…} other {Editing {subject}}}",
+      "evalToolTuning": "Eval tool tuning",
       "executed": "{named, select, no {Ran…} other {Ran {subject}}}",
       "executing": "{named, select, no {Running…} other {Running {subject}}}",
       "failedToLoadSkill": "Failed to load skill.",
@@ -1803,6 +1810,7 @@
       "readingPlan": "Reading the plan",
       "readingSkillFiles": "Reading a skill's files",
       "readingToolResult": "Reading a stored tool result",
+      "recordingEvalToolTuning": "Scoring a tool against eval cases",
       "relevanceScore": "Relevance: {score}",
       "removeStep": "Remove Step",
       "removingStep": "Removing a step",
@@ -7177,6 +7185,12 @@
       "solLoopFinding": "{id} [{severity}] {location} — {claim}",
       "solLoopFix": "Fix: {fix}",
       "solLoopOutcome": "Outcome: {outcome}",
+      "evalToolTuningRuns": "{count, plural, =1 {1 eval tool-tuning run} other {# eval tool-tuning runs}}",
+      "evalToolTuningRun": "{tool} · {passed}/{total} passed",
+      "evalToolTuningDominantFailure": "Most common failure: {failure}",
+      "evalToolTuningCase": "{name} · {classification}",
+      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposalEvidence": "Evidence: {evidence} · {status}",
       "cacheBust": "cache bust",
       "cacheExpired": "cache expired",
       "cacheBustDetail": "{missed, number} cached tokens not read back from the cache - something before them in the prompt changed",
@@ -7186,6 +7200,8 @@
       "resizeRunDetail": "Resize the run detail",
       "resumeFailed": "The run could not be resumed.",
       "resumeRun": "Resume",
+      "retryFailed": "The run could not be retried.",
+      "retryRun": "Retry",
       "runCouldNotBeRead": "That run could not be read",
       "runCount": "{count, plural, =1 {1 run} other {# runs}}",
       "runDetail": "Run detail",
@@ -7193,6 +7209,7 @@
       "runHistoryCouldNot": "Run history could not be read",
       "runHistoryDescription": "Every run records the agent <em>version</em> it executed, so what happened last week stays answerable after the agent has been rewritten.",
       "runResumed": "Run resumed - the agent picked up where it parked.",
+      "runRetried": "Run retried - the agent is answering the same question again.",
       "runs": "Runs",
       "runs2": "Runs",
       "runsViewIsMissing": "Reading run history and spend takes the runs:view permission, which this account does not hold. Nothing failed - the page did not ask.",
@@ -7246,6 +7263,7 @@
       "versionsCaption": "The last 30 days, so a version can show fewer runs than the whole history in the table below. Completed counts every status - nothing excluded, so it reads the same as the dashboard's Outcomes donut. Runs include what this version did as a delegate.",
       "versionsTitle": "By version",
       "whatWentIn": "What went in",
+      "whyItStopped": "Why it stopped",
       "whatYourAgentsDid2": "What your agents did, what it cost, and what is waiting on a person.",
       "whereTheMoneyWent": "Where the money went",
       "whoIsSpendingCouldNotBeRead": "Who is spending could not be read.",
@@ -7380,6 +7398,27 @@
       "irreversible": "This is irreversible",
       "manageYourAccountIntegrations": "Manage your account, integrations, notifications, and slash commands.",
       "memberSince": "Member since {date}",
+      "mfaBack": "Back",
+      "mfaCodeLabel": "Authenticator code",
+      "mfaCopied": "Copied!",
+      "mfaCopy": "Copy",
+      "mfaCodesSaved": "I have saved my recovery codes",
+      "mfaDescription": "A second step at sign-in, from your authenticator app.",
+      "mfaDisable": "Turn off two-factor authentication",
+      "mfaDisableHint": "Enter a code from your authenticator app - or a recovery code - to turn it off.",
+      "mfaEnable": "Enable two-factor authentication",
+      "mfaEnabled": "Two-factor authentication is on. Sign-in asks for a code from your authenticator app after your password.",
+      "mfaFailed": "Could not load two-factor authentication status.",
+      "mfaOff": "Two-factor authentication is off. Your password alone opens the console.",
+      "mfaRecoveryHint": "Shown once. Each code signs you in once, if your authenticator is lost.",
+      "mfaRecoveryTitle": "Recovery codes - save these now",
+      "mfaRegenerate": "Replace recovery codes",
+      "mfaRegenerateHint": "Enter a code to replace your recovery codes. The old set stops working at once.",
+      "mfaRetry": "Try again",
+      "mfaSecret": "Secret - enter it by hand in your authenticator app",
+      "mfaSetup": "Set up two-factor authentication",
+      "mfaSetupHint": "Add the secret below to your authenticator app, then enter the code it shows to switch it on.",
+      "mfaTitle": "Two-factor authentication",
       "newPassword": "New password",
       "newPasswordMustBe": "New password must be at least 8 characters",
       "noBillingEmail": "No billing email.",
@@ -11211,9 +11250,7 @@
     "expires": "Expires",
     "expiry": {
       "30": "In 30 days",
-      "90": "In 90 days",
-      "365": "In a year",
-      "never": "Never"
+      "90": "In 90 days"
     },
     "create": "Create",
     "done": "Done",
@@ -11623,6 +11660,14 @@
       "example2": "Follow the checklist for a new client",
       "needs": "Skills, written under Skills and picked in this panel.",
       "never": "Never changes a skill; the agent only reads it."
+    },
+    "eval_tool_tuning": {
+      "name": "Eval tool tuning",
+      "does": "Scores one tool against eval cases that are already judged, and drafts one tuning proposal per failure class: prompt wording, tool parameters, or tool choice.",
+      "example1": "Why does search keep missing the total?",
+      "example2": "Tune the lookup tool against last week's cases",
+      "needs": "A set of judged eval cases, from the failure-learning loop's eval tries.",
+      "never": "Never judges an answer itself and never applies a proposal: drafts are for a human to approve."
     },
     "sol_loop": {
       "name": "Sol-loop",
@@ -12114,6 +12159,12 @@
       "include_execute": {
         "title": "Allow shell commands",
         "description": "Whether the agent may run shell commands. Turning it off leaves the file tools and removes the shell entirely, rather than gating it."
+      }
+    },
+    "eval_tool_tuning": {
+      "max_tuning_runs": {
+        "title": "Tuning runs at most",
+        "description": "How many tuning runs one run may record. A fresh tuning run after a proposal is applied is a new run, and the cap is what stops repeated scoring turning into scope creep."
       }
     },
     "sol_loop": {

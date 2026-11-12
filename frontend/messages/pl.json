@@ -290,6 +290,12 @@
     "loginFailedPleaseTry": "Logowanie nie powiodło się. Spróbuj ponownie.",
     "loginTimedOut": "Serwer nie odpowiedział na czas. Sprawdź połączenie i spróbuj ponownie.",
     "loginSuccess": "Zalogowano pomyślnie",
+    "mfaPrompt": "Hasło jest poprawne. Wprowadź kod z aplikacji uwierzytelniającej, aby dokończyć logowanie.",
+    "mfaCode": "Kod uwierzytelniający",
+    "mfaCodePlaceholder": "123456",
+    "mfaCodeHint": "Sześć cyfr z aplikacji uwierzytelniającej lub kod odzyskiwania, jeśli ją utracono.",
+    "mfaVerify": "Zweryfikuj i zaloguj się",
+    "mfaBack": "Wróć do logowania",
     "emailChange": {
       "confirming": "Potwierdzanie tego adresu…",
       "errorHeading": "Nie udało się potwierdzić tego adresu",
@@ -767,6 +773,7 @@
       "readingPlan": "Czyta plan",
       "readingSkillFiles": "Czyta pliki skilla",
       "readingToolResult": "Czyta zapisany wynik narzędzia",
+      "recordingEvalToolTuning": "Ocenia narzędzie na podstawie przypadków ewaluacyjnych",
       "relevanceScore": "Trafność: {score}",
       "removeStep": "Usuń krok",
       "removingStep": "Usuwa krok",
@@ -932,6 +939,7 @@
       "delegating": "Deleguje",
       "edited": "{named, select, no {Edytował…} other {Edytował {subject}}}",
       "editing": "{named, select, no {Edytuje…} other {Edytuje {subject}}}",
+      "evalToolTuning": "Dostrajanie narzędzi na podstawie ewaluacji",
       "executed": "{named, select, no {Uruchomił…} other {Uruchomił {subject}}}",
       "executing": "{named, select, no {Uruchamia…} other {Uruchamia {subject}}}",
       "failedToLoadSkill": "Nie udało się wczytać skilla.",
@@ -3268,6 +3276,12 @@
       "solLoopFinding": "{id} [{severity}] {location} — {claim}",
       "solLoopFix": "Poprawka: {fix}",
       "solLoopOutcome": "Wynik: {outcome}",
+      "evalToolTuningRuns": "{count, plural, one {1 przebieg dostrajania narzędzi} few {# przebiegi dostrajania narzędzi} many {# przebiegów dostrajania narzędzi} other {# przebiegu dostrajania narzędzi}}",
+      "evalToolTuningRun": "{tool} · {passed}/{total} zdanych",
+      "evalToolTuningDominantFailure": "Najczęstszy błąd: {failure}",
+      "evalToolTuningCase": "{name} · {classification}",
+      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposalEvidence": "Dowody: {evidence} · {status}",
       "cacheBust": "cache zerwany",
       "cacheExpired": "cache wygasł",
       "cacheBustDetail": "{missed, number} tokenów z cache nieodczytanych z cache - coś przed nimi w prompcie się zmieniło",
@@ -3277,6 +3291,8 @@
       "resizeRunDetail": "Zmień rozmiar szczegółów runu",
       "resumeFailed": "Nie udało się wznowić runu.",
       "resumeRun": "Wznów",
+      "retryFailed": "Nie można było ponowić runu.",
+      "retryRun": "Ponów",
       "runCouldNotBeRead": "Nie udało się odczytać tego runu",
       "runCount": "{count, plural, one {1 run} few {# runy} many {# runów} other {# runu}}",
       "runDetail": "Szczegóły runu",
@@ -3284,6 +3300,7 @@
       "runHistoryCouldNot": "Nie udało się odczytać historii runów",
       "runHistoryDescription": "Każdy run zapisuje <em>wersję</em> agenta, którą wykonał, więc to, co się działo w zeszłym tygodniu, da się wyjaśnić po przepisaniu agenta.",
       "runResumed": "Run wznowiony - agent podjął pracę tam, gdzie się zatrzymał.",
+      "runRetried": "Run ponowiony – agent odpowiada na to samo pytanie jeszcze raz.",
       "runs": "Runy",
       "runs2": "Runy",
       "runsViewIsMissing": "Czytanie historii runów i wydatków wymaga uprawnienia runs:view, którego to konto nie ma. Nic się nie zepsuło - strona nie zapytała.",
@@ -3336,6 +3353,7 @@
       "versionsCaption": "Ostatnie 30 dni, więc wersja może pokazywać mniej runów niż cała historia w tabeli poniżej. Ukończone liczy każdy status - nic nie jest wykluczone, więc czyta się tak samo jak donut Wyników na dashboardzie. Runy obejmują to, co ta wersja zrobiła jako delegat.",
       "versionsTitle": "Według wersji",
       "whatWentIn": "Co trafiło do modelu",
+      "whyItStopped": "Dlaczego się zatrzymał",
       "whatYourAgentsDid2": "Co zrobili Twoi agenci, ile to kosztowało i co czeka na człowieka.",
       "whereTheMoneyWent": "Na co poszły pieniądze",
       "whoIsSpendingCouldNotBeRead": "Nie udało się odczytać, kto wydaje.",
@@ -3513,6 +3531,27 @@
       "irreversible": "Tego nie da się cofnąć",
       "manageYourAccountIntegrations": "Zarządzaj kontem, integracjami, powiadomieniami i komendami slash.",
       "memberSince": "Członek od {date}",
+      "mfaBack": "Wróć",
+      "mfaCodeLabel": "Kod uwierzytelniający",
+      "mfaCopied": "Skopiowano!",
+      "mfaCopy": "Kopiuj",
+      "mfaCodesSaved": "Zapisałem(-am) kody odzyskiwania",
+      "mfaDescription": "Drugi krok przy logowaniu, z aplikacji uwierzytelniającej.",
+      "mfaDisable": "Wyłącz uwierzytelnianie dwuskładnikowe",
+      "mfaDisableHint": "Wprowadź kod z aplikacji uwierzytelniającej - lub kod odzyskiwania - aby je wyłączyć.",
+      "mfaEnable": "Włącz uwierzytelnianie dwuskładnikowe",
+      "mfaEnabled": "Uwierzytelnianie dwuskładnikowe jest włączone. Logowanie poprosi o kod z aplikacji uwierzytelniającej po haśle.",
+      "mfaFailed": "Nie można wczytać statusu uwierzytelniania dwuskładnikowego.",
+      "mfaOff": "Uwierzytelnianie dwuskładnikowe jest wyłączone. Samo hasło otwiera konsolę.",
+      "mfaRecoveryHint": "Pokazywane raz. Każdy kod loguje raz, jeśli aplikacja uwierzytelniająca zostanie utracona.",
+      "mfaRecoveryTitle": "Kody odzyskiwania - zapisz je teraz",
+      "mfaRegenerate": "Zastąp kody odzyskiwania",
+      "mfaRegenerateHint": "Wprowadź kod, aby zastąpić kody odzyskiwania. Stary zestaw przestaje działać od razu.",
+      "mfaRetry": "Spróbuj ponownie",
+      "mfaSecret": "Sekret - wprowadź go ręcznie w aplikacji uwierzytelniającej",
+      "mfaSetup": "Skonfiguruj uwierzytelnianie dwuskładnikowe",
+      "mfaSetupHint": "Dodaj poniższy sekret do aplikacji uwierzytelniającej, a następnie wprowadź wyświetlany kod, aby je włączyć.",
+      "mfaTitle": "Uwierzytelnianie dwuskładnikowe",
       "newPassword": "Nowe hasło",
       "newPasswordMustBe": "Nowe hasło musi mieć co najmniej 8 znaków",
       "noBillingEmail": "Bez e-maili rozliczeniowych.",
@@ -9386,6 +9425,12 @@
         "description": "Czy agent może uruchamiać polecenia powłoki. Wyłączenie zostawia narzędzia plikowe i całkowicie usuwa powłokę, zamiast ją blokować."
       }
     },
+    "eval_tool_tuning": {
+      "max_tuning_runs": {
+        "title": "Najwyżej przebiegów dostrajania",
+        "description": "Ile przebiegów dostrajania może zapisać jeden run. Świeży przebieg po zastosowaniu propozycji to nowy przebieg, a limit powstrzymuje powtarzane ocenianie przed rozrostem zakresu."
+      }
+    },
     "sol_loop": {
       "reviewer": {
         "title": "Recenzent",
@@ -11933,9 +11978,7 @@
     "expires": "Wygasa",
     "expiry": {
       "30": "Za 30 dni",
-      "90": "Za 90 dni",
-      "365": "Za rok",
-      "never": "Nigdy"
+      "90": "Za 90 dni"
     },
     "create": "Utwórz",
     "done": "Gotowe",
@@ -12334,6 +12377,14 @@
       "example2": "Przejść checklistę dla nowego klienta",
       "needs": "Skille, napisane w sekcji Skille i wybrane w tym panelu.",
       "never": "Nigdy nie zmienia skilla; agent tylko go czyta."
+    },
+    "eval_tool_tuning": {
+      "name": "Dostrajanie narzędzi na podstawie ewaluacji",
+      "does": "Ocenia jedno narzędzie na podstawie już ocenionych przypadków ewaluacyjnych i przygotowuje jedną propozycję dostrojenia na klasę błędów: treść promptu, parametry narzędzia lub wybór narzędzia.",
+      "example1": "Dlaczego wyszukiwanie wciąż pomija sumę?",
+      "example2": "Dostrój narzędzie wyszukiwania na podstawie przypadków z zeszłego tygodnia",
+      "needs": "Zestaw ocenionych przypadków ewaluacyjnych z prób ewaluacyjnych pętli uczenia się na błędach.",
+      "never": "Nigdy nie ocenia odpowiedzi samodzielnie i nigdy nie stosuje propozycji: szkice są do zatwierdzenia przez człowieka."
     },
     "sol_loop": {
       "name": "Sol-loop",

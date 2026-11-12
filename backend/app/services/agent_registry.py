@@ -984,8 +984,9 @@ def _window_of(profile: ModelProfile | None) -> int | None:
 
     The profile's recorded number first: it is what the provider's own listing
     published when somebody added the model, and it beats the pricing registry -
-    which records 1,000,000 for `anthropic:claude-sonnet-4-5` against a real
-    200,000, wrong in the direction that lets a run reach the ceiling.
+    a third-party bundle that has recorded a window too high before
+    (`anthropic:claude-sonnet-4-5`, #773), wrong in the direction that lets a
+    run reach the ceiling.
 
     The registry is the fallback for a profile older than that column. Nothing is
     invented past it: a conservative default here would be drawn as a percentage,

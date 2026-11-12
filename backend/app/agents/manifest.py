@@ -167,6 +167,11 @@ class RunRecorder:
     #: with the verdict and every finding, so the ledger is rendered from what
     #: the run actually heard rather than remembered.
     sol_loop_rounds: list[dict[str, Any]] = field(default_factory=list)
+    #: Each eval-driven tool-tuning run the run recorded (#11) - one entry per
+    #: tuning run, with the tool's score, every case's classification, and
+    #: the draft proposals, so the tuning is read from what the run actually
+    #: scored rather than remembered.
+    eval_tool_tuning_runs: list[dict[str, Any]] = field(default_factory=list)
 
     def observe_request(
         self,
@@ -416,6 +421,7 @@ def as_payload(recorder: RunRecorder) -> dict[str, Any]:
         "council_rounds": list(recorder.council_rounds),
         "babysit_pr_events": list(recorder.babysit_pr_events),
         "sol_loop_rounds": list(recorder.sol_loop_rounds),
+        "eval_tool_tuning_runs": list(recorder.eval_tool_tuning_runs),
     }
 
 
@@ -440,6 +446,11 @@ MAX_RECORDED_SOL_LOOP_ROUNDS = 10
 its size ceiling. A capability caps rounds per agent at five, so ten is two
 agents' worth of reviewing in one run."""
 
+MAX_RECORDED_EVAL_TOOL_TUNING_RUNS = 10
+"""How many eval-driven tool-tuning runs a run's manifest keeps, so it stays
+within its size ceiling. A capability caps tuning runs per agent at five, so
+ten is two agents' worth of tuning in one run."""
+
 
 def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """This segment's payload with what earlier segments of the run recorded and it cannot.
@@ -455,23 +466,24 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     earlier_scripts = previous.get("code_runs") or []
     earlier_council_rounds = previous.get("council_rounds") or []
     earlier_events = previous.get("babysit_pr_events") or []
-    earlier_sol_loop_rounds = previous.get("sol_loop_rounds") or []
-    if not any(
-        (earlier_reviews, earlier_scripts, earlier_council_rounds, earlier_events, earlier_sol_loop_rounds)
-    ):
+    earlier_rounds = previous.get("sol_loop_rounds") or []
+    earlier_tuning = previous.get("eval_tool_tuning_runs") or []
+    if not any((earlier_reviews, earlier_scripts, earlier_events, earlier_rounds, earlier_tuning)):
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
     council_rounds = [*earlier_council_rounds, *payload.get("council_rounds", [])]
     events = [*earlier_events, *payload.get("babysit_pr_events", [])]
-    sol_loop_rounds = [*earlier_sol_loop_rounds, *payload.get("sol_loop_rounds", [])]
+    rounds = [*earlier_rounds, *payload.get("sol_loop_rounds", [])]
+    tuning = [*earlier_tuning, *payload.get("eval_tool_tuning_runs", [])]
     return {
         **payload,
         "reviews": reviews[:MAX_RECORDED_REVIEWS],
         "code_runs": scripts[:RECORDED_SCRIPTS],
         "council_rounds": council_rounds[:MAX_RECORDED_COUNCIL_ROUNDS],
         "babysit_pr_events": events[:MAX_RECORDED_BABYSIT_PR_EVENTS],
-        "sol_loop_rounds": sol_loop_rounds[:MAX_RECORDED_SOL_LOOP_ROUNDS],
+        "sol_loop_rounds": rounds[:MAX_RECORDED_SOL_LOOP_ROUNDS],
+        "eval_tool_tuning_runs": tuning[:MAX_RECORDED_EVAL_TOOL_TUNING_RUNS],
     }
 
 
