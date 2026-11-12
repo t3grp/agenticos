@@ -92,6 +92,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Agentennachrichten | `agent_messages` |
 | Einen Befehl beobachten | `monitor` |
 | Babysit PR | `babysit_pr` |
+| Nachweis-Szenario | `proof_scenario` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
 | Sol-loop | `sol_loop` |
