@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Spinner } from "@/components/ui";
@@ -24,21 +24,28 @@ type Adopted = { user: User; access_token: string };
 // the request settles.
 const exchanges = new Map<string, Promise<Adopted>>();
 
-function createMfaChallengeStore() {
+export function createMfaChallengeStore() {
   let snapshot: MfaChallenge | null | undefined;
   return {
     subscribe: () => () => {},
     getSnapshot: (): MfaChallenge | null => {
       if (snapshot !== undefined) return snapshot;
       const mfaToken = new URLSearchParams(window.location.hash.slice(1)).get("mfa_token");
-      snapshot = mfaToken
-        ? {
-            mfa_required: true,
-            mfa_token: mfaToken,
-            expires_in: 300,
-            return_to: takeReturnTo(),
-          }
-        : null;
+      if (mfaToken) {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          window.location.pathname + window.location.search,
+        );
+        snapshot = {
+          mfa_required: true,
+          mfa_token: mfaToken,
+          expires_in: 300,
+          return_to: takeReturnTo(),
+        };
+      } else {
+        snapshot = null;
+      }
       return snapshot;
     },
     getServerSnapshot: () => null,
@@ -67,13 +74,17 @@ export default function AuthCallbackPage() {
   const t = useTranslations("pages.root");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [mfaChallengeStore] = useState(createMfaChallengeStore);
   // Two sources, one derived value. What the provider sent is already in the
   // URL and needs no state at all; the exchange failing later does, but only as
   // a flag - keeping the message here means neither is written from an effect
   // synchronously, and the URL case is shown a render earlier than it was.
   const [exchangeFailed, setExchangeFailed] = useState(false);
-  const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge | null>(null);
-  const mfaChallengeRef = useRef<MfaChallenge | null>(null);
+  const mfaChallenge = useSyncExternalStore(
+    mfaChallengeStore.subscribe,
+    mfaChallengeStore.getSnapshot,
+    mfaChallengeStore.getServerSnapshot,
+  );
   // i18n-exempt: a sentinel nothing renders - what the branch below shows is
   // `t("signInFailedRedirecting")`, and the provider's own code is discarded the same way.
   const error = searchParams.get("error") ?? (exchangeFailed ? "Sign-in failed" : null);
@@ -81,34 +92,9 @@ export default function AuthCallbackPage() {
   const adoptSession = useAdoptSession();
 
   useEffect(() => {
-    // A fragment is not sent to the server. The OAuth callback uses it to
-    // carry a short-lived MFA challenge to this page without exposing it in
-    // access logs or referrers. Remove it before rendering the form.
-    const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const mfaToken = fragment.get("mfa_token");
-    if (mfaToken) {
-      const challenge: MfaChallenge = {
-        mfa_required: true,
-        mfa_token: mfaToken,
-        expires_in: 300,
-        return_to: takeReturnTo(),
-      };
-      mfaChallengeRef.current = challenge;
-      window.history.replaceState(
-        window.history.state,
-        "",
-        window.location.pathname + window.location.search,
-      );
-      queueMicrotask(() => setMfaChallenge(challenge));
-      return;
-    }
-    // Effects are replayed in Strict Mode; the fragment has already been
-    // cleared, so retain the challenge in memory across that replay.
-    if (mfaChallengeRef.current) {
-      const challenge = mfaChallengeRef.current;
-      queueMicrotask(() => setMfaChallenge(challenge));
-      return;
-    }
+    // Read/strip the challenge synchronously through the external store before
+    // its form can render, including when hydration starts from the server snapshot.
+    if (mfaChallenge) return;
 
     const code = searchParams.get("code");
     const errParam = searchParams.get("error");
