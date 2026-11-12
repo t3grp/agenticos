@@ -567,6 +567,8 @@ oauth2_scheme_optional = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
 )
 
+_RECENT_AUTH_MAX_AGE_SECONDS = 300
+
 
 async def _authenticate_api_key(request: Request, token: str, api_keys: ApiKeyService) -> User:
     """Resolve an organization key to its issuer, on a public route only (#1794).
@@ -655,6 +657,23 @@ async def get_current_user(
 # resolved per row by `resolve_access` - never a role name on a route. The one
 # global privilege is `CurrentAppAdmin` below, which gates the deployment's own
 # administration rather than a tenant's.
+def require_recent_authentication(
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> None:
+    """Require an access token minted within five minutes of authentication."""
+    payload = verify_token(token)
+    auth_time = payload.get("auth_time") if payload else None
+    if (
+        payload is None
+        or payload.get("type") != "access"
+        or isinstance(auth_time, bool)
+        or not isinstance(auth_time, (int, float))
+        or not 0 <= datetime.now(UTC).timestamp() - auth_time <= _RECENT_AUTH_MAX_AGE_SECONDS
+    ):
+        raise AuthenticationError(message="Please sign in again before changing MFA settings")
+
+
+RecentAuth = Annotated[None, Depends(require_recent_authentication)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
