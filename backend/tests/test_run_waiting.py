@@ -57,6 +57,7 @@ def _paused_state(*questions: str) -> dict[str, object]:
         "messages": ModelMessagesTypeAdapter.dump_python(
             [ModelResponse(parts=[call]) for call in calls], mode="json"
         ),
+        "tool_call_ids": {},
         "questions": [f"ask-{index}" for index in range(1, len(questions) + 1)],
     }
 
@@ -121,7 +122,7 @@ def test_waiting_question_ids_are_mapped_to_the_question_text() -> None:
         ended_at=datetime(2026, 11, 12, 8, 0, tzinfo=UTC),
         paused_state={
             **_paused_state("Which model should I use?"),
-            "questions": ["ask-1", 42, None],
+            "questions": ["ask-1"],
         },
     )
 

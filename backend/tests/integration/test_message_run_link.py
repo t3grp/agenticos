@@ -480,7 +480,15 @@ class TestWhichConversationsAreAtWork:
                             parts=[
                                 ToolCallPart(
                                     "ask_user_question",
-                                    {"questions": [{"question": "Which model should I use?"}]},
+                                    {
+                                        "questions": [
+                                            {
+                                                "header": "Model",
+                                                "question": "Which model should I use?",
+                                                "options": [{"label": "A"}, {"label": "B"}],
+                                            }
+                                        ]
+                                    },
                                     tool_call_id="ask-1",
                                 )
                             ]
@@ -488,6 +496,7 @@ class TestWhichConversationsAreAtWork:
                     ],
                     mode="json",
                 ),
+                "tool_call_ids": {},
                 "questions": ["ask-1"],
             },
         )

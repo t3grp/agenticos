@@ -34,6 +34,7 @@ import {
 import { useAuthStore } from "@/stores";
 import { ApiError } from "@/lib/api-client";
 import { ROUTES } from "@/lib/constants";
+import { modelShortName } from "@/lib/model-profiles";
 import { cn, formatDateTime, formatRunDuration, timeAgo, timeUntil } from "@/lib/utils";
 import { Perm } from "@/types/permissions";
 import type { AgentRun } from "@/types/runs";
@@ -335,6 +336,23 @@ export function FocusedRun({
             {t("cacheSplit", {
               read: run.cache_read_tokens ?? 0,
               write: run.cache_write_tokens ?? 0,
+            })}
+          </p>
+        )}
+
+        {/* Shown only when a fallback served the run: the header above names
+            the primary profile, so without this line a bad answer could not be
+            traced to the model that gave it. `serving_model` is a bare model
+            id; `modelShortName` strips the provider prefix the same way the
+            history table does. A null serving model falls back to the label
+            rather than rendering a dash. */}
+        {run.fallback_used === true && (
+          <p className="text-muted-foreground text-xs">
+            {t("servedByFallback", {
+              model:
+                run.serving_model !== null && run.serving_model !== undefined
+                  ? modelShortName(run.serving_model)
+                  : (run.model_label ?? "-"),
             })}
           </p>
         )}

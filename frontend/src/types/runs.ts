@@ -44,6 +44,14 @@ export interface AgentRun {
   status: RunStatus;
   model_label: string | null;
   /**
+   * True when a fallback model served any request of this run. Optional in
+   * the type because runs recorded before it was tracked carry no value;
+   * the API sends it on every run it writes now.
+   */
+  fallback_used?: boolean;
+  /** The bare model id that answered the last successful request, or null. */
+  serving_model?: string | null;
+  /**
    * The vendor the model actually ran at, as the provider catalog spells it -
    * what the table keys a brand mark on. `model_label` names the profile; a
    * repointed profile can change vendor under the same label. Null for runs

@@ -202,7 +202,7 @@ from app.agents.factory import AgentOutput, BuiltAgent, answer_text, build_agent
 from app.agents.failures import first_leaf, run_failure_summary
 from app.agents.hand_off import CallWorker, HandOffSpend
 from app.agents.loop_guard import ToolLoopStopped
-from app.agents.manifest import RunRecorder, as_payload, carried_over, fit
+from app.agents.manifest import RunRecorder, as_payload, carried_over, fit, resolve_fallback_use
 from app.agents.mcp import PLATFORM_MCP_PREFIX, McpSourceIdentity, unreachable_briefing
 from app.agents.model_context import ModelContextCheck, checking_model_context
 from app.agents.model_resolver import ModelRequestSpec
@@ -6117,12 +6117,29 @@ class AgentRunnerService:
                 if agent_id == prepared.run.agent_id
             ),
         )
+        # Which model served this run, from the models its own requests
+        # recorded - never from `model_label`, which is a display name. A
+        # resumed run is the same row, built again with a fresh recorder, so
+        # what an earlier segment recorded is kept: a fallback that served
+        # before the park stays served, and a serving model already named is
+        # not replaced by a segment that recorded nothing.
+        fallback_used, serving_model = resolve_fallback_use(
+            prepared.built.recorder.requests,
+            primary_model=prepared.built.primary_model,
+            fallback_models=prepared.built.fallback_models,
+        )
+        if prepared.run.fallback_used:
+            fallback_used = True
+        if serving_model is None:
+            serving_model = prepared.run.serving_model
         if prepared.earlier_attachments_checked:
             await agent_run_repo.record_attachment_lookup(self.db, prepared.run)
         finished = await agent_run_repo.finish_run(
             self.db,
             run=prepared.run,
             status=status.value,
+            fallback_used=fallback_used,
+            serving_model=serving_model,
             input_tokens=ledger.input_tokens,
             output_tokens=ledger.output_tokens,
             cache_read_tokens=ledger.cache_read_tokens,
