@@ -161,14 +161,10 @@ class MfaService:
             return False
         candidate = hash_recovery_code(code)
         stored = user.totp_recovery_hashes or []
-        for index, digest in enumerate(stored):
-            if hmac.compare_digest(digest, candidate):
-                remaining = stored[:index] + stored[index + 1 :]
-                await user_repo.update(
-                    self.db,
-                    db_user=user,
-                    update_data={"totp_recovery_hashes": remaining},
-                )
+        if any(hmac.compare_digest(digest, candidate) for digest in stored):
+            remaining = await user_repo.consume_totp_recovery_hash(self.db, user.id, candidate)
+            if remaining is not None:
+                user.totp_recovery_hashes = remaining
                 await self._audit(user, "mfa.recovery_code_used", {"remaining": len(remaining)})
                 return True
         return verify_code(self._unseal(user), code)

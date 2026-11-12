@@ -36,9 +36,21 @@ def _user(**overrides):
 
 async def _apply_update(db, *, db_user, update_data):
     """The repository's half of an update: apply the fields to the row."""
+    if not hasattr(db, "users"):
+        db.users = {}
+    db.users[db_user.id] = db_user
     for field, value in update_data.items():
         setattr(db_user, field, value)
     return db_user
+
+
+async def _consume_recovery_hash(db, user_id, digest):
+    user = db.users[user_id]
+    stored = user.totp_recovery_hashes or []
+    if digest not in stored:
+        return None
+    user.totp_recovery_hashes = [value for value in stored if value != digest]
+    return user.totp_recovery_hashes
 
 
 @pytest.fixture
@@ -59,6 +71,10 @@ def service():
             "app.services.mfa.user_repo.update",
             new=AsyncMock(side_effect=_apply_update),
         ) as update,
+        patch(
+            "app.services.mfa.user_repo.consume_totp_recovery_hash",
+            new=AsyncMock(side_effect=_consume_recovery_hash),
+        ),
         patch("app.services.mfa.record_audit", new=AsyncMock()) as audit,
     ):
         yield MfaService(db=AsyncMock()), update, audit
