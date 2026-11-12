@@ -1,5 +1,5 @@
 ---
-source_sha: "7738d8d527e6"
+source_sha: "d90fe4bc29a0"
 ---
 
 # Der Capability-Katalog { #the-capability-catalog }
@@ -104,6 +104,7 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `channel_tools` | Infos zum Chat-Kanal | channels | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | nicht verfügbar |
 | `phone_calls` | [Telefonanrufe](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Rückfragen | utility | `ask_user_question` | — | — | auf dem Bildschirm |
+| `secret_request` | Geheimnis anfragen | utility | `request_secret` | — | — | auf dem Bildschirm |
 | `drafts` | Entwürfe | utility | `write_draft` | — | — | nicht verfügbar |
 | `follow_ups` | Nächste Schritte | utility | `suggest_next_steps`, `propose_setup` | — | — | nicht verfügbar |
 

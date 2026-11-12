@@ -156,6 +156,14 @@ class AgentRunRead(BaseSchema):
             "What the Runs view shows instead of a bare 'waiting' badge."
         ),
     )
+    waiting_secret_requests: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The names of the secrets the run's `request_secret` calls are waiting "
+            "on, in the order they were asked (#13). Empty unless the run is parked "
+            "on an answer. The values are never carried here, only the names."
+        ),
+    )
     waiting_expires_at: datetime | None = Field(
         default=None,
         description=(

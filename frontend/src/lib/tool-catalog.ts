@@ -75,6 +75,7 @@ export type ToolRenderer =
   | "context-list"
   | "plan"
   | "asked"
+  | "secret-request"
   | "delegation"
   | "workspace"
   | "memory"
@@ -186,6 +187,15 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     render: "asked",
     captionKey: "askingYou",
     displayNameKey: "askedYou",
+  },
+  // secret_request - the agent needs a credential it does not have (#13).
+  // The step draws the request - name and what it is for - and never the
+  // value, which only the card the run is parked on ever carries.
+  request_secret: {
+    kind: "read",
+    render: "secret-request",
+    captionKey: "requestingSecret",
+    displayNameKey: "requestedSecret",
   },
   // artifacts - the published page is the answer, so its card sits under the
   // answer (`publishedApps` in `message-item.tsx`) and the step stays one line,

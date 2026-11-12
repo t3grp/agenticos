@@ -3438,6 +3438,8 @@ class TestParking:
             "tool_call_ids": {"approval-1": "call-1"},
             # No question asked, so nothing waits on an answer (#2064).
             "questions": [],
+            # No secret asked for either, so nothing waits on a credential (#13).
+            "secret_requests": [],
             # A run that delegated nothing parks with an empty tree, which is what
             # makes the older two-key payload above still resumable: every field
             # added for delegation reads as "this run delegated nothing".

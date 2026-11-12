@@ -866,6 +866,7 @@ include = [
     # through publish (#2487).
     "app/services/model_outputs.py",
     "app/services/organization_secret.py",
+    "app/services/secret_requests.py",
     "app/services/openai_codex.py",
     # Same shape and the same reason as `image_models`: what a picker offers is
     # decided by filtering a data file against what the platform can actually
@@ -932,6 +933,7 @@ include = [
     "app/repositories/mcp_connection.py",
     "app/repositories/mcp_server_check.py",
     "app/repositories/organization_secret.py",
+    "app/repositories/secret_request.py",
     "app/repositories/resource_grant.py",
     "app/api/routes/v1/_sharing_routes.py",
     "app/api/routes/v1/_sharing_loaders.py",
@@ -1664,6 +1666,7 @@ include = [
     # through publish (#2487).
     "app/services/model_outputs.py",
     "app/services/organization_secret.py",
+    "app/services/secret_requests.py",
     "app/services/openai_codex.py",
     # Same shape and the same reason as `image_models`: what a picker offers is
     # decided by filtering a data file against what the platform can actually
@@ -1730,6 +1733,7 @@ include = [
     "app/repositories/mcp_connection.py",
     "app/repositories/mcp_server_check.py",
     "app/repositories/organization_secret.py",
+    "app/repositories/secret_request.py",
     "app/repositories/resource_grant.py",
     "app/api/routes/v1/_sharing_routes.py",
     "app/api/routes/v1/_sharing_loaders.py",

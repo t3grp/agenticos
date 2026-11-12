@@ -1260,6 +1260,17 @@
     "askUserAnswered": "You answered",
     "askUserAsked": "Asked you",
     "askUserAskedBy": "Asked by {name}",
+    "secretRequest": {
+      "title": "The agent needs a secret",
+      "provide": "Provide secret",
+      "decline": "Decline",
+      "valueLabel": "Secret value",
+      "valuePlaceholder": "Paste the secret here — it is never shown again",
+      "provided": "Secret provided",
+      "declined": "You declined to provide this secret",
+      "storedHint": "Stored as {name} (…{hint})",
+      "waiting": "Waiting for the secret"
+    },
     "attachedFile": "Attached file",
     "backAgentAposS": "Back to the agent's own model",
     "cancel": "Cancel",
@@ -1861,6 +1872,8 @@
       "artifactUnchanged": "Unchanged, still version {version} · open the page",
       "askingYou": "Waiting for your answer",
       "askedYou": "Asked you",
+      "requestingSecret": "Waiting for your secret",
+      "requestedSecret": "Requested a secret",
       "notAnsweredYet": "Not answered yet",
       "listMemory": "List memories",
       "readMemory": "Read a memory",
@@ -7282,6 +7295,7 @@
       "decidedSection": "Decided",
       "waitingSection": "Waiting on you",
       "questionExpiresIn": "Expires in {duration}",
+      "needsSecret": "Needs secret: {name}",
       "share": "Share",
       "monthAgainstCap": "${spent} of ${cap} this month",
       "spendOverTime": "Spend over time",
@@ -11501,6 +11515,14 @@
       "example2": "Which of these three files should I use?",
       "needs": "Nothing extra.",
       "never": "Never answers for the person. In Slack or Telegram it waits for their reply."
+    },
+    "secret_request": {
+      "name": "Request a secret",
+      "does": "Lets the agent ask for a secret it needs but does not have, naming it and what it is for.",
+      "example1": "What is the Acme API key for listing contacts?",
+      "example2": "Which secret should the nightly report use?",
+      "needs": "Nothing extra.",
+      "never": "Never shows the value to the model, the transcript or a log. The card seals it straight into the vault."
     },
     "browser_use": {
       "name": "Web browser",

@@ -747,6 +747,7 @@ def load_builtins() -> None:
         phone_calls,
         planning,
         sandbox,
+        secret_request,
         skills,
         sol_loop,
         subagents,

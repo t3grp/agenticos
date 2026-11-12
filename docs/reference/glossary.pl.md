@@ -1,5 +1,5 @@
 ---
-source_sha: "aaae5395a3d5"
+source_sha: "9e0431b220c5"
 ---
 
 # Słownik { #glossary }
@@ -65,6 +65,7 @@ w [Capabilities](capabilities.md).
 |---|---|
 | Aplikacje | `artifacts` |
 | Pytania do użytkownika | `ask_user` |
+| Prośba o sekret | `secret_request` |
 | Wersje robocze | `drafts` |
 | Przeglądarka | `browser_use` |
 | Informacje o kanale czatu | `channel_tools` |

@@ -34,7 +34,14 @@ from app.db.models.agent_run import (
     RunSurface,
 )
 from app.repositories.agent_run import ApprovalFilters, RunFilters
-from app.schemas.agent import AgentRunResult, ParkedCall, ParkedQuestion, QuestionAnswers
+from app.schemas.agent import (
+    AgentRunResult,
+    ParkedCall,
+    ParkedQuestion,
+    QuestionAnswers,
+    SecretRequestFulfil,
+    SecretRequestRead,
+)
 from app.schemas.agent_run import (
     AgentRunList,
     AgentRunRead,
@@ -53,8 +60,8 @@ from app.schemas.agent_run import (
 )
 from app.schemas.conversation import MessageList
 from app.schemas.run_manifest import RunManifestRead
+from app.services.agent_runner import parked_question_items, parked_secret_request_items
 from app.services.channels.handback import continues_in_chat
-from app.services.agent_runner import parked_question_items
 
 router = APIRouter(dependencies=[PUBLIC])
 
@@ -76,8 +83,10 @@ def waiting_update(run: AgentRun) -> dict[str, Any]:
         for parked in parked_question_items(run.paused_state)
         for question in parked.questions
     ]
+    secret_requests = [item.secret_name for item in parked_secret_request_items(run.paused_state)]
     return {
         "waiting_questions": questions,
+        "waiting_secret_requests": secret_requests,
         "waiting_expires_at": run.ended_at + timedelta(hours=settings.QUESTION_EXPIRY_HOURS),
     }
 
@@ -566,6 +575,57 @@ async def answer_run(
     return await run_result(
         service, ctx, continued.segment, continues_in_chat=continued.continues_in_chat
     )
+
+
+@router.get("/runs/{run_id}/secret-requests", response_model=list[SecretRequestRead])
+async def get_secret_requests(run_id: UUID, parked: ParkedRunSvc, ctx: Auth) -> Any:
+    """The secrets this run is waiting on you to provide (#13).
+
+    Empty unless the run is waiting on *your* answer. The values are never
+    part of the answer: fulfil seals one from the card, and this read
+    carries only the name and what it is for.
+    """
+    return await parked.secrets.list_for_run(ctx, run_id)
+
+
+@router.post("/runs/{run_id}/secret-requests/{request_id}/fulfil", response_model=AgentRunResult)
+async def fulfil_secret_request(
+    run_id: UUID,
+    request_id: UUID,
+    data: SecretRequestFulfil,
+    service: AgentRunnerSvc,
+    parked: ParkedRunSvc,
+    ctx: Auth,
+) -> Any:
+    """Provide the secret a run asked for, and continue it (#13).
+
+    The value is sealed into the vault from this call and never stored,
+    returned or logged. Only the person the run asked may provide it. The
+    run resumes once every secret it parked on is in; until then the answer
+    comes back with the run still parked and the remaining cards still up.
+    On a run asked in a chat the continuation is also posted to that chat
+    (`continues_in_chat`).
+    """
+    continued = await parked.fulfil_secret_request(ctx, run_id, request_id, value=data.value)
+    return await run_result(
+        service, ctx, continued.segment, continues_in_chat=continued.continues_in_chat
+    )
+
+
+@router.post(
+    "/runs/{run_id}/secret-requests/{request_id}/decline",
+    response_model=SecretRequestRead,
+)
+async def decline_secret_request(
+    run_id: UUID, request_id: UUID, parked: ParkedRunSvc, ctx: Auth
+) -> Any:
+    """Decline to provide the secret a run asked for (#13).
+
+    Only the person the run asked may decline. The run ends failed, with
+    the refusal as its error, rather than resuming to a model that would
+    ask again.
+    """
+    return await parked.decline_secret_request(ctx, run_id, request_id)
 
 
 @router.get(
