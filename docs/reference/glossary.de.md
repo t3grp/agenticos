@@ -95,6 +95,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Sandbox | `sandbox` |
 | Skills | `skills` |
 | Sol-loop | `sol_loop` |
+| Eval-Tool-Tuning | `eval_tool_tuning` |
 | Subagents | `subagents` |
 | Erinnerung an Anweisungen | `system_reminders` |
 | Sprachausgabe | `text_to_speech` |
