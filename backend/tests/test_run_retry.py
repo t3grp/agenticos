@@ -154,6 +154,31 @@ class TestRetryRunsTheSameRequest:
         service = AgentRunnerService(MagicMock())
         return service
 
+    async def test_a_timed_out_run_can_be_retried(self):
+        service = self._service(None)
+        original = _run(status=RunStatus.TIMED_OUT.value)
+        prompt = _message(role="user", content="try again")
+        new_run = _run(status=RunStatus.COMPLETED.value)
+        ctx = _ctx(user_id=original.user_id)
+        conversations = MagicMock()
+        conversations.find_conversation = AsyncMock(return_value=MagicMock())
+        conversations.model_text = AsyncMock(return_value="try again")
+        conversations.model_history = AsyncMock(return_value=[])
+
+        with (
+            patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)),
+            patch.object(service, "get_run_transcript", new=AsyncMock(return_value=(original, [prompt], 1))),
+            patch(f"{MODULE}.ConversationService", return_value=conversations),
+            patch(f"{MODULE}.load_turn_attachments", new=AsyncMock(return_value=[])),
+            patch(f"{MODULE}.record_audit", new=AsyncMock()),
+            patch.object(service, "execute", new=AsyncMock(return_value=("Done.", new_run))) as executed,
+            patch.object(service, "parked_calls", new=AsyncMock(return_value=[])),
+        ):
+            result = await service.retry_run(ctx, original.id)
+
+        assert result.run_id == new_run.id
+        assert executed.await_args.kwargs["parent_run_id"] == original.id
+
     async def test_the_new_run_reissues_the_original_turn(self):
         """The prompt is the original user turn as the model reads it, the
         history stops before it, its files travel with it, and the new run

@@ -57,6 +57,8 @@ export interface Conversation {
   unread?: boolean;
   /** When the run still at work in it began; null when none is. Listings only. */
   running_since?: string | null;
+  /** When that run last stamped itself alive; null when none is. Listings only. */
+  running_heartbeat_at?: string | null;
   running_run_ids?: string[];
   /**
    * The conversation this one was forked from (#2762). Only ever set for a caller

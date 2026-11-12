@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelHTTPError, UserError
+from pydantic_ai.exceptions import ModelHTTPError, ModelRequestTimeout, UserError
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -2767,6 +2767,46 @@ class TestRunAccounting:
         assert finish.call_args.kwargs["status"] == RunStatus.FAILED.value
 
     @pytest.mark.anyio
+    async def test_a_timeout_is_recorded_as_timed_out_not_failed(self):
+        """A deadline is the platform working, not a malfunction: its own
+        terminal status and its own sentence, so an operator filtering for
+        problems does not wade through it."""
+        service = AgentRunnerService(_db())
+        prepared = _prepared()
+        prepared.built.agent.run = AsyncMock(side_effect=ModelRequestTimeout("gpt-4.1", 300.0))
+
+        with (
+            patch.object(service, "prepare", new=AsyncMock(return_value=prepared)),
+            patch("app.services.agent_runner.agent_run_repo.finish_run", new=AsyncMock()) as finish,
+            pytest.raises(ModelRequestTimeout),
+        ):
+            await service.execute(_ctx(), uuid.uuid4(), "hello")
+
+        assert finish.call_args.kwargs["status"] == RunStatus.TIMED_OUT.value
+        assert "did not finish within 300 seconds" in finish.call_args.kwargs["error"]
+
+    @pytest.mark.anyio
+    async def test_a_timeout_wrapped_in_a_fallback_group_is_still_timed_out(self):
+        """A timeout that exhausted the fallback chain arrives grouped; the
+        runner unwraps it to its first leaf before choosing the status."""
+        service = AgentRunnerService(_db())
+        prepared = _prepared()
+        prepared.built.agent.run = AsyncMock(
+            side_effect=ExceptionGroup(
+                "all fallbacks failed", [ModelRequestTimeout("gpt-4.1", 300.0)]
+            )
+        )
+
+        with (
+            patch.object(service, "prepare", new=AsyncMock(return_value=prepared)),
+            patch("app.services.agent_runner.agent_run_repo.finish_run", new=AsyncMock()) as finish,
+            pytest.raises(ExceptionGroup),
+        ):
+            await service.execute(_ctx(), uuid.uuid4(), "hello")
+
+        assert finish.call_args.kwargs["status"] == RunStatus.TIMED_OUT.value
+
+    @pytest.mark.anyio
     async def test_a_failed_run_records_the_refusal_and_not_the_provider(self, caplog):
         """The stored `error` is read in run history weeks later by anyone who
         can see the run, and a model client puts the failing request in its
@@ -2864,6 +2904,41 @@ class TestWhatAFailedRunIsAllowedToSay:
         assert run_failure_summary(raised).startswith(
             "The run did not finish (ModelHTTPError, HTTP 401) - "
         )
+
+    def test_a_timeout_names_the_deadline_that_ran_out(self):
+        """A deadline is not a refusal: the sentence says which one ran out
+        and how long it was, because that is what somebody has to change."""
+        summary = run_failure_summary(ModelRequestTimeout("gpt-4.1", 300.0))
+
+        assert "did not finish within 300 seconds" in summary
+        assert "request_timeout" in summary
+        assert "raise the request timeout" in summary
+
+    def test_a_first_event_timeout_says_the_model_never_started(self):
+        summary = run_failure_summary(
+            ModelRequestTimeout("gpt-4.1", 120.0, setting="first_event_timeout")
+        )
+
+        assert "did not answer within 120 seconds without producing any output" in summary
+        assert "first_event_timeout" in summary
+
+    def test_a_timeout_wrapped_in_a_fallback_group_still_names_the_deadline(self):
+        """A timeout that exhausted the fallback chain arrives as a group;
+        the sentence is written from its first leaf, not the group's name."""
+        raised = ExceptionGroup(
+            "all fallbacks failed",
+            [ModelRequestTimeout("gpt-4.1", 300.0)],
+        )
+
+        assert "did not finish within 300 seconds" in run_failure_summary(raised)
+
+    def test_a_turn_that_produced_nothing_says_so(self):
+        from app.agents.failures import NO_OUTPUT_MESSAGE
+
+        summary = run_failure_summary(RuntimeError(NO_OUTPUT_MESSAGE))
+
+        assert "ended without producing any output" in summary
+        assert "no text, no thinking, no tool call" in summary
 
     def test_our_own_refusal_is_kept_whole_because_we_wrote_it(self):
         """A message written in this repository, and the most useful thing an

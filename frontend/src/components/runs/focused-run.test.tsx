@@ -180,6 +180,12 @@ describe("stepping to a neighbour", () => {
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 
+  it("offers a retry on a timed-out run the viewer started", () => {
+    serve({ run: run({ status: "timed_out", user_id: "user-1" }) });
+    renderRun();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
   it("offers no retry on a run somebody else started", () => {
     serve({ run: run({ status: "failed", user_id: "user-2" }) });
     renderRun();

@@ -134,6 +134,15 @@ describe("parseCodingReport", () => {
     expect(parseCodingReport(JSON.stringify({ answer: "no harness" }))).toBeNull();
   });
 
+  it("reads a harness prompt's report, the same shape under its own kind", () => {
+    const harness = { ...REPORT, kind: "harness" };
+    expect(parseCodingReport(JSON.stringify(harness))).toMatchObject({
+      kind: "harness",
+      harness: "claude_code",
+      answer: "Fixed **the off-by-one**.",
+    });
+  });
+
   it("reads a report stored before its kind reached the wire", () => {
     const { kind: _kind, ...stored } = REPORT;
     expect(parseCodingReport(JSON.stringify(stored))).toMatchObject({

@@ -134,6 +134,27 @@ _AUDIENCE_AWARE = frozenset(
 # only the never-finishing loop, which 100 still catches.
 DEFAULT_MAX_STEPS = 100
 
+# The deadlines a model request gets when neither the model profile nor the
+# agent spec sets one. Before these, a request had no deadline at all unless
+# somebody chose one, and a model that never answered left the run showing
+# "Working" for ever: the heartbeat keeps beating on a live process, so the
+# stale-run sweep never fires, and failover cannot fire because no exception
+# is raised. These are merged at the lowest precedence in `build_agent` (and
+# `_reviewers`), so a profile or spec value still wins.
+#
+# `timeout` is the per-attempt transport deadline, enforced by the provider
+# clients - and by the Claude-subscription model, which enforces only this
+# one, not the two Pydantic AI deadlines below. `request_timeout` is one
+# clock over the whole request to one model, however many times the provider
+# retries it. `first_event_timeout` bounds only the wait for the first
+# streamed event, so it catches a model that never starts answering, not one
+# that answers slowly. All three cap at the 600s `ModelSettingsSpec` allows.
+DEFAULT_MODEL_TIMEOUTS: dict[str, float] = {
+    "timeout": 300.0,
+    "request_timeout": 300.0,
+    "first_event_timeout": 120.0,
+}
+
 
 type AgentAnswer = str | dict[str, Any]
 """What a finished run answers: prose, or an object of the spec's `output_schema`."""
@@ -581,6 +602,7 @@ def build_agent(
     # parameter however it is spelled. See `ModelSettingsSpec`.
     model_settings = ModelSettings(
         **{
+            **DEFAULT_MODEL_TIMEOUTS,
             **PROMPT_CACHE,
             **model_spec.params,
             **spec.model_settings.model_dump(),
@@ -659,7 +681,7 @@ def _reviewers(
             RunReviewer(
                 name=reviewer.name,
                 model=model.build(),
-                model_settings=ModelSettings(**model.params),
+                model_settings=ModelSettings(**{**DEFAULT_MODEL_TIMEOUTS, **model.params}),
                 instructions=reviewer.instructions,
                 every=reviewer.every,
                 window=window,

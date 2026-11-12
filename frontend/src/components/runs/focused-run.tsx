@@ -44,9 +44,7 @@ import { RunTable } from "./run-table";
 
 /**
  * The statuses after which a run has nothing left to say - the only ones
- * whose `error` is an explanation rather than a stale field. There is no
- * `timed_out` status: a run that hits its timeout fails, so it is covered
- * by `failed`.
+ * whose `error` is an explanation rather than a stale field.
  */
 const TERMINAL_RUN_STATUSES: readonly RunStatus[] = [
   "failed",
@@ -54,6 +52,7 @@ const TERMINAL_RUN_STATUSES: readonly RunStatus[] = [
   "budget_exceeded",
   "guardrail_blocked",
   "loop_stopped",
+  "timed_out",
 ];
 
 /**

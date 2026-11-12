@@ -45,6 +45,13 @@ import type { ArtifactShareRequest } from "@/types/artifact";
  * with - the maintenance gate's gap - opens a band between them.
  */
 const VIEWER = "flex min-h-0 flex-1 flex-col";
+/**
+ * On a phone the viewer bar is fixed over the top of the page: its 44px button
+ * sits 12px below the shell inset, so the page starts 64px down to clear it.
+ * Keep in step with the bar's `max-sm:top-[...]` in artifact-viewer-bar.tsx.
+ */
+const BAR_CLEARANCE =
+  "max-sm:pt-[calc(max(var(--shell-inset-top,0px),env(safe-area-inset-top))+4rem)]";
 
 interface ArtifactViewerProps {
   artifactId: string;
@@ -169,7 +176,7 @@ export function ArtifactViewer({
         ? error
         : null;
     return (
-      <div className={VIEWER}>
+      <div className={cn(VIEWER, BAR_CLEARANCE)}>
         <ArtifactViewerBar artifact={null} />
         <div className={cn("flex min-h-0 flex-1", !isLoading && "items-center justify-center p-6")}>
           {isLoading ? (
@@ -216,7 +223,7 @@ export function ArtifactViewer({
   // is left of it here is when it was archived, the way back, and Delete.
   if (artifact.archived_at !== null) {
     return (
-      <div className={VIEWER}>
+      <div className={cn(VIEWER, BAR_CLEARANCE)}>
         <ArtifactViewerBar artifact={artifact} onDelete={() => setConfirming(true)} />
         <div className="flex flex-1 items-center justify-center p-6">
           <ArchivedArtifactNotice
@@ -234,7 +241,7 @@ export function ArtifactViewer({
   // owner has not confirmed sharing, and the caller is only its audience.
   if (artifact.current_version === null) {
     return (
-      <div className={VIEWER}>
+      <div className={cn(VIEWER, BAR_CLEARANCE)}>
         <ArtifactViewerBar artifact={null} />
         <div className="flex flex-1 items-center justify-center p-6">
           <EmptyState
@@ -274,7 +281,7 @@ export function ArtifactViewer({
   );
 
   return (
-    <div className={VIEWER}>
+    <div className={cn(VIEWER, BAR_CLEARANCE)}>
       <ArtifactViewerBar
         artifact={artifact}
         live={

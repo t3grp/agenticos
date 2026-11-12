@@ -319,7 +319,6 @@ it("respects an already-open project's cloud workspace", () => {
   expect(send).toHaveBeenCalledWith("hello");
 });
 
-
 it("keeps the floating agent's local access separate from the main chat", async () => {
   const send = vi.fn();
   const mainTarget = { folder: "/work", mode: "workspace_write" } as const;
@@ -337,12 +336,11 @@ it("keeps the floating agent's local access separate from the main chat", async 
   );
   act(() => result.current.conversation.setState({ currentConversationId: "floating" }));
   act(() => result.current.send("Explain this page"));
-  await waitFor(() => expect(useLocalAccessStore.getState().asking?.id).toBe(local.id));
-  expect(send).not.toHaveBeenCalled();
-  await act(async () => useLocalAccessStore.getState().answer(whole));
-
-  expect(send).toHaveBeenCalledWith("Explain this page");
-  expect(useWorkOnStore.getState().targetFor("floating")).toEqual(whole);
+  // Nothing is granted to the floating chat, so the send goes out at once without
+  // borrowing the main chat's folder, and nothing is asked (the agent asks on use).
+  await waitFor(() => expect(send).toHaveBeenCalledWith("Explain this page"));
+  expect(useLocalAccessStore.getState().asking).toBeNull();
+  expect(useWorkOnStore.getState().explicitTargetFor("floating")).toBeNull();
   expect(useWorkOnStore.getState().targetFor("chat")).toEqual(mainTarget);
   expect(useConversationStore.getState().currentConversationId).toBe("chat");
 });

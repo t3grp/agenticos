@@ -1277,6 +1277,9 @@ class ConversationService:
             current = activity.get(conversation.id)
             conversation.running_since = current.since if current else None  # ty: ignore[unresolved-attribute]
             conversation.running_run_ids = current.run_ids if current else []  # ty: ignore[unresolved-attribute]
+            conversation.running_heartbeat_at = (  # ty: ignore[unresolved-attribute]
+                current.heartbeat_at if current else None
+            )
 
     async def attach_agents(self, conversations: Sequence[Conversation]) -> None:
         """Name the agents that answered, on each row of a page.

@@ -555,6 +555,11 @@ export function ChatContainer({
   const runningSince =
     conversations.find((conversation) => conversation.id === currentConversationId)
       ?.running_since ?? null;
+  // The same listing row's latest heartbeat for that run: the fold reads it
+  // from the working store, beside the start the effect below already records.
+  const runningHeartbeatAt =
+    conversations.find((conversation) => conversation.id === currentConversationId)
+      ?.running_heartbeat_at ?? null;
   // Not while this tab holds a call: the call is that run, and its last spoken
   // turn is the caller's while the agent thinks - nobody left anything.
   const answeringElsewhere =
@@ -581,7 +586,8 @@ export function ChatContainer({
     // Both the sidebar and the transcript measure the same persisted run,
     // including when its stream resumes after a human decision.
     working.start(currentConversationId, runningSince);
-  }, [isProcessing, runningSince, currentConversationId]);
+    if (runningHeartbeatAt) working.setHeartbeat(currentConversationId, runningHeartbeatAt);
+  }, [isProcessing, runningSince, runningHeartbeatAt, currentConversationId]);
 
   const answeredRef = useRef(answered);
   useEffect(() => {
@@ -1832,10 +1838,7 @@ function ChatUI({
                         )}
                       >
                         <div
-                          className={cn(
-                            "min-w-0 px-3 pt-2 pb-2",
-                            !compact && "sm:px-4 sm:pt-3",
-                          )}
+                          className={cn("min-w-0 px-3 pt-2 pb-2", !compact && "sm:px-4 sm:pt-3")}
                         >
                           {isArchived && (
                             <p className="text-muted-foreground pb-2 text-center font-mono text-xs tracking-wider uppercase">

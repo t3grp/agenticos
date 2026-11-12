@@ -242,8 +242,17 @@ segunda clave o un segundo provider configurados.
 ### Ajustes del modelo { #model-settings }
 
 Por perfil, y sobrescribibles por agent a través de `model_settings` del spec:
-`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`. Ver
+`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`,
+`request_timeout`, `first_event_timeout`. Ver
 [la referencia del spec](reference/spec.md#model-settings).
+
+Una petición también tiene plazos por defecto: 300 segundos para una petición
+al modelo (`request_timeout`, y `timeout` por intento) y 120 segundos para el
+primer evento en streaming (`first_event_timeout`). Un perfil o el spec de un
+agente pueden subirlos o bajarlos. Cuando vence el plazo, el run termina como
+`timed_out` — con el plazo en su error guardado — en lugar de mostrar
+«Working» para siempre; donde haya una cadena de fallback configurada, se
+prueba primero.
 
 **El caché de prompts está activado por defecto**, mediante el ajuste `cache` de
 Pydantic AI, neutral respecto al proveedor. Cada petición de un run vuelve a enviar

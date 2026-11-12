@@ -223,8 +223,16 @@ provider configured.
 ### Model settings
 
 Per profile, and overridable per agent through the spec's `model_settings`:
-`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`. See
+`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`,
+`request_timeout`, `first_event_timeout`. See
 [the spec reference](reference/spec.md#model-settings).
+
+A request also has deadlines by default: 300 seconds for one model request
+(`request_timeout`, and `timeout` per attempt) and 120 seconds for the first
+streamed event (`first_event_timeout`). A profile or an agent spec can raise
+or lower them. When the deadline passes, the run ends as `timed_out` — with
+the deadline in its stored error — rather than showing "Working" for ever;
+where a fallback chain is configured, it is tried first.
 
 **Prompt caching is on by default**, through Pydantic AI's provider-neutral
 `cache` setting. Every request of a run re-sends the instructions, the tool

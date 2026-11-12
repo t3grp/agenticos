@@ -13,8 +13,11 @@ The initial source baseline is upstream `v1.52.0`, commit
 
 This initial change adds documentation and baseline metadata. It does not add an
 adapter, change application behavior, or establish runtime compatibility.
-GitHub Actions is disabled in this fork at repository level. No automatic update
-or deployment schedule is configured.
+GitHub Actions is disabled in this fork at repository level. The Cloud Build
+validation and downstream updater definitions are documented in [T3_SYNC.md](T3_SYNC.md).
+Repository files alone do not enable the triggers or establish passing checks;
+record the connected build and trigger evidence when installing them. Deployment
+remains a separate acceptance step.
 
 ## Branches
 
@@ -73,6 +76,10 @@ remaining source files. It downloads missing files and does not install software
 7. Open the update PR explicitly against `t3grp/agenticos`, base `t3`. After
    review and passing checks, merge with upstream ancestry intact. Promotion to
    any running deployment is a separate step with its own acceptance evidence.
+
+This manual procedure receives changes from Vstorm into the T3 baseline. The
+[downstream updater](T3_SYNC.md) separately distributes validated T3 commits to
+privately configured consumers; it does not automatically import Vstorm releases.
 
 ### Migration-number collisions to expect
 

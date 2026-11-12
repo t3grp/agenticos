@@ -31,7 +31,8 @@ import { WorkflowRunCard } from "./workflow-run-card";
 import { TurnVisuals } from "./visual-panel";
 import { YouFace } from "./you-face";
 import { ReplyQuote } from "./reply-quote";
-import { useTurnElapsed, WorkFold } from "./work-fold";
+import { STALLED_AFTER_MS, useTurnElapsed, WorkFold } from "./work-fold";
+import { formatElapsed } from "@/lib/elapsed";
 
 /**
  * A turn's body: its reasoning, its work and its words, in the order they arrived.
@@ -67,6 +68,7 @@ export function TurnParts({
   durationMs,
   stopped = false,
   waitingFor,
+  lastHeartbeatAt,
 }: {
   parts: MessagePart[];
   isStreaming: boolean;
@@ -86,6 +88,8 @@ export function TurnParts({
   stopped?: boolean;
   /** Includes a delegate paused outside the parent's own tool parts. */
   waitingFor?: "approval" | "answer";
+  /** When the run behind this turn last stamped itself alive, if known. */
+  lastHeartbeatAt?: Date;
 }) {
   const runs = runsOf(parts);
   const waiting =
@@ -99,6 +103,10 @@ export function TurnParts({
             ? "awaiting_approval"
             : undefined;
   const elapsed = useTurnElapsed(startedAt, isStreaming && !waiting);
+  // A run with no work to fold has no WorkFold to say it has gone quiet, so
+  // the turn says so itself once its heartbeat is stale.
+  const heartbeatAgeMs = useTurnElapsed(lastHeartbeatAt, isStreaming && !waiting);
+  const tSteps = useTranslations("chat.steps");
   const tChat = useTranslations("chat");
   const tTools = useTranslations("chat.tools");
   const latest = parts.at(-1);
@@ -175,7 +183,20 @@ export function TurnParts({
   const active = isStreaming || waiting !== undefined;
   const split = foldWork(runs, stopped, active);
   if (split === null) {
-    return <>{runs.map((run) => render(run))}</>;
+    const stalledFor =
+      isStreaming && !waiting && heartbeatAgeMs !== null && heartbeatAgeMs > STALLED_AFTER_MS
+        ? formatElapsed(heartbeatAgeMs, tSteps)
+        : null;
+    return (
+      <>
+        {stalledFor !== null && (
+          <p role="status" className="text-muted-foreground py-0.5 text-[13px]">
+            {tSteps("stalledFor", { duration: stalledFor })}
+          </p>
+        )}
+        {runs.map((run) => render(run))}
+      </>
+    );
   }
   return (
     <>
@@ -188,6 +209,7 @@ export function TurnParts({
         running={isStreaming && !waiting}
         activity={activity}
         waiting={waiting}
+        lastHeartbeatAt={lastHeartbeatAt}
       >
         {split.folded.map((run, index) => {
           const previous = split.folded[index - 1];

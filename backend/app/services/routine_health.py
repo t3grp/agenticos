@@ -18,6 +18,7 @@ _TERMINAL = frozenset(
         RunStatus.LOOP_STOPPED.value,
         RunStatus.BUDGET_EXCEEDED.value,
         RunStatus.GUARDRAIL_BLOCKED.value,
+        RunStatus.TIMED_OUT.value,
     }
 )
 

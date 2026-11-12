@@ -878,6 +878,7 @@ class TestConversationServiceListConversations:
     ):
         busy, idle = MockConversation(id=uuid4()), MockConversation(id=uuid4())
         started = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
+        beat = datetime(2026, 10, 13, 12, 1, 30, tzinfo=UTC)
 
         with patch("app.services.conversation.conversation_repo") as mock_repo:
             mock_repo.get_conversations_by_user = AsyncMock(return_value=[busy, idle])
@@ -885,7 +886,7 @@ class TestConversationServiceListConversations:
             mock_repo.agents_in_conversations = AsyncMock(return_value={})
             mock_repo.coding_agents_in_conversations = AsyncMock(return_value={})
             mock_repo.running_activity = AsyncMock(
-                return_value={busy.id: conversation_repo.RunningActivity(started, [uuid4()])}
+                return_value={busy.id: conversation_repo.RunningActivity(started, [uuid4()], beat)}
             )
 
             items, _total = await service.list_conversations(
@@ -893,6 +894,7 @@ class TestConversationServiceListConversations:
             )
 
         assert [item.running_since for item in items] == [started, None]
+        assert [item.running_heartbeat_at for item in items] == [beat, None]
 
     @pytest.mark.anyio
     async def test_a_row_says_whether_it_holds_an_answer_its_reader_has_not_seen(
