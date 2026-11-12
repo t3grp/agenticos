@@ -146,6 +146,11 @@ async def verify_mfa(
     except NotFoundError as exc:
         raise AuthenticationError(message="This sign-in step is invalid or has expired") from exc
     await enforce_auth_limit(request, surface="auth_mfa_verify", identifier=str(user.id))
+    if await rate_limit.mfa_backoff_locked(str(user.id)):
+        raise RateLimitError(
+            message="Too many incorrect codes. Please wait five minutes before trying again.",
+            details={"retry_after_seconds": 300},
+        )
     challenge_decision = await rate_limit.consume(
         surface="auth_mfa_challenge",
         caller=f"token:{hashlib.sha256(body.mfa_token.encode()).hexdigest()}",
@@ -159,9 +164,11 @@ async def verify_mfa(
     if not user.is_active or payload["cv"] != user.credential_version:
         raise AuthenticationError(message="This sign-in step is invalid or has expired")
     if not await mfa_service.verify_challenge(user, body.code):
+        await rate_limit.record_mfa_failure(str(user.id))
         raise AuthenticationError(
             message="That code did not match - try the code your authenticator shows now"
         )
+    await rate_limit.reset_mfa_failures(str(user.id))
     access_token, refresh_token = await _issue_tokens(user, session_service, request)
     return_to = payload.get("rt")
     if return_to is not None:
