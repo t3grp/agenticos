@@ -39,16 +39,25 @@ def _row(**overrides: object) -> AgentRun:
 
 
 def _paused_state(*questions: str) -> dict[str, object]:
-    call = ToolCallPart(
-        "ask_user_question",
-        {"questions": [{"question": question} for question in questions]},
-        tool_call_id="ask-1",
-    )
+    calls = [
+        ToolCallPart(
+            "ask_user_question",
+            {
+                "questions": [{
+                    "header": f"Question {index}",
+                    "question": question,
+                    "options": [{"label": "A"}, {"label": "B"}],
+                }]
+            },
+            tool_call_id=f"ask-{index}",
+        )
+        for index, question in enumerate(questions, start=1)
+    ]
     return {
         "messages": ModelMessagesTypeAdapter.dump_python(
-            [ModelResponse(parts=[call])], mode="json"
+            [ModelResponse(parts=[call]) for call in calls], mode="json"
         ),
-        "questions": ["ask-1"],
+        "questions": [f"ask-{index}" for index in range(1, len(questions) + 1)],
     }
 
 
@@ -105,9 +114,8 @@ def test_a_parked_run_with_no_park_time_reports_nothing() -> None:
     assert waiting_update(run) == {}
 
 
-def test_only_string_questions_are_reported() -> None:
-    """A stored question that is not a string is a corrupt row, not a question
-    a person can answer - it is dropped rather than rendered."""
+def test_waiting_question_ids_are_mapped_to_the_question_text() -> None:
+    """The persisted ids identify tool calls; the person sees their question text."""
     run = _row(
         status=RunStatus.AWAITING_ANSWER.value,
         ended_at=datetime(2026, 11, 12, 8, 0, tzinfo=UTC),
