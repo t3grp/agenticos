@@ -29,6 +29,7 @@ from app.agents.manifest import (
     as_payload,
     carried_over,
 )
+from app.schemas.run_manifest import ManifestEvalToolTuningCase
 
 pytestmark = pytest.mark.anyio
 
@@ -75,13 +76,38 @@ class TestEvalToolTuningScoring:
         assert scored.classification == "bad_arguments"
         assert "400 bad query" in scored.detail
 
-    def test_non_validation_error_has_its_own_classification(self):
+    @pytest.mark.parametrize(
+        ("error", "error_type", "expected"),
+        [
+            ("request timed out", "TimeoutError", "transient"),
+            ("connection refused", "ConnectionError", "transient"),
+            ("429 rate limit exceeded", "RateLimitError", "transient"),
+            ("HTTP 401 unauthorized", "HTTPError", "authorization"),
+            ("HTTP 403 forbidden", "HTTPError", "authorization"),
+            ("400 bad query", "ValidationError", "bad_arguments"),
+            ("unclassified service failure", "RuntimeError", "unknown"),
+        ],
+    )
+    def test_tool_errors_are_classified_by_failure_kind(self, error, error_type, expected):
         scored = classify(
             "search",
-            _case(calls=[_call("search", error="upstream timed out", error_type="TimeoutError")]),
+            _case(calls=[_call("search", error=error, error_type=error_type)]),
         )
-        assert scored.classification == "tool_error"
-        assert "TimeoutError" in scored.detail
+        assert scored.classification == expected
+
+    def test_a_transient_error_does_not_propose_parameter_changes(self):
+        score = score_tool("search", [_case(calls=[_call("search", error="timeout")])])
+        assert score.cases[0].classification == "transient"
+        assert propose_tuning(score) == ()
+
+    @pytest.mark.parametrize("classification", ["transient", "authorization", "unknown"])
+    def test_manifest_schema_accepts_new_failure_classes(self, classification):
+        case = ManifestEvalToolTuningCase(
+            name="case",
+            classification=classification,
+            passed=False,
+        )
+        assert case.classification == classification
 
     def test_tool_clean_but_answer_missing_is_wrong_answer(self):
         scored = classify("search", _case(calls=[_call("search")], value="total"))
@@ -143,7 +169,12 @@ class TestEvalToolTuningScoring:
                 _case("a"),
                 _case("b"),
                 _case("c", calls=[_call("browse")]),
-                _case("d", calls=[_call("search", error="timeout")]),
+                _case(
+                    "d",
+                    calls=[
+                        _call("search", error="invalid argument: q", error_type="ValidationError")
+                    ],
+                ),
                 _case("e", calls=[_call("search")], value="total"),
             ],
         )

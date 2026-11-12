@@ -4,7 +4,7 @@ The tuning layer on top of the failure-learning loop (#32). A tuning run
 takes one tool and a set of eval cases - the cases #32's `agent_eval_cases`
 holds, each with an `EvalExpectation` - and scores how the tool behaved on
 them: per case, did it pass, and when it did not, why. The failures sort
-into five classes, and each class drafts one kind of tuning proposal -
+into seven classes, and actionable classes draft tuning proposals -
 prompt wording, tool parameters, or which tool is picked.
 
 What this module does NOT do, deliberately:
@@ -28,6 +28,7 @@ the capability's tool takes those results as its input - a caller hands
 this module judged cases, it never runs an eval itself.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -39,12 +40,27 @@ EXPECTATION_KINDS = ("contains", "not_contains", "equals")
 _SHOWN_ANSWER = 500
 
 FailureClass = Literal[
-    "passed", "not_called", "wrong_tool", "bad_arguments", "tool_error", "wrong_answer"
+    "passed",
+    "not_called",
+    "wrong_tool",
+    "transient",
+    "authorization",
+    "bad_arguments",
+    "unknown",
+    "wrong_answer",
 ]
 
 #: The order failure classes are reported in when counts tie: the class
 #: closest to the tool itself - it was never called - first.
-_FAILURE_ORDER = ("not_called", "wrong_tool", "bad_arguments", "tool_error", "wrong_answer")
+_FAILURE_ORDER = (
+    "not_called",
+    "wrong_tool",
+    "transient",
+    "authorization",
+    "bad_arguments",
+    "unknown",
+    "wrong_answer",
+)
 
 TuningKind = Literal["prompt_wording", "tool_parameters", "tool_choice"]
 
@@ -58,6 +74,7 @@ class ToolCallObservation:
         arguments: The arguments it was called with, summarised - keys and
             short values, never a whole payload.
         error: What the call failed with, or `None` when it returned cleanly.
+        error_type: The exception class, when the caller recorded one.
     """
 
     tool: str
@@ -175,9 +192,9 @@ def classify(tool: str, case: JudgedCase) -> CaseScore:
     """Score one case for one tool: its verdict, and which failure it is.
 
     A case that passed is `passed`, whatever the tool did. A failing case
-    sorts by what the run shows: the tool never called, another tool picked
-    instead, the tool called and erroring, or the tool called cleanly and
-    the answer still missing what the expectation asked for.
+    sorts by what the run shows: the tool never called, another tool picked,
+    a transient or authorization error, invalid arguments, an unknown error,
+    or a clean call whose answer still missed the expectation.
     """
     if case.passed:
         return CaseScore(
@@ -208,9 +225,7 @@ def classify(tool: str, case: JudgedCase) -> CaseScore:
         )
     errored = [call for call in calls if call.error]
     if errored:
-        classification: FailureClass = (
-            "bad_arguments" if _is_argument_error(errored[0].error_type) else "tool_error"
-        )
+        classification = _classify_tool_error(errored[0].error, errored[0].error_type)
         return CaseScore(
             name=case.name,
             classification=classification,
@@ -236,21 +251,24 @@ def classify(tool: str, case: JudgedCase) -> CaseScore:
     )
 
 
-def _is_argument_error(error_type: str | None) -> bool:
-    if not error_type:
-        return False
-    normalized = error_type.casefold().replace("-", "_").replace(" ", "_")
-    return normalized in {
-        "argument",
-        "argument_error",
-        "arguments",
-        "arguments_error",
-        "bad_arguments",
-        "invalid_arguments",
-        "validation",
-        "validation_error",
-        "validationerror",
-    } or normalized.endswith(("argumenterror", "argumentserror", "validationerror"))
+def _classify_tool_error(error: str | None, error_type: str | None) -> FailureClass:
+    normalized = f"{error_type or ''} {error or ''}".casefold()
+    if re.search(r"\b(?:401|403)\b|unauthori[sz]ed|forbidden", normalized):
+        return "authorization"
+    if re.search(
+        r"\b(?:timeout|timed out|connection(?:error| refused| reset| aborted| failed)?|"
+        r"connectiontimeout|ratelimit|rate.?limit|429|too many requests)\b",
+        normalized,
+    ):
+        return "transient"
+    if re.search(
+        r"\b(?:400|argument(?:s)?[_ ]?error|bad[_ ]?arguments?|bad query|"
+        r"invalid[_ ]?arguments?|invalid[_ ]?parameters?|"
+        r"validation(?:error|[_ ]?error| failed)?)\b",
+        normalized,
+    ):
+        return "bad_arguments"
+    return "unknown"
 
 
 def score_tool(tool: str, cases: list[JudgedCase]) -> ToolTuningScore:
@@ -360,26 +378,6 @@ def propose_tuning(score: ToolTuningScore) -> tuple[TuningProposal, ...]:
                     f"calling it with arguments that fail."
                 ),
                 rationale=f"The tool errored on these cases ({rate}).",
-                evidence=tuple(names),
-            )
-        )
-    if "tool_error" in by_class:
-        names = [case.name for case in by_class["tool_error"]]
-        proposals.append(
-            TuningProposal(
-                kind="tool_parameters",
-                tool=score.tool,
-                title=f"Handle {score.tool}'s runtime errors",
-                current=(
-                    f"{score.tool} failed for reasons other than invalid arguments on "
-                    f"{len(names)} case(s): "
-                    + "; ".join(case.detail for case in by_class["tool_error"])
-                ),
-                proposed=(
-                    f"Document how the caller should handle {score.tool}'s runtime "
-                    f"failures for requests like {', '.join(names)}."
-                ),
-                rationale=f"The tool failed for reasons other than invalid arguments ({rate}).",
                 evidence=tuple(names),
             )
         )

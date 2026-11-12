@@ -28,12 +28,14 @@ call is one tuning run: it scores the tool, classifies each failure, drafts
 one proposal per failure class, and records the run on the manifest. At
 most 3 tuning runs per run.
 
-The five failure classes, and what each one means:
+The seven failure classes, and what each one means:
 
 - `not_called` - no tool ran on the case. The tool was never reached.
 - `wrong_tool` - another tool was picked instead.
+- `transient` - the tool failed because of a timeout, connection, or rate-limit error.
+- `authorization` - the tool rejected the request with 401 or 403.
 - `bad_arguments` - the tool failed with an argument or validation error.
-- `tool_error` - the tool failed for another reason, or the error type was not recorded.
+- `unknown` - the tool failed for another reason, or the error type was not recognized.
 - `wrong_answer` - the tool ran cleanly, but the answer still missed what
   the expectation asked for.
 

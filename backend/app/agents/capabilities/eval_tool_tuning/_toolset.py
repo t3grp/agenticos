@@ -26,7 +26,8 @@ class _ToolCallInput(BaseModel):
     error_type: str | None = Field(
         default=None,
         description=(
-            "Exception class for the failure; argument or validation types classify as bad_arguments."
+            "Exception class for the failure; timeout, connection, rate-limit, authorization, "
+            "argument, and validation errors are classified by type."
         ),
     )
 
@@ -67,8 +68,10 @@ def build_eval_tool_tuning_toolset(
         every judged case: each case with what its answer was supposed to
         say, whether the judge said it passed, what the answer said, and
         every tool call the case's run made. For failed calls, include the
-        exception class in `error_type`; argument and validation errors are
-        `bad_arguments`, while other or missing error types are `tool_error`.
+        exception class in `error_type`; timeout, connection, and rate-limit
+        errors are `transient`; 401/403 errors are `authorization`;
+        argument and validation errors are `bad_arguments`; other errors
+        are `unknown`.
         One call is one tuning run: it
         scores the tool, classifies each failure, drafts one proposal per
         failure class, and records the run on the manifest.

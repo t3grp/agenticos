@@ -344,7 +344,15 @@ export interface ManifestSolLoopRound {
 /** One eval case scored for one tool in a tuning run. */
 export interface ManifestEvalToolTuningCase {
   name: string;
-  classification: "passed" | "not_called" | "wrong_tool" | "bad_arguments" | "wrong_answer";
+  classification:
+    | "passed"
+    | "not_called"
+    | "wrong_tool"
+    | "transient"
+    | "authorization"
+    | "bad_arguments"
+    | "unknown"
+    | "wrong_answer";
   passed: boolean;
   shown: string;
   detail: string;
