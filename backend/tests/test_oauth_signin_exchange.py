@@ -18,6 +18,7 @@ from httpx import AsyncClient
 from starlette.responses import Response
 
 from app.api.deps import get_redis, get_session_service
+from app.api.routes.v1 import oauth as oauth_routes
 from app.core.config import settings
 from app.core.oauth import oauth
 from app.core.security import verify_special_token, verify_token
@@ -28,6 +29,7 @@ from app.services.user import UserService
 pytestmark = pytest.mark.anyio
 
 _CALLBACK = f"{settings.API_V1_STR}/oauth/google/callback"
+_OIDC_CALLBACK = f"{settings.API_V1_STR}/oauth/oidc/callback"
 _EXCHANGE = f"{settings.API_V1_STR}/oauth/exchange"
 
 
@@ -88,7 +90,7 @@ async def test_the_callback_redirect_carries_a_code_not_the_tokens(
     assert "refresh_token" not in location
 
 
-async def test_oauth_signin_for_totp_user_returns_mfa_challenge_without_session(
+async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The provider identity is only the first factor for an MFA-enabled user."""
@@ -98,15 +100,13 @@ async def test_oauth_signin_for_totp_user_returns_mfa_challenge_without_session(
     session_service = MagicMock()
     session_service.create_session = AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: session_service
-    monkeypatch.setattr(
-        oauth.google,
-        "authorize_access_token",
-        AsyncMock(
-            return_value={
-                "userinfo": {"sub": "s", "email": "u@e.com", "name": "U", "email_verified": True}
-            }
-        ),
+    oidc_client = MagicMock()
+    oidc_client.authorize_access_token = AsyncMock(
+        return_value={
+            "userinfo": {"sub": "s", "email": "u@e.com", "name": "U", "email_verified": True}
+        }
     )
+    monkeypatch.setattr(oauth_routes, "sign_in_client", lambda provider: oidc_client)
     monkeypatch.setattr(
         UserService,
         "get_or_create_oauth_user",
@@ -117,17 +117,19 @@ async def test_oauth_signin_for_totp_user_returns_mfa_challenge_without_session(
         ),
     )
 
-    response = await client.get(_CALLBACK)
+    response = await client.get(_OIDC_CALLBACK)
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["mfa_required"] is True
-    assert "access_token" not in body and "refresh_token" not in body
-    payload = verify_special_token(body["mfa_token"], expected_type="mfa")
+    assert response.status_code == 307
+    location = urlparse(response.headers["location"])
+    assert location.path == "/auth/callback"
+    assert location.query == ""
+    mfa_token = parse_qs(location.fragment)["mfa_token"][0]
+    payload = verify_special_token(mfa_token, expected_type="mfa")
     assert payload is not None
     assert payload["sub"] == str(user_id)
     assert payload["cv"] == 3
     session_service.create_session.assert_not_awaited()
+    assert fake._store == {}
 
 
 async def test_exchange_returns_the_pair_for_a_valid_code(client: AsyncClient) -> None:

@@ -33,7 +33,6 @@ from app.core.oauth import (
     verified_identity,
 )
 from app.core.security import create_access_token, create_mfa_token, create_refresh_token
-from app.schemas.mfa import MfaRequired
 from app.schemas.token import OAuthExchangeRequest, Token
 from app.services.oauth_exchange import native_code_challenge
 
@@ -235,11 +234,14 @@ async def provider_callback(
         if getattr(user, "totp_enabled", False):
             # OAuth proves the external identity, but does not complete this
             # account's enrolled second factor. Stop before directory changes,
-            # session creation, or token exchange.
-            return MfaRequired(
-                mfa_token=create_mfa_token(
-                    subject=str(user.id), credential_version=user.credential_version
-                )
+            # session creation, or token exchange. The challenge stays in the
+            # URL fragment, which the browser can read but never sends in an
+            # HTTP request.
+            mfa_token = create_mfa_token(
+                subject=str(user.id), credential_version=user.credential_version
+            )
+            return RedirectResponse(
+                url=f"{frontend}/auth/callback#{urlencode({'mfa_token': mfa_token})}"
             )
         if groups is not None:
             await directory_sync.apply(user.id, groups, provider=provider)
