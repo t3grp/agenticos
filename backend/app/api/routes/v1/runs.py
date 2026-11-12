@@ -23,6 +23,7 @@ from app.api.public_api import INTERNAL, PUBLIC
 from app.api.responses import csv_response
 from app.api.routes.v1._chat_file_bytes import chat_file_response
 from app.api.routes.v1._run_results import run_result
+from app.agents.ask_user import parked_question_texts
 from app.core.config import settings
 from app.core.permissions import Perm
 from app.db.models.agent_run import (
@@ -70,9 +71,13 @@ def waiting_update(run: AgentRun) -> dict[str, Any]:
     """
     if run.status != RunStatus.AWAITING_ANSWER or run.ended_at is None:
         return {}
-    questions = (run.paused_state or {}).get("questions") or []
+    paused_state = run.paused_state or {}
+    question_ids = paused_state.get("questions") or []
     return {
-        "waiting_questions": [q for q in questions if isinstance(q, str)],
+        "waiting_questions": parked_question_texts(
+            paused_state.get("messages") or [],
+            [question_id for question_id in question_ids if isinstance(question_id, str)],
+        ),
         "waiting_expires_at": run.ended_at + timedelta(hours=settings.QUESTION_EXPIRY_HOURS),
     }
 

@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, defer, load_only, raiseload, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 
+from app.agents.ask_user import parked_question_texts
 from app.db.locks import LockScope, hold_subject
 from app.db.models.agent import Agent
 from app.db.models.agent_run import AgentRun, RunStatus, RunSurface
@@ -641,8 +642,13 @@ async def waiting_activity(
     for conversation_id, status, ended_at, paused_state, run_id in result.all():
         if conversation_id is None or ended_at is None:
             continue
-        questions = (paused_state or {}).get("questions") or []
-        question = next((q for q in questions if isinstance(q, str)), None)
+        state = paused_state or {}
+        question_ids = state.get("questions") or []
+        questions = parked_question_texts(
+            state.get("messages") or [],
+            [question_id for question_id in question_ids if isinstance(question_id, str)],
+        )
+        question = next(iter(questions), None)
         current = activity.get(conversation_id)
         if current is None:
             activity[conversation_id] = WaitingActivity(

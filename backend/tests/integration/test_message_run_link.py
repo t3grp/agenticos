@@ -17,6 +17,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelResponse, ToolCallPart
 from sqlalchemy import select
 
 from app.agents.spec import AgentSpec
@@ -472,7 +473,23 @@ class TestWhichConversationsAreAtWork:
             status="awaiting_answer",
             started_at=parked_at - timedelta(minutes=5),
             ended_at=parked_at,
-            paused_state={"questions": ["Which model should I use?"]},
+            paused_state={
+                "messages": ModelMessagesTypeAdapter.dump_python(
+                    [
+                        ModelResponse(
+                            parts=[
+                                ToolCallPart(
+                                    "ask_user_question",
+                                    {"questions": [{"question": "Which model should I use?"}]},
+                                    tool_call_id="ask-1",
+                                )
+                            ]
+                        )
+                    ],
+                    mode="json",
+                ),
+                "questions": ["ask-1"],
+            },
         )
         finished = await _conversation(db, organization, owner)
         await self._run_in(db, finished, agent, status="completed", started_at=now, ended_at=now)

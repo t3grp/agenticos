@@ -10,6 +10,8 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelResponse, ToolCallPart
+
 from app.api.routes.v1.runs import waiting_update
 from app.core.config import settings
 from app.db.models.agent_run import AgentRun, RunStatus, RunSurface
@@ -36,13 +38,27 @@ def _row(**overrides: object) -> AgentRun:
     return AgentRun(**{**defaults, **overrides})
 
 
+def _paused_state(*questions: str) -> dict[str, object]:
+    call = ToolCallPart(
+        "ask_user_question",
+        {"questions": [{"question": question} for question in questions]},
+        tool_call_id="ask-1",
+    )
+    return {
+        "messages": ModelMessagesTypeAdapter.dump_python(
+            [ModelResponse(parts=[call])], mode="json"
+        ),
+        "questions": ["ask-1"],
+    }
+
+
 def test_a_run_parked_on_an_answer_reports_its_questions_and_their_expiry() -> None:
     """The question text and the park time plus the expiry window."""
     parked_at = datetime(2026, 11, 12, 8, 0, tzinfo=UTC)
     run = _row(
         status=RunStatus.AWAITING_ANSWER.value,
         ended_at=parked_at,
-        paused_state={"questions": ["Which model should I use?", "And the budget?"]},
+        paused_state=_paused_state("Which model should I use?", "And the budget?"),
     )
 
     update = waiting_update(run)
@@ -95,7 +111,10 @@ def test_only_string_questions_are_reported() -> None:
     run = _row(
         status=RunStatus.AWAITING_ANSWER.value,
         ended_at=datetime(2026, 11, 12, 8, 0, tzinfo=UTC),
-        paused_state={"questions": ["Which model should I use?", 42, None]},
+        paused_state={
+            **_paused_state("Which model should I use?"),
+            "questions": ["ask-1", 42, None],
+        },
     )
 
     assert waiting_update(run)["waiting_questions"] == ["Which model should I use?"]
