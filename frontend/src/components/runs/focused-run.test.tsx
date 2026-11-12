@@ -231,11 +231,13 @@ describe("stepping to a neighbour", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(mutate).toHaveBeenCalledWith("run-2");
-    const options = useRetryRunMock.mock.calls[0][0] as {
+    const options = useRetryRunMock.mock.calls[0]![0] as {
       onRetried: (runId: string) => void;
     };
     options.onRetried("run-9");
     expect(onFocusRun).toHaveBeenCalledWith("run-9");
+  });
+
   it("says when a fallback served the run, and which model answered", () => {
     serve({ run: run({ fallback_used: true, serving_model: "gpt-5" }) });
     renderRun();

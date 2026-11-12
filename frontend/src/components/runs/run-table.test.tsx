@@ -80,7 +80,7 @@ describe("a run history row", () => {
       />,
     );
 
-    const statusCell = within(row()).getAllByRole("cell")[0];
+    const statusCell = within(row()).getAllByRole("cell")[0]!;
     expect(
       statusCell.querySelector('[title="The run did not finish (ModelHTTPError, HTTP 400)"]'),
     ).not.toBeNull();
@@ -89,7 +89,7 @@ describe("a run history row", () => {
   it("carries no reason on a run that has none", () => {
     render(<RunTable runs={[run()]} />);
 
-    const statusCell = within(row()).getAllByRole("cell")[0];
+    const statusCell = within(row()).getAllByRole("cell")[0]!;
     expect(statusCell.querySelector("[title]")).toBeNull();
   });
 
