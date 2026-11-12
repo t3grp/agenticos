@@ -57,8 +57,8 @@ from app.schemas.token import (
     Token,
 )
 from app.schemas.user import MeRead, UserCreate, UserRead
-from app.services.email.service import get_email_service
 from app.services import rate_limit
+from app.services.email.service import get_email_service
 from app.services.session import SessionService, refresh_expiry, successor_refresh_token
 
 logger = logging.getLogger(__name__)
