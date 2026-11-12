@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from app.api.deps import (
     ImpersonationSvc,
     InvitationStagingSvc,
     MfaSvc,
+    RecentAuth,
     SessionSvc,
     UserSvc,
     enforce_auth_limit,
@@ -84,7 +86,12 @@ async def _issue_tokens(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("User-Agent"),
     )
-    return create_access_token(subject=str(user.id), sid=str(session.id)), refresh_token
+    return (
+        create_access_token(
+            subject=str(user.id), sid=str(session.id), auth_time=int(datetime.now(UTC).timestamp())
+        ),
+        refresh_token,
+    )
 
 
 @router.post("/login", response_model=Token | MfaRequired)
@@ -165,14 +172,16 @@ async def verify_mfa(
 
 
 @router.get("/mfa/status", response_model=MfaStatusRead)
-async def mfa_status(current_user: CurrentUser, mfa_service: MfaSvc) -> Any:
+async def mfa_status(
+    current_user: CurrentUser, mfa_service: MfaSvc, _recent_auth: RecentAuth
+) -> Any:
     """Whether this account's sign-in stops at a second factor."""
     return MfaStatusRead(enabled=mfa_service.is_enabled(current_user))
 
 
 @router.post("/mfa/setup", response_model=MfaSetupRead, status_code=status.HTTP_201_CREATED)
 async def mfa_setup(
-    request: Request, current_user: CurrentUser, mfa_service: MfaSvc
+    request: Request, current_user: CurrentUser, mfa_service: MfaSvc, _recent_auth: RecentAuth
 ) -> Any:
     """Start enrolment: seal a secret and show what the authenticator needs.
 
@@ -191,6 +200,7 @@ async def mfa_enable(
     body: MfaCodeRequest,
     current_user: CurrentUser,
     mfa_service: MfaSvc,
+    _recent_auth: RecentAuth,
 ) -> Any:
     """Prove the enrolled authenticator and switch the second factor on.
 
@@ -208,6 +218,7 @@ async def mfa_disable(
     body: MfaCodeRequest,
     current_user: CurrentUser,
     mfa_service: MfaSvc,
+    _recent_auth: RecentAuth,
 ) -> None:
     """Switch the second factor off, proved by a code from the account."""
     await enforce_auth_limit(request, surface="auth_mfa_manage", identifier=str(current_user.id))
@@ -220,6 +231,7 @@ async def mfa_regenerate_recovery_codes(
     body: MfaCodeRequest,
     current_user: CurrentUser,
     mfa_service: MfaSvc,
+    _recent_auth: RecentAuth,
 ) -> Any:
     """Replace the recovery codes, proved by a code from the account.
 
@@ -366,7 +378,9 @@ async def refresh_token(
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("User-Agent"),
         )
-    access_token = create_access_token(subject=str(user.id), sid=str(session.id))
+    access_token = create_access_token(
+        subject=str(user.id), sid=str(session.id), auth_time=int(session.created_at.timestamp())
+    )
     return Token(access_token=access_token, refresh_token=new_refresh_token)
 
 
@@ -421,7 +435,9 @@ async def change_password(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("User-Agent"),
     )
-    access_token = create_access_token(subject=str(updated.id), sid=str(session.id))
+    access_token = create_access_token(
+        subject=str(updated.id), sid=str(session.id), auth_time=int(session.created_at.timestamp())
+    )
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 
