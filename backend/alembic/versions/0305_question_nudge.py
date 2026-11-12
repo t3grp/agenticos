@@ -7,20 +7,16 @@ No backfill: every existing row is a run that has already been reminded about
 as many times as the old code reminded anyone - never - so null, "not
 reminded yet", is the true value for all of them.
 
-NOTE on the number: `0304` is also claimed by other branches not yet on `t3`
-(#31's `0304_resource_grant_expires_at`, inherited by #32, and #47's
-`0304_visible_failover`; the upstream sync's `0304`–`0307` could not be
-verified live - its branch is not on GitHub). Whichever of them lands
-second re-numbers and re-chains at merge time; this revision chains onto
-`t3`'s head, `0303`.
+This revision follows #47's `0304_visible_failover`. The branch is validated
+with both migrations merged, so the chain has one head.
 """
 
 import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0304_question_nudge"
-down_revision: str | None = "0303_artifact_favourites"
+revision: str = "0305_question_nudge"
+down_revision: str | None = "0304_visible_failover"
 branch_labels: str | None = None
 depends_on: str | None = None
 
