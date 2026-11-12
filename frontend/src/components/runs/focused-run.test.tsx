@@ -231,7 +231,7 @@ describe("stepping to a neighbour", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(mutate).toHaveBeenCalledWith("run-2");
-    const options = useRetryRunMock.mock.calls[0][0] as {
+    const options = useRetryRunMock.mock.calls[0]![0] as {
       onRetried: (runId: string) => void;
     };
     options.onRetried("run-9");
