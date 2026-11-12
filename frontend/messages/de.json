@@ -1733,6 +1733,7 @@
       "chunkCount": "{count, plural, =1 {1 Chunk} other {# Chunks}}",
       "chunkNumber": "Chunk {number}",
       "collectionNamed": "Collection: {name}",
+      "councilReview": "Ratsprüfung",
       "createSpecialist": "Spezialisten erstellen",
       "creating": "Erstellt",
       "creatingChart": "Erstellt ein Diagramm",
@@ -1798,6 +1799,7 @@
       "removeStep": "Schritt entfernen",
       "removingStep": "Entfernt einen Schritt",
       "result": "Ergebnis",
+      "reviewingWithCouncil": "Prüft mit dem Rat",
       "runPython": "Python ausführen",
       "running": "Läuft …",
       "runningCalculations": "Rechnet",
@@ -11315,6 +11317,14 @@
       "needs": "Nichts weiter.",
       "never": "Liest nie die Gespräche anderer und ist in Gruppenchats aus."
     },
+    "council": {
+      "name": "Rat",
+      "does": "Lässt drei delegierte Prüfer – je ein starkes Modell von drei verschiedenen Anbietern – die Arbeit in parallelen Runden mit bis zu 10 Punkten bewerten, bis alle zustimmen.",
+      "example1": "Ist dieser Pull Request bereit zum Zusammenführen?",
+      "example2": "Bewerte diesen Entwurf, bevor er rausgeht",
+      "needs": "Ein Modellprofil pro Delegiertem, von drei verschiedenen Anbietern.",
+      "never": "Ersetzt nie einen fehlenden Delegierten und erfindet nie eine Punktzahl: Ein Delegierter, der nicht erreichbar ist, wird als nicht verfügbar gemeldet, und einer ohne Punktzahl liest sich als keine Punktzahl."
+    },
     "guardrails": {
       "name": "Schutzregeln",
       "does": "Verbirgt Passwörter oder personenbezogene Daten oder stoppt einen Run, wenn eine Nachricht oder Antwort auf eine Regel passt.",
@@ -11695,6 +11705,20 @@
       "max_results": {
         "title": "Gespräche pro Suche",
         "description": "Wie viele Gespräche eine Suche höchstens liefert. Jedes bringt einen kurzen Ausschnitt mit, eine hohe Zahl kostet also bei jeder Suche Kontext."
+      }
+    },
+    "council": {
+      "members": {
+        "title": "Ratsmitglieder",
+        "description": "Die Delegierten: je ein starkes Modell von drei verschiedenen Anbietern mit hohem Reasoning-Aufwand. Ein bis drei Mitglieder."
+      },
+      "agreement_threshold": {
+        "title": "Einigungsschwelle",
+        "description": "Die Punktzahl von 10, die jeder Delegierte erreichen muss, damit eine Runde den Rat zufriedenstellt. Eine Runde darunter heißt: beheben und erneut prüfen lassen."
+      },
+      "max_rounds": {
+        "title": "Runden höchstens",
+        "description": "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten."
       }
     },
     "guardrails": {

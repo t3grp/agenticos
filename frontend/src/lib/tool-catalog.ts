@@ -773,6 +773,16 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "cancellingDelegate",
     displayNameKey: "cancelTask",
   },
+
+  // council - one review round: three delegates score the work in parallel.
+  // The result is plain text - a JSON round with the scores and the table -
+  // so the step renders generic, like any other read-only text tool.
+  run_council_review: {
+    kind: "read",
+    render: "generic",
+    captionKey: "reviewingWithCouncil",
+    displayNameKey: "councilReview",
+  },
   create_agent: {
     kind: "delegate",
     render: "generic",
