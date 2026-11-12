@@ -6,6 +6,7 @@ challenge token may and may not become, and that enrolment answers with
 its secrets once and never again.
 """
 
+import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -161,6 +162,49 @@ async def test_the_challenge_and_the_code_become_a_session(
 
     assert response.status_code == 200
     assert response.json()["access_token"]
+
+
+async def test_a_successful_mfa_challenge_cannot_be_replayed(
+    client: AsyncClient, mock_user: MockUser, mock_redis: MagicMock
+) -> None:
+    mock_redis.set.side_effect = [True, False]
+    challenge = create_mfa_token(
+        subject=str(mock_user.id), credential_version=mock_user.credential_version
+    )
+
+    first = await client.post(_mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"})
+    replay = await client.post(_mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"})
+
+    assert first.status_code == 200
+    assert replay.status_code == 401
+    assert mock_redis.set.await_count == 2
+
+
+async def test_oidc_desktop_mfa_returns_a_nonce_bound_deep_link(
+    client: AsyncClient, mock_user: MockUser, mock_redis: MagicMock
+) -> None:
+    nonce = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+    mock_redis.getdel.return_value = json.dumps(
+        {
+            "groups": None,
+            "provider": "oidc",
+            "client": {"client": "desktop", "nonce": nonce},
+        }
+    )
+    challenge = create_mfa_token(
+        subject=str(mock_user.id), credential_version=mock_user.credential_version
+    )
+
+    response = await client.post(
+        _mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"}
+    )
+
+    assert response.status_code == 307
+    location = response.headers["location"]
+    assert location.startswith("agenticos://auth/callback?code=")
+    assert f"desktop_nonce={nonce}" in location
+    exchange_payload = json.loads(mock_redis.set.await_args_list[-1].args[1])
+    assert exchange_payload["code_challenge"] == nonce
 
 
 async def test_a_wrong_code_at_the_second_step_is_refused(
