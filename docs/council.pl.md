@@ -32,7 +32,7 @@ edytuje jej i nie proponuje prac spoza jej zakresu.
 
 | Pole | Domyślnie | Co to jest |
 |---|---|---|
-| `members` | — | Delegaci: od jednego do trzech, każdy z nazwą, dostawcą i profilem modelu |
+| `members` | — | Dokładnie trzech delegatów, każdy z innym dostawcą i profilem modelu |
 | `agreement_threshold` | `8` | Ocena w skali do 10, którą każdy delegat musi osiągnąć, żeby runda zadowoliła radę |
 | `max_rounds` | `3` | Ile rund oceny może poprosić jeden run (1–5) |
 

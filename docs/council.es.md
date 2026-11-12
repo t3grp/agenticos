@@ -34,7 +34,7 @@ está; no lo edita ni propone trabajo fuera de su alcance.
 
 | Campo | Predeterminado | Qué es |
 |---|---|---|
-| `members` | — | Los delegados: de uno a tres, cada uno con nombre, proveedor y perfil de modelo |
+| `members` | — | Exactamente tres delegados, cada uno con un proveedor distinto y un perfil de modelo |
 | `agreement_threshold` | `8` | La puntuación sobre 10 que cada delegado debe alcanzar para que una ronda satisfaga al consejo |
 | `max_rounds` | `3` | Cuántas rondas de revisión puede pedir un run (1–5) |
 

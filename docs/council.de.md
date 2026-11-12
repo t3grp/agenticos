@@ -36,7 +36,7 @@ Umfangs vor.
 
 | Feld | Standard | Was es ist |
 |---|---|---|
-| `members` | — | Die Delegierten: ein bis drei, jeder mit Name, Anbieter und Modellprofil |
+| `members` | — | Genau drei Delegierte, jeder mit einem eigenen, unterschiedlichen Anbieter und Modellprofil |
 | `agreement_threshold` | `8` | Die Punktzahl von 10, die jeder Delegierte erreichen muss, damit eine Runde den Rat zufriedenstellt |
 | `max_rounds` | `3` | Wie viele Prüfungsrunden ein Run höchstens verlangen darf (1–5) |
 
