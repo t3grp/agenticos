@@ -17,6 +17,7 @@ import pytest
 from httpx import AsyncClient
 from starlette.responses import Response
 
+from app.api import deps
 from app.api.deps import get_redis, get_session_service
 from app.api.routes.v1 import oauth as oauth_routes
 from app.core.config import settings
@@ -95,6 +96,11 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
 ) -> None:
     """The provider identity is only the first factor for an MFA-enabled user."""
     user_id = uuid4()
+    monkeypatch.setattr(settings, "OIDC_GROUPS_CLAIM", "groups")
+    directory_sync = MagicMock()
+    directory_sync.admits = AsyncMock(return_value=True)
+    directory_sync.apply = AsyncMock()
+    app.dependency_overrides[deps.get_directory_sync_service] = lambda: directory_sync
     fake = _FakeRedis()
     app.dependency_overrides[get_redis] = lambda: fake
     session_service = MagicMock()
@@ -109,7 +115,13 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
     oidc_client = MagicMock()
     oidc_client.authorize_access_token = AsyncMock(
         return_value={
-            "userinfo": {"sub": "s", "email": "u@e.com", "name": "U", "email_verified": True}
+            "userinfo": {
+                "sub": "s",
+                "email": "u@e.com",
+                "name": "U",
+                "email_verified": True,
+                "groups": ["admins"],
+            }
         }
     )
     monkeypatch.setattr(oauth_routes, "sign_in_client", lambda provider: oidc_client)
@@ -134,6 +146,9 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
     assert payload is not None
     assert payload["sub"] == str(user_id)
     assert payload["cv"] == 3
+    directory_sync.apply.assert_awaited_once_with(
+        user_id, frozenset({"admins"}), provider="oidc"
+    )
     make_access.assert_not_called()
     make_refresh.assert_not_called()
     issue_code.assert_not_awaited()
