@@ -7113,6 +7113,7 @@
       "modelFilter": "Filter by model",
       "modelRunHadNo": "A model in this run had no price, so this is a floor",
       "toolArgsRepaired": "{count, plural, =1 {Repaired one tool call's malformed arguments instead of retrying it} other {Repaired # tool calls' malformed arguments instead of retrying them}}",
+      "servedByFallback": "Served by {model} (fallback)",
       "cacheSplit": "Of the input, {read, number} read from the provider's cache and {write, number} written to it - priced apart from the rest",
       "modelSettings": "Model settings",
       "monthToDate": "Month to date",

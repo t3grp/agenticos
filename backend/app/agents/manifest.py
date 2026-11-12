@@ -31,7 +31,7 @@ key is written down.
 
 import json
 import time
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Collection, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -447,6 +447,53 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
         "code_runs": scripts[:RECORDED_SCRIPTS],
         "babysit_pr_events": events[:MAX_RECORDED_BABYSIT_PR_EVENTS],
     }
+
+
+def _model_key(model: str) -> str:
+    """A model id reduced to what identifies it, for comparison.
+
+    `response.model_name` is the bare id the provider reported, while a chain
+    id may carry its `provider:` prefix - `anthropic:claude-sonnet-4-5` and
+    `claude-sonnet-4-5` are the same model, and comparing the raw strings
+    would call every fallback a miss. Only the prefix is dropped: an
+    OpenRouter id such as `meta-llama/llama-3-70b` keeps its slash.
+    """
+    return model.split(":", 1)[-1]
+
+
+def resolve_fallback_use(
+    requests: Sequence[RecordedRequest],
+    *,
+    primary_model: str,
+    fallback_models: Collection[str],
+) -> tuple[bool, str | None]:
+    """Which model served a run, from the models its requests recorded.
+
+    Returns `(fallback_used, serving_model)`: whether any request was served
+    by a fallback in the run's chain, and the model id that answered the last
+    successful request - the fallback's id when one served it, the primary's
+    otherwise, or `None` when no request succeeded.
+
+    Only requests whose model is in the chain count. The recorder is shared
+    with run reviewers, who run on their own cheap models, and with inline
+    specialists: a request from either would otherwise read as a fallback.
+    A failed request records `model=None`, so it can neither claim a fallback
+    nor name a server - it is skipped, and a run whose only requests failed
+    reports `(False, None)`.
+    """
+    chain = {_model_key(primary_model), *(_model_key(model) for model in fallback_models)}
+    primary_key = _model_key(primary_model)
+    fallback_used = False
+    serving_model: str | None = None
+    for request in requests:
+        if request.model is None or request.failed is not None:
+            continue
+        if _model_key(request.model) not in chain:
+            continue
+        if _model_key(request.model) != primary_key:
+            fallback_used = True
+        serving_model = request.model
+    return fallback_used, serving_model
 
 
 #: How large a stored manifest may be, as JSON bytes.
