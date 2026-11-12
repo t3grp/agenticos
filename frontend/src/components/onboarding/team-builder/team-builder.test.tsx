@@ -1,0 +1,160 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TeamBuilder } from "./team-builder";
+import * as teamApi from "@/lib/onboarding/team-api";
+import { ROUTES } from "@/lib/constants";
+
+vi.mock("@/components/branding/branding-provider", () => ({
+  useBranding: () => ({ appName: "AgenticOS", logoUrl: null }),
+}));
+
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+import enMessages from "../../../../messages/en.json";
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace?: string) => {
+    const section = namespace ? (enMessages as Record<string, any>)[namespace] : enMessages;
+    return (key: string, params?: Record<string, any>) => {
+      const parts = key.split(".");
+      let val: any = section;
+      for (const p of parts) {
+        val = val?.[p];
+      }
+      if (typeof val === "string") {
+        if (params) {
+          return Object.entries(params).reduce(
+            (acc, [k, v]) => acc.replace(new RegExp(`\\{${k}\\}`, "g"), String(v)),
+            val
+          );
+        }
+        return val;
+      }
+      return key;
+    };
+  },
+}));
+
+describe("TeamBuilder", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("guides the user step by step to build a recommended team of agents", async () => {
+    vi.spyOn(teamApi, "fetchTeamProposal").mockResolvedValue({
+      industry: "software",
+      role: "Engineering / Developer",
+      rationale: "Tailored team for engineering speed.",
+      lead: {
+        name: "Tech Lead",
+        role: "Engineering Coordinator",
+        description: "Coordinates specialists and reviews work.",
+        starters: ["Draft release notes"],
+      },
+      specialists: [
+        {
+          key: "software/api-support",
+          name: "API Support",
+          role: "Integrations",
+          description: "Answers integration questions.",
+          capabilities: ["web_research"],
+          recommended: true,
+        },
+        {
+          key: "software/release-writer",
+          name: "Release Notes Writer",
+          role: "Releases",
+          description: "Writes release notes.",
+          capabilities: ["artifacts"],
+          recommended: true,
+        },
+      ],
+    });
+
+    vi.spyOn(teamApi, "createOnboardingTeam").mockResolvedValue({
+      lead_agent_id: "lead-123",
+      lead_agent_slug: "tech-lead",
+      lead_conversation_id: "conv-123",
+      created_agents: [
+        {
+          id: "lead-123",
+          name: "Tech Lead",
+          slug: "tech-lead",
+          role: "Engineering Coordinator",
+          is_lead: true,
+          status: "published",
+        },
+        {
+          id: "spec-1",
+          name: "API Support",
+          slug: "api-support",
+          role: "Integrations",
+          is_lead: false,
+          status: "published",
+        },
+      ],
+      message: "Team ready",
+    });
+
+    render(<TeamBuilder />);
+
+    // Step 1: About
+    expect(screen.getByText("Step 1 of 4")).toBeInTheDocument();
+    expect(screen.getByText("About you & your work")).toBeInTheDocument();
+    expect(screen.getByText("Engineering / Tech")).toBeInTheDocument();
+    expect(screen.getByText("Software & Technology")).toBeInTheDocument();
+
+    // Advance to Step 2: Goals
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    expect(screen.getByText("Step 2 of 4")).toBeInTheDocument();
+    expect(screen.getByText("What should your AI team handle?")).toBeInTheDocument();
+
+    // Advance to Step 3: Tools
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    expect(screen.getByText("Step 3 of 4")).toBeInTheDocument();
+    expect(screen.getByText("Tools & integrations")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /connect apps/i })).toHaveAttribute(
+      "href",
+      ROUTES.CONNECTORS,
+    );
+
+    // Advance to Step 4: Recommended Team
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Step 4 of 4")).toBeInTheDocument();
+      expect(screen.getByText("Your recommended AI team")).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue("Tech Lead")).toBeInTheDocument();
+    expect(screen.getByText("API Support")).toBeInTheDocument();
+    expect(screen.getByText("Release Notes Writer")).toBeInTheDocument();
+
+    // Deploy Team
+    fireEvent.click(screen.getByRole("button", { name: /build & deploy my team/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Your AI team is ready!")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("link", { name: /chat with your team lead/i })).toHaveAttribute(
+      "href",
+      `${ROUTES.CHAT}?id=conv-123`,
+    );
+  });
+
+  it("allows user to skip to workspace at any point", async () => {
+    render(<TeamBuilder />);
+    const skipButton = screen.getByRole("button", { name: /skip for now/i });
+    fireEvent.click(skipButton);
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.CHAT);
+  });
+});

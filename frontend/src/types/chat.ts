@@ -1,3 +1,4 @@
+import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import type { ChatPerson } from "./conversation";
 import type { Mentionable } from "./mention";
 
@@ -23,8 +24,22 @@ export interface ChatMessageFile {
  * the composer until it can be sent - and, in the apps, kept sealed on the
  * device so closing the app does not lose it (#2097).
  */
+/** The floating assistant's target and page, fixed when the person submits a question. */
+export interface ChatSubmissionContext {
+  agentId: string | null;
+  pageContext: AssistantPageContext | null;
+  /** Filled after the local-access gate, before a question can enter the outbox. */
+  local?: {
+    payload: Record<string, unknown> | null;
+    fileRoot: string | null;
+    projectId: string | null;
+  };
+}
+
 export interface QueuedMessage {
   id: string;
+  /** A continuation keeps its requesting agent; undefined follows the current picker. */
+  agentId?: string | null;
   content: string;
   fileIds?: string[];
   files?: ChatMessageFile[];
@@ -35,6 +50,7 @@ export interface QueuedMessage {
    * held, marked, until the person sends it again or drops it.
    */
   refused?: string;
+  submission?: ChatSubmissionContext;
 }
 
 /** The earlier message a turn answers, quoted above it. */
@@ -162,7 +178,8 @@ export interface ChatMessage {
 }
 
 export interface ToolCall {
-  presentation_kind?: "draft" | null;
+  tool_id?: string | null;
+  presentation_kind?: "draft" | "generic" | "platform" | null;
   id: string;
   name: string;
   args: Record<string, unknown>;
@@ -291,9 +308,12 @@ export type WSEventType =
   | "error"
   | "tool_approval_required"
   | "ask_user"
+  | "user_question_required"
+  | "run_answer_result"
   | "steer_applied"
   | "steer_unapplied"
   | "connect_account"
+  | "computer_access"
   | "compaction_started"
   | "compaction_finished"
   | "compaction_impossible"
@@ -855,6 +875,19 @@ export interface PersonalServiceGap {
  * up front; answered with `connect_account_response`. Never "nobody to speak
  * as" - a run with nobody signed in cannot wait for anybody.
  */
+/**
+ * A run paused on `computer_access`: an agent that works on this computer needs
+ * its files, and waits while the person chooses a folder or the whole computer.
+ * Answered with `computer_access_response`.
+ */
+export interface ComputerAccessRequest {
+  reason: string;
+  /** A local coding delegate also needs full computer access. */
+  coding?: boolean;
+  /** The requesting turn's agent, including when the picker changes while it runs. */
+  agent_id?: string | null;
+}
+
 export interface ConnectionRequest {
   catalog_key: string;
   name: string;

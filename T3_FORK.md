@@ -13,8 +13,11 @@ The initial source baseline is upstream `v1.52.0`, commit
 
 This initial change adds documentation and baseline metadata. It does not add an
 adapter, change application behavior, or establish runtime compatibility.
-GitHub Actions is disabled in this fork at repository level. No automatic update
-or deployment schedule is configured.
+GitHub Actions is disabled in this fork at repository level. The Cloud Build
+validation and downstream updater definitions are documented in [T3_SYNC.md](T3_SYNC.md).
+Repository files alone do not enable the triggers or establish passing checks;
+record the connected build and trigger evidence when installing them. Deployment
+remains a separate acceptance step.
 
 ## Branches
 
@@ -74,6 +77,24 @@ remaining source files. It downloads missing files and does not install software
    review and passing checks, merge with upstream ancestry intact. Promotion to
    any running deployment is a separate step with its own acceptance evidence.
 
+This manual procedure receives changes from Vstorm into the T3 baseline. The
+[downstream updater](T3_SYNC.md) separately distributes validated T3 commits to
+privately configured consumers; it does not automatically import Vstorm releases.
+
+### Migration-number collisions to expect
+
+Three `0296` revisions already exist on `t3`, all with
+`down_revision = "0295_tool_approval_consent"`: `0296_personal_model_connections`,
+`0296_sync_source_connected_account` and upstream's `0296_tool_identity`,
+joined by the merge migrations `0299_merge_personal_composio` and
+`0302_merge_upstream`. Upstream PR #2805 (native business-app tools) adds a
+fourth, `0296_integration_watch_cursor` (also down `0295`). When that PR lands
+in a sync, its migration needs a renumbered merge migration on top of the
+then-current head — do not renumber the existing three — and its
+check-constraint replacements (`ck_trigger_event_source`,
+`ck_trigger_shape`) must be rebased onto whatever the current head did to
+those constraints, because the PR's `_OLD_CHECKS` assume the pre-0296 state.
+
 This is a documented manual update procedure, not an installed sync automation.
 
 ## Contribute improvements upstream
@@ -116,3 +137,37 @@ real documents and operational records in their approved private systems.
 Reference the upstream [MCP guide](docs/mcp.md),
 [HTTP API](docs/api.md), [testing guide](docs/testing.md), and
 [branching guide](docs/branching.md) for their current contracts.
+
+## Floating assistant integration
+
+The floating assistant's page-sharing controls and agent selector are described in
+[the console guide](docs/console.md#the-assistant). Embedded apps publish their
+current view through the bounded setter in
+[the app guide](docs/artifacts.md#sharing-context-with-the-assistant).
+
+The frontend attaches a fresh `page_context` to each submitted question while
+sharing is enabled. Every console page has a route/title fallback; mounted pages
+may register explicit details with `useRegisterAssistantPageContext`. Primary
+app viewers register their app identity, title and version. Richer app details
+require `window.agenticos.setAssistantContext(details)` when the view changes.
+Context registration reads no form values, full page text, query values or browser
+selection automatically.
+
+The WebSocket session validates the bounded reference object before saving an
+accepted question and appends it as untrusted model input. Page identities do not
+grant access, select an agent or trigger a resource fetch. The selected agent
+still runs under the authenticated caller's existing permissions. The context
+note is not a new transcript field; it is model input subject to the normal run,
+trace and compaction behavior. Client outboxes retain the submitted snapshot with
+queued questions.
+
+Queued questions freeze the page, selected agent, project and local workspace
+after the applicable access gate. Regeneration is a new submission using the
+current page and selected agent. The floating chat uses its own conversation
+scope, and account or organization changes remount the widget. App registrations
+also track the current document nonce and clear when that document changes.
+
+Release the frontend and backend changes together in T3-built images. No database
+migration or new dependency is required. Follow the existing validation and
+promotion process above; creating a feature branch does not update a running
+deployment.

@@ -1038,6 +1038,7 @@ ArtifactPublicDataSvc = Annotated[
 ]
 
 from app.services.memory import MemoryService
+from app.services.onboarding_team import OnboardingTeamService
 from app.services.outcome import OutcomeService
 from app.services.primary_conversation import PrimaryConversationService
 from app.services.system_agent import SystemAgentService
@@ -1082,6 +1083,14 @@ def get_primary_conversation_service(db: DBSession) -> PrimaryConversationServic
 PrimaryConversationSvc = Annotated[
     PrimaryConversationService, Depends(get_primary_conversation_service)
 ]
+
+
+def get_onboarding_team_service(db: DBSession) -> OnboardingTeamService:
+    """Create OnboardingTeamService instance with database session."""
+    return OnboardingTeamService(db)
+
+
+OnboardingTeamSvc = Annotated[OnboardingTeamService, Depends(get_onboarding_team_service)]
 
 
 def get_browser_sign_in_service(db: DBSession) -> BrowserSignInService:
@@ -1472,6 +1481,26 @@ async def limit_table_write(ctx: Auth) -> None:
         limit=rate_limit.table_write_limit(),
     )
     _refuse_if_over(decision, "Too many table writes in the last minute. Wait and try again.")
+
+
+async def limit_fork(ctx: Auth) -> None:
+    """Refuse a member forking conversations faster than the deployment allows.
+
+    Keyed on the member and the organization, as table writes are, and for the
+    same reason: each fork stores a copy of a whole conversation, so this is a
+    storage boundary and keeps a per-process floor while the shared limiter
+    cannot count.
+
+    Usage::
+
+        @router.post("/{conversation_id}/fork", dependencies=[Depends(limit_fork)])
+    """
+    decision = await rate_limit.consume_with_local_floor(
+        surface="conversation_fork",
+        caller=f"org:{ctx.organization_id}:user:{ctx.subject_id}",
+        limit=rate_limit.fork_limit(),
+    )
+    _refuse_if_over(decision, "Too many forks in the last minute. Wait and try again.")
 
 
 async def limit_artifact_data(ctx: Auth, rows: bool = Query(True)) -> None:

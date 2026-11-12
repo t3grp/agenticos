@@ -173,6 +173,7 @@ export {
 export { useWorkflowActions } from "./use-workflow-actions";
 export { useWorkflowTables, useWorkflowTable } from "./use-workflow-tables";
 export { useCausingRun, useRunHistory, useWorkflowRun, useWorkflowRuns } from "./use-workflow-runs";
+export { useWorkflowChatRun, useWorkflowRunQuestions } from "./use-workflow-questions";
 export { useWorkflowApprovalHistory, useWorkflowApprovals } from "./use-workflow-approvals";
 export { useWorkflowExposure } from "./use-workflow-exposure";
 export { useWorkflowLogs } from "./use-workflow-logs";
@@ -210,3 +211,7 @@ export { useWikiGraph } from "./use-wiki-graph";
 export { useDurableTasks } from "./use-durable-tasks";
 
 export { useCodingAccounts } from "./use-coding-accounts";
+export {
+  useAssistantPageContext,
+  useRegisterAssistantPageContext,
+} from "./use-assistant-page-context";

@@ -88,7 +88,6 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `monitor` | Einen Befehl beobachten | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | übergeben |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | übergeben |
 | `background_tasks` | Hintergrundthemen | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | übergeben |
-| `agent_messages` | Agentennachrichten | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | unverändert |
 | `planning` | Planung | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | unverändert |
 | `thinking` | Nachdenken | reasoning | keine, mit Absicht | — | — | abgebildet |
 | `system_reminders` | Erinnerung an Anweisungen | reasoning | keine, mit Absicht | — | — | ohne Wirkung |
@@ -287,18 +286,14 @@ das so lange wächst, bis jeder Run für jede Prozedur bezahlt. Siehe
 [Skills](../skills.md) dafür, was ein Skill ist und wie einer in eine Organisation
 gelangt.
 
-**Jeder gebundene Skill ist eine eigene Capability.** Sein Name und seine
-Beschreibung stehen im Katalog, den das Modell in jeder Runde liest, und den
-Textkörper holt sich das Modell mit `load_capability` — dem Tool des
-Agent-Frameworks selbst, weshalb es nicht in der Liste oben steht und weshalb ein
-Spec es weder gewähren noch absichern noch umbenennen kann. `read_skill_resource`
-ist das einzige Tool, das diese Capability beisteuert, und es erscheint nur, wenn
-mindestens ein gebundener Skill eine Datei neben seinen Instruktionen mitbringt.
-
-Das Tool stammt aus `pydantic-ai-skills`, sein Name und seine Formulierungen liegen
-also in fremder Hand. Ein Drift-Test vergleicht, was die Registry deklariert, mit
-den Tools, die dem Modell tatsächlich angeboten werden — das ist es, was den Tag
-meldet, an dem das passiert.
+**Jeder gebundene Skill bleibt eine native verzögerte Capability.** Das Modell
+sieht einen Katalog verfügbarer Skills und öffnet den Inhalt mit `read_skill`.
+Der Plattformadapter erhält den nativen Ladezustand, Freigaben und die Wiedergabe
+von Unterhaltungen, auch älteren. Freigaberichtlinien behalten den stabilen
+Schlüssel `load_capability`; gewöhnliche Tool-Overrides benennen diesen
+Framework-Loader nicht um. `read_skill_resource` liest Begleitdateien und
+erscheint nur, wenn ein gebundener Skill eine mitbringt. Ein Drift-Test gleicht
+das Dateitool der Bibliothek mit der Registry ab.
 
 `run_skill_script` ist abgeschaltet statt freigegeben: Die Dateien eines Skills
 erreichen einen Run unter `/workspace/skills/`, wo das eigene `execute` der
@@ -520,10 +515,6 @@ neben der Capability.
 ## Hintergrundthemen { #background-tasks }
 
 Ausdrückliche Arbeit in einem neuen Thema über die ursprüngliche Antwort hinaus. Der Quellagent fasst das Ergebnis mit aktueller Historie ohne Werkzeuge zusammen. [Hintergrundthemen](../console.de.md#background-topics) beschreibt Grenzen, Freigaben, Stoppen und Unterbrechungen. Getrennt von vorübergehendem `background_tools` und asynchronen Subagenten eines Laufs.
-
-## Agentennachrichten { #agent-messages }
-
-Direkte Nachrichten zwischen zwei Agenten, in einem Thread, den die Konsole zeigt. Ein Thread pro Agentenpaar, in einer Organisation; eine Nachricht wird gespeichert, nie als Lauf zugestellt. Senden braucht `agents:run` für beide Agenten, Lesen für einen von beiden, und beide müssen veröffentlicht sein. Siehe [Agentennachrichten](../agent-messages.de.md) für Antworten, Reaktionen, Dateien und was es nicht tut. Dies ist die offene Version der Delegierung: Wo eine Delegierung den Austausch im übergeordneten Agenten verbirgt, kann einen Thread jeder lesen, der einen der beiden Agenten ausführen darf.
 
 ## Frühere Gespräche { #conversation-search }
 
@@ -2757,6 +2748,11 @@ Spezifikationsversion 14 entfernt gespeicherte `virtual_tables`-Bindungen beim L
 
 ## Workflows { #workflows }
 
+Die Erkennung mit `list_workflows` ist auf 32 KiB kodiertes JSON einschließlich
+der Eingabeverträge begrenzt. Größere Antworten werden vollständig abgelehnt.
+Wählen Sie weniger Workflows oder kleinere Verträge für die Bindung oder prüfen
+Sie den HTTP-Endpunkt für Eingabeschemas außerhalb des Agentenkontexts.
+
 Lässt den Agenten die veröffentlichten [Workflows](../workflows.md) starten, die sein
 Binding nennt, und lesen, wie sie liefen. Das Panel im Builder listet die Workflows der
 Organisation, eine Zeile je Workflow, und eine angehakte Zeile ist einer, den der Agent
@@ -3034,6 +3030,11 @@ jedem Zug bezahlt, ob es es jemals aufruft oder nicht.
 |---|---|---|
 | `strategy` | `auto` | `auto`, `keywords`, `local_bm25`, `bm25`, `regex` |
 | `max_results` | 10 | 1–50, von der nativen Suche ignoriert |
+| `defer_capabilities` | `false` | geeignete Funktionstools aktivierter Capabilities zurückstellen |
+| `defer_mcp_servers` | `true` | Tools gebundener MCP-Server zurückstellen |
+| `exclude_capabilities` | `[]` | Capability-IDs, deren Tools sichtbar bleiben |
+| `exclude_mcp_servers` | `[]` | normalisierte MCP-Tool-Präfixe, deren Tools sichtbar bleiben |
+| `exclude_tools` | `[]` | sichtbare Tool-Namen nach Präfix und Umbenennung, die sichtbar bleiben |
 
 **`local_bm25`** bewertet Werkzeugkennungen, Beschreibungen und Argumentschemata lokal bei jedem Provider. Seltenheit und Textlänge beeinflussen die Rangfolge, Kennungen werden bevorzugt. Nur passende autorisierte Werkzeuge werden zurückgegeben, ohne Modell- oder Embedding-Aufruf. Die Ergebnisgrenze gilt weiterhin.
 
@@ -3046,21 +3047,37 @@ jedem Zug bezahlt, ob es es jemals aufruft oder nicht.
   eine Laufzeitkosten, die der Autor akzeptiert, indem er einen benennt — `auto`
   scheitert nie auf diese Weise.
 
-**Sie einzuschalten, ist das, was die MCP-Toolsets zurückstellt.** Die Capability
-und die Zurückstellung sind zwei Hälften einer Entscheidung: Das `ToolSearch` der
-Bibliothek ist ohne Zurückgestelltes wirkungslos, und ein zurückgestelltes Tool
-ohne eine Suche, die es findet, ist ein Tool, das das Modell nie aufrufen kann.
-`tool_search` zu binden ist also das, was die Toolsets der verbundenen Server zum
-zurückgestellten Laden markiert — die Tools der Registry selbst bleiben sichtbar,
-da sie wenige und pro Agent gewählt sind. Ein Agent, der es nicht bindet, zahlt
-nichts und sieht jedes Tool wie zuvor.
+**Wählen Sie die zurückzustellenden Tool-Gruppen.** Die Standardwerte bewahren das
+Verhalten bestehender Specs: MCP-Tools werden zurückgestellt, Capability-Tools
+bleiben sichtbar. Aktivieren Sie `defer_capabilities`, um auch geeignete
+Funktionstools aktivierter Capabilities zurückzustellen. Deaktivieren Sie
+`defer_mcp_servers`, um nur Capability-Tools zurückzustellen, oder aktivieren Sie
+beide Gruppen gemeinsam. Ein Agent ohne Tool-Suche sieht seine Tools wie zuvor.
+
+**Ausnahmen halten Tools ab der ersten Anfrage sichtbar.** Tragen Sie
+Capability-IDs in `exclude_capabilities`, ganze MCP-Tool-Namensräume in
+`exclude_mcp_servers` oder die endgültig angebotenen Tool-Namen in `exclude_tools`
+ein. Eine Connection namens `github-work` nutzt den Namensraum `github_work`;
+ein persönliches Binding nutzt den tatsächlichen Namensraum des Kontos, häufig
+den Katalogschlüssel wie `notion`. Mehrere persönliche Konten können verschiedene
+Namensräume haben. Geben Sie für ein einzelnes MCP-Tool sein Präfix an, etwa
+`github_work_search`, und verwenden Sie den durch ein Binding umbenannten Namen.
+Ausnahmen beeinflussen die Sichtbarkeit; die Allowlists von Connection und
+Binding kontrollieren weiterhin den Zugriff.
+
+Native Tools des Providers und Capability-Hooks bleiben aktiv. Skills behalten
+ihre eigene Entdeckung über `read_skill`. Echtzeit-Sprachgespräche nutzen
+keine Zurückstellung durch Tool-Suche. Bleibt jedes Tool sichtbar, gibt es für
+die Suche keinen zurückgestellten Katalog zu entdecken.
 
 **Der Builder sagt, wann es sich lohnt.** Sobald die MCP-Bindungen eines Agenten
 zusammen mehr als 30 Tools ergeben - nach der eigenen Positivliste jeder Bindung,
 sonst nach dem, was ihr Server bei der letzten Prüfung gelistet hat -, zeigt der
-MCP-Tab einen Hinweis mit einer groben Token-Schätzung und eine Schaltfläche, die
-die Tool-Suche bindet. Von selbst bindet er sie nie: Die Zurückstellung ändert,
-was das Modell sieht, also bleibt es die Entscheidung der bearbeitenden Person.
+MCP-Tab einen Hinweis mit einer groben Token-Schätzung und eine Schaltfläche zum
+Aktivieren der MCP-Tool-Suche. Sie fügt die Tool-Suche hinzu oder aktiviert die
+MCP-Zurückstellung in der bestehenden Konfiguration und bewahrt dabei Ausnahmen
+und Capability-Einstellungen. Von selbst aktiviert er die Zurückstellung nie:
+Sie ändert, was das Modell sieht, also bleibt es die Entscheidung des Bearbeiters.
 
 **Die Zurückstellung ändert, was das Modell sieht, nie die Identität eines Tools.**
 Ein gefundenes MCP-Tool kommt unter seinem echten, präfigierten Namen an, sodass
@@ -3068,7 +3085,7 @@ das [Genehmigungs-Gate](#what-a-binding-may-change) weiterhin darauf passt und d
 Umbenennung einer Bindung es weiterhin erreicht; `ToolSearch` sitzt ganz außen und
 liest die Namen, die eine Umbenennung bereits angewandt hat.
 
-**Sie braucht keine Erfassung.** Die beiden lokalen Strategien laufen in Python und
+**Sie braucht keine Erfassung.** Die lokalen Strategien laufen in Python und
 geben keine Tokens aus; die native Suche läuft innerhalb der Anfrage des Providers
 selbst, deren Verbrauch der [Budget-Guard](../governance.md) bereits erfasst; und
 die Runden zur Entdeckung sind gewöhnliche Modellanfragen, die derselbe Guard
@@ -3137,8 +3154,30 @@ Zugs die Nachricht eines `guardrail_blocked`-Runs nicht erneut ab, gleich welche
 Prüfung ihn gestoppt hat. An ihrer Stelle liest das Modell einen kurzen Hinweis,
 dass ein Guardrail diesen Zug gestoppt hat, ohne den Text der Nachricht und ohne
 das, was die mit ihr gesendeten Dateien hinzugefügt haben. Die Unterhaltung zeigt
-der Person weiterhin, was sie eingegeben hat. Die Suche in früheren Unterhaltungen
-(`conversation_search`) filtert diese Nachrichten noch nicht.
+der Person weiterhin, was sie eingegeben hat. Die Ablehnung eines Agent-Schritts
+im Workflow markiert auch die genaue Quellnachricht im Chat. Die Suche in früheren
+Unterhaltungen (`conversation_search`) lässt abgelehnte Nachrichten bei Treffern,
+Ausschnitten und beim Lesen des Transkripts aus. Diese Tools erhalten keinen Titel
+einer Unterhaltung mit einem abgelehnten Zug, auch bei bereits gespeicherten Titeln.
+
+Wiederholungen und aufgerufene Workflows behalten diese Herkunft der Ablehnung.
+Sie erben weder ein Antwortziel noch Zugriff auf den Workspace des Quellchats.
+War ein neu abgelehnter Zug bereits komprimiert, wird die gespeicherte
+Zusammenfassung, die ihn enthält, verworfen. Der spätere Verlauf wird mit dem
+Ablehnungshinweis neu aufgebaut. Gesprächserwähnungen verwenden dieselbe
+gefilterte Liste, damit ihre Bezeichnungen keinem Modell abgelehnten Text wiedergeben.
+
+Eine bereits laufende Komprimierung kann einen später abgelehnten Zug nicht
+wieder im Cache speichern. Beim Upgrade werden vorhandene Zusammenfassungen
+einmal neu aufgebaut; die ursprünglichen Nachrichten bleiben erhalten.
+
+Jeder Run prüft seinen Verlaufsstand vor jeder Modellanfrage, auch nach Tool-Aufrufen. Agenten-, Modell- und Entscheidungsschritte eines Workflows prüfen außerdem ihre gemeinsame Chatquelle vor dem Start; wartende Schritte dürfen eine abgelehnte oder gelöschte Quelle nicht wiederverwenden. Voice-Zusammenfassungen und neue Realtime-Sitzungen verwenden dieselbe Revisionsprüfung.
+
+Coding-Harnesses prüfen denselben Kontext vor dem Start und vor jedem ACP-Prompt, auch nach einer Korrektur der Aufgabe.
+
+Wird ein früherer Zug abgelehnt, während ein Run auf Freigabe oder eine Antwort
+wartet, stoppt der Run vor der Wiederholung von Tools oder einem Modellaufruf.
+Beginnen Sie einen neuen Zug mit dem aktuellen, gefilterten Verlauf.
 
 **Eine Ausgabeprüfung greift, bevor jemand die Antwort sieht.** Jede Oberfläche
 streamt: Der Web-Chat und das eingebettete Widget senden die Antwort, während sie
@@ -3281,18 +3320,25 @@ Person abgelehnt hat, und macht weiter.
 
 Das Tool und sein Schema stammen aus `AskUser` in pydantic-ai-harness. Es ist in
 jedem neuen Agent und jeder Vorlage standardmäßig aktiv und lässt sich abschalten.
-Wo noch niemand antworten kann — ein Zeitplan, ein Webhook, die API —, erfährt der
-Agent, dass die Person abgelehnt hat.
+Ein eigenständiger Agent-Run ohne Fragekanal — aus einem Zeitplan, Webhook oder
+der API — erfährt, dass die Person abgelehnt hat.
 
-Eine unbeantwortete Frage beendet die Arbeit des Agents nicht endgültig. Verlässt
-die Person die offene Karte, parkt der Run darauf — im Run-Verlauf als **Wartet
-auf eine Antwort** — und die Karte kehrt zurück, sobald sie die Unterhaltung
-wieder öffnet, auf jedem Gerät. Die Antwort setzt den Run dort fort, wo er
-stehen blieb. Antworten kann nur die gefragte Person, über
-`POST /runs/{run_id}/answers`; `GET /runs/{run_id}/questions` liest die Karte
-zurück. Nach einem Tag (`QUESTION_EXPIRY_HOURS`, 24) endet der Run als
+Im Konsolenchat speichert der Run seine Fragen und pausiert, bevor die Karte
+erscheint — im Run-Verlauf als **Wartet auf eine Antwort**. Ein Chatwechsel,
+Neuladen oder das Öffnen der Unterhaltung auf einem anderen Gerät stellt die
+unbeantwortete Karte wieder her. Die Konsole sendet Antworten über ihre aktive
+Chatverbindung, damit ein delegierter Agent während der Fortsetzung weitere
+Fragen stellen kann. Ohne Verbindung wartet die Karte auf die Wiederverbindung.
+
+Antworten kann nur die gefragte Person. API-Clients können
+`POST /runs/{run_id}/answers` verwenden; `GET /runs/{run_id}/questions` liest die
+Karte zurück. Nach einem Tag (`QUESTION_EXPIRY_HOURS`, 24) endet der Run als
 abgebrochen, und der Schritt hält fest, dass die Person nicht rechtzeitig
 geantwortet hat.
+
+In einem Workflow-Agent-Schritt speichert dasselbe Tool die Unterhaltung und pausiert den Workflow mit **Wartet auf Benutzer**. Antworte in der Workflow-Run-Ansicht oder im ursprünglichen Chat. Die Antwort wird gespeichert, und der Workflow-Worker setzt denselben Agent-Run mit seinem Budget und den bisherigen Tool-Ergebnissen fort. Workflow-Clients lesen `GET /workflow-runs/{run_id}/questions` und senden `POST /workflow-runs/{run_id}/nodes/{node_run_id}/answers` mit dem üblichen Objekt `responses`. Jeder Eintrag nennt die zugehörige `workflow_run_id`; verwende diese beim Beantworten einer Frage aus einem synchron aufgerufenen Workflow.
+
+Fragekarten erscheinen nur, solange du den zugehörigen Workflow ausführen darfst. Eine **use**-Freigabe für diesen Workflow erlaubt ebenfalls das Antworten; andere Personen mit Lesezugriff können nicht für dich antworten.
 
 ## Entwürfe { #drafts }
 

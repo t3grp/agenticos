@@ -373,6 +373,7 @@
     "workspace": "Workspace",
     "workspaces": "Workspace'ler",
     "allOrganizations": "Tüm organizasyonlar",
+    "noFavouriteApps": "Bir uygulamayı burada sabitlemek için yıldız ekleyin. <link>Tüm uygulamalar</link>",
     "context": "Bağlam",
     "deploymentSettings": "Dağıtım",
     "routines": "Rutinler",
@@ -870,7 +871,13 @@
         "boolean": "Evet veya hayır",
         "date": "Tarih",
         "choice": "Seçenek"
-      }
+      },
+      "contractFormat": "Giriş sözleşmesi",
+      "simpleFields": "Basit alanlar",
+      "jsonSchema": "JSON Schema",
+      "formatHint": "Basit alanları veya JSON Schema sözleşmesini seçin. Bu tetikleyici açıkken her kayıtlı biçim korunur; workflow’a yalnızca seçilen biçim kaydedilir.",
+      "schemaHint": "İç içe nesneler, diziler ve referanslar için JSON Schema Draft 2020-12 kullanın. Girdiler run başlamadan önce doğrulanır.",
+      "schemaInvalid": "Bir JSON nesnesi girin. Bu değişiklik kaydedilmedi."
     },
     "categoryHint": {
       "triggers": "run nasıl başlar?",
@@ -1468,7 +1475,7 @@
     "templateUnknown": "{placeholder}, bu adımın okuyabileceği bir alanı belirtmiyor.",
     "templatePreview": "Önizleme:",
     "templateSuggestions": "Önceki adımlardaki değerler",
-    "triggerHintCall": "Başka bir workflow’daki Run a workflow adımı bunu girdisiyle başlatır; girdi bu alanlara göre doğrulanır. Sonraki adımlar bunları payload olarak okur.",
+    "triggerHintCall": "Başka bir workflow’daki Run a workflow adımı bunu girdisiyle başlatır; girdi bu giriş sözleşmesine göre doğrulanır. Sonraki adımlar girdiyi payload olarak okur.",
     "pickerWorkflowLabel": "Workflow",
     "pickerWorkflowPlaceholder": "Bir workflow seçin",
     "pickerWorkflowNone": "Henüz Called by a workflow ile başlayan bir workflow yayımlanmadı.",
@@ -2031,6 +2038,10 @@
     }
   },
   "artifacts": {
+    "addFavourite": "Favorilere ekle",
+    "removeFavourite": "Favorilerden çıkar",
+    "addFavouriteNamed": "{name} favorilere eklensin",
+    "removeFavouriteNamed": "{name} favorilerden çıkarılsın",
     "actions": {
       "why": "“{page}” sayfası, bu workflow’u sizin erişiminiz ve budget’ınızla çalıştırmak istiyor. Devam etmeden önce neler göndereceğini kontrol edin.",
       "pageWording": "Sayfanın kullandığı ad",
@@ -3266,7 +3277,7 @@
       "inCategoryUse": "Kullanımdaki kategoriler",
       "inTagUse": "Kullanımdaki etiketler",
       "mcpToolLoad": "Bu MCP sunucuları her istekte modele {count} araç sunar; kullanıcı yazmaya başlamadan önce yaklaşık {tokens, number} token ve modelin iyi seçemeyeceği kadar çok araç anlamına gelir. Tool search, agent arayana kadar bu araçları görünümden kaldırır.",
-      "mcpToolLoadEnable": "Tool search özelliğini aç",
+      "mcpToolLoadEnable": "MCP tool aramasını etkinleştir",
       "agentDescriptionLabel": "Açıklama",
       "agentNameLabel": "Ad",
       "agentNameRequired": "Agentın adı olmalı.",
@@ -3560,7 +3571,7 @@
       "avatarColourHint": "Fotoğraf yükleyene kadar avatarınız olarak gösterilir.",
       "prefArtifactVersionPublished": "Uygulama güncellendi",
       "prefArtifactVersionPublishedTrigger": "Takip ettiğiniz uygulama yeni bir sürüm aldı; agentı yeniden yayımladı veya bir kullanıcı eski sürümü geri yükledi.",
-      "prefResourceShared": "Grubunuzla paylaşıldı",
+      "prefResourceShared": "Sizinle veya grubunuzla paylaşıldı",
       "prefResourceSharedTrigger": "Bir şey (agent, skill, bilgi veya uygulama) üyesi olduğunuz grupla paylaşıldı.",
       "prefBudgetWarning": "Bölüm budgetı %80 seviyesinde",
       "prefBudgetWarningTrigger": "Yönettiğiniz bir bölüm aylık budgetının %80’ini kullandı. Yöneticilere tüm bölümler için bildirim gönderilir.",
@@ -4342,7 +4353,8 @@
       "templateCategories": "Kategoriler",
       "templateCount": "{count, plural, one {# şablon} other {# şablon}}",
       "automationCategoryHint": "Tabloları otomatik hazırlanan, kullanıma hazır otomasyonlar.",
-      "exampleCategoryHint": "Kendi otomasyonunuzu öğrenmek ve oluşturmak için küçük akışlar."
+      "exampleCategoryHint": "Kendi otomasyonunuzu öğrenmek ve oluşturmak için küçük akışlar.",
+      "startRunSchema": "Beklenen giriş şeması"
     },
     "runs": {
       "aParkedRunIsStill": "Beklemeye alınmış run hâlâ beklemede. Hiçbir karar verilmedi ve hiçbir şeyin süresi dolmadı.",
@@ -4686,6 +4698,7 @@
     "failedLoadConnections": "Bağlantılar yüklenemedi",
     "failedLoadOrgServers": "Kuruluşun MCP server'ları yüklenemedi",
     "finishConsentThenReturn": "Açılan sekmedeki işlemi tamamlayıp geri dönün. Yetkilendirildiğinde server burada görünür.",
+    "finishConsentInBrowser": "Tarayıcınızda oturum açmayı tamamlayıp geri dönün. Yetkilendirildiğinde server burada görünür.",
     "consentTabBlocked": "Tarayıcınız oturum açma sekmesini engelledi. Bu site için açılır pencerelere izin verip yeniden deneyin.",
     "fromRegistry": "Registry",
     "fromRegistryHint": "Genel MCP registry'den. Burada kimse incelemedi: açıklama yayınlayana aittir ve hangi kimlik bilgisini istediğine dair yönlendirme yoktur.",
@@ -5394,6 +5407,26 @@
       "max_results": {
         "title": "Arama başına eşleşme",
         "description": "Yerel aramanın döndüreceği eşleşme sayısı; native search'te kullanılmaz."
+      },
+      "defer_capabilities": {
+        "title": "Capability tool’larını ertele",
+        "description": "Etkin capability’lerin uygun tool’larını agent arayana kadar gizler. Kapatıldığında capability tool’ları görünür kalır."
+      },
+      "defer_mcp_servers": {
+        "title": "MCP tool’larını ertele",
+        "description": "Bağlı MCP server’ların uygun tool’larını agent arayana kadar gizler. Kapatıldığında MCP tool’ları görünür kalır."
+      },
+      "exclude_capabilities": {
+        "title": "Her zaman görünür capability’ler",
+        "description": "Tool’ları görünür kalacak capability kimliklerini virgülle ayırın; ör. knowledge veya visuals. Bu capability’lerin yine de etkin olması gerekir."
+      },
+      "exclude_mcp_servers": {
+        "title": "Her zaman görünür MCP server’lar",
+        "description": "Tool’ları görünür kalacak MCP tool ad alanı öneklerini virgülle ayırın; ör. github_work veya agenticos. Tool adından önceki öneki kullanın ve kısa çizgileri alt çizgiyle değiştirin."
+      },
+      "exclude_tools": {
+        "title": "Her zaman görünür tool’lar",
+        "description": "Görünür kalacak tool’ların modelin gördüğü adlarını virgülle ayırın. Yeniden adlandırılan capability tool adlarını ve tam önekli MCP tool adlarını kullanın; ör. github_work_list_issues."
       }
     },
     "web_fetch": {
@@ -5780,7 +5813,7 @@
     "tool_search": {
       "name": "Tool arama",
       "does": "Çok sayıda tool'u olan Agent'ın her seferinde tümünü okumak yerine ihtiyacı olduğunda doğru tool'u bulmasını sağlar.",
-      "example1": "Düzinelerce tool'u olan birkaç MCP server'a bağlı Agent",
+      "example1": "Çok sayıda etkin capability’si ve bağlı MCP server’ı olan Agent",
       "needs": "Ek bir şey gerekmez.",
       "never": "Tool eklemez; Agent arayana kadar tool'ları gizler."
     },
@@ -8332,6 +8365,10 @@
         "title": "Yayımlanmış sayfalar",
         "body": "Agent’larınızın yayımladığı raporlar ve dashboard’lar. Görüntülemek için açın, önceki bir sürümü seçin, iş arkadaşlarınızla paylaşın veya herkese açık bağlantı oluşturun."
       },
+      "nav-pinned": {
+        "title": "Sabitlenmiş uygulamalar",
+        "body": "Yıldızladığınız uygulamalar burada, kenar çubuğunda görünür. Bir uygulamayı kartından veya sayfasından yıldızlayıp aynı şekilde kaldırabilirsiniz."
+      },
       "settings-api-keys": {
         "title": "API key’leriniz",
         "body": "Bir key, script’in, Postman’in veya MCP client’ının tarayıcı kullanmadan sizin adınıza işlem yapmasını sağlar. Yapabileceklerini seçin; sizin yapabileceklerinizin ötesine geçemez ve key’i iptal ettiğiniz anda çalışmayı bırakır."
@@ -8603,6 +8640,10 @@
       "chat-subscription-model": {
         "title": "Claude aboneliğinizi kullanın",
         "body": "Bu sohbet için kayıtlı Claude abonelik modellerinizden birini seçin. Bağlantı kişisel kalır; Ayarlar → AI bağlantıları bölümünden yönetin."
+      },
+      "workflow-input-contract": {
+        "title": "Beklenen girdiyi tanımlayın",
+        "body": "Manuel, API veya Bir workflow tarafından çağrılan tetikleyicileri, basit alanları veya JSON Schema Draft 2020-12 sözleşmesini kullanabilir. Şema iç içe değerleri destekler ve run başlamadan önce doğrulanır."
       }
     }
   },
@@ -9014,6 +9055,10 @@
       "filters": "Filtrele ve sırala",
       "show": "Göster",
       "backToActive": "Etkin konuşmalara dön",
+      "modeLabel": "Konuşmaları şöyle göster",
+      "modeChats": "Konuşmalar",
+      "modeAgents": "Ajanlar",
+      "otherAgents": "Diğer",
       "age": {
         "today": "Bugün",
         "yesterday": "Dün",
@@ -9029,7 +9074,11 @@
       "title": "Chat'ler",
       "unread": "Yeni yanıt",
       "unreadHeading": "Okunmamış",
-      "unnamedProject": "Bir project"
+      "unnamedProject": "Bir project",
+      "sharedHeading": "Sizinle paylaşılanlar",
+      "sharedLoading": "Paylaşılan konuşmalar yükleniyor…",
+      "sharedFailed": "Paylaşılan konuşmalar yüklenemedi.",
+      "retryShared": "Paylaşılan konuşmaları yeniden yükle"
     },
     "skipComment": "Yorumu atla",
     "sourceCount": "{count, plural, =1 {1 kaynak} other {# kaynak}}",
@@ -9120,11 +9169,11 @@
       "knowledgeBaseSearch": "Bilgi tabanı araması",
       "listed": "{named, select, no {Listelendi…} other {{subject} listelendi}}",
       "listing": "{named, select, no {Listeleniyor…} other {{subject} listeleniyor}}",
-      "loadSkill": "Skill yükle",
+      "loadSkill": "Skill oku",
       "loading": "Yükleniyor…",
       "availableSkills": "Kullanılabilir skill'ler",
       "lookingThroughSkills": "Skill'ler inceleniyor",
-      "loadingSkill": "Bir skill yükleniyor",
+      "loadingSkill": "Bir skill okunuyor",
       "lookedFor": "{named, select, no {Arandı…} other {{subject} arandı}}",
       "lookingAtChannel": "Kanal inceleniyor",
       "lookingAtChannelMembers": "Kanaldaki kişiler inceleniyor",
@@ -9400,6 +9449,11 @@
       "failed": "Browser'a erişilemedi"
     },
     "conversationActions": "Konuşma işlemleri",
+    "changeProject": "Projeyi değiştir",
+    "moveToProject": "Projeye taşı…",
+    "removeFromProject": "Projeden kaldır",
+    "projectMoved": "Konuşma taşındı",
+    "projectMoveFailed": "Konuşma taşınamadı",
     "imageNotLoaded": "Görsel (yüklenmedi)",
     "whileWorking": {
       "steersWaiting": "Göreve gönderildi - sonraki adımda okunacak"
@@ -9835,8 +9889,9 @@
     "approvalRememberFailed": "Onay kaldırılamadı. Tekrar deneyin.",
     "approvalRememberRetry": "Tekrar dene",
     "localAccess": {
+      "continue": "Erişim verildi - lütfen devam et.",
       "title": "{agent} nerede çalışabilir?",
-      "description": "{agent} bilgisayarında çalışır. Bu agent için bir kez sorulur; daha sonra Chat controls → Work on altında değiştirebilir ya da geri alabilirsin.",
+      "description": "{agent} bu istek için bilgisayarındaki dosyalara ihtiyaç duyuyor. Seçimin bu agent için hatırlanır; daha sonra Chat controls → Work on altında değiştirebilir ya da geri alabilirsin.",
       "computer": "Tüm bilgisayar",
       "computerHint": "Hesabının erişebildiği her yerde dosyaları okuyup değiştirebilir ve senin adına komut çalıştırabilir. Bilgisayarın onay ister.",
       "folder": "Klasör seç",
@@ -9844,7 +9899,23 @@
       "cancel": "Şimdi değil",
       "agentUnavailable": "Seçilen ajan yüklenemedi. Tekrar deneyin.",
       "failed": "Bu bilgisayarda erişim ayarlanamadı"
-    }
+    },
+    "fork": "Yeni konuşmaya dallandır",
+    "forkedToast": "Konuşma dallandırıldı",
+    "failedForkConversation": "Konuşma dallandırılamadı",
+    "forkedFrom": "<link>{title}</link> konuşmasından dallandırıldı",
+    "untitledFork": "Başlıksız konuşma",
+    "leaveShared": "Sohbetlerimden kaldır",
+    "leftShared": "Sohbetlerinizden kaldırıldı",
+    "failedLeaveShared": "Konuşma kaldırılamadı",
+    "conversationViewOnly": "Sizinle salt okunur olarak paylaşıldı",
+    "accessChanged": "Erişim değiştirildi",
+    "failedToChangeAccess": "Erişim değiştirilemedi",
+    "accessLevelFor": "{name} için erişim düzeyi",
+    "accessChecking": "Sohbet erişimi kontrol ediliyor…",
+    "accessFailed": "Bu sohbete erişim doğrulanamadı",
+    "accessRetry": "Tekrar dene",
+    "forking": "Sohbet dallandırılıyor…"
   },
   "admin": {
     "actions": "Eylemler",
@@ -10102,7 +10173,8 @@
     "revoked": "Anahtar iptal edildi",
     "couldNotLoad": "API anahtarlarınız yüklenemedi",
     "emptyTitle": "Henüz API anahtarı yok",
-    "emptyWhy": "Bir betikten, Postman’den veya Claude Code’dan API’yi çağırmak için anahtar oluşturun."
+    "emptyWhy": "Bir betikten, Postman’den veya Claude Code’dan API’yi çağırmak için anahtar oluşturun.",
+    "personalConsentWhy": "Kişisel onay hazır izin kümelerine dahil değildir. Bu anahtarın veya uygulamanın kişisel bağlantılarınızı ve verilerinizi kullanan rutinleri ve izlemeleri onaylamasına izin vermek için Özel altında personal:consent seçeneğini işaretleyin."
   },
   "kb": {
     "addIntegration": "Entegrasyon ekle",
@@ -10628,6 +10700,8 @@
     "templatesMore": "{count, plural, =1 {1 tane daha göster} other {# tane daha göster}}",
     "templatesFewer": "Daha az göster",
     "local": {
+      "useAllowed": "İzin verilen klasörü kullan",
+      "allRoutines": "Tüm rutinlerim",
       "label": "Üzerinde çalış",
       "hint": "Her çalışma, masaüstü uygulaması aracılığıyla bilgisayarınızdaki bir klasörde veya agent’ın sandbox’ında gerçekleşir. Uygulama kapalıysa çalışma uygulamanın açılmasını bekler.",
       "elsewhereHint": "Her çalışma bilgisayarınızdaki bu klasörde gerçekleşir. Bunu o bilgisayardaki masaüstü uygulamasından değiştirin.",
@@ -11624,6 +11698,9 @@
     "created": "{name} projesi oluşturuldu",
     "saved": "Proje kaydedildi",
     "deleted": "Proje silindi. Sohbetleri artık normal sohbetler.",
+    "moved": "Konuşma taşındı",
+    "moveFailed": "Konuşma taşınamadı",
+    "changeProject": "Projeyi değiştir",
     "uploaded": "{count, plural, =1 {1 dosya eklendi} other {# dosya eklendi}}",
     "removed": "Kaldırıldı",
     "filesUnreadable": "Projenin dosyaları okunamadı",
@@ -13022,5 +13099,98 @@
     "opensNewTab": "Yeni bir sekmede açılır. Hazır olduğunuzda buraya dönün.",
     "skipHint": "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Bağlantılar → Uygulamalar bölümünden yapabilirsiniz.",
     "continueToWorkspace": "Workspace alanına geç"
+  },
+  "onboardingTeam": {
+    "step1Title": "Siz ve işiniz hakkında",
+    "step1Subtitle": "Doğru uzman agent'ları önerebilmemiz için rolünüz hakkında biraz bilgi verin.",
+    "roleLabel": "Rolünüz nedir?",
+    "industryLabel": "Hangi sektörde veya alanda çalışıyorsunuz?",
+    "teamSizeLabel": "Takım büyüklüğü",
+    "step2Title": "Yapay zeka ekibiniz neleri üstlensin?",
+    "step2Subtitle": "Devretmek veya hızlandırmak istediğiniz iş akışlarını seçin.",
+    "goalsLabel": "Öncelikli alanlar",
+    "detailsLabel": "İş akışınız hakkında daha fazla bilgi verin (isteğe bağlı)",
+    "detailsPlaceholder": "ör. Çok sayıda müşteri sorusu alıyoruz ve haftalık bülten hazırlıyoruz...",
+    "step3Title": "Araçlar ve entegrasyonlar",
+    "step3Subtitle": "Ekibinizin her gün kullandığı araçları seçin. Şimdi veya daha sonra bağlayabilirsiniz.",
+    "toolsInStack": "Kullandığınız araçlar",
+    "appsTitle": "Uygulama ve araçları bağla",
+    "appsOptional": "İsteğe bağlı",
+    "appsDescription": "Araçlarınızı Composio üzerinden yetkilendirin.",
+    "connectApps": "Uygulamaları bağla",
+    "opensNewTab": "Yeni sekmede açılır.",
+    "skipHint": "Uygulama bağlamak tamamen isteğe bağlıdır.",
+    "step4Title": "Önerilen yapay zeka ekibiniz",
+    "step4Subtitle": "İşte ekip yapınız. Takım lideriniz görevleri koordine eder ve uzmanlara devreder.",
+    "leadBadge": "Takım Lideri ve Orkestratör",
+    "leadOrchestrationHint": "Görevleri uzmanlara yönlendirir ve sizin için sonuçları birleştirir.",
+    "starterPromptsHeader": "Örnek başlangıç soruları",
+    "specialistsTitle": "Uzman agent'lar",
+    "addSpecialist": "Uzman ekle",
+    "removeSpecialist": "Kaldır",
+    "selectTemplate": "Şablon seç",
+    "deployTeam": "Ekibimi oluştur ve dağıt",
+    "deployingTitle": "Yapay zeka ekibiniz kuruluyor...",
+    "deployingSubtitle": "Modeller, delegasyon kanalları ve çalışma alanı kuruluyor...",
+    "deployingStep1": "Uzman agent özellikleri hazırlanıyor...",
+    "deployingStep2": "Yetenekler ve araçlar bağlanıyor...",
+    "deployingStep3": "Delegasyon hiyerarşisi kuruluyor...",
+    "deployingStep4": "Sohbette ekip çalışma alanı açılıyor...",
+    "errorTitle": "Bir sorun oluştu",
+    "tryAgain": "Tekrar Dene",
+    "teamMembersCreated": "Oluşturulan Ekip Üyeleri",
+    "successTitle": "Yapay zeka ekibiniz hazır!",
+    "successSubtitle": "Takım lideriniz ve uzmanlarınız oluşturuldu ve birbirine bağlandı.",
+    "startChat": "Takım Lideri ile sohbet et",
+    "viewAgents": "Ekibi Agent'lar sayfasında gör",
+    "skip": "Şimdilik atla",
+    "back": "Geri",
+    "continue": "Devam et",
+    "generating": "Oluşturuluyor...",
+    "generatingProposal": "Profiliniz analiz ediliyor ve ekip önerisi oluşturuluyor...",
+    "stepTracker": "Adım {step} / 4",
+    "stepProfile": "Profil",
+    "stepGoals": "Hedefler",
+    "stepTools": "Araçlar",
+    "stepTeam": "Önerilen Ekip",
+    "roles": {
+      "founder": "Kurucu / Yönetici",
+      "engineering": "Mühendislik / Yazılım",
+      "product": "Ürün / PM",
+      "operations": "Operasyon",
+      "support": "Müşteri Desteği",
+      "legal": "Hukuk ve Finans",
+      "other": "Diğer"
+    },
+    "industries": {
+      "software": "Yazılım ve Teknoloji",
+      "ecommerce": "E-Ticaret ve Perakende",
+      "finance": "Finans ve Bankacılık",
+      "healthcare": "Sağlık ve Yaşam Bilimleri",
+      "legal": "Hukuk Hizmetleri",
+      "manufacturing": "Üretim ve Lojistik",
+      "publicSector": "Kamu Sektörü",
+      "general": "Genel / Diğer"
+    },
+    "teamSizes": {
+      "solo": "Bireysel",
+      "soloDesc": "Sadece ben",
+      "small": "Küçük Ekip",
+      "smallDesc": "2–15 kişi",
+      "company": "Organizasyon",
+      "companyDesc": "15+ kişi"
+    },
+    "goals": {
+      "support": "Müşteri Desteği ve Talep Yönetimi",
+      "docs": "Dokümantasyon ve Bilgi Bankası",
+      "releases": "Sürüm Notları ve Değişiklik Günlüğü",
+      "research": "Araştırma ve Rakip Analizi",
+      "contracts": "Sözleşme ve Politika İncelemesi",
+      "automation": "Süreç ve İş Akışı Otomasyonu",
+      "incidents": "Olay Müdahalesi ve Teşhis",
+      "content": "İçerik Yazımı ve Ürün Metinleri",
+      "data": "Veri Analizi ve Raporlama",
+      "meetings": "Toplantı Notları ve Kararları"
+    }
   }
 }

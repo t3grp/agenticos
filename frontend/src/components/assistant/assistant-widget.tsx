@@ -8,6 +8,7 @@ import type { ChatPrompt } from "@/components/chat/chat-container";
 import { useShell } from "@/hooks/use-shell";
 import { isDesktopShell } from "@/lib/desktop/shell";
 import { useAssistant } from "@/hooks/use-assistant";
+import { useAssistantPageContext } from "@/hooks/use-assistant-page-context";
 import { useAssistantSignals } from "@/hooks/use-assistant-signals";
 import { pointAt, type ConsoleLink } from "@/lib/assistant-highlight";
 import {
@@ -49,7 +50,10 @@ let visits = 0;
  * Shown only to somebody who may run agents - the assistant is an agent like any
  * other. Before it has a model it walks through connecting one instead.
  */
-export function AssistantWidget() {
+export function AssistantWidget({
+  defaultAgentId,
+  viewer = false,
+}: { defaultAgentId?: string | null; viewer?: boolean } = {}) {
   // A failed read leaves the corner empty on every page rather than an error
   // following the reader around; Settings → Assistant is where it is said.
   const { assistant } = useAssistant();
@@ -59,9 +63,11 @@ export function AssistantWidget() {
   if (assistant.status === "ready") {
     return (
       <ReadyWidget
-        key={JSON.stringify([userId, orgId, assistant.agent_id])}
+        key={JSON.stringify([userId, orgId, assistant.agent_id, defaultAgentId ?? null])}
         assistant={assistant}
         agentId={assistant.agent_id}
+        defaultAgentId={defaultAgentId ?? assistant.agent_id}
+        viewer={viewer}
       />
     );
   }
@@ -107,9 +113,20 @@ function usePhone(): boolean {
   return phone;
 }
 
-function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentId: string }) {
+function ReadyWidget({
+  assistant,
+  agentId,
+  defaultAgentId,
+  viewer,
+}: {
+  assistant: AssistantState;
+  agentId: string;
+  defaultAgentId: string;
+  viewer: boolean;
+}) {
   const t = useTranslations("assistantWidget");
   const pathname = usePathname();
+  const { page, getSnapshot } = useAssistantPageContext(pathname);
   const signals = useAssistantSignals();
   const organization = useOrgStore((state) => state.activeOrgId);
   const [open, setOpen] = useState(false);
@@ -249,16 +266,14 @@ function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentI
       {everOpened && (
         // Keyed by organization: a switch starts the conversation afresh rather
         // than carrying one organization's thread into another.
-        <ChatScope key={organization ?? "none"} agentId={agentId}>
+        <ChatScope key={organization ?? "none"} agentId={defaultAgentId}>
           <AssistantWindow
             assistant={assistant}
             agentId={agentId}
             open={open}
             prompt={prompt}
-            page={{
-              path: pageOf(pathname),
-              title: typeof document === "undefined" ? "" : document.title,
-            }}
+            page={page}
+            getPageContext={getSnapshot}
             tipsOff={preferences.off}
             onTipsOff={(off) => {
               setBubblesOff(off);
@@ -299,6 +314,7 @@ function ReadyWidget({ assistant, agentId }: { assistant: AssistantState; agentI
       <AssistantLauncher
         assistant={assistant}
         agentId={agentId}
+        viewer={viewer}
         open={open}
         docked={docked}
         waiting={(docked || phone) && bubble !== null && isProactive(bubble) && !preferences.off}

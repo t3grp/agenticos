@@ -26,6 +26,7 @@ from app.db.models.artifact import (
     ArtifactVersion,
     ConsentState,
 )
+from app.db.models.artifact_favourite import ArtifactFavourite
 from app.db.models.conversation import Conversation
 from app.db.models.resource_grant import Visibility
 from app.repositories._search import contains_ci
@@ -210,6 +211,7 @@ async def list_visible(
     agent_id: UUID | None = None,
     only_ids: Sequence[UUID] | None = None,
     project_id: UUID | None = None,
+    favourites_for: UUID | None = None,
     skip: int = 0,
     limit: int = 50,
 ) -> tuple[list[Artifact], int]:
@@ -228,6 +230,8 @@ async def list_visible(
         only_ids: Narrow to these rows - the pages shared with one group.
         project_id: Narrow to the pages a run in one of this project's chats
             published a version of, on top of the visibility rules.
+        favourites_for: Restrict to this reader's favourites, in the order they were
+            added to favourites.
     """
     where = _visible(
         organization_id=organization_id,
@@ -257,15 +261,77 @@ async def list_visible(
                 .where(Conversation.project_id == project_id)
             )
         )
+    if favourites_for is not None:
+        where.append(
+            Artifact.id.in_(
+                select(ArtifactFavourite.artifact_id).where(
+                    ArtifactFavourite.user_id == favourites_for
+                )
+            )
+        )
+        favourite_at = (
+            select(ArtifactFavourite.created_at)
+            .where(
+                ArtifactFavourite.user_id == favourites_for,
+                ArtifactFavourite.artifact_id == Artifact.id,
+            )
+            .scalar_subquery()
+        )
+        # Favourites take the place of the former pinned-app list. Preserve its
+        # stable pin order: the first app a person starred stays at the top.
+        ordering = [favourite_at.asc(), Artifact.id.asc()]
+    else:
+        ordering = [Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc()]
     items = await db.execute(
-        select(Artifact)
-        .where(*where)
-        .order_by(Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc())
-        .offset(skip)
-        .limit(limit)
+        select(Artifact).where(*where).order_by(*ordering).offset(skip).limit(limit)
     )
     total = await db.scalar(select(func.count(Artifact.id)).where(*where))
     return list(items.scalars().all()), total or 0
+
+
+async def set_favourite(
+    db: AsyncSession, *, user_id: UUID, artifact_id: UUID, favourite: bool
+) -> None:
+    """Star or unstar an app for one reader, idempotently."""
+    if favourite:
+        await db.execute(
+            pg_insert(ArtifactFavourite)
+            .values(user_id=user_id, artifact_id=artifact_id)
+            .on_conflict_do_nothing(index_elements=["user_id", "artifact_id"])
+        )
+    else:
+        await db.execute(
+            delete(ArtifactFavourite).where(
+                ArtifactFavourite.user_id == user_id,
+                ArtifactFavourite.artifact_id == artifact_id,
+            )
+        )
+    await db.flush()
+
+
+async def is_favourite(db: AsyncSession, *, user_id: UUID, artifact_id: UUID) -> bool:
+    result = await db.execute(
+        select(ArtifactFavourite.artifact_id).where(
+            ArtifactFavourite.user_id == user_id,
+            ArtifactFavourite.artifact_id == artifact_id,
+        )
+    )
+    return result.first() is not None
+
+
+async def favourite_ids(
+    db: AsyncSession, *, user_id: UUID, artifact_ids: Collection[UUID]
+) -> set[UUID]:
+    """Which artifacts in this page this reader has favourited."""
+    if not artifact_ids:
+        return set()
+    result = await db.execute(
+        select(ArtifactFavourite.artifact_id).where(
+            ArtifactFavourite.user_id == user_id,
+            ArtifactFavourite.artifact_id.in_(artifact_ids),
+        )
+    )
+    return set(result.scalars().all())
 
 
 async def list_for_agent(

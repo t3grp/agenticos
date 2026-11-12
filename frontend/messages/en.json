@@ -1638,6 +1638,10 @@
       "filters": "Filter and sort",
       "show": "Show",
       "backToActive": "Back to active",
+      "modeLabel": "Show conversations by",
+      "modeChats": "Chats",
+      "modeAgents": "Agents",
+      "otherAgents": "Other",
       "age": {
         "today": "Today",
         "yesterday": "Yesterday",
@@ -1654,7 +1658,11 @@
       "unread": "New answer",
       "unreadHeading": "Unread",
       "unnamedProject": "A project",
-      "apiFilterLabel": "Hide API conversations"
+      "apiFilterLabel": "Hide API conversations",
+      "sharedHeading": "Shared with you",
+      "sharedLoading": "Loading shared conversations…",
+      "sharedFailed": "Shared conversations could not be loaded.",
+      "retryShared": "Retry shared conversations"
     },
     "skipComment": "Skip comment",
     "sourceCount": "{count, plural, =1 {1 source} other {# sources}}",
@@ -1745,11 +1753,11 @@
       "knowledgeBaseSearch": "Knowledge Base Search",
       "listed": "{named, select, no {Listed…} other {Listed {subject}}}",
       "listing": "{named, select, no {Listing…} other {Listing {subject}}}",
-      "loadSkill": "Load Skill",
+      "loadSkill": "Read Skill",
       "loading": "Loading…",
       "availableSkills": "Available Skills",
       "lookingThroughSkills": "Looking through the skills",
-      "loadingSkill": "Loading a skill",
+      "loadingSkill": "Reading a skill",
       "lookedFor": "{named, select, no {Looked for…} other {Looked for {subject}}}",
       "lookingAtChannel": "Looking at the channel",
       "lookingAtChannelMembers": "Looking at who is in the channel",
@@ -2055,6 +2063,11 @@
       "failed": "The browser could not be reached"
     },
     "conversationActions": "Conversation actions",
+    "changeProject": "Change project",
+    "moveToProject": "Move to project…",
+    "removeFromProject": "Remove from project",
+    "projectMoved": "Conversation moved",
+    "projectMoveFailed": "Could not move conversation",
     "imageNotLoaded": "Image (not loaded)",
     "whileWorking": {
       "steersWaiting": "Sent into the task - it reads it at its next step"
@@ -2497,8 +2510,9 @@
     "approvalRememberFailed": "Could not forget this approval. Try again.",
     "approvalRememberRetry": "Retry",
     "localAccess": {
+      "continue": "Access granted - please continue.",
       "title": "Where may {agent} work?",
-      "description": "{agent} works on your computer. You are asked once for this agent; change or revoke it later under Chat controls → Work on.",
+      "description": "{agent} needs files on your computer for this request. Your choice is remembered for this agent; change or revoke it later under Chat controls → Work on.",
       "computer": "Whole computer",
       "computerHint": "It may read and change files anywhere your account can, and run commands as you. Your computer asks you to confirm.",
       "folder": "Choose a folder",
@@ -2506,7 +2520,25 @@
       "cancel": "Not now",
       "agentUnavailable": "The selected agent could not be loaded. Try again.",
       "failed": "Could not set up access on this computer"
-    }
+    },
+    "sendNowNotWithPageContext": "This question keeps its selected agent and page, and waits for a full answer",
+    "queuedPageContext": "Page: {page}",
+    "fork": "Fork into a new conversation",
+    "forkedToast": "Conversation forked",
+    "failedForkConversation": "Failed to fork conversation",
+    "forkedFrom": "Forked from <link>{title}</link>",
+    "untitledFork": "Untitled conversation",
+    "leaveShared": "Remove from my chats",
+    "leftShared": "Removed from your chats",
+    "failedLeaveShared": "Failed to remove the conversation",
+    "conversationViewOnly": "Shared with you as read-only",
+    "accessChanged": "Access changed",
+    "failedToChangeAccess": "Failed to change access",
+    "accessLevelFor": "Access level for {name}",
+    "accessChecking": "Checking conversation access…",
+    "accessFailed": "Could not verify access to this conversation",
+    "accessRetry": "Retry",
+    "forking": "Forking conversation…"
   },
   "common": {
     "archiveNamedConfirm": "Archive {name}?",
@@ -4292,6 +4324,7 @@
     "failedLoadConnections": "Failed to load connections",
     "failedLoadOrgServers": "Failed to load the organization's MCP servers",
     "finishConsentThenReturn": "Finish in the tab that opened, then come back - the server appears here once it is authorised.",
+    "finishConsentInBrowser": "Finish signing in in your browser, then come back - the server appears here once it is authorised.",
     "consentTabBlocked": "Your browser blocked the sign-in tab. Allow pop-ups for this site, then try again.",
     "fromRegistry": "Registry",
     "fromRegistryHint": "From the public MCP registry. Nobody here reviewed it: the description is the publisher's, and there is no guidance on what credential it wants.",
@@ -4514,7 +4547,8 @@
     "whatsNewDone": "Got it",
     "backgroundWork": "Background work",
     "connectors": "Connections",
-    "onboarding": "Onboarding"
+    "onboarding": "Onboarding",
+    "noFavouriteApps": "Star an app to pin it here. <link>All apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5006,6 +5040,10 @@
         "title": "Find a server",
         "body": "Search the catalog, or narrow it by category and by whether you've already connected it."
       },
+      "organization-switcher": {
+        "title": "Choose your organization",
+        "body": "The name here is the organization you're working in. Open the menu to switch organizations, manage them or create another. Agents, knowledge and activity follow your selection."
+      },
       "notification-bell": {
         "title": "Stay in the loop",
         "body": "A run that failed, an approval waiting on you, a budget about to run out, a message from an app admin - it all lands here, with an in-app and email toggle for the kinds you can turn off in Settings."
@@ -5134,6 +5172,10 @@
         "title": "Published pages",
         "body": "Reports and dashboards your agents published. Open one to see it, pick an earlier version, share it with colleagues or give it a public link."
       },
+      "nav-pinned": {
+        "title": "Pinned apps",
+        "body": "Apps you starred sit here in the sidebar, one tap away. Star one from its card or page, and unstar it the same way."
+      },
       "settings-api-keys": {
         "title": "Your API keys",
         "body": "A key lets a script, Postman or an MCP client act as you, without a browser. Pick what it may do; it can never do more than you can, and it stops the moment you revoke it."
@@ -5144,7 +5186,7 @@
       },
       "assistant-widget": {
         "title": "Your Architect",
-        "body": "Ask it anything about the platform - it builds agents with you, explains errors and finds settings. Its speech bubbles suggest what to do on each page; turn them off in Settings → Assistant."
+        "body": "Open the floating assistant to ask about the page you are viewing. Choose who answers, inspect or switch off the page context, and keep asking as you navigate. Its speech bubbles suggest what to do on each page."
       },
       "groups-new": {
         "title": "Add a group",
@@ -5477,6 +5519,22 @@
       "chat-subscription-model": {
         "title": "Use your Claude subscription",
         "body": "Choose one of your saved Claude subscription models to power this chat. The connection stays personal; manage it in Settings → AI connections."
+      },
+      "assistant-agent-picker": {
+        "title": "Choose who answers",
+        "body": "Select a published agent you can run. The next question goes to that agent, while previous answers keep their original attribution."
+      },
+      "assistant-page-context": {
+        "title": "Include the current page",
+        "body": "The next question includes the page details shown here. View them before sending or switch page context off. Queued questions keep the page and agent selected when you submitted them."
+      },
+      "workflow-run-questions": {
+        "title": "Answer the agent",
+        "body": "An agent in this workflow can ask for clarification. Answer here to continue its saved conversation and let the workflow proceed."
+      },
+      "workflow-input-contract": {
+        "title": "Define the expected input",
+        "body": "A Manual, API or Called by a workflow trigger can use simple fields or a JSON Schema Draft 2020-12 contract. The schema supports nested values and is checked before a run starts."
       }
     },
     "chooseLanguage": "Language",
@@ -5594,7 +5652,8 @@
         "budget_exceeded": "Budget spent",
         "failed": "Failed",
         "cancelled": "Cancelled",
-        "succeeded": "Succeeded"
+        "succeeded": "Succeeded",
+        "waiting_for_user": "Waiting for user"
       },
       "nodeStatus": {
         "pending": "Pending",
@@ -6114,7 +6173,11 @@
       "replyMailboxUnavailable": "Selected mailbox unavailable",
       "replyMailboxConnect": "Connect Gmail or Outlook in Integrations first.",
       "replySharedMailbox": "Shared Outlook mailbox (optional)",
-      "startRunListHint": "One item per line. Blank lines are ignored."
+      "startRunListHint": "One item per line. Blank lines are ignored.",
+      "runQuestionsTitle": "Your agent needs an answer to continue",
+      "runQuestionsFailed": "The questions could not be loaded.",
+      "runQuestionsRetry": "Try again",
+      "startRunSchema": "Expected input schema"
     },
     "retention": {
       "title": "Data retention",
@@ -6545,7 +6608,7 @@
       "inCategoryUse": "Categories already in use",
       "inTagUse": "Tags already in use",
       "mcpToolLoad": "These MCP servers give the model {count} tools on every request - roughly {tokens, number} tokens before anyone types, and more tools than a model chooses between well. Tool search keeps them out of the way until the agent looks one up.",
-      "mcpToolLoadEnable": "Turn on Tool search",
+      "mcpToolLoadEnable": "Enable MCP tool search",
       "agentDescriptionLabel": "Description",
       "agentNameLabel": "Name",
       "agentNameRequired": "An agent needs a name.",
@@ -7379,7 +7442,7 @@
       "avatarColourHint": "Shown as your avatar until you upload a picture.",
       "prefArtifactVersionPublished": "App updated",
       "prefArtifactVersionPublishedTrigger": "An app you follow gets a new version - republished by its agent or restored by a person.",
-      "prefResourceShared": "Shared with your group",
+      "prefResourceShared": "Shared with you or your group",
       "prefResourceSharedTrigger": "Something - an agent, a skill, knowledge, an app - is shared with a group you are in.",
       "prefBudgetWarning": "Department budget at 80%",
       "prefBudgetWarningTrigger": "A department you lead has used 80% of its monthly budget. Administrators hear about every department.",
@@ -8497,6 +8560,9 @@
     "loading": "Loading"
   },
   "teams": {
+    "organizationLabel": "Organization",
+    "organizationSwitcher": "Switch organization, current: {name}",
+    "selectOrganization": "Select organization",
     "acmeCom": "acme.com",
     "approvalWaiver": "Waiving approvals in chat",
     "approvalWaiverDescription": "Whether a conversation may run without stopping for approvals.",
@@ -9144,13 +9210,15 @@
     "templatesMore": "{count, plural, =1 {Show 1 more} other {Show # more}}",
     "templatesFewer": "Show fewer",
     "local": {
+      "useAllowed": "Use the allowed folder",
+      "allRoutines": "All my routines",
       "label": "Work on",
       "hint": "Each fire works in a folder on your computer through the desktop app, or in the agent's sandbox. A fire waits for the app if it is closed.",
       "elsewhereHint": "Each fire works in this folder on your computer. Change it from the desktop app on that computer.",
       "sandbox": "The agent's sandbox",
       "pick": "Choose a folder…",
       "useSandbox": "Use the sandbox",
-      "routineHint": "Choose a folder and operations. Saving asks this computer to approve this routine only.",
+      "routineHint": "Choose a folder and operations. The first time, this computer asks once to let all your routines work there; later routines in that folder need no approval.",
       "read": "Read",
       "write": "Write",
       "execute": "Run commands",
@@ -9623,7 +9691,13 @@
         "boolean": "Yes or no",
         "date": "Date",
         "choice": "Choice"
-      }
+      },
+      "contractFormat": "Input contract",
+      "simpleFields": "Simple fields",
+      "jsonSchema": "JSON Schema",
+      "formatHint": "Choose simple fields or a JSON Schema contract. Each saved format is kept while this trigger stays open; only the selected format is saved to the workflow.",
+      "schemaHint": "Use JSON Schema Draft 2020-12 for nested objects, arrays and references. Inputs are checked before a run starts.",
+      "schemaInvalid": "Enter a JSON object. This edit was not saved."
     },
     "pickerHostLabel": "Sandbox host",
     "pickerHostDefault": "The organization's default host",
@@ -9817,7 +9891,7 @@
     "templateUnknown": "{placeholder} names nothing this step can read.",
     "templatePreview": "Preview:",
     "templateSuggestions": "Values from earlier steps",
-    "triggerHintCall": "Another workflow's Run a workflow step starts this one with its input, checked against these fields. The steps after it read them as payload.",
+    "triggerHintCall": "Another workflow's Run a workflow step starts this one with its input, checked against this input contract. The steps after it read the input as payload.",
     "pickerWorkflowLabel": "Workflow",
     "pickerWorkflowPlaceholder": "Choose a workflow",
     "pickerWorkflowNone": "No workflow is published starting from Called by a workflow yet.",
@@ -10463,7 +10537,11 @@
       "blockedLink": "The page has no public link. Turn it on first."
     },
     "lightTheme": "Use light app theme",
-    "darkTheme": "Use dark app theme"
+    "darkTheme": "Use dark app theme",
+    "addFavourite": "Add to favourites",
+    "removeFavourite": "Remove from favourites",
+    "addFavouriteNamed": "Add {name} to favourites",
+    "removeFavouriteNamed": "Remove {name} from favourites"
   },
   "tables": {
     "cells": {
@@ -11136,7 +11214,8 @@
     "revoked": "Key revoked",
     "couldNotLoad": "Could not load your API keys",
     "emptyTitle": "No API keys yet",
-    "emptyWhy": "Create one to call the API from a script, Postman or Claude Code."
+    "emptyWhy": "Create one to call the API from a script, Postman or Claude Code.",
+    "personalConsentWhy": "Personal consent is excluded from presets. To let this key or app approve routines and watches that use your personal connections and data, select personal:consent under Custom."
   },
   "mcpOauth": {
     "title": "{client} wants to act as you",
@@ -11300,7 +11379,18 @@
     },
     "screenshot": "Show it this page",
     "screenshotFailed": "The screenshot could not be taken. Paste one into the conversation instead.",
-    "defaultName": "Architect"
+    "defaultName": "Architect",
+    "pageContext": {
+      "include": "Use the current page",
+      "using": "Using: {page}",
+      "off": "Page context is off",
+      "view": "View context",
+      "explanation": "These page details will accompany your next question. Each queued question keeps the page it was submitted from.",
+      "page": "Page",
+      "record": "Record",
+      "viewLabel": "View",
+      "selected": "Selected records"
+    }
   },
   "assistantSettings": {
     "notForYou": "Your role doesn't include running agents, so the assistant isn't available to you. An administrator can change that.",
@@ -11539,7 +11629,7 @@
     "tool_search": {
       "name": "Tool search",
       "does": "Lets an agent with many tools find the right one when it needs it, instead of reading all of them every time.",
-      "example1": "An agent connected to several MCP servers with dozens of tools",
+      "example1": "An agent with many enabled capabilities and bound MCP servers",
       "needs": "Nothing extra.",
       "never": "Never adds a tool; it only hides tools until the agent looks for one."
     },
@@ -12068,6 +12158,26 @@
       "max_results": {
         "title": "Matches per search",
         "description": "How many matches the local search returns; ignored for native search."
+      },
+      "defer_capabilities": {
+        "title": "Defer capability tools",
+        "description": "Hide eligible tools from enabled capabilities until the agent searches for them. Off keeps capability tools visible."
+      },
+      "defer_mcp_servers": {
+        "title": "Defer MCP tools",
+        "description": "Hide eligible tools from bound MCP servers until the agent searches for them. Off keeps MCP tools visible."
+      },
+      "exclude_capabilities": {
+        "title": "Always-visible capabilities",
+        "description": "Comma-separated capability IDs whose tools stay visible, such as knowledge or visuals. These capabilities must still be enabled."
+      },
+      "exclude_mcp_servers": {
+        "title": "Always-visible MCP servers",
+        "description": "Comma-separated MCP tool namespace prefixes whose tools stay visible, such as github_work or agenticos. Use the prefix before the tool name, with hyphens replaced by underscores."
+      },
+      "exclude_tools": {
+        "title": "Always-visible tools",
+        "description": "Comma-separated model-facing tool names to keep visible. Use renamed capability tool names and fully prefixed MCP tool names, such as github_work_list_issues."
       }
     },
     "web_fetch": {
@@ -12441,6 +12551,9 @@
     "created": "Project {name} created",
     "saved": "Project saved",
     "deleted": "Project deleted. Its chats are ordinary chats now.",
+    "moved": "Conversation moved",
+    "moveFailed": "Could not move conversation",
+    "changeProject": "Change project",
     "uploaded": "{count, plural, =1 {1 file added} other {# files added}}",
     "removed": "Removed",
     "filesUnreadable": "The project's files could not be read",
@@ -13891,5 +14004,98 @@
     "opensNewTab": "Opens in a new tab. Return here when you're ready.",
     "skipHint": "No app connection is required. You can connect later from Connections → Apps.",
     "continueToWorkspace": "Continue to workspace"
+  },
+  "onboardingTeam": {
+    "step1Title": "About you & your work",
+    "step1Subtitle": "Tell us a bit about what you do so we can recommend the right specialist agents.",
+    "roleLabel": "What is your role?",
+    "industryLabel": "What industry or domain are you in?",
+    "teamSizeLabel": "Team size",
+    "step2Title": "What should your AI team handle?",
+    "step2Subtitle": "Select the workflows you want to delegate, automate, or accelerate.",
+    "goalsLabel": "Priority areas",
+    "detailsLabel": "Tell us more about your workflow (optional)",
+    "detailsPlaceholder": "e.g. We get lots of customer inquiries, write weekly updates, and need help drafting documentation without spending hours on it...",
+    "step3Title": "Tools & integrations",
+    "step3Subtitle": "Choose the tools your team relies on daily. You can connect them now or anytime later from Connectors.",
+    "toolsInStack": "Tools in your stack",
+    "appsTitle": "Connect apps & tools",
+    "appsOptional": "Optional",
+    "appsDescription": "Authorize your tools through Composio with verified permissions. You can also connect them later.",
+    "connectApps": "Connect apps",
+    "opensNewTab": "Opens in a new tab. Return here when ready.",
+    "skipHint": "Connecting apps is completely optional. You can connect anytime later.",
+    "step4Title": "Your recommended AI team",
+    "step4Subtitle": "Here is your team structure. Your Team Lead coordinates incoming requests and delegates work to your specialists.",
+    "leadBadge": "Team Lead & Orchestrator",
+    "leadOrchestrationHint": "Routes tasks to specialists and synthesizes unified answers for you.",
+    "starterPromptsHeader": "Example starter prompts",
+    "specialistsTitle": "Specialist agents",
+    "addSpecialist": "Add specialist",
+    "removeSpecialist": "Remove",
+    "selectTemplate": "Pick a specialist template",
+    "deployTeam": "Build & deploy my team",
+    "deployingTitle": "Assembling your AI team...",
+    "deployingSubtitle": "Setting up models, delegation channels, and workspace...",
+    "deployingStep1": "Configuring specialist agent specifications...",
+    "deployingStep2": "Binding skills, tools, and capabilities...",
+    "deployingStep3": "Wiring delegation hierarchy and orchestrator routing...",
+    "deployingStep4": "Opening team workspace in chat...",
+    "errorTitle": "Something went wrong",
+    "tryAgain": "Try Again",
+    "teamMembersCreated": "Team Members Created",
+    "successTitle": "Your AI team is ready!",
+    "successSubtitle": "Your Lead Agent and specialists have been created and wired together.",
+    "startChat": "Chat with your Team Lead",
+    "viewAgents": "View team in Agents",
+    "skip": "Skip for now",
+    "back": "Back",
+    "continue": "Continue",
+    "generating": "Generating...",
+    "generatingProposal": "Analyzing your profile and generating team recommendation...",
+    "stepTracker": "Step {step} of 4",
+    "stepProfile": "Profile",
+    "stepGoals": "Goals",
+    "stepTools": "Tools",
+    "stepTeam": "Recommended Team",
+    "roles": {
+      "founder": "Founder / Executive",
+      "engineering": "Engineering / Tech",
+      "product": "Product / PM",
+      "operations": "Operations",
+      "support": "Support & Success",
+      "legal": "Legal & Finance",
+      "other": "Other"
+    },
+    "industries": {
+      "software": "Software & Technology",
+      "ecommerce": "E-Commerce & Retail",
+      "finance": "Finance & Banking",
+      "healthcare": "Healthcare & Life Sciences",
+      "legal": "Legal Services",
+      "manufacturing": "Manufacturing & Logistics",
+      "publicSector": "Public Sector & Gov",
+      "general": "General / Other"
+    },
+    "teamSizes": {
+      "solo": "Solo",
+      "soloDesc": "Just me",
+      "small": "Small Team",
+      "smallDesc": "2–15 people",
+      "company": "Organization",
+      "companyDesc": "15+ people"
+    },
+    "goals": {
+      "support": "Customer Support & Ticket Triage",
+      "docs": "Documentation & Team Knowledge Q&A",
+      "releases": "Release Notes & Changelog Writing",
+      "research": "Research, Citations & Competitive Intel",
+      "contracts": "Contracts, Invoices & Policy Review",
+      "automation": "Process & Workflow Automation",
+      "incidents": "Incident Response & Alert Diagnostics",
+      "content": "Content Writing & Product Copy",
+      "data": "Data Analysis, Metrics & Reporting",
+      "meetings": "Meeting Notes, Action Items & Minutes"
+    }
   }
 }
