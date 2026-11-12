@@ -50,6 +50,7 @@ from app.api.routes.v1 import secrets
 from app.api.routes.v1 import runs as agent_runs
 from app.api.routes.v1 import stats
 from app.api.routes.v1 import skill_changes
+from app.api.routes.v1 import auto_skill_learning
 from app.api.routes.v1 import workspaces as agent_workspaces
 from app.api.routes.v1 import skills as agent_skills
 from app.api.routes.v1 import artifacts
@@ -204,6 +205,7 @@ v1_router.include_router(
     browser_sign_ins.router, prefix="/browser-sign-ins", tags=["browser-sign-ins"]
 )
 v1_router.include_router(skill_changes.router, prefix="/skill-changes", tags=["skills:changes"])
+v1_router.include_router(auto_skill_learning.router, tags=["failure-learning"])
 v1_router.include_router(
     sharing.collection_sharing_router, prefix="/kb", tags=["collections:sharing"]
 )

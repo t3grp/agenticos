@@ -97,6 +97,7 @@ PLATFORM_MODULES = (
     "app/services/mfa.py",
     "app/schemas/mfa.py",
     "app/services/skills.py",
+    "app/services/auto_skill_learning.py",
     "app/services/text_similarity.py",
     "app/repositories/agent_environment.py",
     "app/repositories/agent_exposure.py",
