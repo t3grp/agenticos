@@ -221,15 +221,24 @@ Profil może wymienić profile zapasowe, wypróbowywane po kolei. Awaria jednego
 providera nie powinna kłaść agentów organizacji, gdy ma ona drugi klucz albo
 skonfigurowanego drugiego providera.
 
-!!! warning "Fallback jest niewidoczny w zapisie runa"
+Fallback nie jest już niewidoczny w zapisie runa. Gdy model zapasowy obsłuży
+któreś żądanie runa, wiersz runa zapisuje `fallback_used` oraz czyste id modelu,
+który odpowiedział na ostatnie udane żądanie, jako `serving_model`, a widok
+szczegółów runa pokazuje pod faktami „Odpowiedział … (model zapasowy)". Wiersz
+jest nadal zapisywany przed pierwszym żądaniem, więc do zakończenia runa nazywa
+profil podstawowy; zaparkowany run niesie to, co dotychczas zapisały jego
+ukończone segmenty.
 
-    Wiersz runa zapisywany jest przed pierwszym żądaniem i niesie etykietę,
-    providera oraz id sekretu profilu **podstawowego**. Jeśli turę obsłużył
-    fallback, run i tak nazywa podstawowy.
+Zanim oprzesz się na tych liczbach w czasie awarii, warto znać dwa martwe pola:
 
-    Więc „ile wydaliśmy w OpenAI” i „który klucz kosztuje najwięcej” odpowiadają
-    profilem, którego *zapytano* jako pierwszego, a nie tym, który odpowiedział.
-    Warto to wiedzieć, zanim oprzesz się na tych liczbach w czasie awarii.
+- „Ile wydaliśmy w OpenAI” i „który klucz kosztuje najwięcej” nadal odpowiadają
+  profilem podstawowym, którego *zapytano* jako pierwszego, a nie tym, który
+  odpowiedział — koszt przypisywany jest profilowi podstawowemu. Nowe kolumny
+  mówią, który model odpowiedział, a nie który profil zapłacił.
+- Błąd **po** pierwszym zdarzeniu strumieniowym nigdy nie uruchamia fallbacku.
+  Pydantic AI przekazuje strumień wywołującemu przy pierwszym zdarzeniu, więc
+  błąd w środku strumienia kończy runa zamiast próbować kolejnego modelu
+  z łańcucha.
 
 ### Ustawienia modelu { #model-settings }
 

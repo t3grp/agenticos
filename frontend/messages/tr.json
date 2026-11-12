@@ -4423,6 +4423,7 @@
       "modelFilter": "Modele göre filtrele",
       "modelRunHadNo": "Bu runın bir modelinin fiyatı belirtilmemiş; bu nedenle gösterilen tutar alt sınırdır.",
       "toolArgsRepaired": "{count, plural, =1 {Yeniden denemek yerine bozuk argümanlı 1 araç çağrısı düzeltildi} other {Yeniden denemek yerine bozuk argümanlı # araç çağrısı düzeltildi}}",
+      "servedByFallback": "Yanıtlayan {model} (yedek model)",
       "cacheSplit": "Girdinin {read, number} kadarı provider önbelleğinden okundu, {write, number} kadarı önbelleğe yazıldı; bunlar ayrı fiyatlandırılır.",
       "modelSettings": "Model ayarları",
       "monthToDate": "Ay başından bugüne",
