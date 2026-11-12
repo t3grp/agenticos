@@ -9254,6 +9254,15 @@
       "queue": "Runs once the previous run ends, however many times were missed.",
       "allow": "Starts on time alongside the run still going. Both runs are paid for."
     },
+    "conversationModeLabel": "Each fire runs in",
+    "conversationMode": {
+      "continue": "The same run log",
+      "fresh": "A new conversation"
+    },
+    "conversationModeHint": {
+      "continue": "Every fire appends to the trigger's one run log, so its Runs tab lists them all.",
+      "fresh": "Each fire opens its own conversation, so one fire never reads the previous fires' turns. The Runs tab has no one conversation to list."
+    },
     "howOften": "How often",
     "choiceEvery15m": "Every 15 min",
     "choiceHourly": "Hourly",
