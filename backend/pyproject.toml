@@ -998,8 +998,13 @@ include = [
     "app/api/routes/v1/visuals.py",
     "app/db/models/api_key.py",
     "app/schemas/api_key.py",
+    "app/schemas/mfa.py",
     "app/repositories/api_key.py",
     "app/services/api_key.py",
+    # TOTP for console sign-in: the code itself, and the service that
+    # enrols it, gates sign-in on it and hands out recovery codes.
+    "app/core/totp.py",
+    "app/services/mfa.py",
     "app/api/routes/v1/api_keys.py",
     "app/db/models/oauth.py",
     "app/schemas/oauth_server.py",
@@ -1791,8 +1796,13 @@ include = [
     "app/api/routes/v1/visuals.py",
     "app/db/models/api_key.py",
     "app/schemas/api_key.py",
+    "app/schemas/mfa.py",
     "app/repositories/api_key.py",
     "app/services/api_key.py",
+    # TOTP for console sign-in: the code itself, and the service that
+    # enrols it, gates sign-in on it and hands out recovery codes.
+    "app/core/totp.py",
+    "app/services/mfa.py",
     "app/api/routes/v1/api_keys.py",
     "app/db/models/oauth.py",
     "app/schemas/oauth_server.py",

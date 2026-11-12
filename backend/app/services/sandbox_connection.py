@@ -170,6 +170,11 @@ class SandboxConnectionService:
         """
         await self._refuse_duplicate_name(ctx, data.name)
         self._check_shape(kind=data.kind, base_url=data.base_url)
+        if data.secret_id is not None:
+            # Attaching is the moment a secret starts being spent: a Builder
+            # holding `connections:manage` must not be able to name somebody
+            # else's private key and have the connection spend it for them.
+            await self.secrets.require_view(ctx, data.secret_id)
 
         first = not await sandbox_connection_repo.list_for_organization(
             self.db, organization_id=ctx.organization_id
@@ -222,6 +227,8 @@ class SandboxConnectionService:
             )
         changes = writable(data, over=SandboxConnection)
 
+        if changes.get("secret_id") is not None:
+            await self.secrets.require_view(ctx, changes["secret_id"])
         if "name" in changes and changes["name"] != row.name:
             await self._refuse_duplicate_name(ctx, changes["name"])
         self._check_shape(
@@ -550,6 +557,7 @@ class SandboxConnectionService:
             raise refused_field(
                 "secret_id", "Pick the key this service was started with before testing it"
             )
+        await self.secrets.require_view(ctx, data.secret_id)
         secrets = await self.secrets.resolve_for_bindings(ctx, [data.secret_id])
         secret = secrets.get(data.secret_id)
         if not isinstance(secret, ApiKeySecret):

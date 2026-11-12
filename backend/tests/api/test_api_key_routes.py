@@ -41,6 +41,7 @@ def service() -> MagicMock:
     stub.list_keys = AsyncMock(return_value=ApiKeyList(items=[], total=0))
     stub.create = AsyncMock(return_value=_created())
     stub.revoke = AsyncMock()
+    stub.rotate = AsyncMock(return_value=_created())
     return stub
 
 
@@ -94,3 +95,16 @@ async def test_an_unknown_scope_is_refused_at_the_edge(member: AsyncClient) -> N
         created = await http.post(_url(), json={"name": "ci", "scopes": ["agents:fly"]})
 
     assert created.status_code == 422
+
+
+async def test_rotating_a_key_returns_the_new_one_once(
+    member: AsyncClient, service: MagicMock
+) -> None:
+    key_id = uuid.uuid4()
+    async with member as http:
+        rotated = await http.post(_url(f"/{key_id}/rotate"))
+
+    assert rotated.status_code == 201
+    assert rotated.json()["key"] == "aos_0123abcdsecret"
+    service.rotate.assert_awaited_once()
+    assert service.rotate.await_args.args[1] == key_id

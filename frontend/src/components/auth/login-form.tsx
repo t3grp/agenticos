@@ -8,10 +8,11 @@ import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
 
 import { DirectoryLoginForm } from "@/components/auth/directory-login-form";
+import { MfaCodeForm } from "@/components/auth/mfa-code-form";
 import { OAuthBlock } from "@/components/auth/oauth-buttons";
 import { returnToForAttempt } from "@/lib/oauth-return";
 import { Button, Input, Label } from "@/components/ui";
-import { useAuth } from "@/hooks";
+import { useAuth, type MfaChallenge } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api-client";
 import { getErrorMessage, isTimeout } from "@/lib/api-error";
 import { ROUTES } from "@/lib/constants";
@@ -36,6 +37,9 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [directory, setDirectory] = useState(false);
+  // The password step passed and the sign-in is waiting on the second
+  // factor: the form swaps to the code step instead of signing in.
+  const [mfa, setMfa] = useState<MfaChallenge | null>(null);
 
   const emailValid = !email || EMAIL_RE.test(email);
 
@@ -48,7 +52,12 @@ export function LoginForm() {
       // Read off the URL at submit time: useSearchParams would demand a
       // Suspense boundary around a form that renders statically.
       const returnTo = new URLSearchParams(window.location.search).get("returnTo");
-      await login({ email, password }, returnTo);
+      const result = await login({ email, password }, returnTo);
+      if ("mfa_required" in result) {
+        setMfa(result);
+        setIsLoading(false);
+        return;
+      }
       toast.success(t("loginSuccess"));
     } catch (err) {
       const message =
@@ -81,7 +90,9 @@ export function LoginForm() {
         </p>
       </div>
 
-      {directory ? (
+      {mfa ? (
+        <MfaCodeForm challenge={mfa} onBack={() => setMfa(null)} />
+      ) : directory ? (
         <DirectoryLoginForm onBack={() => setDirectory(false)} />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -150,7 +161,7 @@ export function LoginForm() {
         </form>
       )}
 
-      {!directory && (
+      {!directory && !mfa && (
         <OAuthBlock
           label={t("orSignInWith")}
           returnTo={returnToForAttempt(search)}
