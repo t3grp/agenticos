@@ -148,6 +148,40 @@ class TestRequestSecretValidation:
 
         assert "under 1000 characters" in result
 
+    async def test_an_unknown_kind_is_refused_before_parking(self, toolset, ctx) -> None:
+        from unittest.mock import AsyncMock, patch
+
+        with patch(
+            "app.agents.capabilities.secret_request._toolset.park_the_secret_request",
+            AsyncMock(),
+        ) as park:
+            result = await toolset.request_secret(
+                ctx, "acme_api_key", "Acme CRM", kind="not_a_secret_kind"
+            )
+            none_result = await toolset.request_secret(
+                ctx, "acme_api_key", "Acme CRM", kind="none"
+            )
+
+        assert "supported secret kinds" in result
+        assert "api_key" in result
+        assert "none" not in result
+        assert "supported secret kinds" in none_result
+        park.assert_not_awaited()
+
+    async def test_a_kind_over_32_characters_is_refused_before_parking(self, toolset, ctx) -> None:
+        from unittest.mock import AsyncMock, patch
+
+        with patch(
+            "app.agents.capabilities.secret_request._toolset.park_the_secret_request",
+            AsyncMock(),
+        ) as park:
+            result = await toolset.request_secret(
+                ctx, "acme_api_key", "Acme CRM", kind="k" * 33
+            )
+
+        assert "supported secret kinds" in result
+        park.assert_not_awaited()
+
     async def test_a_valid_call_that_somehow_does_not_park_still_answers(
         self, toolset, ctx
     ) -> None:

@@ -12,6 +12,7 @@ from pydantic_ai.tools import AgentDepsT, RunContext
 from pydantic_ai.toolsets import FunctionToolset
 
 from app.agents.capabilities._failures import steer
+from app.core.secret_kinds import SecretKind
 from app.agents.secret_request import (
     MAX_SECRET_NAME_CHARS,
     MAX_WHAT_FOR_CHARS,
@@ -66,6 +67,13 @@ class SecretRequestToolset(FunctionToolset[AgentDepsT]):
             return steer(ctx, "Say what the secret is for, so the person can decide.")
         if len(purpose) > MAX_WHAT_FOR_CHARS:
             return steer(ctx, f"Keep what the secret is for under {MAX_WHAT_FOR_CHARS} characters.")
+        allowed = ", ".join(item.value for item in SecretKind if item is not SecretKind.NONE)
+        try:
+            secret_kind = SecretKind(kind)
+        except ValueError:
+            return steer(ctx, f"Use one of the supported secret kinds: {allowed}.")
+        if secret_kind is SecretKind.NONE:
+            return steer(ctx, f"Use one of the supported secret kinds: {allowed}.")
         await park_the_secret_request()
         # Unreachable: parking raises. Kept so the function has a return on
         # every path the type checker can see.
