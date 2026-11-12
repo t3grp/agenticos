@@ -230,8 +230,9 @@ export function useConversations(query: Partial<ConversationQuery> = {}) {
       return response;
     },
     networkMode: "offlineFirst",
-    // While a thread on the page is at work, ask again every few seconds, so its
-    // row stops saying so when the run ends - a routine's, or another tab's, as
+    // While a thread on the page is at work - or waiting on its person - ask
+    // again every few seconds, so its row stops saying so when the run ends or
+    // the question is answered elsewhere: a routine's, or another tab's, as
     // well as this one's. A thread this tab handed off counts too: the listing
     // has to catch up with it before it can say anything about it.
     // The poll also carries the run's heartbeat, which the stalled status reads.
@@ -239,8 +240,9 @@ export function useConversations(query: Partial<ConversationQuery> = {}) {
     // socket announces the run's end, not its heartbeat, so a slower poll left the
     // page without a heartbeat to show a stall from (#2219 traded this away).
     refetchInterval: (query) =>
-      query.state.data?.items.some((conversation) => conversation.running_since) ||
-      Object.keys(handedOff).length > 0
+      query.state.data?.items.some(
+        (conversation) => conversation.running_since || conversation.waiting_since,
+      ) || Object.keys(handedOff).length > 0
         ? RUNNING_POLL_MS
         : false,
   });

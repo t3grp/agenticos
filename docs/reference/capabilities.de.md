@@ -1,5 +1,5 @@
 ---
-source_sha: "fe652977b769"
+source_sha: "8d2e6a7f5851"
 ---
 
 # Der Capability-Katalog { #the-capability-catalog }
@@ -84,6 +84,7 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `text_to_speech` | Sprachausgabe | analysis | `generate_speech` | — | erforderlich | unverändert |
 | `video_generation` | Videoerzeugung | analysis | `generate_video` | — | erforderlich | übergeben |
 | `coding_agent` | Coding Agent | analysis | `run_coding_agent` | `sandbox:execute` | erforderlich | übergeben |
+| `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | erforderlich | übergeben |
 | `monitor` | Einen Befehl beobachten | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | übergeben |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | übergeben |
 | `background_tasks` | Hintergrundthemen | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | übergeben |
@@ -1822,6 +1823,89 @@ jeder Aufgabe geprüft. Codex nennt in seinen Ereignissen kein Modell, daher wir
 seine Nutzung ohne gesetztes `model` ohne Preis gebucht und die Kosten des Runs als
 unvollständig markiert. Ebenso gebucht wird eine Aufgabe, die endet, bevor ihr
 Harness meldet, was sie verbraucht hat - fehlgeschlagen, abgelaufen oder gestoppt.
+
+## Harness { #harness }
+
+`harness_start` — *Öffnet eine benannte Harness-Sitzung mit einem ersten Prompt und hält sie offen.*
+`harness_prompt` — *Sendet einen Folge-Prompt an eine benannte Harness-Sitzung.*
+`harness_stop` — *Schließt eine benannte Harness-Sitzung.*
+`harness_sessions` — *Listet die Harness-Sitzungen auf, die diese Unterhaltung offen hat.*
+
+Ein Agent, der von einer **Claude-Code**- oder **Codex**-Sitzung in seiner eigenen
+[Sandbox](../sandbox.md) getragen wird, die über mehrere Runden offen bleibt: Der Agent startet eine Sitzung pro
+Arbeitslinie und schickt ihr Prompts, während die Arbeit vorangeht, statt eine
+Aufgabe an einen Harness zu übergeben und Bericht zu erstatten. Die Sitzung gehört dem CLI: Sie
+merkt sich, was ihre früheren Prompts gelesen und geändert haben, und eine Person sieht im Chat, wie
+jeder Prompt arbeitet. Ein anderer Agent erreicht einen Harness-gestützten Agent über
+gewöhnliche [Delegation](#delegation), wie jeden Spezialisten.
+
+| Einstellung | Standard | Werte |
+|---|---|---|
+| `harness` | `claude_code` | `claude_code` (ein Anthropic-API-Key oder ein Claude-Abo-Token), `codex` (ein OpenAI-API-Key) |
+| `access` | `read_only` | `read_only` liest den Code und antwortet; `edit` ändert Dateien und führt Befehle aus |
+| `model` | der Standard des Harness | Claude Opus, Sonnet oder Haiku 5.5 für Claude Code; GPT-5.6 Sol, Terra, Luna oder GPT-5.3 Codex für Codex |
+| `base_url` | Anthropic direkt | Nur Claude Code: ein Gateway, das die API von Anthropic spricht, etwa `https://openrouter.ai/api`, dessen Key der Vault dann hält. Wird verworfen, wenn Codex gewählt ist |
+| `timeout_minutes` | 30 | 1–60, für einen Prompt. Die Sitzung bleibt offen |
+
+**Vier Tools, und die Bindung entscheidet, was sie dürfen.** Bei `edit` ändert der Harness
+jede Datei und führt jeden Befehl in der Sandbox aus, mit seinen eigenen Prompts
+ausgeschaltet (`--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`):
+Niemand sitzt an seinem Terminal, und der Container ist die Grenze, für die beide Flags
+dokumentiert sind. Bei `read_only` läuft Claude Code im Plan-Modus ohne ein Tool,
+das schreibt — ohne seine Bearbeitungstools und die Shell — und liest mit Read, Grep und Glob;
+ihm wird gesagt, dass nichts anderes genehmigt werden kann. Codex im Container hat kein `read_only`: Sein Nur-Lesen-Modus ist eine
+eigene Sandbox, die im Container des Agent nicht starten kann, und die Veröffentlichung
+lehnt die Kombination ab. Ob eine Person vor jedem Prompt zustimmt, ist die
+**Freigabe durch einen Menschen** dieser Capability — wie jedes Gate ist sie aus,
+bis jemand sie einschaltet. Es gibt keinen Tools-Tab: Die vier Tools sind die Capability.
+
+**Benannte Sitzungen.** Jeder Prompt nennt eine `session` — `main`, wenn er keine nennt. Derselbe Name setzt die frühere Arbeit dieser Sitzung in der Unterhaltung fort; ein neuer Name öffnet eine weitere. `harness_start` auf einem bereits offenen Namen startet sie neu, und `harness_stop` schließt sie, sodass ein späterer Prompt unter diesem Namen eine neue öffnet. Prompts in einem Toolset laufen nacheinander, sodass zwei Prompts an dieselbe Sitzung sich nicht überlagern können. Eine Harness-Sitzung wird vom Coding Agent nie fortgesetzt, und eine Aufgabe des Coding Agent setzt eine Harness-Sitzung nie fort: Ihre Sitzungsdateien liegen getrennt, `.agenticos/harness/` und `.agenticos/coding-agent/`.
+
+**Die Sitzungen einer Unterhaltung laufen über Prompts weiter.** Die Sitzungs-ID des Harness wird
+in der Sandbox neben der Arbeit gehalten, unter `.agenticos/harness/`, eine pro
+Unterhaltung und Sitzungsname, sodass der zweite Prompt in einem Chat weiß, was der erste gelesen hat — und ein
+Chat setzt nie die Sitzung eines anderen Chats fort, in einer Sandbox, die mehrere teilen, in einem Projekt oder in einem
+auf eine Person oder einen Agent begrenzten Bereich. Eine Sitzung, die die Sandbox nicht mehr hält, startet von selbst neu, einmal.
+
+**Die Person sieht, wie er arbeitet.** Ein Prompt läuft wie eine Aufgabe des Coding Agent: Der Harness wird abgelöst in der Sandbox gestartet,
+`claude -p --output-format stream-json` oder `codex exec --json`, und seine Ereignisdatei
+wird alle anderthalb Sekunden gelesen. Jeder Schritt erreicht den Chat, während er geschieht, in einem
+eigenen Panel unter der Claude-Code- oder Codex-Marke, wie die Schritte einer Delegation:
+die Datei, die er liest, die Bearbeitung, der Befehl, den er ausführt, was er dazwischen sagt. Wenn
+er fertig ist, enthält das Ergebnis des Aufrufs die Antwort, jeden Schritt und die Dateien, die er geändert hat.
+Ein Prompt nach `timeout_minutes` und einer, den die Person stoppt, endet damit, dass seine
+gesamte Prozessgruppe gestoppt wird.
+
+**Was er braucht.** Die Capability `sandbox` auf dem Backend `service` mit eingeschalteten Shell-Befehlen
+— die Veröffentlichung lehnt alles andere ab — und eine Runtime mit installiertem Harness:
+Die Runtime `workbench` pinnt Claude Code 2.1.288 und Codex 0.160.0. Die
+Anmeldedaten kommen aus dem Vault über die `secret_id` der Bindung und erreichen den
+Befehl über seine Umgebung, nie über seine Befehlszeile. In einem [Projekt](../projects.md),
+das seine Dateien ohne Container hält, gibt es keine Shell, sodass der Harness
+dort aus Runs herausgelassen wird und der Agent erfährt, warum.
+
+**Ein Key, keine Anmeldung.** Claude Code nimmt einen Anthropic-API-Key oder das Token,
+das `claude setup-token` für ein Claude-Pro- oder Max-Abo ausgibt, als Key gespeichert —
+es ist am Präfix `sk-ant-oat` zu erkennen, und es meldet sich nur bei Anthropic an, nicht
+bei einem Gateway. Codex nimmt einen OpenAI-API-Key. Eine ChatGPT-Anmeldung wird hier noch nicht akzeptiert: Der Anmelde-Flow des Coding Agent — ein isoliertes Home-Verzeichnis, eine Sichtbarkeitsprüfung, Token-Rotation, die aus der Sandbox zurückgelesen wird — ist in dieser Capability nicht verdrahtet, sodass der Picker nur API-Keys anbietet. Ein API-Key gehört dem Agent, wie das Token eines Bots in Slack, sodass
+jeder Run ihn nutzt, wer auch fragt — und alles, was ein Prompt ausführt, kann ihn lesen. Binden Sie
+einen Key, den alle teilen dürfen, die den Agent ausführen dürfen.
+Die Nutzung eines persönlichen Abos unterliegt den Bedingungen von Anthropic für
+diese Pläne, die sie in einem geteilten Deployment möglicherweise nicht erlauben.
+
+**Der Key passt zum Harness.** Der Picker bietet Claude Code nur Keys an, die für
+Anthropic gespeichert sind, und Codex nur OpenAI-Keys. Ein Key, der für
+`custom` gespeichert ist, passt zu beiden, ebenso wie der bereits gebundene Key. Die Veröffentlichung lehnt einen Key ab,
+der für einen anderen Provider gespeichert ist, und nennt die, die der Harness nimmt: Ein OpenAI-Key,
+der an Claude Code gebunden ist, würde veröffentlichen und dann bei jedem Prompt fehlschlagen. Mit gesetztem `base_url`
+ist der Key der des Gateways — OpenRouter, LiteLLM oder ein anderes — sodass Claude Code
+dann jeden Key nimmt.
+
+**Sein Verbrauch wird gemessen.** Beide Harness melden ihre Tokens pro Modell, die
+wie jede Modellanfrage im Ledger des Runs verbucht werden, und das Budget wird vor
+jedem Prompt geprüft. Codex nennt kein Modell in seinen Ereignissen, sodass sein Verbrauch ohne gesetztes `model`
+unbepreist verbucht und die Kosten des Runs als teilweise markiert werden. Ein Prompt, der endet, bevor sein
+Harness meldet, was er ausgegeben hat — fehlgeschlagen, abgelaufen oder gestoppt — wird genauso verbucht.
 
 ## Einen Befehl beobachten { #monitor }
 

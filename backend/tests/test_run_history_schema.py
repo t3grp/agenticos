@@ -34,6 +34,8 @@ def _row(**overrides: object) -> AgentRun:
         # Set explicitly: a column default is applied on flush, and this row never is.
         "modality": "text",
         "is_test": False,
+        "fallback_used": False,
+        "serving_model": None,
     }
     return AgentRun(**{**defaults, **overrides})
 
@@ -79,3 +81,35 @@ def test_an_orphaned_delegation_reports_no_task_id() -> None:
 
     assert read.parent_run_id is None
     assert read.subagent_task_id is None
+
+
+def test_a_run_read_declares_its_waiting_fields() -> None:
+    """The waiting questions and their expiry are declared on the read, so the
+    API sends them rather than dropping them silently - the failure this file
+    exists for. The values themselves are set by the route's `waiting_update`,
+    not by validation, so a bare read carries the empty answer: no questions,
+    no expiry."""
+    read = AgentRunRead.model_validate(_row())
+
+    assert read.waiting_questions == []
+    assert read.waiting_expires_at is None
+
+
+def test_a_run_served_by_a_fallback_reports_which_model_answered() -> None:
+    """The fallback is visible to the client, which is the whole point of
+    recording it: without the schema declaring it, the column exists, the row
+    is written, and the API sends neither the flag nor the model - the exact
+    failure this file exists for.
+    """
+    read = AgentRunRead.model_validate(_row(fallback_used=True, serving_model="gpt-5"))
+
+    assert read.fallback_used is True
+    assert read.serving_model == "gpt-5"
+
+
+def test_a_run_served_by_its_primary_reports_no_fallback() -> None:
+    """False and null rather than absent, so a client branches on one shape."""
+    read = AgentRunRead.model_validate(_row(fallback_used=False, serving_model=None))
+
+    assert read.fallback_used is False
+    assert read.serving_model is None

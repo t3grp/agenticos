@@ -56,6 +56,8 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
     status: "completed",
     model_label: "claude-sonnet-4-5",
     provider: "anthropic",
+    fallback_used: false,
+    serving_model: null,
     input_tokens: 1200,
     output_tokens: 340,
     cost_usd: "0.0182",
@@ -125,6 +127,24 @@ describe("stepping to a neighbour", () => {
     serve({ run: run() });
     renderRun();
     expect(screen.queryByText(/malformed arguments/)).toBeNull();
+  });
+
+  it("says when a fallback served the run, and which model answered", () => {
+    serve({ run: run({ fallback_used: true, serving_model: "gpt-5" }) });
+    renderRun();
+    expect(screen.getByText("Served by gpt-5 (fallback)")).toBeInTheDocument();
+  });
+
+  it("says nothing about a fallback for a run its primary served", () => {
+    serve({ run: run() });
+    renderRun();
+    expect(screen.queryByText(/fallback/)).toBeNull();
+  });
+
+  it("names the primary profile when no serving model was recorded", () => {
+    serve({ run: run({ fallback_used: true, serving_model: null }) });
+    renderRun();
+    expect(screen.getByText("Served by claude-sonnet-4-5 (fallback)")).toBeInTheDocument();
   });
 
   it("says how much of the input the cache served, when it did (#2170)", () => {
@@ -319,5 +339,30 @@ describe("the header a run opens on", () => {
     expect(screen.getAllByText("-").length).toBeGreaterThan(0);
     expect(screen.getByTitle(/no price/i)).toHaveTextContent("+");
     expect(screen.queryByText(/ago$/)).toBeNull();
+  });
+});
+
+describe("a run parked on a question", () => {
+  it("shows the unanswered questions and how long is left to answer them", () => {
+    serve({
+      run: run({
+        status: "awaiting_answer",
+        waiting_questions: ["Which model should I use?", "And the budget?"],
+        waiting_expires_at: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+      }),
+    });
+    renderRun();
+
+    expect(screen.getByRole("region", { name: "Waiting on you" })).toBeVisible();
+    expect(screen.getByText("Which model should I use?")).toBeVisible();
+    expect(screen.getByText("And the budget?")).toBeVisible();
+    expect(screen.getByText(/Expires in 1 d/)).toBeVisible();
+  });
+
+  it("shows no waiting section once the run has finished", () => {
+    serve({ run: run({ status: "completed" }) });
+    renderRun();
+
+    expect(screen.queryByRole("region", { name: "Waiting on you" })).toBeNull();
   });
 });

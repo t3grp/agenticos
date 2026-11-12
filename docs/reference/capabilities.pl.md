@@ -1,5 +1,5 @@
 ---
-source_sha: "fe652977b769"
+source_sha: "8d2e6a7f5851"
 ---
 
 # Katalog capability { #the-capability-catalog }
@@ -83,6 +83,7 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `text_to_speech` | Zamiana tekstu na mowę | analiza | `generate_speech` | — | wymagany | bez zmian |
 | `video_generation` | Generowanie wideo | analiza | `generate_video` | — | wymagany | przekazana |
 | `coding_agent` | Coding agent | analiza | `run_coding_agent` | `sandbox:execute` | wymagany | przekazana |
+| `harness` | Harness | analiza | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | wymagany | przekazana |
 | `monitor` | Obserwuj polecenie | analiza | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | przekazana |
 | `subagents` | Subagenci | rozumowanie | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | przekazana |
 | `background_tasks` | Tematy w tle | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | przekazywane |
@@ -1715,6 +1716,88 @@ zadaniem. Codex nie podaje modelu w swoich zdarzeniach, więc bez ustawionego `m
 jego zużycie jest księgowane bez ceny, a koszt runa oznaczony jako częściowy. Tak
 samo księgowane jest zadanie, które kończy się, zanim harness poda, ile wydał -
 nieudane, przerwane limitem czasu albo zatrzymane.
+
+## Harness { #harness }
+
+`harness_start` — *Otwiera nazwaną sesję harnessu z pierwszym promptem i trzyma ją otwartą.*
+`harness_prompt` — *Wysyła kolejny prompt do nazwanej sesji harnessu.*
+`harness_stop` — *Zamyka nazwaną sesję harnessu.*
+`harness_sessions` — *Wymienia sesje harnessu otwarte w tej rozmowie.*
+
+Agent oparty na sesji **Claude Code** albo **Codex** we własnym
+[sandboxie](../sandbox.md), trzymanej otwartej przez kolejne tury: agent otwiera jedną sesję
+na wątek pracy i wysyła do niej prompty w miarę postępu, zamiast przekazać jedno
+zadanie harnessowi i zdać raport. Sesja należy do CLI: pamięta, co wcześniejsze prompty czytały i zmieniały, a osoba widzi na czacie, jak pracuje każdy
+prompt. Inny agent dociera do agenta opartego na harnessie przez zwykłą
+[delegację](#delegation), tak jak do każdego specjalisty.
+
+| Konfiguracja | Domyślnie | Wartości |
+|---|---|---|
+| `harness` | `claude_code` | `claude_code` (klucz API Anthropic albo token subskrypcji Claude), `codex` (klucz API OpenAI) |
+| `access` | `read_only` | `read_only` czyta kod i odpowiada; `edit` zmienia pliki i uruchamia polecenia |
+| `model` | domyślny model harnessu | Claude Opus, Sonnet albo Haiku 5.5 dla Claude Code; GPT-5.6 Sol, Terra, Luna albo GPT-5.3 Codex dla Codexa |
+| `base_url` | bezpośrednio Anthropic | Tylko Claude Code: bramka obsługująca API Anthropic, np. `https://openrouter.ai/api`, której klucz trzyma wtedy vault. Usuwane, gdy wybrano Codex |
+| `timeout_minutes` | 30 | 1–60, na jeden prompt. Sesja pozostaje otwarta |
+
+**Cztery narzędzia, a binding decyduje, co mogą robić.** Przy `edit` harness edytuje
+dowolny plik i uruchamia dowolne polecenie w sandboxie, z własnymi promptami wyłączonymi
+(`--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`):
+nikt nie siedzi przy jego terminalu, a kontener jest granicą, dla której obie flagi są
+udokumentowane. Przy `read_only` Claude Code działa w trybie planu bez żadnego narzędzia,
+które zapisuje — bez narzędzi edycji i powłoki — i czyta za pomocą Read, Grep i Glob;
+jest poinformowany, że nic więcej nie może zostać zatwierdzone. Codex w kontenerze nie ma `read_only`: jego tryb tylko do odczytu to
+własny sandbox, który nie może wystartować wewnątrz kontenera agenta, a publikacja
+odrzuca to połączenie. Czy osoba wyraża zgodę przed każdym promptem, to
+**Zatwierdzenie przez człowieka** tej capability — jak każda bramka, jest wyłączone,
+dopóki ktoś go nie włączy. Nie ma zakładki Narzędzia: cztery narzędzia to capability.
+
+**Nazwane sesje.** Każdy prompt nazywa `session` — `main`, gdy nie nazwano żadnej. Ta sama nazwa kontynuuje wcześniejszą pracę tej sesji w rozmowie; nowa nazwa otwiera kolejną. `harness_start` na nazwie już otwartej zaczyna ją od nowa, a `harness_stop` ją zamyka, więc późniejszy prompt pod tą nazwą otwiera nową. Prompty w jednym zestawie narzędzi działają po kolei, więc dwa prompty do tej samej sesji nie mogą się przeplatać. Sesja harnessu nigdy nie jest wznawiana przez coding agenta, a zadanie coding agenta nigdy nie kontynuuje sesji harnessu: ich pliki sesji leżą osobno, `.agenticos/harness/` i `.agenticos/coding-agent/`.
+
+**Sesje rozmowy trwają przez prompty.** Identyfikator sesji harnessu jest trzymany
+w sandboxie obok pracy, w `.agenticos/harness/`, jeden na
+rozmowę i nazwę sesji, więc drugi prompt w czacie wie, co czytał pierwszy — a
+czat nigdy nie kontynuuje sesji innego czatu w sandboxie współdzielonym przez kilka, w projekcie ani w zakresie
+osoby czy agenta. Sesja, której sandbox już nie trzyma, zaczyna od nowa sama, raz.
+
+**Osoba widzi, jak pracuje.** Prompt działa tak jak zadanie coding agenta: harness startuje odłączony w sandboxie,
+`claude -p --output-format stream-json` albo `codex exec --json`, a jego plik zdarzeń
+jest odczytywany co półtorej sekundy. Każdy krok dociera do czatu, gdy się dzieje, w
+panelu własnym pod znakiem Claude Code albo Codex, tak jak kroki delegacji:
+plik, który czyta, edycja, polecenie, które uruchamia, co mówi pomiędzy. Gdy
+skończy, wynik wywołania zawiera odpowiedź, każdy krok i pliki, które zmienił.
+Prompt po `timeout_minutes` oraz prompt zatrzymany przez osobę kończy się zatrzymaniem
+całej jego grupy procesów.
+
+**Czego potrzebuje.** Capability `sandbox` na backendzie `service` z włączonymi poleceniami powłoki
+— publikacja odrzuca wszystko inne — oraz runtime z zainstalowanym harnessem:
+runtime `workbench` przypina Claude Code 2.1.288 i Codex 0.160.0. Poświadczenie
+pochodzi z vault poprzez `secret_id` bindingu i trafia do
+polecenia poprzez jego środowisko, nigdy w linii poleceń. W [projekcie](../projects.md),
+który trzyma pliki bez kontenera, nie ma powłoki, więc harness jest
+pominięty w runach tam, a agent dowiaduje się dlaczego.
+
+**Klucz, nie logowanie.** Claude Code przyjmuje klucz API Anthropic albo token,
+który wypisuje `claude setup-token` dla subskrypcji Claude Pro albo Max, przechowywany jako klucz —
+odróżnia go prefiks `sk-ant-oat`, a loguje się tylko do Anthropic, nie
+do bramki. Codex przyjmuje klucz API OpenAI. Logowanie ChatGPT nie jest tu jeszcze akceptowane: przepływ logowania coding agenta — odizolowany katalog domowy, sprawdzenie widoczności, rotacja tokenów odczytywana z powrotem z sandboxu — nie jest podłączony do tej capability, więc selektor oferuje tylko klucze API. Klucz API należy do agenta, jak token bota w Slacku, więc
+każdy run go używa, ktokolwiek zapytał — a wszystko, co uruchamia prompt, może go odczytać. Powiąż
+klucz, który mogą współdzielić wszyscy, którzy mogą uruchamiać agenta.
+Korzystanie z osobistej subskrypcji podlega warunkom Anthropic dla
+tych planów, które mogą na to nie pozwalać we wspólnym deploymentcie.
+
+**Klucz pasuje do harnessu.** Selektor oferuje Claude Code tylko klucze przechowywane dla
+Anthropic, a Codexowi tylko klucze OpenAI. Klucz przechowywany dla
+`custom` pasuje do obu, podobnie jak klucz już powiązany. Publikacja odrzuca klucz
+przechowywany dla innego providera i nazywa te, które przyjmuje harness: klucz OpenAI
+powiązany z Claude Code opublikowałby się, a potem nie działał przy każdym prompcie. Gdy ustawiono `base_url`,
+klucz jest kluczem bramki — OpenRouter, LiteLLM albo innej — więc Claude Code
+przyjmuje wtedy dowolny klucz.
+
+**Jego koszt jest mierzony.** Oba harnessy zgłaszają swoje tokeny na model, które są
+księgowane w rejestrze runu jak każde żądanie modelu, a budżet jest sprawdzany przed
+każdym promptem. Codex nie nazywa modelu w swoich zdarzeniach, więc bez ustawionego `model` jego zużycie jest
+księgowane bez ceny, a koszt runu jest oznaczony jako częściowy. Prompt, który kończy się, zanim jego
+harness zgłosi, ile wydał — nieudany, przekroczony w czasie albo zatrzymany — jest księgowany tak samo.
 
 ## Obserwuj polecenie { #monitor }
 

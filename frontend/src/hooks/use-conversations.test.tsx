@@ -139,6 +139,24 @@ describe("the conversation list", () => {
     vi.useRealTimers();
   });
 
+  it("reads the list again while a thread on it is waiting on its person, and stops once none is", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    serve({ items: [conversation("c-1", { waiting_since: "2026-10-13T12:00:00Z" })] });
+    await hook();
+    const lists = () =>
+      vi.mocked(apiClient.get).mock.calls.filter(([path]) => !String(path).includes("/messages"))
+        .length;
+    const first = lists();
+
+    serve({ items: [conversation("c-1", { waiting_since: null })] });
+    await act(async () => vi.advanceTimersByTimeAsync(4_000));
+    await waitFor(() => expect(lists()).toBe(first + 1));
+    // Nothing waiting now, so no further read comes.
+    await act(async () => vi.advanceTimersByTimeAsync(8_000));
+    expect(lists()).toBe(first + 1);
+    vi.useRealTimers();
+  });
+
   it("reads the list again while a thread this tab left mid-answer is not on it yet", async () => {
     // The listing has not seen the run the tab let go; polling is how it does.
     vi.useFakeTimers({ shouldAdvanceTime: true });

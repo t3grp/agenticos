@@ -390,6 +390,7 @@ class TestTheProjectsChatList:
                 f"{MODULE}.conversation_repo.agents_in_conversations", AsyncMock(return_value={})
             ),
             patch(f"{MODULE}.conversation_repo.running_activity", AsyncMock(return_value={})),
+            patch(f"{MODULE}.conversation_repo.waiting_activity", AsyncMock(return_value={})),
             patch(f"{MODULE}.conversation_repo.unread_ids", AsyncMock(return_value=set())),
             patch(
                 f"{MODULE}.conversation_repo.readers_of",
