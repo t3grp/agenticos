@@ -16,6 +16,7 @@ from app.agents.capabilities import build as build_capabilities
 from app.agents.capabilities._registry import CapabilityBinding
 from app.agents.capabilities.council import CouncilConfig
 from app.agents.capabilities.council._capability import Council
+from app.agents.capabilities.council._capability import resolve_members
 from app.agents.capabilities.council._toolset import build_council_toolset
 from app.agents.council import (
     CouncilMemberReview,
@@ -267,6 +268,30 @@ class TestRunCouncilRound:
             reviews=[CouncilMemberReview(name="A", status="scored", score=9)],
         )
         assert CouncilRound.from_record(round_.to_record(8)) == round_
+
+
+class TestResolveCouncilMembers:
+    def test_rejects_configured_provider_that_disagrees_with_profile(self):
+        profile_id = uuid.uuid4()
+        spec = ModelRequestSpec(
+            profile_id=profile_id,
+            label="Claude Opus",
+            provider="anthropic",
+            model="claude-opus-4-1",
+            params={},
+            credential=ResolvedCredential(
+                provider="anthropic",
+                secret=ApiKeySecret(api_key=SecretStr("sk-ant-test-key")),
+            ),
+            fallbacks=[],
+        )
+        member = resolve_members(
+            [{"name": "Configured OpenAI", "provider": "openai", "model_profile_id": profile_id}],
+            {profile_id: spec},
+        )[0]
+        assert member.provider == "openai"
+        assert member.model is None
+        assert "does not match" in member.unavailable_reason
 
 
 class TestCouncilConfig:

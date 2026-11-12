@@ -103,6 +103,19 @@ def resolve_members(
                 )
             )
             continue
+        if spec.provider != provider or spec.credential.provider != provider:
+            resolved.append(
+                ResolvedCouncilMember(
+                    name=name,
+                    provider=provider,
+                    model_label=spec.label,
+                    model=None,
+                    unavailable_reason=(
+                        "Configured provider does not match the resolved model profile"
+                    ),
+                )
+            )
+            continue
         try:
             model = build_model(spec.credential, spec.model)
         except Exception:
