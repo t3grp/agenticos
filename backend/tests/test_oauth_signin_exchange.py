@@ -91,13 +91,19 @@ async def test_the_callback_redirect_carries_a_code_not_the_tokens(
 async def test_oauth_signin_for_totp_user_returns_mfa_challenge_without_session(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The provider identity is only the first factor for an MFA-enabled user."""
+    """The browser gets an MFA token in the fragment without an auth session."""
     user_id = uuid4()
     fake = _FakeRedis()
     app.dependency_overrides[get_redis] = lambda: fake
     session_service = MagicMock()
     session_service.create_session = AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: session_service
+    create_refresh_token = MagicMock(return_value="must-not-be-created")
+    monkeypatch.setattr(
+        "app.api.routes.v1.oauth.create_refresh_token", create_refresh_token
+    )
+    issue_code = AsyncMock()
+    monkeypatch.setattr(OAuthExchangeService, "issue", issue_code)
     monkeypatch.setattr(
         oauth.google,
         "authorize_access_token",
@@ -119,14 +125,20 @@ async def test_oauth_signin_for_totp_user_returns_mfa_challenge_without_session(
 
     response = await client.get(_CALLBACK)
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["mfa_required"] is True
-    assert "access_token" not in body and "refresh_token" not in body
-    payload = verify_special_token(body["mfa_token"], expected_type="mfa")
+    assert response.status_code == 302
+    redirect = urlparse(response.headers["location"])
+    assert redirect.path == "/login"
+    assert redirect.query == ""
+    assert "mfa_token" not in parse_qs(redirect.query)
+    fragment = parse_qs(redirect.fragment)
+    assert set(fragment) == {"mfa_token"}
+    mfa_token = fragment["mfa_token"][0]
+    payload = verify_special_token(mfa_token, expected_type="mfa")
     assert payload is not None
     assert payload["sub"] == str(user_id)
     assert payload["cv"] == 3
+    create_refresh_token.assert_not_called()
+    issue_code.assert_not_awaited()
     session_service.create_session.assert_not_awaited()
 
 
