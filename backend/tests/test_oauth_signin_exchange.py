@@ -100,6 +100,12 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
     session_service = MagicMock()
     session_service.create_session = AsyncMock()
     app.dependency_overrides[get_session_service] = lambda: session_service
+    make_access = MagicMock(return_value="must-not-be-created")
+    make_refresh = MagicMock(return_value="must-not-be-created")
+    issue_code = AsyncMock()
+    monkeypatch.setattr(oauth_routes, "create_access_token", make_access)
+    monkeypatch.setattr(oauth_routes, "create_refresh_token", make_refresh)
+    monkeypatch.setattr(OAuthExchangeService, "issue", issue_code)
     oidc_client = MagicMock()
     oidc_client.authorize_access_token = AsyncMock(
         return_value={
@@ -128,6 +134,9 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
     assert payload is not None
     assert payload["sub"] == str(user_id)
     assert payload["cv"] == 3
+    make_access.assert_not_called()
+    make_refresh.assert_not_called()
+    issue_code.assert_not_awaited()
     session_service.create_session.assert_not_awaited()
     assert fake._store == {}
 
