@@ -1748,6 +1748,7 @@
       "delegating": "Delegating",
       "edited": "{named, select, no {Edited…} other {Edited {subject}}}",
       "editing": "{named, select, no {Editing…} other {Editing {subject}}}",
+      "evalToolTuning": "Eval tool tuning",
       "executed": "{named, select, no {Ran…} other {Ran {subject}}}",
       "executing": "{named, select, no {Running…} other {Running {subject}}}",
       "failedToLoadSkill": "Failed to load skill.",
@@ -1802,6 +1803,7 @@
       "readingPlan": "Reading the plan",
       "readingSkillFiles": "Reading a skill's files",
       "readingToolResult": "Reading a stored tool result",
+      "recordingEvalToolTuning": "Scoring a tool against eval cases",
       "relevanceScore": "Relevance: {score}",
       "removeStep": "Remove Step",
       "removingStep": "Removing a step",
@@ -7175,6 +7177,12 @@
       "solLoopFinding": "{id} [{severity}] {location} — {claim}",
       "solLoopFix": "Fix: {fix}",
       "solLoopOutcome": "Outcome: {outcome}",
+      "evalToolTuningRuns": "{count, plural, =1 {1 eval tool-tuning run} other {# eval tool-tuning runs}}",
+      "evalToolTuningRun": "{tool} · {passed}/{total} passed",
+      "evalToolTuningDominantFailure": "Most common failure: {failure}",
+      "evalToolTuningCase": "{name} · {classification}",
+      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposalEvidence": "Evidence: {evidence} · {status}",
       "cacheBust": "cache bust",
       "cacheExpired": "cache expired",
       "cacheBustDetail": "{missed, number} cached tokens not read back from the cache - something before them in the prompt changed",
@@ -11618,6 +11626,14 @@
       "needs": "Skills, written under Skills and picked in this panel.",
       "never": "Never changes a skill; the agent only reads it."
     },
+    "eval_tool_tuning": {
+      "name": "Eval tool tuning",
+      "does": "Scores one tool against eval cases that are already judged, and drafts one tuning proposal per failure class: prompt wording, tool parameters, or tool choice.",
+      "example1": "Why does search keep missing the total?",
+      "example2": "Tune the lookup tool against last week's cases",
+      "needs": "A set of judged eval cases, from the failure-learning loop's eval tries.",
+      "never": "Never judges an answer itself and never applies a proposal: drafts are for a human to approve."
+    },
     "sol_loop": {
       "name": "Sol-loop",
       "does": "Asks one reviewer to judge the work in rounds until it passes: round 1 reviews the whole change, later rounds check only changed code and open findings.",
@@ -12094,6 +12110,12 @@
       "include_execute": {
         "title": "Allow shell commands",
         "description": "Whether the agent may run shell commands. Turning it off leaves the file tools and removes the shell entirely, rather than gating it."
+      }
+    },
+    "eval_tool_tuning": {
+      "max_tuning_runs": {
+        "title": "Tuning runs at most",
+        "description": "How many tuning runs one run may record. A fresh tuning run after a proposal is applied is a new run, and the cap is what stops repeated scoring turning into scope creep."
       }
     },
     "sol_loop": {
