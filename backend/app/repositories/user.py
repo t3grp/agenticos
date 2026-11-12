@@ -4,7 +4,8 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select, update as sa_update
+from sqlalchemy import func, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.locks import LockScope, hold_name
