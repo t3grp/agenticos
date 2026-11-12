@@ -153,8 +153,10 @@ async def test_login_with_a_second_factor_stops_at_a_challenge(
 
 
 async def test_the_challenge_and_the_code_become_a_session(
-    client: AsyncClient, mock_user: MockUser
+    client: AsyncClient, mock_user: MockUser, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    reset = AsyncMock()
+    monkeypatch.setattr(auth_routes.rate_limit, "reset_mfa_failures", reset)
     challenge = create_mfa_token(
         subject=str(mock_user.id), credential_version=mock_user.credential_version
     )
@@ -165,12 +167,18 @@ async def test_the_challenge_and_the_code_become_a_session(
 
     assert response.status_code == 200
     assert response.json()["access_token"]
+    reset.assert_awaited_once_with(str(mock_user.id))
 
 
 async def test_a_wrong_code_at_the_second_step_is_refused(
-    client: AsyncClient, mock_user: MockUser, mock_mfa_service: MagicMock
+    client: AsyncClient,
+    mock_user: MockUser,
+    mock_mfa_service: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mock_mfa_service.verify_challenge = AsyncMock(return_value=False)
+    record = AsyncMock()
+    monkeypatch.setattr(auth_routes.rate_limit, "record_mfa_failure", record)
     challenge = create_mfa_token(
         subject=str(mock_user.id), credential_version=mock_user.credential_version
     )
@@ -180,6 +188,27 @@ async def test_a_wrong_code_at_the_second_step_is_refused(
     )
 
     assert response.status_code == 401
+    record.assert_awaited_once_with(str(mock_user.id))
+
+
+async def test_locked_account_is_refused_before_the_code_is_checked(
+    client: AsyncClient,
+    mock_user: MockUser,
+    mock_mfa_service: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(auth_routes.rate_limit, "mfa_backoff_locked", AsyncMock(return_value=True))
+    challenge = create_mfa_token(
+        subject=str(mock_user.id), credential_version=mock_user.credential_version
+    )
+
+    response = await client.post(
+        _mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"}
+    )
+
+    assert response.status_code == 429
+    assert response.json()["error"]["details"]["retry_after_seconds"] == 300
+    mock_mfa_service.verify_challenge.assert_not_awaited()
 
 
 async def test_an_access_token_is_not_a_challenge(client: AsyncClient, mock_user: MockUser) -> None:

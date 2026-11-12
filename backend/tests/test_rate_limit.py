@@ -58,6 +58,30 @@ class TestTheAllowanceItself:
         assert decision.allowed is True
         assert decision.metered is True
 
+    async def test_mfa_failures_lock_the_user_after_three_and_success_resets_the_window(self):
+        client = _redis([1, 2, 3])
+        client.get = AsyncMock(side_effect=[None, "1"])
+        client.set = AsyncMock(return_value=True)
+        client.delete = AsyncMock(return_value=1)
+        rate_limit.configure(client)
+
+        assert await rate_limit.record_mfa_failure("user-123") == 1
+        assert await rate_limit.record_mfa_failure("user-123") == 2
+        assert await rate_limit.record_mfa_failure("user-123") == 3
+        assert await rate_limit.mfa_backoff_locked("user-123") is False
+        assert await rate_limit.mfa_backoff_locked("user-123") is True
+        await rate_limit.reset_mfa_failures("user-123")
+
+        key = client.count_in_window.await_args.args[0]
+        assert key.startswith("auth:mfa:backoff:")
+        assert "user-123" not in key
+        assert client.count_in_window.await_args.kwargs == {"ttl": 300}
+        client.set.assert_awaited_once_with(f"{key.rsplit(':', 1)[0]}:locked", "1", ttl=300)
+        assert [call.args[0] for call in client.delete.await_args_list] == [
+            f"{key.rsplit(':', 1)[0]}:failures",
+            f"{key.rsplit(':', 1)[0]}:locked",
+        ]
+
     async def test_the_attempt_after_the_allowance_is_refused(self):
         """Four attempts against a limit of three: the fourth is the one the
         window has no room for."""
