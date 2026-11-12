@@ -174,6 +174,72 @@ class ManifestSolLoopRound(BaseSchema):
     satisfied: bool = False
 
 
+class ManifestEvalToolTuningCase(BaseSchema):
+    """One eval case scored for one tool in a tuning run (#11).
+
+    Attributes:
+        name: The case, as its author named it.
+        classification: `passed`, `not_called`, `wrong_tool`,
+            `bad_arguments`, or `wrong_answer`.
+        passed: Whether the judge said the answer met the expectation.
+        shown: What the answer said at the expectation's field, clipped.
+        detail: Why the case scored as it did, in one sentence.
+    """
+
+    name: str
+    classification: Literal["passed", "not_called", "wrong_tool", "bad_arguments", "wrong_answer"]
+    passed: bool = False
+    shown: str = ""
+    detail: str = ""
+
+
+class ManifestEvalToolTuningProposal(BaseSchema):
+    """One tuning proposal a tuning run drafted (#11) - a draft, never applied.
+
+    Attributes:
+        kind: `prompt_wording`, `tool_parameters`, or `tool_choice`.
+        tool: The tool the change tunes.
+        title: The change in one line.
+        current: What is true now, as observed.
+        proposed: The change, as a concrete instruction or constraint.
+        rationale: Why, citing the score.
+        evidence: The failing cases this rests on, by name.
+        status: Always `draft`.
+    """
+
+    kind: Literal["prompt_wording", "tool_parameters", "tool_choice"]
+    tool: str
+    title: str
+    current: str = ""
+    proposed: str = ""
+    rationale: str = ""
+    evidence: list[str] = Field(default_factory=list)
+    status: Literal["draft"] = "draft"
+
+
+class ManifestEvalToolTuningRun(BaseSchema):
+    """One eval-driven tool-tuning run (#11).
+
+    Attributes:
+        tool: The tool that was scored.
+        total: Cases scored. `passed` of them passed.
+        passed: Cases the tool passed.
+        pass_rate: `passed / total`, or 0.0 when no cases were scored.
+        dominant_failure: The most common failure class, or `None` when
+            nothing failed.
+        cases: Every case, in the order it was scored.
+        proposals: The draft proposals, one per failure class.
+    """
+
+    tool: str
+    total: int = 0
+    passed: int = 0
+    pass_rate: float = 0.0
+    dominant_failure: str | None = None
+    cases: list[ManifestEvalToolTuningCase] = Field(default_factory=list)
+    proposals: list[ManifestEvalToolTuningProposal] = Field(default_factory=list)
+
+
 class RunManifestRead(BaseSchema):
     """The whole record, as `GET /runs/{run_id}/manifest` answers it.
 
@@ -213,4 +279,5 @@ class RunManifestRead(BaseSchema):
     reviews: list[ManifestReview] = Field(default_factory=list)
     code_runs: list[ManifestCodeRun] = Field(default_factory=list)
     sol_loop_rounds: list[ManifestSolLoopRound] = Field(default_factory=list)
+    eval_tool_tuning_runs: list[ManifestEvalToolTuningRun] = Field(default_factory=list)
     truncated: bool = False

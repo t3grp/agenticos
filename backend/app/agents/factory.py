@@ -66,6 +66,9 @@ from app.agents.capabilities.compaction import (
 )
 from app.agents.capabilities.conversation_search import CONVERSATION_SEARCH_CAPABILITY_ID
 from app.agents.capabilities.drafts._spec import draft_tool_names
+from app.agents.capabilities.eval_tool_tuning import (
+    EVAL_TOOL_TUNING_RECORDER_RESOURCE,
+)
 from app.agents.capabilities.guardrails import (
     ANSWER_TOOLS_RESOURCE,
     GuardrailsConfig,
@@ -441,6 +444,9 @@ def build_agent(
             # are recorded - resolved by the runner, read by the capability.
             SOL_LOOP_MODELS_RESOURCE: sol_loop_models,
             SOL_LOOP_RECORDER_RESOURCE: recorder,
+            # Where eval-driven tool-tuning runs are recorded - the run's
+            # recorder, read by the capability.
+            EVAL_TOOL_TUNING_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
