@@ -28,7 +28,7 @@ not edit it and does not propose work outside its scope.
 
 | Field | Default | What it is |
 |---|---|---|
-| `members` | — | The delegates: one to three, each with a name, a provider, and a model profile |
+| `members` | — | Exactly three delegates, each with a name, a distinct provider, and a model profile |
 | `agreement_threshold` | `8` | The score out of 10 every delegate must reach for a round to satisfy the council |
 | `max_rounds` | `3` | How many review rounds one run may ask for (1–5) |
 
