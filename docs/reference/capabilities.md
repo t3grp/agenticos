@@ -81,6 +81,7 @@ browser is pointed at the deployment's browser service
 | `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | handed off |
 | `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | handed off |
 | `eval_tool_tuning` | Eval tool tuning | analysis | `record_eval_tool_tuning` | — | — | as-is |
+| `burst` | Burst | analysis | `run_burst` | `agents:delegate` | — | handed off |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | handed off |
 | `background_tasks` | Background topics | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | handed off |
 | `agent_messages` | Agent messages | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | as-is |

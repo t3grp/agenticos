@@ -95,6 +95,7 @@ w [Capabilities](capabilities.md).
 | Skille | `skills` |
 | Sol-loop | `sol_loop` |
 | Dostrajanie narzędzi na podstawie ewaluacji | `eval_tool_tuning` |
+| Burst | `burst` |
 | Subagenci | `subagents` |
 | Przypomnienia instrukcji | `system_reminders` |
 | Zamiana tekstu na mowę | `text_to_speech` |
