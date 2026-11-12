@@ -42,6 +42,25 @@ class AgentRunRead(BaseSchema):
     )
     status: str
     model_label: str | None = None
+    fallback_used: bool = Field(
+        default=False,
+        description=(
+            "True when a fallback model served any request of this run. False "
+            "on runs recorded before this was tracked, as well as on runs the "
+            "primary answered throughout - the console renders the fallback "
+            "line only when this is true"
+        ),
+    )
+    serving_model: str | None = Field(
+        default=None,
+        description=(
+            "The bare model id the provider reported for the last successful "
+            "request of this run - the model that actually answered, which is "
+            "a fallback's id when `fallback_used` is true. Null when no "
+            "request succeeded. A model id, not a display label: compare it "
+            "against the profile's model, never against `model_label`"
+        ),
+    )
     provider: str | None = Field(
         default=None,
         description=(
