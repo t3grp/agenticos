@@ -119,6 +119,89 @@ describe("what the model was told", () => {
     expect(screen.getByText("and 250 more calls, not listed")).toBeInTheDocument();
   });
 
+  it("shows each sol-loop round, its verdict and findings, and what happened to them (#6)", () => {
+    serve({
+      manifest: record({
+        sol_loop_rounds: [
+          {
+            round: 1,
+            scope: "full",
+            verdict: "CHANGES",
+            model: "GPT Sol",
+            findings: [
+              {
+                id: "S1",
+                severity: "blocker",
+                claim: "The check is wrong.",
+                file: "app/x.py",
+                line: 12,
+                fix: "Guard it.",
+                outcome: null,
+              },
+            ],
+            dispositions: {},
+            stop_reason: null,
+            reason: null,
+            satisfied: false,
+          },
+          {
+            round: 2,
+            scope: "changed-only",
+            verdict: "APPROVE",
+            model: "GPT Sol",
+            findings: [],
+            dispositions: { S1: "agree-fixed" },
+            stop_reason: "approved",
+            reason: null,
+            satisfied: true,
+          },
+        ],
+      }),
+    });
+    renderManifest();
+
+    expect(screen.getByText("2 sol-loop rounds")).toBeInTheDocument();
+    expect(screen.getByText("Round 1 · full · CHANGES")).toBeInTheDocument();
+    expect(screen.getByText("S1 [blocker] app/x.py:12 — The check is wrong.")).toBeInTheDocument();
+    expect(screen.getByText("Fix: Guard it.")).toBeInTheDocument();
+    expect(screen.getByText("Round 2 · changed-only · APPROVE")).toBeInTheDocument();
+    expect(screen.getByText("Stopped: approved")).toBeInTheDocument();
+    expect(screen.getByText("Outcome: agree-fixed")).toBeInTheDocument();
+  });
+
+  it("shows no sol-loop section for a run nobody reviewed", () => {
+    serve({ manifest: record() });
+    renderManifest();
+    expect(screen.queryByText(/sol-loop round/)).toBeNull();
+  });
+
+  it("reads a round the reviewer never answered as unavailable, never as approval", () => {
+    serve({
+      manifest: record({
+        sol_loop_rounds: [
+          {
+            round: 1,
+            scope: "full",
+            verdict: "unavailable",
+            model: "GPT Sol",
+            findings: [],
+            dispositions: {},
+            stop_reason: "reviewer_unavailable",
+            reason: "No model resolved for this reviewer's model profile",
+            satisfied: false,
+          },
+        ],
+      }),
+    });
+    renderManifest();
+
+    expect(screen.getByText("Round 1 · full · unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Stopped: reviewer_unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("No model resolved for this reviewer's model profile"),
+    ).toBeInTheDocument();
+  });
+
   it("shows the prompt as it was sent, and the system parts beside it", () => {
     serve({
       manifest: record({

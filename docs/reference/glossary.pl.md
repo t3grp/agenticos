@@ -1,5 +1,5 @@
 ---
-source_sha: "573be813d5ed"
+source_sha: "5a103c8e255a"
 ---
 
 # Słownik { #glossary }
@@ -92,6 +92,7 @@ w [Capabilities](capabilities.md).
 | Obserwuj polecenie | `monitor` |
 | Sandbox | `sandbox` |
 | Skille | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagenci | `subagents` |
 | Przypomnienia instrukcji | `system_reminders` |
 | Zamiana tekstu na mowę | `text_to_speech` |

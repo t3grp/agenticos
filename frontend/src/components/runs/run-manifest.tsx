@@ -59,6 +59,16 @@ export function RunManifest({ runId }: { runId: string }) {
     );
   }
 
+  // A finding's outcome is recorded in a later round's dispositions - the
+  // agent answers the last round's findings when it asks for the next one -
+  // so outcomes resolve across the whole ledger, not per round.
+  const solLoopOutcomes: Record<string, string> = {};
+  for (const round of manifest.sol_loop_rounds ?? []) {
+    for (const [id, outcome] of Object.entries(round.dispositions ?? {})) {
+      solLoopOutcomes[id] = outcome;
+    }
+  }
+
   return (
     <div className="space-y-5">
       {manifest.truncated && (
@@ -162,6 +172,62 @@ export function RunManifest({ runId }: { runId: string }) {
                   <p className="text-muted-foreground text-xs">
                     {t("codeRunOmittedCalls", { count: run.omitted_calls })}
                   </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {/* The sol-loop ledger: each round's verdict and findings, with what the
+          agent did with them. A round that ran out of budget or that the
+          reviewer never answered reads as exactly that, never as approval. */}
+      {!!manifest.sol_loop_rounds?.length && (
+        <Section title={t("solLoopRounds", { count: manifest.sol_loop_rounds.length })}>
+          <ul className="space-y-3">
+            {manifest.sol_loop_rounds.map((round) => (
+              <li key={round.round} className="space-y-1.5">
+                <p className="text-sm font-medium">
+                  {t("solLoopRound", {
+                    round: round.round,
+                    scope: round.scope,
+                    verdict: round.verdict,
+                  })}
+                </p>
+                {!!round.stop_reason && (
+                  <p className="text-muted-foreground text-xs">
+                    {t("solLoopStopReason", { reason: round.stop_reason })}
+                  </p>
+                )}
+                {!!round.reason && <p className="text-muted-foreground text-xs">{round.reason}</p>}
+                {round.findings.length > 0 && (
+                  <ol className="space-y-1.5">
+                    {round.findings.map((finding) => {
+                      const outcome = finding.outcome ?? solLoopOutcomes[finding.id];
+                      return (
+                        <li key={finding.id} className="space-y-0.5 text-sm">
+                          <p>
+                            {t("solLoopFinding", {
+                              id: finding.id,
+                              severity: finding.severity,
+                              location: `${finding.file}${finding.line ? `:${finding.line}` : ""}`,
+                              claim: finding.claim,
+                            })}
+                          </p>
+                          {!!finding.fix && (
+                            <p className="text-muted-foreground text-xs">
+                              {t("solLoopFix", { fix: finding.fix })}
+                            </p>
+                          )}
+                          {!!outcome && (
+                            <p className="text-muted-foreground text-xs">
+                              {t("solLoopOutcome", { outcome })}
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
                 )}
               </li>
             ))}

@@ -17,6 +17,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   monitor: 55,
   drafts: 36,
   harness: 90,
+  sol_loop: 120,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -340,6 +341,33 @@ const HARNESS =
   '<text x="0" y="2.4" class="tx mono s7 mid b" >main</text></g></g>' +
   "</svg>";
 
+/**
+ * Sol-loop: one reviewer judges the same work, round after round - a verdict
+ * over the ledger, with the findings listed under it until none are open.
+ */
+const SOL_LOOP =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/></g>' +
+  '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
+  '<polygon class="int" points="91.2,10 148.8,42 146.6,43 89.4,11"/>' +
+  '<polygon class="inr" points="148.8,42 148.8,92 146.6,93 146.6,43"/>' +
+  '<polygon class="inl" points="89.4,61 146.6,93 146.6,43 89.4,11"/>' +
+  '<g transform="matrix(0.9 0.5 0 1 89.4 11)">' +
+  '<rect x="6" y="6" width="10" height="8" rx="2" class="ac" />' +
+  '<text x="20" y="13" class="tx s7 b">S1 blocker</text>' +
+  '<g class="breathe" style="animation-delay:-0.8s"><rect x="6" y="18" width="10" height="8" rx="2" class="ac" /></g>' +
+  '<text x="20" y="25" class="tx s7 b">S2 should</text>' +
+  '<rect x="6" y="30" width="10" height="8" rx="2" class="ac" />' +
+  '<text x="20" y="37" class="tx s7 b">S3 nit</text></g>' +
+  '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
+  '<text x="0" y="2.4" class="tx mono s7 mid b" >APPROVE</text></g></g>' +
+  "</svg>";
+
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
@@ -354,4 +382,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   phone_calls: PHONE_CALLS,
   drafts: DRAFTS,
   harness: HARNESS,
+  sol_loop: SOL_LOOP,
 };

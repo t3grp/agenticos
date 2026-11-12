@@ -56,6 +56,14 @@ _FINDING_RE = re.compile(
 _KNOWN_OUTCOMES = frozenset({"agree-fixed", "disagree-with-evidence", "decline-nit"})
 
 
+_SEVERITIES: dict[str, FindingSeverity] = {
+    "blocker": "blocker",
+    "should": "should",
+    "nit": "nit",
+}
+"""The severities a finding line may carry, so a parsed one is one of them."""
+
+
 class SolLoopFinding(BaseModel):
     """One finding in a review, with a stable id the ledger tracks.
 
@@ -176,7 +184,8 @@ def parse_verdict(text: str) -> Literal["APPROVE", "CHANGES"] | None:
     match = _VERDICT_RE.search(text or "")
     if match is None:
         return None
-    return match.group(1).upper()  # type: ignore[return-value]
+    value = match.group(1).upper()
+    return "APPROVE" if value == "APPROVE" else "CHANGES"
 
 
 def parse_findings(text: str) -> list[SolLoopFinding]:
@@ -196,7 +205,7 @@ def parse_findings(text: str) -> list[SolLoopFinding]:
         findings.append(
             SolLoopFinding(
                 id=finding_id,
-                severity=severity,  # type: ignore[arg-type]
+                severity=_SEVERITIES[severity],
                 claim=claim.strip(),
                 file=file,
                 line=int(line_no) if line_no is not None else None,

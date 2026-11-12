@@ -333,6 +333,51 @@ class TestRunSolLoopRound:
         assert SolLoopRound.from_record(round_.to_record()) == round_
 
 
+class TestResolveReviewer:
+    def test_no_reviewer_configured_is_none(self):
+        from app.agents.capabilities.sol_loop._capability import resolve_reviewer
+
+        assert resolve_reviewer(None, None) is None
+
+    def test_a_model_that_cannot_be_built_is_unavailable(self, monkeypatch):
+        from app.agents.capabilities.sol_loop._capability import resolve_reviewer
+
+        def _raise(credential, model):
+            raise RuntimeError("no such provider")
+
+        monkeypatch.setattr("app.agents.capabilities.sol_loop._capability.build_model", _raise)
+        reviewer = {
+            "name": "GPT Sol",
+            "provider": "openai",
+            "model_profile_id": uuid.uuid4(),
+        }
+        spec = ModelRequestSpec(
+            profile_id=reviewer["model_profile_id"],
+            label="Sol",
+            provider="openai",
+            model="gpt-5.6-sol",
+            params={},
+            credential=ResolvedCredential(
+                provider="openai",
+                secret=ApiKeySecret(api_key=SecretStr("sk-openai-test-key")),
+            ),
+            fallbacks=[],
+        )
+        resolved = resolve_reviewer(reviewer, {reviewer["model_profile_id"]: spec})
+        assert resolved is not None
+        assert resolved.model is None
+        assert resolved.unavailable_reason == "Its model could not be built"
+
+
+class TestSolLoopCapability:
+    def test_the_toolset_is_built_once(self):
+        sol_loop = SolLoop(reviewer=_reviewer())
+        assert sol_loop.get_toolset() is sol_loop.get_toolset()
+
+    def test_the_instructions_describe_rounds(self):
+        assert "one round per call" in SolLoop().get_instructions()
+
+
 class TestSolLoopConfig:
     def test_a_reviewer_is_required(self):
         with pytest.raises(ValidationError):
@@ -505,6 +550,24 @@ class TestSolLoopTool:
         assert result["verdict"] == "unavailable"
         assert result["stop_reason"] == "reviewer_unavailable"
         assert result["reason"] == "AmbientCallSkipped"
+
+    async def test_a_round_past_the_manifest_cap_still_renders_in_the_ledger(self, monkeypatch):
+        async def fake_ambient(ctx, **kwargs):
+            return SolLoopReview(verdict="CHANGES", findings=[], summary="")
+
+        monkeypatch.setattr(
+            "app.agents.capabilities.sol_loop._toolset.run_ambient_agent", fake_ambient
+        )
+        recorder = RunRecorder()
+        recorder.sol_loop_rounds = [
+            {"round": number, "verdict": "CHANGES"} for number in range(1, 11)
+        ]
+        tool = self._tool(_reviewer(), recorder, max_rounds=11)
+        result = json.loads(await tool(None, "the work"))
+        assert result["round"] == 11
+        # The manifest keeps ten; the ledger still shows the round just run.
+        assert len(recorder.sol_loop_rounds) == MAX_RECORDED_SOL_LOOP_ROUNDS
+        assert "Rounds: 11" in result["ledger"]
 
     async def test_builder_with_empty_resources_reports_unavailable(self):
         """No resolved models: the tool still builds and answers, never crashes."""

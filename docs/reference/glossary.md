@@ -89,6 +89,7 @@ in [Capabilities](capabilities.md).
 | Watch a command | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |
