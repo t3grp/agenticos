@@ -105,7 +105,7 @@ class TestCreating:
 
     async def test_an_expiry_given_is_kept(self) -> None:
         ctx = _ctx()
-        wanted = datetime.now(UTC) + timedelta(days=365)
+        wanted = datetime.now(UTC) + timedelta(days=90)
         issuer = User(id=ctx.user_id, email="ada@example.com", hashed_password="<redacted>")
         with (
             patch(f"{PATH}.api_key_repo.prefix_taken", new=AsyncMock(return_value=False)),
@@ -119,6 +119,18 @@ class TestCreating:
             )
 
         assert created.expires_at == wanted
+
+    async def test_an_expiry_beyond_ninety_days_is_refused(self) -> None:
+        with pytest.raises(BadRequestError) as refused:
+            await ApiKeyService(MagicMock()).create(
+                _ctx(),
+                ApiKeyCreate(
+                    name="x",
+                    scopes=[Perm.AGENTS_VIEW],
+                    expires_at=datetime.now(UTC) + timedelta(days=91),
+                ),
+            )
+        assert refused.value.details["fields"][0]["field"] == "expires_at"
 
 
 class TestRotating:
@@ -157,7 +169,7 @@ class TestRotating:
         assert entry["details"]["old_prefix"] == old.prefix
         assert entry["details"]["new_prefix"] == rotated.prefix
 
-    async def test_rotation_keeps_an_expiry_the_key_was_given(self) -> None:
+    async def test_rotation_caps_a_legacy_far_future_expiry_at_ninety_days(self) -> None:
         ctx = _ctx(OrgRoleName.MEMBER)
         wanted = datetime.now(UTC) + timedelta(days=365)
         old = _key(ctx, expires_at=wanted)
@@ -172,7 +184,8 @@ class TestRotating:
         ):
             rotated = await ApiKeyService(MagicMock()).rotate(ctx, old.id)
 
-        assert rotated.expires_at == wanted
+        assert rotated.expires_at is not None
+        assert timedelta(days=89) < rotated.expires_at - datetime.now(UTC) < timedelta(days=91)
 
     async def test_a_revoked_key_cannot_be_rotated_back_to_life(self) -> None:
         ctx = _ctx(OrgRoleName.MEMBER)

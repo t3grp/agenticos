@@ -1,8 +1,8 @@
-Warning: truncated output (original token count: 14465)
-Total output lines: 988
+Warning: truncated output (original token count: 14497)
+Total output lines: 990
 
 ---
-source_sha: "c0e30d22b606"
+source_sha: "20738f21b704"
 ---
 
 # La API HTTP { #the-http-api }
@@ -54,8 +54,10 @@ SHA-256, y nunca aparece en una línea de log, una entrada de auditoría ni el
 cuerpo de un error. Las listas muestran su prefijo (`aos_1a2b3c4d`), que es
 también como una entrada de auditoría nombra la clave que actuó: cada entrada
 registrada durante una petición autenticada con clave lleva `via_api_key` en sus
-detalles. Una clave caduca a los 90 días de ser emitida salvo que se le dé una
-caducidad al emitirla, y revocarla (`DELETE /api/v1/api-keys/{id}`) surte efecto
+detalles. De forma predeterminada, una clave caduca a los 90 días; se puede
+elegir una caducidad anterior, pero no una que supere los 90 días. Al rotar una
+clave antigua con una caducidad posterior, la nueva se limita a 90 días.
+Revocarla (`DELETE /api/v1/api-keys/{id}`) surte efecto
 en su siguiente petición. Rotarla (`POST /api/v1/api-keys/{id}/rotate`) sustituye
 su secreto de inmediato: la clave antigua deja de funcionar y la respuesta
 contiene la nueva, una sola vez.
@@ -411,10 +413,7 @@ se acepta `1`, pero se rechazan `1.0` y `1e0`. El descubrimiento los marca con
 `x-agenticos-strict-integer: true`, también dentro de los campos opcionales
 que admiten null. JSON Schema ordinario no puede imponer esta distinción de
 representación, por lo que validar solo el esquema no basta para esos campos;
-la admisión del servidor es definitiva. Los contratos JSON Schema sin procesar
-usan la semántica estándar de integer.
-
-El [contrato de e…2465 tokens truncated… webhook es la dirección a la que entrega el remitente:
+la admisión …2497 tokens truncated… webhook es la dirección a la que entrega el remitente:
 
 ```bash
 BODY='{"lead": 42}'

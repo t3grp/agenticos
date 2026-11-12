@@ -33,6 +33,9 @@ A group grant reaches whoever is in the group **when access is checked**. Somebo
 who joins the group next month reaches the resource; somebody who leaves stops
 reaching it. There is nothing to revoke per person.
 
+Group shares expire after 90 days by default. Existing group shares receive a
+90-day grace period when this version is installed; share them again to renew.
+
 A group carries no role. What a member may do in the organization is still their
 membership's role, and a group only adds the grants made to it. Effective access
 stays the rule described in [Permissions](permissions.md#how-the-layers-combine):
@@ -278,6 +281,13 @@ claim is `groups`, and set:
 OIDC_ISSUER=https://id.corp.example.com/realms/staff
 OIDC_GROUPS_CLAIM=groups
 ```
+
+Enforce multi-factor authentication in the identity provider. AgenticOS accepts
+an OIDC sign-in after checking identity and email verification, but does not
+inspect `amr`, `acr` or another claim to verify MFA. It cannot refuse a sign-in
+because the provider omitted an MFA assertion. Kerberos sign-in has the same
+limit: enforce MFA in the identity provider's Kerberos policy. LDAP password
+sign-in can use the account's AgenticOS authenticator setting.
 
 The mapping's directory group is then what Keycloak puts in the claim: the group
 path, such as `/Finance`, or the bare name if **Full group path** is off.

@@ -61,8 +61,9 @@ longer than this asks the platform again for a fresh one when it resumes."""
 _DEFAULT_LIFETIME = timedelta(days=90)
 """What a key created without an expiry gets. A key that lives for ever is a
 secret that never stops working when it leaks, so the default is a lifetime,
-not an absence of one - the caller who needs longer says so, explicitly, and
-the expiry they chose is the one the listing shows."""
+not an absence of one."""
+_MAX_LIFETIME = timedelta(days=90)
+_EXPIRY_CLOCK_TOLERANCE = timedelta(minutes=5)
 _REFUSED = "Invalid, expired or revoked API key"
 
 # Keys never manage keys: a leaked one must not be able to mint its successors.
@@ -178,8 +179,11 @@ class ApiKeyService:
                 "scopes", f"You cannot grant what you do not hold: {', '.join(refused)}"
             )
         now = datetime.now(UTC)
-        if data.expires_at is not None and data.expires_at <= now:
-            raise refused_field("expires_at", "The expiry has to be in the future")
+        if data.expires_at is not None:
+            if data.expires_at <= now:
+                raise refused_field("expires_at", "The expiry has to be in the future")
+            if data.expires_at > now + _MAX_LIFETIME + _EXPIRY_CLOCK_TOLERANCE:
+                raise refused_field("expires_at", "The expiry cannot be more than 90 days away")
         key, row = await self._mint(
             organization_id=ctx.organization_id,
             user_id=ctx.subject_id,
@@ -360,7 +364,9 @@ class ApiKeyService:
             user_id=key.user_id,
             name=key.name,
             scopes=list(key.scopes),
-            expires_at=key.expires_at if key.expires_at is not None else now + _DEFAULT_LIFETIME,
+            expires_at=min(key.expires_at, now + _MAX_LIFETIME)
+            if key.expires_at is not None
+            else now + _DEFAULT_LIFETIME,
             oauth_grant_id=key.oauth_grant_id,
             internal=key.internal,
         )

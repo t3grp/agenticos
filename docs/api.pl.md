@@ -1,8 +1,8 @@
-Warning: truncated output (original token count: 14074)
-Total output lines: 951
+Warning: truncated output (original token count: 14107)
+Total output lines: 953
 
 ---
-source_sha: "c0e30d22b606"
+source_sha: "20738f21b704"
 ---
 
 # API HTTP { #the-http-api }
@@ -51,9 +51,11 @@ Klucz jest pokazywany **raz**, w odpowiedzi, która go tworzy. Przechowywany jes
 wyłącznie jego SHA-256 i nigdy nie trafia do linii logu, wpisu audytu ani treści
 błędu. Listy pokazują jego prefiks (`aos_1a2b3c4d`) — i tak samo wpis audytu
 nazywa klucz, który zadziałał: każdy wpis zapisany w trakcie żądania
-uwierzytelnionego kluczem niesie w szczegółach `via_api_key`. Klucz wygasa 90
-dni po wystawieniu, chyba że podano przy nim datę wygaśnięcia, a jego
-unieważnienie (`DELETE /api/v1/api-keys/{id}`) działa od następnego żądania.
+uwierzytelnionego kluczem niesie w szczegółach `via_api_key`. Klucz domyślnie
+wygasa po 90 dniach; można wybrać wcześniejszą datę, ale nie późniejszą niż za
+90 dni. Podczas rotacji starszego klucza późniejsza data wygaśnięcia nowego
+klucza zostaje ograniczona do 90 dni. Unieważnienie
+(`DELETE /api/v1/api-keys/{id}`) działa od następnego żądania.
 Jego rotacja (`POST /api/v1/api-keys/{id}/rotate`) wymienia jego sekret od razu:
 stary klucz przestaje działać, a odpowiedź zawiera nowy, raz.
 
@@ -398,8 +400,7 @@ jest sprawdzany przed przyjęciem runu. Niezgodność zwraca
 `422 WORKFLOW_RUN_INPUT_INVALID` ze ścieżkami pól i komunikatami w `error.details.fields`;
 run nie powstaje. Każdy wpis ma `field` i `message`; zagnieżdżone ścieżki żądania
 zawierają indeksy tablic, na przykład `input.items.0.sku`. Dla dotychczasowych
-wywołujących `error.details.problems` zachowuje też `field`, `message` i `type`
-ze ścieżkami względem obiektu wejścia. Kontrakt poc…2074 tokens truncated… powrotem albo zwraca `null` dla workflow, który startuje inaczej.
+wywo…2107 tokens truncated… powrotem albo zwraca `null` dla workflow, który startuje inaczej.
 `PATCH .../exposures/{exposure_id}` z `{"is_active": false}` ją wstrzymuje, a `POST
 .../exposures/{exposure_id}/rotate-secret` wymienia sekret webhooka i raz zwraca
 nowy. Oba wymagają `workflows:edit` i `workflows:run` na workflow. `webhook_url`

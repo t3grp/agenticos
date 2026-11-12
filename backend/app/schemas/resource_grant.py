@@ -98,8 +98,8 @@ class ResourceGrantUpsert(BaseSchema):
     expires_at: AwareDatetime | None = Field(
         default=None,
         description=(
-            "When the share stops working. Omit it to leave a share's expiry as it "
-            "is, or to make a new share permanent"
+            "When the share stops working. Member shares may be permanent; group shares "
+            "default to 90 days when omitted."
         ),
     )
 

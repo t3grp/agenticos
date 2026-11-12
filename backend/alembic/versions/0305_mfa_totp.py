@@ -12,12 +12,7 @@ Existing rows get no secret and the flag off - nobody's sign-in changes
 until they enrol. Nothing here forces enrolment; whether the deployment
 requires it is a policy decision for the operator, not this migration.
 
-Numbering: this revision is `0306` on this branch, sitting directly on the
-`0302` base for now. The row-level-access build claims `0303` and the
-failure-learning-loop build claims `0304`/`0305`; merge order is row-level
-first, then the loop, then this branch (`0306` and up) - so this revision is
-re-linked onto the merged head when this branch rebases, and the grants
-migration on this branch (`0303`) is renumbered with it.
+This revision follows the resource-grant expiry migration.
 """
 
 import sqlalchemy as sa
@@ -25,8 +20,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from alembic import op
 
-revision: str = "0306_mfa_totp"
-down_revision: str = "0302_merge_upstream"
+revision: str = "0305_mfa_totp"
+down_revision: str = "0304_resource_grant_expires_at"
 branch_labels: None = None
 depends_on: None = None
 

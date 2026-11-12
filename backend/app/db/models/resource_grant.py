@@ -71,11 +71,11 @@ class ResourceGrant(Base, TimestampMixin):
     group grant reaches whoever is in the group when access is resolved, so
     leaving the group is losing the access, with nothing to revoke (#1773).
 
-    A grant is permanent unless `expires_at` is set. Past it, the grant gives
-    nothing: the repository's access reads exclude expired rows, so an expired
-    share stops widening listings and stops passing `resolve_access` without
-    anyone deleting the row - the row stays, so the share can be seen, renewed
-    or revoked from the Sharing panel.
+    Member grants may be permanent. Group grants always expire; the repository's
+    access reads exclude expired rows, so an expired share stops widening
+    listings and stops passing `resolve_access` without anyone deleting the row.
+    The row stays, so the share can be seen, renewed or revoked from the Sharing
+    panel.
     """
 
     __tablename__ = "resource_grants"

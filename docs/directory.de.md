@@ -1,5 +1,5 @@
 ---
-source_sha: "d04d063ac485"
+source_sha: "8cd4ed76ebd2"
 ---
 
 # Verzeichnisanmeldung und Gruppen { #directory-sign-in-and-groups }
@@ -39,6 +39,10 @@ Ein Gruppen-Grant erreicht, wer in der Gruppe ist, **wenn der Zugriff geprüft
 wird**. Wer der Gruppe nächsten Monat beitritt, erreicht die Ressource; wer sie
 verlässt, erreicht sie nicht mehr. Es gibt nichts, was je Person widerrufen
 werden müsste.
+
+Gruppenfreigaben laufen standardmäßig nach 90 Tagen ab. Bestehende
+Gruppenfreigaben erhalten nach der Installation dieser Version eine Frist von
+90 Tagen; teilen Sie die Ressource erneut, um die Freigabe zu verlängern.
 
 Eine Gruppe trägt keine Rolle. Was ein Mitglied in der Organisation darf, ist
 weiterhin die Rolle seiner Mitgliedschaft, und eine Gruppe fügt nur die Grants
@@ -299,8 +303,12 @@ Stellt Ihr Unternehmen bereits einen Identitätsanbieter vor sein Verzeichnis,
 richten Sie AgenticOS stattdessen auf diesen, über
 [OIDC](configuration.md#single-sign-on-generic-oidc). Nutzen Sie seinen
 Gruppen-Claim für die Zuordnungen. Die native LDAP- und Kerberos-Anmeldung wird
-dann nicht gebraucht. Das ist auch die Antwort auf Multi-Faktor-Authentifizierung,
-die die native Anmeldung nicht leistet.
+dann nicht gebraucht. Wenn Ihre Bereitstellung MFA erfordert, erzwingen Sie sie
+beim Identitätsanbieter. AgenticOS prüft bei OIDC weder `amr`, `acr` noch einen
+anderen MFA-Nachweis und kann eine Anmeldung ohne diesen Nachweis nicht ablehnen.
+Kerberos hat dieselbe Einschränkung; erzwingen Sie MFA in der Kerberos-Richtlinie
+des Identitätsanbieters. LDAP-Passwortanmeldungen können den AgenticOS-Authenticator
+des Kontos verwenden.
 
 **Keycloak** föderiert beides. Fügen Sie unter **User federation** einen
 **LDAP**-Provider für Ihr Verzeichnis hinzu, und schalten Sie dort **Allow

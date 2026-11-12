@@ -1,8 +1,8 @@
-Warning: truncated output (original token count: 15224)
-Total output lines: 1022
+Warning: truncated output (original token count: 15259)
+Total output lines: 1024
 
 ---
-source_sha: "c0e30d22b606"
+source_sha: "20738f21b704"
 ---
 
 # Die HTTP-API { #the-http-api }
@@ -56,9 +56,11 @@ Gespeichert wird nur sein SHA-256, und er erscheint nie in einer Logzeile, einem
 Audit-Eintrag oder einem Fehlertext. Listen zeigen sein Präfix (`aos_1a2b3c4d`),
 und so nennt auch ein Audit-Eintrag den Schlüssel, der gehandelt hat — jeder
 Eintrag, der während einer mit einem Schlüssel authentifizierten Anfrage
-geschrieben wird, trägt `via_api_key` in seinen Details. Ein Schlüssel läuft 90
-Tage nach seiner Ausstellung ab, sofern bei seiner Ausstellung kein Ablaufdatum
-angegeben wurde, und sein Widerruf (`DELETE /api/v1/api-keys/{id}`) wirkt ab
+geschrieben wird, trägt `via_api_key` in seinen Details. Standardmäßig läuft ein
+Schlüssel nach 90 Tagen ab; ein früheres Ablaufdatum ist möglich, aber keines,
+das mehr als 90 Tage entfernt liegt. Bei der Rotation eines älteren Schlüssels
+wird ein späteres Ablaufdatum des Ersatzschlüssels auf 90 Tage begrenzt. Sein
+Widerruf (`DELETE /api/v1/api-keys/{id}`) wirkt ab
 seiner nächsten Anfrage. Ihn zu rotieren (`POST /api/v1/api-keys/{id}/rotate`)
 ersetzt sein Secret sofort: Der alte Schlüssel funktioniert nicht mehr, und die
 Antwort enthält den neuen, einmal.
@@ -402,11 +404,7 @@ bei Graph, Schritten, Ereignissen, Dateien, Wiederholung und Abbruch. Schlüssel
 keine Dateien aus diesen Läufen importieren.
 
 ```bash
-curl -X POST "$BASE/api/v1/workflow-runs" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Organization-Id: $ORG_ID" \
-  -H "Content-Type: application/json" \
-  …3224 tokens truncated…aucht, ist ein `500` `WORKFLOW_WEBHOOK_UNANSWERED` mit dem Run.
+curl -X POST "$BASE/a…3259 tokens truncated…aucht, ist ein `500` `WORKFLOW_WEBHOOK_UNANSWERED` mit dem Run.
 
 Vor der Veröffentlichung öffnet `POST /api/v1/workflows/{id}/webhook-test`
 (`workflows:edit`) eine Test-URL für den Entwurf, zurückgegeben als `url` mit dem

@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 13151)
-Total output lines: 939
+Warning: truncated output (original token count: 13184)
+Total output lines: 941
 
 # The HTTP API
 
@@ -48,7 +48,9 @@ is stored, and it never appears in a log line, an audit entry or an error body.
 Lists show its prefix (`aos_1a2b3c4d`), which is also how an audit entry names
 the key that acted — every entry recorded during a key-authenticated request
 carries `via_api_key` in its details. A key expires 90 days after it is issued
-unless an expiry is given with it, and revoking it
+by default; a caller may choose an earlier expiry, but cannot set one more than
+90 days away. Rotating a legacy key with a later expiry caps its replacement at
+90 days. Revoking it
 (`DELETE /api/v1/api-keys/{id}`) takes effect on its next request. Rotating it
 (`POST /api/v1/api-keys/{id}/rotate`) replaces its secret at once: the old key
 stops working, and the response holds the new one, once.
@@ -416,10 +418,7 @@ iterations included, each with its `scope_path`, status, tries, cost and the typ
 error it last failed with, and `GET /api/v1/workflow-runs/{id}/graph` returns the
 graph the run executes: its version's, or a test run's draft snapshot.
 
-### Reading a workflow's log { #reading-a-workflows-log }
-
-The lines a workflow's [Quick Logs](workflows.md#the-logs-page) wrote can be read from
-outside …1151 tokens truncated…ones owned by the exposure and organization. A duplicate still returns the original run UUID after its content is deleted; its status and previous webhook response may no longer be available. Deleting the exposure or organization ends that deduplication lifetime. Migration `0230_webhook_delivery_tombstones.py` cannot restore claims already deleted by older retention; downgrading removes orphan tombstones before restoring the old cascading foreign key.
+### Reading a workflow's…1184 tokens truncated…ones owned by the exposure and organization. A duplicate still returns the original run UUID after its content is deleted; its status and previous webhook response may no longer be available. Deleting the exposure or organization ends that deduplication lifetime. Migration `0230_webhook_delivery_tombstones.py` cannot restore claims already deleted by older retention; downgrading removes orphan tombstones before restoring the old cascading foreign key.
 
 Unattended trigger publication and authority changes require a member session (`403` for an organization API key). Keys may publish manual workflows, start runs within their scopes and pause exposures, but cannot enable them, rotate secrets/form links, retime schedules or choose a new error-workflow identity. These operations retain a user's authority for future events.
 

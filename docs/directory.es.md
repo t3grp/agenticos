@@ -1,5 +1,5 @@
 ---
-source_sha: "d04d063ac485"
+source_sha: "8cd4ed76ebd2"
 ---
 
 # Inicio de sesión con el directorio y grupos { #directory-sign-in-and-groups }
@@ -38,6 +38,10 @@ Una concesión a un grupo alcanza a quien esté en el grupo **en el momento en q
 comprueba el acceso**. Quien entre en el grupo el mes que viene alcanza el
 recurso; quien salga deja de alcanzarlo. No hay nada que revocar persona a
 persona.
+
+Las concesiones a grupos caducan de forma predeterminada a los 90 días. Al
+instalar esta versión, las concesiones existentes reciben un plazo de 90 días;
+vuelve a compartir el recurso para renovarlas.
 
 Un grupo no lleva rol. Lo que un miembro puede hacer en la organización sigue
 siendo el rol de su membresía, y un grupo solo añade las concesiones hechas a él.
@@ -285,7 +289,12 @@ Si tu empresa ya pone un proveedor de identidad delante de su directorio, apunta
 AgenticOS a él en su lugar, por [OIDC](configuration.md#single-sign-on-generic-oidc).
 Usa su claim de grupos para los mapeos. El inicio de sesión nativo por LDAP y por
 Kerberos deja entonces de hacer falta. Esta es también la respuesta para la
-autenticación multifactor, que el inicio de sesión nativo no hace.
+autenticación multifactor. Si tu despliegue exige MFA, aplícala en el proveedor
+de identidad. AgenticOS no comprueba `amr`, `acr` ni otra afirmación de MFA en
+OIDC, así que no puede rechazar un inicio de sesión si el proveedor no la incluye.
+Kerberos tiene la misma limitación; exige MFA en la política Kerberos del
+proveedor. El inicio de sesión por contraseña LDAP puede usar el autenticador de
+AgenticOS de la cuenta.
 
 **Keycloak** federa los dos. En **User federation**, añade un proveedor **LDAP**
 para tu directorio, y activa ahí **Allow Kerberos authentication** si quieres el

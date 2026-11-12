@@ -217,14 +217,12 @@ async def upsert_for_group(
     resource_type: str,
     resource_id: UUID,
     level: GrantLevel,
+    expires_at: datetime,
     created_by_user_id: UUID | None = None,
-    expires_at: datetime | None = None,
 ) -> ResourceGrant:
     """Share a resource with a group, replacing any existing level.
 
-    The expiry rule is the member half's: given, it is set on a new grant and
-    replaces the stored one; omitted, an existing grant keeps its expiry and a
-    new grant is permanent.
+    A group grant always has an expiry. Re-sharing replaces the stored expiry.
     """
     result = await db.execute(
         select(ResourceGrant).where(

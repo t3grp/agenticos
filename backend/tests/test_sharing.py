@@ -271,6 +271,7 @@ class TestShareWithGroup:
             # Who is told is `test_group_leads_and_shares`'s, over a real database.
             patch.object(SharingService, "_tell_the_group", new=AsyncMock()),
         ):
+            before = datetime.now(UTC)
             await SharingService(_db()).share_with_group(
                 ctx,
                 resource,
@@ -282,10 +283,13 @@ class TestShareWithGroup:
         assert found.call_args.kwargs["organization_id"] == ctx.organization_id
         assert upsert.call_args.kwargs["subject_group_id"] == group.id
         assert upsert.call_args.kwargs["level"] is GrantLevel.USE
+        expires_at = upsert.call_args.kwargs["expires_at"]
+        assert timedelta(days=89) < expires_at - before < timedelta(days=91)
         assert audit.call_args.kwargs["action"] == "resource.share"
         assert audit.call_args.kwargs["details"] == {
             "subject_group_id": str(group.id),
             "level": "use",
+            "expires_at": expires_at.isoformat(),
         }
 
     @pytest.mark.anyio

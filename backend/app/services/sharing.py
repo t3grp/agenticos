@@ -114,6 +114,7 @@ _CONSOLE_PATHS = {
     "table": "/tables/{id}",
     "workflow": "/workflows/{id}",
 }
+_GROUP_SHARE_LIFETIME = timedelta(days=90)
 """Where the console opens a shared resource of each kind."""
 
 
@@ -297,6 +298,8 @@ class SharingService:
         """
         await self._require_edit(ctx, resource, resource_type)
         _require_level_for(resource_type, level)
+        if expires_at is None:
+            expires_at = datetime.now(UTC) + _GROUP_SHARE_LIFETIME
         _refuse_past_expiry(expires_at)
 
         group = await group_repo.get(
