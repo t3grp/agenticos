@@ -13,6 +13,7 @@ from app.schemas.virtual_table import ColumnDef, TableRead
 from app.services.access import TABLE, resolve_access
 from app.services.virtual_tables.deadline import ReadDeadline, arm_if_set
 from app.services.virtual_tables.exceptions import TableArchivedError
+from app.services.virtual_tables.row_policy import parse_policy
 
 
 class Operations:
@@ -118,5 +119,6 @@ class Operations:
             updated_at=table.updated_at,
             can_edit=can_edit,
             can_restore=can_restore,
+            row_policy=parse_policy(table.row_policy),
             columns=columns,
         )

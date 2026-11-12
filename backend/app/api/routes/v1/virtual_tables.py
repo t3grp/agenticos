@@ -76,6 +76,7 @@ from app.schemas.virtual_table import (
     RecordSource,
     RecordUpdate,
     RecordUpsert,
+    RowPolicyUpdate,
     SchemaUpdate,
     SchemaVersionList,
     SortDirection,
@@ -251,6 +252,26 @@ async def change_schema(
 ) -> Any:
     """Append the next schema version from the full list of columns the table should have."""
     return await service.update_schema(ctx, table_id, data)
+
+
+@router.put(
+    "/{table_id}/row-policy",
+    response_model=TableRead,
+    responses=_WRITE_REFUSALS,
+    dependencies=[Depends(limit_table_write)],
+)
+async def set_row_policy(
+    table_id: UUID, data: RowPolicyUpdate, service: VirtualTableSvc, ctx: Auth
+) -> Any:
+    """Set or clear a table's row-level access policy.
+
+    Anyone holding `tables:edit` on the table may set it; the service
+    decides access, so grant holders are not refused by a route-level
+    role gate. Refused with `BAD_REQUEST` (400) on a managed board table
+    and with `INVALID_SCHEMA` (422) when a named column is missing,
+    archived, or the wrong kind.
+    """
+    return await service.set_row_policy(ctx, table_id, data)
 
 
 @router.get("/{table_id}/schema-versions", response_model=SchemaVersionList, responses=_REFUSALS)
