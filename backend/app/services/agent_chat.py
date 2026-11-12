@@ -30,6 +30,7 @@ from typing import Any, NamedTuple
 from uuid import UUID
 
 from pydantic import TypeAdapter, ValidationError
+from pydantic_ai.exceptions import ModelRequestTimeout
 from pydantic_ai.messages import ModelMessage, UserContent
 from pydantic_ai.run import AgentRun
 from pydantic_ai.tools import DeferredToolRequests
@@ -47,7 +48,7 @@ from app.agents.connect_on_use import ConnectionCallback
 from app.agents.deps import AgentDeps, AskUserCallback, CompactionSink, QuestionsCallback
 from app.agents.ephemeral_media import dump_messages
 from app.agents.factory import AgentOutput, answer_text
-from app.agents.failures import run_failure_summary
+from app.agents.failures import first_leaf, run_failure_summary
 from app.agents.loop_guard import ToolLoopStopped
 from app.agents.steering import SteeringInbox
 from app.agents.subagent_events import SubagentEventSink
@@ -767,6 +768,12 @@ class ChatAgentRunner:
             logger.info("Chat run %s stopped for looping: %s", prepared.run.id, exc)
             raise
         except Exception as exc:
+            if isinstance(first_leaf(exc), ModelRequestTimeout):
+                # A deadline, not a malfunction - its own terminal status,
+                # as in `AgentRunnerService._run`. The exception is still
+                # raised on: somebody is sitting there waiting, and is owed
+                # the reason the answer stopped.
+                status = RunStatus.TIMED_OUT
             error = run_failure_summary(exc)
             logger.exception("Chat run %s failed", prepared.run.id)
             raise

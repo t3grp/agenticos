@@ -18,7 +18,6 @@ import {
   useConversationStore,
   useChatStore,
   useInChatScope,
-  useLiveFeedStore,
   useOrgStore,
   useWorkingStore,
 } from "@/stores";
@@ -235,14 +234,14 @@ export function useConversations(query: Partial<ConversationQuery> = {}) {
     // row stops saying so when the run ends - a routine's, or another tab's, as
     // well as this one's. A thread this tab handed off counts too: the listing
     // has to catch up with it before it can say anything about it.
-    // While the live-update socket is up it announces the run ending, so the poll
-    // is only the safety net for what it does not announce (#2219).
+    // The poll also carries the run's heartbeat, which the stalled status reads.
+    // It stays at the short interval while the live-update socket is up too: a
+    // socket announces the run's end, not its heartbeat, so a slower poll left the
+    // page without a heartbeat to show a stall from (#2219 traded this away).
     refetchInterval: (query) =>
       query.state.data?.items.some((conversation) => conversation.running_since) ||
       Object.keys(handedOff).length > 0
-        ? useLiveFeedStore.getState().connected
-          ? RUNNING_POLL_LIVE_MS
-          : RUNNING_POLL_MS
+        ? RUNNING_POLL_MS
         : false,
   });
   const conversations = data?.items ?? [];
@@ -953,8 +952,6 @@ export function useConversations(query: Partial<ConversationQuery> = {}) {
  */
 /** How often a listing with a thread at work in it is read again. */
 const RUNNING_POLL_MS = 4000;
-/** The same poll while the live-update socket carries the run's end as an event. */
-const RUNNING_POLL_LIVE_MS = 30_000;
 
 export function useConversationSearch(term: string) {
   const params = listParams({ ...DEFAULT_QUERY, search: term });

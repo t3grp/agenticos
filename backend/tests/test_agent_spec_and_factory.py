@@ -37,6 +37,7 @@ from app.agents.connect_on_use import ConnectionRequest, ConnectOnUse, PendingSe
 from app.agents.factory import (
     _AUDIENCE_AWARE,
     DEFAULT_MAX_STEPS,
+    DEFAULT_MODEL_TIMEOUTS,
     BuiltAgent,
     _fits_schema,
     answer_text,
@@ -976,7 +977,7 @@ class TestRunReviewers:
         (reviewer,) = self._reviewers(spec, {resolved: model})
 
         assert (reviewer.name, reviewer.every, reviewer.model) == ("sources", 4, model.build())
-        assert reviewer.model_settings == {"temperature": 0.0}
+        assert reviewer.model_settings == {**DEFAULT_MODEL_TIMEOUTS, "temperature": 0.0}
         assert reviewer.screen is None
         assert "scope is incomplete or unresolved" in caplog.text
         assert "draft is incomplete or unresolved" in caplog.text
