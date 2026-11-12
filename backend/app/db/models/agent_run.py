@@ -60,6 +60,15 @@ class RunStatus(enum.StrEnum):
     GUARDRAIL_BLOCKED = "guardrail_blocked"
     LOOP_STOPPED = "loop_stopped"
     """Stopped for looping on its tool calls after it was warned (#2086)."""
+    TIMED_OUT = "timed_out"
+    """A model request went past its deadline without answering.
+
+    Not a malfunction in the platform's own code: the deadline is the
+    platform working, like a budget cap. A run that hung forever showed
+    "Working" indefinitely; a timed-out one ends here, visibly, with the
+    deadline in its stored error. It is a plain string column, not a DB
+    enum, so this member needs no alembic migration.
+    """
 
     @classmethod
     def parse_csv(cls, raw: str | None) -> list[str] | None:

@@ -735,6 +735,7 @@ def load_builtins() -> None:
         drafts,
         follow_ups,
         guardrails,
+        harness,
         image_generation,
         knowledge,
         media,

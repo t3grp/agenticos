@@ -547,6 +547,13 @@ RUNNING_HORIZON = timedelta(hours=2)
 class RunningActivity(NamedTuple):
     since: datetime
     run_ids: list[UUID]
+    # The freshest heartbeat among the conversation's running runs. A live
+    # run stamps it every 15 seconds; a dead process leaves it behind, and
+    # the chat shows the run as stalled once it is old enough - the sweep
+    # that ends such a run only fires at 120 seconds, and meanwhile the
+    # person watching deserves to know the run is not at work. Defaulted so
+    # existing constructions of the tuple keep working.
+    heartbeat_at: datetime | None = None
 
 
 async def running_activity(
@@ -556,7 +563,12 @@ async def running_activity(
     if not conversation_ids:
         return {}
     result = await db.execute(
-        select(AgentRun.conversation_id, func.min(AgentRun.started_at), func.array_agg(AgentRun.id))
+        select(
+            AgentRun.conversation_id,
+            func.min(AgentRun.started_at),
+            func.array_agg(AgentRun.id),
+            func.max(AgentRun.heartbeat_at),
+        )
         .where(
             AgentRun.conversation_id.in_(list(conversation_ids)),
             AgentRun.parent_run_id.is_(None),
@@ -568,8 +580,8 @@ async def running_activity(
         .group_by(AgentRun.conversation_id)
     )
     return {
-        identifier: RunningActivity(since, list(run_ids))
-        for identifier, since, run_ids in result.all()
+        identifier: RunningActivity(since, list(run_ids), heartbeat_at)
+        for identifier, since, run_ids, heartbeat_at in result.all()
         if identifier is not None and since is not None
     }
 

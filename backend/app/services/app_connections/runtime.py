@@ -21,6 +21,7 @@ from app.services.app_connections import (
     composio_user_id,
     get_app_by_catalog_key,
     is_configured,
+    resolve_action,
     toolkit_from_catalog_key,
 )
 
@@ -87,7 +88,9 @@ def with_app_connection_bindings(
         PersonalMcpServerRef(
             account="personal",
             catalog_key=app.catalog_key,
-            allowed_tools=[action.name for action in app.actions if action.read_only],
+            allowed_tools=[
+                resolve_action(action).tool_name for action in app.actions if action.read_only
+            ],
             approval="writes",
         )
         for app in configured
@@ -203,7 +206,7 @@ async def managed_connection_spec(
         ):
             return None
     else:
-        tools = [action.name for action in app.actions if action.read_only]
+        tools = [resolve_action(action).tool_name for action in app.actions if action.read_only]
     for ceiling in (connection.allowed_tools, allowed_tools):
         if ceiling is not None:
             within = set(ceiling)

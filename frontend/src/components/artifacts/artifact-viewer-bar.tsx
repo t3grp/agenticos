@@ -11,6 +11,7 @@ import {
   Lock,
   MoreHorizontal,
   ShieldOff,
+  Star,
   UserRoundCog,
   GitPullRequest,
   Trash2,
@@ -30,6 +31,7 @@ import {
   IconButton,
 } from "@/components/ui";
 import { ArtifactActionsMenu } from "@/components/artifacts/artifact-actions-menu";
+import type { ArtifactCardFavourite } from "@/components/artifacts/artifact-card";
 import { LiveBadge, type LiveHealth } from "@/components/artifacts/live-badge";
 import { RestartTourButton } from "@/components/onboarding/restart-tour-button";
 import { ROUTES } from "@/lib/constants";
@@ -78,6 +80,8 @@ interface ArtifactViewerBarProps {
   waitingRequests?: number;
   /** Opens the Share dialog on its Requests. */
   onRequests?: () => void;
+  /** The star beside the controls; drawn only while the page is loaded. */
+  favourite?: ArtifactCardFavourite;
 }
 
 /**
@@ -99,6 +103,7 @@ export function ArtifactViewerBar({
   onChangeOwner,
   waitingRequests = 0,
   onRequests,
+  favourite,
 }: ArtifactViewerBarProps) {
   const t = useTranslations("artifacts");
   const tc = useTranslations("common");
@@ -150,6 +155,25 @@ export function ArtifactViewerBar({
         <span className="max-sm:bg-background/95 shrink-0 max-sm:rounded-full max-sm:border max-sm:px-3 max-sm:py-2 max-sm:shadow-sm">
           <LiveBadge health={live} />
         </span>
+      )}
+      {artifact !== null && favourite && (
+        <IconButton
+          aria-label={
+            favourite.on
+              ? t("removeFavouriteNamed", { name: artifact.title })
+              : t("addFavouriteNamed", { name: artifact.title })
+          }
+          aria-pressed={favourite.on}
+          title={favourite.on ? t("removeFavourite") : t("addFavourite")}
+          disabled={favourite.busy}
+          onClick={favourite.onToggle}
+          className="bg-background/95 pointer-events-auto size-11 rounded-full border shadow-sm sm:size-8"
+        >
+          <Star
+            className={cn("h-4 w-4", favourite.on && "text-warning fill-current")}
+            aria-hidden
+          />
+        </IconButton>
       )}
       {artifact !== null && (
         <IconButton

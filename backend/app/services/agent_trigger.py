@@ -2846,7 +2846,7 @@ class AgentTriggerService:
                 # fire's run. Nothing to stamp; the next interval tries again
                 # once the cause is fixed.
                 return
-            if run.status != RunStatus.FAILED.value:
+            if run.status not in {RunStatus.FAILED.value, RunStatus.TIMED_OUT.value}:
                 # A durable row this fire cannot claim as its own outcome: a
                 # concurrent fire's run, live or settled - or this fire's own
                 # opening commit whose terminal write was lost above. Not ours

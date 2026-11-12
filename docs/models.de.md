@@ -1,5 +1,5 @@
 ---
-source_sha: "46ab128249f6"
+source_sha: "8801e7d12091"
 ---
 
 # Modelle und Provider { #models-and-providers }
@@ -272,8 +272,17 @@ verlassen:
 ### Model Settings { #model-settings }
 
 Pro Profile, und pro Agent über die `model_settings` des Specs überschreibbar:
-`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`. Siehe
+`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`,
+`request_timeout`, `first_event_timeout`. Siehe
 [die Spec-Referenz](reference/spec.md#model-settings).
+
+Eine Anfrage hat außerdem standardmäßig Deadlines: 300 Sekunden für eine
+Modellanfrage (`request_timeout`, und `timeout` pro Versuch) und 120 Sekunden
+für das erste gestreamte Ereignis (`first_event_timeout`). Ein Profil oder ein
+Agent-Spec kann sie erhöhen oder senken. Läuft die Deadline ab, endet der Run
+als `timed_out` — mit der Deadline im gespeicherten Fehler — statt endlos
+„Working" anzuzeigen; wo eine Fallback-Kette konfiguriert ist, wird sie
+zuerst versucht.
 
 **Prompt-Caching ist standardmäßig an**, über die anbieterneutrale
 `cache`-Einstellung von Pydantic AI. Jeder Request eines Runs schickt die

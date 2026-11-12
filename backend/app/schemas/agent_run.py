@@ -180,6 +180,15 @@ class AgentRunRead(BaseSchema):
     )
     started_at: datetime | None = None
     ended_at: datetime | None = None
+    heartbeat_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When the process executing this run last stamped it alive - "
+            "every 15 seconds while it runs. A `running` run whose beat is "
+            "minutes old has a dead process behind it; the stale-run sweep "
+            "ends such a run, and the chat shows it as stalled meanwhile."
+        ),
+    )
     parent_run_id: UUID | None = Field(
         default=None,
         description=(

@@ -1,5 +1,5 @@
 ---
-source_sha: "4e1d79f43728"
+source_sha: "573be813d5ed"
 ---
 
 # Glossar { #glossary }
@@ -80,6 +80,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Frühere Gespräche | `conversation_search` |
 | Nächste Schritte | `follow_ups` |
 | Schutzregeln | `guardrails` |
+| Harness | `harness` |
 | Bilderzeugung | `image_generation` |
 | Wissenssuche | `knowledge` |
 | Bilder auslagern | `media` |

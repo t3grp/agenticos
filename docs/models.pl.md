@@ -1,5 +1,5 @@
 ---
-source_sha: "46ab128249f6"
+source_sha: "8801e7d12091"
 ---
 
 # Modele i providery { #models-and-providers }
@@ -243,8 +243,16 @@ Zanim oprzesz się na tych liczbach w czasie awarii, warto znać dwa martwe pola
 ### Ustawienia modelu { #model-settings }
 
 Per profil, nadpisywalne per agent przez `model_settings` w specu:
-`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`. Zobacz
+`temperature`, `top_p`, `max_tokens`, `parallel_tool_calls`, `timeout`,
+`request_timeout`, `first_event_timeout`. Zobacz
 [referencję speca](reference/spec.md#model-settings).
+
+Żądanie ma też domyślne terminy: 300 sekund na jedno żądanie do modelu
+(`request_timeout` oraz `timeout` na próbę) i 120 sekund na pierwsze
+zdarzenie w streamie (`first_event_timeout`). Profil lub spec agenta mogą je
+podnieść lub obniżyć. Po upływie terminu run kończy się jako `timed_out` — z
+terminem w zapisanym błędzie — zamiast wyświetlać „Working" bez końca; tam,
+gdzie skonfigurowano łańcuch fallback, jest on najpierw próbowany.
 
 **Cache'owanie promptu jest domyślnie włączone**, przez neutralne wobec dostawcy
 ustawienie `cache` z Pydantic AI. Każde żądanie runu wysyła ponownie instrukcje,

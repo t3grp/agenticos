@@ -584,6 +584,7 @@
     "runGuardrailBlocked": "Blocked by guardrail",
     "runLoopStopped": "Stopped: looping",
     "runRunning": "Running",
+    "runTimedOut": "Timed out",
     "runningThemOneAt": "Running them one at a time makes a conversation easier to follow, and easier to approve.",
     "runs": "Runs",
     "runs2": "Runs on",
@@ -1677,6 +1678,7 @@
       "running": "Running",
       "working": "Working…",
       "workingFor": "Working for {duration}…",
+      "stalledFor": "Stalled — no heartbeat for {duration}…",
       "thoughtFor": "Thought for {duration}",
       "worked": "Worked · {count, plural, =1 {1 step} other {# steps}}",
       "workedFor": "Worked for {duration} · {count, plural, =1 {1 step} other {# steps}}",
@@ -1897,6 +1899,13 @@
       "runningCodingAgent": "The coding agent is working",
       "codingStepRunning": "{kind, select, read {Reading} search {Searching} edit {Editing} command {Running} web {Looking up} other {Working on}}",
       "codingStepDone": "{kind, select, read {Read} search {Searched} edit {Edited} command {Ran} web {Looked up} other {Used}}",
+      "runningHarness": "The harness session is working",
+      "harnessStarted": "Opened a harness session",
+      "harnessPrompted": "Prompted the harness session",
+      "harnessStopping": "Closing the harness session",
+      "harnessStopped": "Closed the harness session",
+      "harnessListing": "Listing the harness sessions",
+      "harnessListed": "Listed the harness sessions",
       "drawingVisual": "Drawing",
       "drawVisual": "Drew a visual",
       "revisingVisual": "Revising a visual",
@@ -2531,7 +2540,7 @@
     "accessChecking": "Checking conversation access…",
     "accessFailed": "Could not verify access to this conversation",
     "accessRetry": "Retry",
-    "forking": "Forking conversation…" 
+    "forking": "Forking conversation…"
   },
   "common": {
     "archiveNamedConfirm": "Archive {name}?",
@@ -4540,7 +4549,8 @@
     "whatsNewDone": "Got it",
     "backgroundWork": "Background work",
     "connectors": "Connections",
-    "onboarding": "Onboarding"
+    "onboarding": "Onboarding",
+    "noFavouriteApps": "Star an app to pin it here. <link>All apps</link>"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5164,6 +5174,10 @@
         "title": "Published pages",
         "body": "Reports and dashboards your agents published. Open one to see it, pick an earlier version, share it with colleagues or give it a public link."
       },
+      "nav-pinned": {
+        "title": "Pinned apps",
+        "body": "Apps you starred sit here in the sidebar, one tap away. Star one from its card or page, and unstar it the same way."
+      },
       "settings-api-keys": {
         "title": "Your API keys",
         "body": "A key lets a script, Postman or an MCP client act as you, without a browser. Pick what it may do; it can never do more than you can, and it stops the moment you revoke it."
@@ -5522,7 +5536,7 @@
       },
       "workflow-input-contract": {
         "title": "Define the expected input",
-        "body": "A Manual, API or Called by a workflow trigger can use simple fields or a JSON Schema Draft 2020-12 contract. The schema supports nested values and is checked before a run starts." 
+        "body": "A Manual, API or Called by a workflow trigger can use simple fields or a JSON Schema Draft 2020-12 contract. The schema supports nested values and is checked before a run starts."
       }
     },
     "chooseLanguage": "Language",
@@ -10526,7 +10540,11 @@
       "blockedLink": "The page has no public link. Turn it on first."
     },
     "lightTheme": "Use light app theme",
-    "darkTheme": "Use dark app theme"
+    "darkTheme": "Use dark app theme",
+    "addFavourite": "Add to favourites",
+    "removeFavourite": "Remove from favourites",
+    "addFavouriteNamed": "Add {name} to favourites",
+    "removeFavouriteNamed": "Remove {name} from favourites"
   },
   "tables": {
     "cells": {
@@ -11480,6 +11498,14 @@
       "needs": "For a sandbox: the Sandbox capability, a connection and a provider key or sign-in in the vault. On this computer: the desktop app, a signed-in coding agent and an approved full-access folder.",
       "never": "Local tasks require a full-access folder grant and native start confirmation. Set Human approval to Always ask to also approve each task in the chat."
     },
+    "harness": {
+      "name": "Harness",
+      "does": "Keeps a Claude Code or Codex session open in the agent's sandbox and drives it across turns, as the agent's working backend, while you watch each prompt in the chat.",
+      "example1": "Fix a failing test, then keep prompting the same session for the follow-ups",
+      "example2": "Read a module and explain how it works, without changing anything",
+      "needs": "A connection and a provider key in the vault: an Anthropic key or Claude subscription token for Claude Code, an OpenAI key for Codex.",
+      "never": "A ChatGPT sign-in does not work here yet; Codex runs on an OpenAI API key. Set Human approval to Always ask to also approve each prompt in the chat."
+    },
     "compaction": {
       "name": "Long conversations",
       "does": "Shortens the oldest part of a long conversation so the agent keeps going instead of hitting the model's limit.",
@@ -12209,6 +12235,28 @@
       "runs_on": {
         "title": "Where it runs",
         "description": "The agent's sandbox with its configured key, a disposable private cloud task using the initiating person's profile account, or the folder a person chooses on their own computer in the desktop app, where Claude Code and Codex use the sign-in they already have and need no key."
+      }
+    },
+    "harness": {
+      "harness": {
+        "title": "Harness",
+        "description": "The CLI session that does the agent's work: Claude Code or Codex."
+      },
+      "access": {
+        "title": "Access",
+        "description": "What the harness may do in the agent's sandbox: only read code, or change code and run commands."
+      },
+      "model": {
+        "title": "Model",
+        "description": "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex. Not set takes the harness's own default."
+      },
+      "base_url": {
+        "title": "Anthropic-compatible endpoint",
+        "description": "Claude Code only: a gateway that speaks Anthropic's API, such as https://openrouter.ai/api, with the key in the vault being that gateway's. Empty calls Anthropic directly."
+      },
+      "timeout_minutes": {
+        "title": "Prompt timeout (minutes)",
+        "description": "How long one prompt may run before it is stopped. The session stays open."
       }
     },
     "workflows": {

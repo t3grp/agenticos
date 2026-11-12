@@ -6,7 +6,17 @@ from pydantic import SecretStr
 
 from app.core.config import settings
 from app.core.exceptions import ConfigurationError, ExternalServiceError
+from app.services.app_connections._catalog import (
+    APPS,
+    ComposioAction,
+    get_app,
+    resolve_action,
+)
 from app.services.app_connections._client import ComposioCatalogClient
+from app.services.app_connections._managed import (
+    is_managed_auth_type,
+    is_managed_catalog_key,
+)
 
 pytestmark = pytest.mark.anyio
 
@@ -290,3 +300,65 @@ async def test_missing_toolkit_and_malformed_catalog_response_are_safe_failures(
     assert provider_secret not in str(malformed.value)
     assert CATALOG_KEY not in repr(missing.value)
     assert CATALOG_KEY not in repr(malformed.value)
+
+
+def test_managed_registry_names_only_the_vendor() -> None:
+    assert is_managed_auth_type("composio")
+    assert not is_managed_auth_type("oauth")
+    assert not is_managed_auth_type("bearer")
+    assert not is_managed_auth_type(None)
+    assert is_managed_catalog_key("composio-gmail")
+    assert is_managed_catalog_key("COMPOSIO-GMAIL")
+    assert not is_managed_catalog_key("gmail")
+    assert not is_managed_catalog_key(None)
+
+
+def test_side_effecting_is_the_provider_neutral_read_of_read_only() -> None:
+    assert ComposioAction("GMAIL_FETCH_EMAILS", "Find email").side_effecting is False
+    assert (
+        ComposioAction("GMAIL_SEND_MESSAGE", "Send email", read_only=False).side_effecting is True
+    )
+
+
+def test_resolve_action_returns_the_composio_executor() -> None:
+    action = get_app("gmail").actions[0]
+    executor = resolve_action(action)
+    assert executor.kind == "composio"
+    assert executor.tool_name == "GMAIL_FETCH_EMAILS"
+    assert executor.side_effecting is False
+    assert executor.scopes == ("https://www.googleapis.com/auth/gmail.readonly",)
+
+
+def test_starter_actions_carry_least_privilege_scopes() -> None:
+    by_toolkit = {app.toolkit: app for app in APPS}
+    assert len(by_toolkit) == 7
+    for app in APPS:
+        assert all(not action.side_effecting for action in app.actions)
+        assert all(action.read_only for action in app.actions)
+    gmail = by_toolkit["gmail"]
+    assert all(
+        action.scopes == ("https://www.googleapis.com/auth/gmail.readonly",)
+        for action in gmail.actions
+    )
+    drive = by_toolkit["googledrive"]
+    assert all(
+        action.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
+        for action in drive.actions
+    )
+    calendar = by_toolkit["googlecalendar"]
+    assert all(
+        action.scopes == ("https://www.googleapis.com/auth/calendar.readonly",)
+        for action in calendar.actions
+    )
+    outlook = by_toolkit["outlook"]
+    assert outlook.actions[0].scopes == ("Mail.Read",)
+    assert outlook.actions[1].scopes == ("Mail.Read",)
+    assert outlook.actions[2].scopes == ("Calendars.Read",)
+    slack = by_toolkit["slack"]
+    assert slack.actions[0].scopes == ("search:read",)
+    assert "channels:history" in slack.actions[1].scopes
+    assert "channels:history" in slack.actions[2].scopes
+    notion = by_toolkit["notion"]
+    assert all(action.scopes == () for action in notion.actions)
+    github = by_toolkit["github"]
+    assert all(action.scopes == ("repo",) for action in github.actions)

@@ -75,7 +75,7 @@ from pydantic import (
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import ToolReturn
 from pydantic_ai.agent import AgentRealtime
-from pydantic_ai.exceptions import ModelAPIError
+from pydantic_ai.exceptions import ModelAPIError, ModelRequestTimeout
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -199,7 +199,7 @@ from app.agents.connect_on_use import (
 from app.agents.deps import AgentDeps, AskUserCallback, CompactionSink, QuestionsCallback
 from app.agents.ephemeral_media import dump_messages
 from app.agents.factory import AgentOutput, BuiltAgent, answer_text, build_agent
-from app.agents.failures import run_failure_summary
+from app.agents.failures import first_leaf, run_failure_summary
 from app.agents.hand_off import CallWorker, HandOffSpend
 from app.agents.loop_guard import ToolLoopStopped
 from app.agents.manifest import RunRecorder, as_payload, carried_over, fit, resolve_fallback_use
@@ -6425,8 +6425,9 @@ class AgentRunnerService:
                 and run.routine_kind != "watch"
             ):
                 await notifications.run_completed(run, agent=agent)
-            elif status in (RunStatus.FAILED, RunStatus.LOOP_STOPPED):
+            elif status in (RunStatus.FAILED, RunStatus.LOOP_STOPPED, RunStatus.TIMED_OUT):
                 # A run stopped for looping produced nothing either, and says why.
+                # A timed-out run likewise: a non-web surface gets no chat line.
                 await notifications.run_failed(run, agent=agent, error=error)
         # Whatever the outcome: a failed run spent money too.
         await notifications.department_budget_warnings(run)
@@ -7804,6 +7805,13 @@ class AgentRunnerService:
             logger.info("Run %s stopped for looping: %s", prepared.run.id, exc)
             finished_cleanly = True
         except Exception as exc:
+            if isinstance(first_leaf(exc), ModelRequestTimeout):
+                # A deadline, not a malfunction: the run ended because a
+                # model request went past its timeout, possibly after the
+                # fallback chain was exhausted (which arrives wrapped in a
+                # group, hence the unwrap). Its own terminal status, so an
+                # operator filtering for problems does not wade through it.
+                status = RunStatus.TIMED_OUT
             error = run_failure_summary(exc)
             logger.exception("Agent run %s failed", prepared.run.id)
             raise
