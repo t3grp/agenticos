@@ -167,7 +167,13 @@ class MfaService:
                 user.totp_recovery_hashes = remaining
                 await self._audit(user, "mfa.recovery_code_used", {"remaining": len(remaining)})
                 return True
-        return verify_code(self._unseal(user), code)
+        counter = verify_code(self._unseal(user), code)
+        if counter is None:
+            return False
+        claimed = await user_repo.claim_totp_counter(self.db, user.id, counter)
+        if claimed:
+            user.totp_last_counter = counter
+        return claimed
 
     def _pending_secret(self, user: User) -> str:
         """The enrolled-but-unproved secret, or the refusal that none exists."""

@@ -27,6 +27,7 @@ def _user(**overrides):
         "email": "ada@example.com",
         "totp_secret_encrypted": None,
         "totp_key_version": None,
+        "totp_last_counter": None,
         "totp_enabled": False,
         "totp_recovery_hashes": None,
     }
@@ -53,6 +54,14 @@ async def _consume_recovery_hash(db, user_id, digest):
     return user.totp_recovery_hashes
 
 
+async def _claim_totp_counter(db, user_id, counter):
+    user = db.users[user_id]
+    if user.totp_last_counter is not None and user.totp_last_counter >= counter:
+        return False
+    user.totp_last_counter = counter
+    return True
+
+
 @pytest.fixture
 def service():
     """An MfaService with the vault and the audit trail faked."""
@@ -74,6 +83,10 @@ def service():
         patch(
             "app.services.mfa.user_repo.consume_totp_recovery_hash",
             new=AsyncMock(side_effect=_consume_recovery_hash),
+        ),
+        patch(
+            "app.services.mfa.user_repo.claim_totp_counter",
+            new=AsyncMock(side_effect=_claim_totp_counter),
         ),
         patch("app.services.mfa.record_audit", new=AsyncMock()) as audit,
     ):
@@ -165,6 +178,15 @@ class TestVerifyChallenge:
         await _enrolled(mfa, user)
 
         assert await mfa.verify_challenge(user, code_now(user.totp_secret_encrypted)) is True
+
+    async def test_the_same_authenticator_code_fails_the_second_time(self, service):
+        mfa, _, _ = service
+        user = _user()
+        await _enrolled(mfa, user)
+        code = code_now(user.totp_secret_encrypted)
+
+        assert await mfa.verify_challenge(user, code) is True
+        assert await mfa.verify_challenge(user, code) is False
 
     async def test_a_wrong_code_fails(self, service):
         mfa, _, _ = service

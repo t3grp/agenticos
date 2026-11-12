@@ -67,6 +67,7 @@ class User(Base, TimestampMixin):
     # lost, stored as SHA-256 digests - never the codes themselves.
     totp_secret_encrypted: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     totp_key_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    totp_last_counter: Mapped[int | None] = mapped_column(Integer, nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), nullable=False
     )

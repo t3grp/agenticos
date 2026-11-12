@@ -10,6 +10,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
 from app.core.config import settings
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.permissions import AuthContext, OrgRoleName
 from app.main import app
 from app.schemas.api_key import ApiKeyCreated, ApiKeyList, ApiKeyScopeCatalog
@@ -63,6 +64,11 @@ def viewer(service: MagicMock) -> Iterator[AsyncClient]:
     yield from _client(OrgRoleName.VIEWER, service)
 
 
+@pytest.fixture
+def admin(service: MagicMock) -> Iterator[AsyncClient]:
+    yield from _client(OrgRoleName.ADMIN, service)
+
+
 def _url(suffix: str = "") -> str:
     return f"{settings.API_V1_STR}/api-keys{suffix}"
 
@@ -108,3 +114,25 @@ async def test_rotating_a_key_returns_the_new_one_once(
     assert rotated.json()["key"] == "aos_0123abcdsecret"
     service.rotate.assert_awaited_once()
     assert service.rotate.await_args.args[1] == key_id
+
+
+async def test_rotating_another_members_key_returns_404(
+    admin: AsyncClient, service: MagicMock
+) -> None:
+    service.rotate.side_effect = NotFoundError(message="API key not found")
+    async with admin as http:
+        response = await http.post(_url(f"/{uuid.uuid4()}/rotate"))
+
+    assert response.status_code == 404
+
+
+async def test_refusing_to_rotate_a_special_key_returns_400(
+    member: AsyncClient, service: MagicMock
+) -> None:
+    service.rotate.side_effect = BadRequestError(
+        message="Internal and OAuth keys cannot be rotated"
+    )
+    async with member as http:
+        response = await http.post(_url(f"/{uuid.uuid4()}/rotate"))
+
+    assert response.status_code == 400
