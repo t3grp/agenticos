@@ -1,5 +1,5 @@
 ---
-source_sha: "8c1dc819b3fa"
+source_sha: "aaae5395a3d5"
 ---
 
 # Słownik { #glossary }
@@ -91,8 +91,10 @@ w [Capabilities](capabilities.md).
 | Tematy w tle | `background_tasks` |
 | Wiadomości agentów | `agent_messages` |
 | Obserwuj polecenie | `monitor` |
+| Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skille | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagenci | `subagents` |
 | Przypomnienia instrukcji | `system_reminders` |
 | Zamiana tekstu na mowę | `text_to_speech` |

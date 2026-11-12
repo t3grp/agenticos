@@ -498,6 +498,7 @@ its own.
 |----------|---------|-------------|
 | `APPROVAL_EXPIRY_HOURS` | `72` | How long a parked tool call waits before the hourly sweep denies it by timeout |
 | `QUESTION_EXPIRY_HOURS` | `24` | How long a run waits on an agent's unanswered question before the same sweep ends it |
+| `QUESTION_NUDGE_HOURS` | `12` | How long after a question parks before the sweep reminds the chat once that an answer is still needed |
 
 Three days because it has to span a weekend: the approval that arrives on Friday
 afternoon is the one nobody decides, and expiring it on Saturday would be expiring

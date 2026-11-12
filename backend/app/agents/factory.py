@@ -49,6 +49,7 @@ from app.agents.capabilities.approval import (
     refuse_ungateable_approvals,
 )
 from app.agents.capabilities.artifacts import ARTIFACTS_CAPABILITY_ID
+from app.agents.capabilities.babysit_pr import BABYSIT_PR_RECORDER_RESOURCE
 from app.agents.capabilities.browser_use import BROWSER_CAPABILITY_ID, WebBrowser
 from app.agents.capabilities.budget import (
     BudgetGuard,
@@ -83,6 +84,10 @@ from app.agents.capabilities.media import (
 )
 from app.agents.capabilities.memory_files import MEMORY_FILES_CAPABILITY_ID
 from app.agents.capabilities.skills._loader import SkillLoader
+from app.agents.capabilities.sol_loop import (
+    SOL_LOOP_MODELS_RESOURCE,
+    SOL_LOOP_RECORDER_RESOURCE,
+)
 from app.agents.capabilities.system_reminders import (
     REMINDER_STATE_RESOURCE,
     ReminderState,
@@ -235,6 +240,15 @@ class BuiltAgent:
     # capability list, where a capability with one gated tool and one ungated
     # one has no single answer.
     approval_required_tools: frozenset[str]
+    # The chain this run was built with, as raw model ids - the primary, then
+    # its fallbacks in order. The run row records only the label, which is a
+    # display name, so without these the caller that persists the run cannot
+    # tell a fallback's answer from the primary's: it would have to compare a
+    # recorded model id against a label, which false-positives whenever the
+    # two differ. Read by `finish()` to derive `fallback_used` and
+    # `serving_model` from the recorder.
+    primary_model: str
+    fallback_models: tuple[str, ...] = ()
     # How many of the run's tool calls arrived malformed and were repaired, read
     # by whoever persists the run - see `app/agents/tool_repair.py`.
     repairs: RepairTally = field(default_factory=RepairTally)
@@ -258,6 +272,7 @@ def build_agent(
     secrets: Mapping[UUID, StorableSecret] | None = None,
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
     council_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
     extra_toolsets: list[AbstractToolset[Any]] | None = None,
     extra_capabilities: Sequence[AbstractCapability[AgentDeps]] = (),
     agent_period_spend: PeriodSpendLookup | None = None,
@@ -392,8 +407,8 @@ def build_agent(
     # Wrapped, so what the provider is handed is written down as it is handed
     # over. Reconstructing the prompt and the tool schemas from the spec
     # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because a run reviewer, code mode, the
-    # council and `CacheWatch` write onto it.
+    # Made before the capabilities, because run reviewers, council, sol-loop,
+    # code mode, `CacheWatch` and babysit-pr write onto it.
     recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
@@ -428,6 +443,13 @@ def build_agent(
             # are recorded - resolved by the runner, read by the capability.
             COUNCIL_MODELS_RESOURCE: council_models,
             COUNCIL_RECORDER_RESOURCE: recorder,
+            # Where a babysit-pr watch's events are recorded - the run's
+            # recorder, read by the capability, resolved by the runner.
+            BABYSIT_PR_RECORDER_RESOURCE: recorder,
+            # Which model sol-loop's reviewer reviews on, and where its rounds
+            # are recorded - resolved by the runner, read by the capability.
+            SOL_LOOP_MODELS_RESOURCE: sol_loop_models,
+            SOL_LOOP_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
@@ -515,6 +537,9 @@ def build_agent(
     # a side-effecting capability to a spec is the only thing that has to be
     # right for approval to apply.
     repairs = RepairTally()
+    # Wrapped, so what the provider is handed is written down as it is handed
+    # over. Reconstructing the prompt and the tool schemas from the spec
+    # afterwards would be a second implementation of everything above this line.
     asking = frozenset(
         name
         for name, kind in (
@@ -653,6 +678,8 @@ def build_agent(
         capabilities=configured,
         recorder=recorder,
         model_label=model_spec.label,
+        primary_model=model_spec.model,
+        fallback_models=tuple(model for _, model in model_spec.fallbacks),
         approval_required_tools=approval_required,
         usage_limits=UsageLimits(request_limit=spec.max_steps or DEFAULT_MAX_STEPS),
         repairs=repairs,

@@ -188,6 +188,7 @@ from app.agents.capabilities.sandbox import (
 )
 from app.agents.capabilities.sandbox._identity import SessionScope
 from app.agents.capabilities.sandbox._recording import RecordingWorkspace
+from app.agents.capabilities.sol_loop import SolLoopConfig
 from app.agents.capabilities.subagents import SubagentsConfig, acting_delegate
 from app.agents.capabilities.tool_output_limits import SPILL_LOG_RESOURCE
 from app.agents.computer_on_use import ComputerAccessCallback, RequestComputerOnUse
@@ -203,7 +204,7 @@ from app.agents.factory import AgentOutput, BuiltAgent, answer_text, build_agent
 from app.agents.failures import first_leaf, run_failure_summary
 from app.agents.hand_off import CallWorker, HandOffSpend
 from app.agents.loop_guard import ToolLoopStopped
-from app.agents.manifest import RunRecorder, as_payload, carried_over, fit
+from app.agents.manifest import RunRecorder, as_payload, carried_over, fit, resolve_fallback_use
 from app.agents.mcp import PLATFORM_MCP_PREFIX, McpSourceIdentity, unreachable_briefing
 from app.agents.model_context import ModelContextCheck, checking_model_context
 from app.agents.model_resolver import ModelRequestSpec
@@ -951,6 +952,7 @@ class PausedRunState(BaseModel):
         description="The conversation as of the parked call, in Pydantic AI's message format"
     )
     tool_call_ids: dict[str, str] = Field(
+        default_factory=dict,
         description="Approval id -> the tool call it parked, so a decision can be replayed"
     )
     guardrail_revision: int | None = Field(
@@ -1904,6 +1906,48 @@ def _question_calls(state: PausedRunState) -> dict[str, ToolCallPart]:
         for part in message.parts
         if isinstance(part, ToolCallPart) and part.tool_call_id in wanted
     }
+
+
+def parked_question_items(paused_state: dict[str, Any] | None) -> list[ParkedQuestion]:
+    """Map parked call ids back to the question text shown to the person.
+
+    This is a pure mapping over the persisted state so a run list can derive
+    waiting text without querying once per row.
+    """
+    if paused_state is None:
+        return []
+    # Older persisted parks can predate these fields, and malformed question
+    # references must not break an otherwise readable run list.
+    payload = dict(paused_state)
+    payload.setdefault("tool_call_ids", {})
+    question_ids = payload.get("questions", [])
+    if not isinstance(question_ids, list):
+        logger.warning(
+            "run_paused_questions_malformed",
+            extra={"value_type": type(question_ids).__name__},
+        )
+        payload["questions"] = []
+    else:
+        valid_question_ids = [value for value in question_ids if isinstance(value, str)]
+        if len(valid_question_ids) != len(question_ids):
+            logger.warning(
+                "run_paused_questions_malformed",
+                extra={"invalid_count": len(question_ids) - len(valid_question_ids)},
+            )
+        payload["questions"] = valid_question_ids
+    state = PausedRunState.model_validate(payload)
+    if state.question_results:
+        return []
+    return [
+        ParkedQuestion(
+            tool_call_id=tool_call_id,
+            questions=[
+                QuestionItem.model_validate(item)
+                for item in wire_questions(question_request(call))
+            ],
+        )
+        for tool_call_id, call in _question_calls(state).items()
+    ]
 
 
 def _classify_output(
@@ -2891,6 +2935,7 @@ def _delegate_builder(
     extra_toolsets: list[AbstractToolset[Any]],
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
     council_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
 ) -> Callable[[], PydanticAgent[Any, Any]]:
     """A closure that builds one delegate, with nothing left to look up.
 
@@ -2941,6 +2986,9 @@ def _delegate_builder(
             # Its own council, resolved the same way: a delegate bound with a
             # council reviews with it when called directly and as a delegate.
             council_models=council_models,
+            # Its own sol-loop reviewer, resolved the same way: a delegate bound
+            # with sol-loop reviews with it when called directly and as a delegate.
+            sol_loop_models=sol_loop_models,
             # The person waiting on the parent is the person a delegate has to
             # ask, so the gate reaches the same queue rather than refusing
             # because a delegation has no channel of its own.
@@ -3150,12 +3198,7 @@ def _browser_step_profile(spec: AgentSpec) -> UUID | None:
 
 
 def _council_profile_ids(spec: AgentSpec) -> list[UUID]:
-    """The model profiles the agent's council members review on, if it has one.
-
-    A binding whose config no longer validates is left out with a warning
-    rather than taking the agent offline: the council is advisory, and a
-    stale config must cost the review, never the run.
-    """
+    """The model profiles the agent's council members review on, if it has one."""
     profile_ids: list[UUID] = []
     for binding in spec.capabilities:
         if binding.id != "council" or not binding.enabled:
@@ -3169,6 +3212,24 @@ def _council_profile_ids(spec: AgentSpec) -> list[UUID]:
             )
             continue
         profile_ids.extend(member.model_profile_id for member in config.members)
+    return profile_ids
+
+
+def _sol_loop_profile_ids(spec: AgentSpec) -> list[UUID]:
+    """The model profile the agent's sol-loop reviewer reviews on, if it has one."""
+    profile_ids: list[UUID] = []
+    for binding in spec.capabilities:
+        if binding.id != "sol_loop" or not binding.enabled:
+            continue
+        try:
+            config = SolLoopConfig.model_validate(binding.config)
+        except Exception:
+            logger.warning(
+                "Sol-loop binding has an invalid config; reviewing without it",
+                exc_info=True,
+            )
+            continue
+        profile_ids.append(config.reviewer.model_profile_id)
     return profile_ids
 
 
@@ -3654,13 +3715,7 @@ class AgentRunnerService:
     async def _council_models(
         self, ctx: AuthContext, spec: AgentSpec
     ) -> dict[UUID, ModelRequestSpec]:
-        """Each council member's model, by profile id - those that still resolve.
-
-        A member is advisory to the run it reviews: one whose profile was
-        deleted since publish, or whose key no longer unseals, is left out with
-        a warning rather than taking the agent offline, and the council reports
-        it unavailable instead of substituting another provider.
-        """
+        """Resolve configured council members, leaving unavailable profiles out."""
         models: dict[UUID, ModelRequestSpec] = {}
         for profile_id in _council_profile_ids(spec):
             if profile_id in models:
@@ -3670,6 +3725,24 @@ class AgentRunnerService:
             except AppException:
                 logger.warning(
                     "Council member model %s cannot resolve; the run goes on without it",
+                    profile_id,
+                    exc_info=True,
+                )
+        return models
+
+    async def _sol_loop_models(
+        self, ctx: AuthContext, spec: AgentSpec
+    ) -> dict[UUID, ModelRequestSpec]:
+        """Resolve the sol-loop reviewer, leaving an unavailable profile out."""
+        models: dict[UUID, ModelRequestSpec] = {}
+        for profile_id in _sol_loop_profile_ids(spec):
+            if profile_id in models:
+                continue
+            try:
+                models[profile_id] = await self.models.resolve(ctx, profile_id=profile_id)
+            except AppException:
+                logger.warning(
+                    "Sol-loop reviewer model %s cannot resolve; the run goes on without it",
                     profile_id,
                     exc_info=True,
                 )
@@ -4044,6 +4117,7 @@ class AgentRunnerService:
         # a resolved model holds its unsealed credential.
         reviewer_models = await self._reviewer_models(models_ctx, spec)
         council_models = await self._council_models(models_ctx, spec)
+        sol_loop_models = await self._sol_loop_models(models_ctx, spec)
         step_profile = _browser_step_profile(spec)
         if step_profile is not None:
             # Built here, where the vault and the session are: a fast model for
@@ -4714,6 +4788,7 @@ class AgentRunnerService:
                     secrets=secrets,
                     reviewer_models=reviewer_models,
                     council_models=council_models,
+                    sol_loop_models=sol_loop_models,
                     extra_toolsets=[*(extra_toolsets or []), *spec_toolsets],
                     request_approval=channel,
                     gate_every_tool=approval_mode is ApprovalMode.ASK_ALL,
@@ -4782,6 +4857,7 @@ class AgentRunnerService:
             secrets=secrets,
             reviewer_models=reviewer_models,
             council_models=council_models,
+            sol_loop_models=sol_loop_models,
             extra_toolsets=[
                 *(extra_toolsets or []),
                 *spec_toolsets,
@@ -5590,6 +5666,7 @@ class AgentRunnerService:
                 extra_toolsets=toolsets,
                 reviewer_models=await self._reviewer_models(delegation.models_ctx, runnable),
                 council_models=await self._council_models(delegation.models_ctx, runnable),
+                sol_loop_models=await self._sol_loop_models(delegation.models_ctx, runnable),
             ),
             max_steps=runnable.max_steps,
             preferred_mode=ref.preferred_mode,
@@ -6150,12 +6227,29 @@ class AgentRunnerService:
                 if agent_id == prepared.run.agent_id
             ),
         )
+        # Which model served this run, from the models its own requests
+        # recorded - never from `model_label`, which is a display name. A
+        # resumed run is the same row, built again with a fresh recorder, so
+        # what an earlier segment recorded is kept: a fallback that served
+        # before the park stays served, and a serving model already named is
+        # not replaced by a segment that recorded nothing.
+        fallback_used, serving_model = resolve_fallback_use(
+            prepared.built.recorder.requests,
+            primary_model=prepared.built.primary_model,
+            fallback_models=prepared.built.fallback_models,
+        )
+        if prepared.run.fallback_used:
+            fallback_used = True
+        if serving_model is None:
+            serving_model = prepared.run.serving_model
         if prepared.earlier_attachments_checked:
             await agent_run_repo.record_attachment_lookup(self.db, prepared.run)
         finished = await agent_run_repo.finish_run(
             self.db,
             run=prepared.run,
             status=status.value,
+            fallback_used=fallback_used,
+            serving_model=serving_model,
             input_tokens=ledger.input_tokens,
             output_tokens=ledger.output_tokens,
             cache_read_tokens=ledger.cache_read_tokens,
@@ -7499,19 +7593,7 @@ class AgentRunnerService:
             or not _key_may_continue(ctx, run)
         ):
             return []
-        state = PausedRunState.model_validate(run.paused_state)
-        if state.question_results:
-            return []
-        return [
-            ParkedQuestion(
-                tool_call_id=tool_call_id,
-                questions=[
-                    QuestionItem.model_validate(item)
-                    for item in wire_questions(question_request(call))
-                ],
-            )
-            for tool_call_id, call in _question_calls(state).items()
-        ]
+        return parked_question_items(run.paused_state)
 
     async def _decisions(
         self, ctx: AuthContext, *, run: AgentRun, state: PausedRunState

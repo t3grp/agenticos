@@ -1,5 +1,5 @@
 ---
-source_sha: "8c1dc819b3fa"
+source_sha: "aaae5395a3d5"
 ---
 
 # Glossar { #glossary }
@@ -92,8 +92,10 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Hintergrundthemen | `background_tasks` |
 | Agentennachrichten | `agent_messages` |
 | Einen Befehl beobachten | `monitor` |
+| Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Erinnerung an Anweisungen | `system_reminders` |
 | Sprachausgabe | `text_to_speech` |

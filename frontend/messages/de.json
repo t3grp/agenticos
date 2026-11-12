@@ -1717,6 +1717,12 @@
       "askingDelegateStop": "Bittet einen Delegaten anzuhalten",
       "availableContext": "Verfügbarer Kontext",
       "availableSteps": "Verfügbare Schritte",
+      "babysitPrCheck": "Babysit-PR-Prüfung",
+      "babysitPrRateLimit": "Babysit-PR-Rate-Limit",
+      "babysitPrStop": "Babysit PR stoppen",
+      "checkingBabysitPr": "Pull Request wird geprüft",
+      "checkingBabysitRateLimit": "Rate-Limit wird geprüft",
+      "stoppingBabysitPr": "PR-Beobachtung wird beendet",
       "browseWeb": "Im Web surfen",
       "browsingWeb": "Surft im Web",
       "cancelTask": "Aufgabe abbrechen",
@@ -1800,6 +1806,7 @@
       "removingStep": "Entfernt einen Schritt",
       "result": "Ergebnis",
       "reviewingWithCouncil": "Prüft mit dem Rat",
+      "reviewingWithSolLoop": "Prüft mit Sol-loop",
       "runPython": "Python ausführen",
       "running": "Läuft …",
       "runningCalculations": "Rechnet",
@@ -1815,6 +1822,7 @@
       "showFormatted": "Die formatierte Ansicht zeigen",
       "showRaw": "Argumente und Rohausgabe zeigen",
       "skillResource": "Skill-Ressource",
+      "solLoopReview": "Sol-loop-Prüfung",
       "sourceCount": "{count, plural, =1 {1 Quelle} other {# Quellen}}",
       "steeringDelegate": "Steuert einen Delegaten",
       "stopTask": "Aufgabe stoppen",
@@ -6357,6 +6365,7 @@
       "modelFilter": "Nach Modell filtern",
       "modelRunHadNo": "Für ein Modell in diesem Run gab es keinen Preis, dies ist also eine Untergrenze",
       "toolArgsRepaired": "{count, plural, =1 {Die fehlerhaften Argumente eines Tool-Aufrufs wurden repariert statt wiederholt} other {Die fehlerhaften Argumente von # Tool-Aufrufen wurden repariert statt wiederholt}}",
+      "servedByFallback": "Beantwortet von {model} (Fallback)",
       "cacheSplit": "Von der Eingabe {read, number} aus dem Cache des Anbieters gelesen und {write, number} hineingeschrieben - getrennt bepreist",
       "modelSettings": "Modelleinstellungen",
       "monthToDate": "Monat bis heute",
@@ -6410,6 +6419,12 @@
       "codeRuns": "{count, plural, =1 {1 Skript} other {# Skripte}}",
       "codeRunCalls": "{count, plural, =0 {Es hat kein Tool aufgerufen} =1 {Es hat 1 Tool aufgerufen} other {Es hat # Tools aufgerufen}}",
       "codeRunOmittedCalls": "{count, plural, =1 {und 1 weiterer Aufruf, nicht aufgeführt} other {und # weitere Aufrufe, nicht aufgeführt}}",
+      "solLoopRounds": "{count, plural, =1 {1 Sol-loop-Runde} other {# Sol-loop-Runden}}",
+      "solLoopRound": "Runde {round} · {scope} · {verdict}",
+      "solLoopStopReason": "Gestoppt: {reason}",
+      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFix": "Fix: {fix}",
+      "solLoopOutcome": "Ergebnis: {outcome}",
       "cacheBust": "Cache gebrochen",
       "cacheExpired": "Cache abgelaufen",
       "cacheBustDetail": "{missed, number} gecachte Tokens nicht aus dem Cache gelesen - davor im Prompt hat sich etwas geändert",
@@ -11395,6 +11410,14 @@
       "needs": "Skills, unter Skills geschrieben und in diesem Bereich ausgewählt.",
       "never": "Ändert nie einen Skill; der Agent liest ihn nur."
     },
+    "sol_loop": {
+      "name": "Sol-loop",
+      "does": "Lässt einen Prüfer die Arbeit in Runden beurteilen, bis sie besteht: Runde 1 prüft die ganze Änderung, spätere Runden nur den geänderten Code und die offenen Befunde.",
+      "example1": "Ist dieser Pull Request bereit zum Zusammenführen?",
+      "example2": "Prüfe diesen Entwurf, bevor er rausgeht",
+      "needs": "Ein Modellprofil für den Prüfer, ausgerichtet auf ein Sol-Modell.",
+      "never": "Ersetzt nie einen fehlenden Prüfer und erfindet nie ein Urteil: Ein Prüfer, der nicht erreichbar ist, wird als nicht verfügbar gemeldet, und ein Budgetende ist keine Freigabe."
+    },
     "subagents": {
       "name": "Subagents",
       "does": "Der Agent gibt einen Teil der Arbeit an einen anderen Agenten ab und nutzt dessen Antwort.",
@@ -11511,6 +11534,14 @@
       "example2": "Ein Deploy-Log verfolgen und den ersten Fehler melden",
       "needs": "Ein Arbeitsbereich mit Shell, etwa die Sandbox-Capability oder ein Ordner auf deinem Computer.",
       "never": "Lässt nie einen Befehl über das Ende der Runde hinaus laufen: Jede Beobachtung endet mit dem Lauf."
+    },
+    "babysit_pr": {
+      "name": "Babysit PR",
+      "does": "Beobachtet einen Pull Request in CI und Review-Bots, meldet nur, was sich geändert hat, und stoppt, wenn die Bots auf dem neuesten Commit grün sind.",
+      "example1": "Ist dieser Pull Request schon grün?",
+      "example2": "Beobachte diesen PR und sag mir, wenn die Checks bestehen",
+      "needs": "Ein Weg, die Checks des PR zu lesen, etwa die Monitor-Capability mit `gh pr checks`.",
+      "never": "Mergt, kommentiert oder unternimmt nie etwas anderes auf dem PR: nur beobachten und melden."
     },
     "background_tasks": {
       "name": "Hintergrundthemen",
@@ -11871,6 +11902,16 @@
         "description": "Ob der Agent Shell-Befehle ausführen darf. Ausschalten lässt die Datei-Tools bestehen und entfernt die Shell vollständig, statt sie zu sperren."
       }
     },
+    "sol_loop": {
+      "reviewer": {
+        "title": "Prüfer",
+        "description": "Der eine Prüfer, der die Arbeit beurteilt, auf seinem Sol-Modell."
+      },
+      "max_rounds": {
+        "title": "Runden höchstens",
+        "description": "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten. Nur auf 5 ausweiten bei Sicherheit, Berechtigungen, Auth, Datenverlust oder Zustand und Nebenläufigkeit, solange ein Blocker oder Should offen ist - oder wenn der Nutzer darum bittet."
+      }
+    },
     "subagents": {
       "inline": {
         "title": "Eingebettete Spezialisten",
@@ -12221,6 +12262,16 @@
       "allow_attachments": {
         "title": "Dateianhänge zulassen",
         "description": "Ob dieser Agent Dateien, die er bereits hochgeladen hat, zusammen mit seinen Nachrichten senden darf. Aus bedeutet nur Text; bereits angehängte Dateien bleiben lesbar."
+      }
+    },
+    "babysit_pr": {
+      "poll_interval_seconds": {
+        "title": "Abfrageintervall",
+        "description": "Sekunden zwischen den Prüfungen des Pull Requests. Mindestens 60, damit der Watcher nie in einer engen Schleife abfragt und das gemeinsame GitHub-Limit nicht verbraucht."
+      },
+      "max_watch_minutes": {
+        "title": "Höchstens beobachten",
+        "description": "Minuten, die eine Beobachtung laufen darf, bevor sie stoppt und blockiert meldet. Eine Beobachtung, die ohne Grün darüber hinaus läuft, wurde nicht freigegeben — sie ist abgelaufen."
       }
     }
   },

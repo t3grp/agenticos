@@ -129,6 +129,8 @@ async def finish_run(
     error: str | None = None,
     logfire_trace_id: str | None = None,
     paused_state: dict[str, Any] | None = None,
+    fallback_used: bool | None = None,
+    serving_model: str | None = None,
     tool_args_repaired: int | None = None,
     cache_read_tokens: int | None = None,
     cache_write_tokens: int | None = None,
@@ -152,6 +154,13 @@ async def finish_run(
     if tool_args_repaired is not None:
         run.tool_args_repaired = tool_args_repaired
     run.ended_at = ended_at
+    # Left alone by a caller that passes none - an approval that expired, a
+    # parked run being closed - so it does not wipe what the run's earlier
+    # segments recorded. A caller that ran the model passes both.
+    if fallback_used is not None:
+        run.fallback_used = fallback_used
+    if serving_model is not None:
+        run.serving_model = serving_model
     run.error = error
     # Written even when unchanged in memory: another writer may have set it since
     # the run was loaded - the voice sweep's error on a call whose teardown was
@@ -387,6 +396,7 @@ async def mark_running(db: AsyncSession, *, run: AgentRun) -> AgentRun:
     run.ended_at = None
     # The next park starts unannounced.
     run.chat_notice_sent_at = None
+    run.question_nudged_at = None
     db.add(run)
     await db.flush()
     await db.refresh(run)
@@ -407,6 +417,45 @@ async def keep_paused_state(
 async def record_chat_notice(db: AsyncSession, *, run: AgentRun, at: datetime) -> AgentRun:
     """Remember that the run's chat was told this park could not continue."""
     run.chat_notice_sent_at = at
+    db.add(run)
+    await db.flush()
+    await db.refresh(run)
+    return run
+
+
+async def list_unnudged_runs(
+    db: AsyncSession, *, older_than: datetime, younger_than: datetime, limit: int = 500
+) -> list[AgentRun]:
+    """Every run parked on a question that is due its one reminder (#2064).
+
+    Parked longer than `older_than` (half the question window) but not yet
+    past `younger_than` (the expiry itself - those are the expiry sweep's,
+    not a reminder's), never reminded, and with no answer recorded since.
+    Not scoped to an organization, for the reason :func:`list_stale_approvals`
+    gives: its caller is the hourly sweep, which settles each run in its own
+    organization. Do not copy this shape into anything a route can reach.
+    """
+    result = await db.execute(
+        select(AgentRun)
+        .where(
+            AgentRun.status == RunStatus.AWAITING_ANSWER.value,
+            AgentRun.ended_at <= older_than,
+            AgentRun.ended_at > younger_than,
+            AgentRun.question_nudged_at.is_(None),
+            or_(
+                AgentRun.paused_state["question_results"].is_(None),
+                AgentRun.paused_state["question_results"] == {},
+            ),
+        )
+        .order_by(AgentRun.ended_at.asc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def record_question_nudge(db: AsyncSession, *, run: AgentRun, at: datetime) -> AgentRun:
+    """Remember that the run's chat was reminded once about its question."""
+    run.question_nudged_at = at
     db.add(run)
     await db.flush()
     await db.refresh(run)

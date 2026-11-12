@@ -1,5 +1,5 @@
 ---
-source_sha: "a2b8e09f7af4"
+source_sha: "7738d8d527e6"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -86,6 +86,8 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | obligatoria | delegada |
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | delegada |
 | `council` | Consejo | analysis | `run_council_review` | `agents:delegate` | — | delegada |
+| `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | delegada |
+| `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | delegada |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | delegada |
 | `background_tasks` | Temas en segundo plano | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | delegado |
 | `planning` | Planificación | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | tal cual |

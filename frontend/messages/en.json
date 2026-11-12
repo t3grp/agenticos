@@ -1719,6 +1719,12 @@
       "askingDelegateStop": "Asking a delegate to stop",
       "availableContext": "Available Context",
       "availableSteps": "Available Steps",
+      "babysitPrCheck": "Babysit PR Check",
+      "babysitPrRateLimit": "Babysit PR Rate Limit",
+      "babysitPrStop": "Stop Babysit PR",
+      "checkingBabysitPr": "Checking the pull request",
+      "checkingBabysitRateLimit": "Checking the rate limit",
+      "stoppingBabysitPr": "Stopping the PR watch",
       "browseWeb": "Browse the Web",
       "browsingWeb": "Browsing the web",
       "cancelTask": "Cancel Task",
@@ -1802,6 +1808,7 @@
       "removingStep": "Removing a step",
       "result": "Result",
       "reviewingWithCouncil": "Reviewing with the council",
+      "reviewingWithSolLoop": "Reviewing with Sol-loop",
       "runPython": "Run Python",
       "running": "Running…",
       "runningCalculations": "Running calculations",
@@ -1817,6 +1824,7 @@
       "showFormatted": "Show the formatted view",
       "showRaw": "Show arguments and raw output",
       "skillResource": "Skill Resource",
+      "solLoopReview": "Sol-loop Review",
       "sourceCount": "{count, plural, =1 {1 source} other {# sources}}",
       "steeringDelegate": "Steering a delegate",
       "stopTask": "Stop Task",
@@ -7109,6 +7117,7 @@
       "modelFilter": "Filter by model",
       "modelRunHadNo": "A model in this run had no price, so this is a floor",
       "toolArgsRepaired": "{count, plural, =1 {Repaired one tool call's malformed arguments instead of retrying it} other {Repaired # tool calls' malformed arguments instead of retrying them}}",
+      "servedByFallback": "Served by {model} (fallback)",
       "cacheSplit": "Of the input, {read, number} read from the provider's cache and {write, number} written to it - priced apart from the rest",
       "modelSettings": "Model settings",
       "monthToDate": "Month to date",
@@ -7162,6 +7171,12 @@
       "codeRuns": "{count, plural, =1 {1 script} other {# scripts}}",
       "codeRunCalls": "{count, plural, =0 {It called no tools} =1 {It made 1 tool call} other {It made # tool calls}}",
       "codeRunOmittedCalls": "{count, plural, =1 {and 1 more call, not listed} other {and # more calls, not listed}}",
+      "solLoopRounds": "{count, plural, =1 {1 sol-loop round} other {# sol-loop rounds}}",
+      "solLoopRound": "Round {round} · {scope} · {verdict}",
+      "solLoopStopReason": "Stopped: {reason}",
+      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFix": "Fix: {fix}",
+      "solLoopOutcome": "Outcome: {outcome}",
       "cacheBust": "cache bust",
       "cacheExpired": "cache expired",
       "cacheBustDetail": "{missed, number} cached tokens not read back from the cache - something before them in the prompt changed",
@@ -7250,6 +7265,7 @@
       "anAgent": "An agent",
       "decidedSection": "Decided",
       "waitingSection": "Waiting on you",
+      "questionExpiresIn": "Expires in {duration}",
       "share": "Share",
       "monthAgainstCap": "${spent} of ${cap} this month",
       "spendOverTime": "Spend over time",
@@ -11608,6 +11624,14 @@
       "needs": "Skills, written under Skills and picked in this panel.",
       "never": "Never changes a skill; the agent only reads it."
     },
+    "sol_loop": {
+      "name": "Sol-loop",
+      "does": "Asks one reviewer to judge the work in rounds until it passes: round 1 reviews the whole change, later rounds check only changed code and open findings.",
+      "example1": "Is this pull request ready to merge?",
+      "example2": "Review this draft before it goes out",
+      "needs": "One model profile for the reviewer, pointed at a Sol model.",
+      "never": "Never substitutes a missing reviewer or invents a verdict: a reviewer that cannot be reached is reported unavailable, and budget end is not approval."
+    },
     "subagents": {
       "name": "Subagents",
       "does": "Lets the agent hand part of a job to another agent and use its answer.",
@@ -11724,6 +11748,14 @@
       "example2": "Tail a deploy log and report the first error",
       "needs": "A workspace with a shell, such as the Sandbox capability or a folder on your computer.",
       "never": "Never keeps a command running after the turn ends: every watch stops with the run."
+    },
+    "babysit_pr": {
+      "name": "Babysit PR",
+      "does": "Watches a pull request through CI and review bots, reporting only what changed, and stops when the bots are green on the latest commit.",
+      "example1": "Is this pull request green yet?",
+      "example2": "Watch this PR and tell me when the checks pass",
+      "needs": "A way to read the PR's checks, such as the monitor capability running `gh pr checks`.",
+      "never": "Never merges, comments, or takes any other action on the PR: watching and reporting only."
     },
     "background_tasks": {
       "name": "Background topics",
@@ -12084,6 +12116,16 @@
         "description": "Whether the agent may run shell commands. Turning it off leaves the file tools and removes the shell entirely, rather than gating it."
       }
     },
+    "sol_loop": {
+      "reviewer": {
+        "title": "Reviewer",
+        "description": "The one reviewer that judges the work, on its Sol model."
+      },
+      "max_rounds": {
+        "title": "Rounds at most",
+        "description": "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep. Extend to 5 only for security, permissions, auth, data loss, or state and concurrency, while a blocker or should stays open - or when the user asks."
+      }
+    },
     "subagents": {
       "inline": {
         "title": "Inline specialists",
@@ -12434,6 +12476,16 @@
       "allow_attachments": {
         "title": "Allow file attachments",
         "description": "Whether this agent may send files it already uploaded along with its messages. Off means text only; files already attached stay readable."
+      }
+    },
+    "babysit_pr": {
+      "poll_interval_seconds": {
+        "title": "Poll interval",
+        "description": "Seconds between checks of the pull request. At least 60, so the watcher never polls in a tight loop and never burns the shared GitHub rate limit."
+      },
+      "max_watch_minutes": {
+        "title": "Watch at most",
+        "description": "Minutes one watch may run before it stops and reports blocked. A watch that runs past this without green has not been approved — it has expired."
       }
     }
   },

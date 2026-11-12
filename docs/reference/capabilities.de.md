@@ -1,5 +1,5 @@
 ---
-source_sha: "a2b8e09f7af4"
+source_sha: "7738d8d527e6"
 ---
 
 # Der Capability-Katalog { #the-capability-catalog }
@@ -87,6 +87,8 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | erforderlich | übergeben |
 | `monitor` | Einen Befehl beobachten | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | übergeben |
 | `council` | Rat | analysis | `run_council_review` | `agents:delegate` | — | übergeben |
+| `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | übergeben |
+| `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | übergeben |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | übergeben |
 | `background_tasks` | Hintergrundthemen | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | übergeben |
 | `planning` | Planung | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | unverändert |

@@ -772,6 +772,7 @@
       "removingStep": "Usuwa krok",
       "result": "Wynik",
       "reviewingWithCouncil": "Sprawdza pracę z radą",
+      "reviewingWithSolLoop": "Sprawdza pracę w sol-loop",
       "runPython": "Uruchom Python",
       "running": "Działa…",
       "runningCalculations": "Liczy",
@@ -787,6 +788,7 @@
       "showFormatted": "Pokaż sformatowany widok",
       "showRaw": "Pokaż argumenty i surowy wynik",
       "skillResource": "Zasób skilla",
+      "solLoopReview": "Przegląd sol-loop",
       "sourceCount": "{count, plural, one {1 źródło} few {# źródła} many {# źródeł} other {# źródła}}",
       "steeringDelegate": "Kieruje delegatem",
       "stopTask": "Zatrzymaj zadanie",
@@ -900,6 +902,12 @@
       "askingDelegateStop": "Prosi delegata o zatrzymanie",
       "availableContext": "Dostępny kontekst",
       "availableSteps": "Dostępne kroki",
+      "babysitPrCheck": "Sprawdzanie PR",
+      "babysitPrRateLimit": "Limit Babysit PR",
+      "babysitPrStop": "Zatrzymaj Babysit PR",
+      "checkingBabysitPr": "Sprawdzam pull request",
+      "checkingBabysitRateLimit": "Sprawdzam limit",
+      "stoppingBabysitPr": "Zatrzymuję obserwację PR",
       "browseWeb": "Przeglądanie stron",
       "browsingWeb": "Przegląda strony",
       "cancelTask": "Anuluj zadanie",
@@ -3200,6 +3208,7 @@
       "modelFilter": "Filtruj według modelu",
       "modelRunHadNo": "Model w tym runie nie miał ceny, więc to wartość minimalna",
       "toolArgsRepaired": "{count, plural, one {Naprawiono błędne argumenty jednego wywołania narzędzia zamiast je ponawiać} few {Naprawiono błędne argumenty # wywołań narzędzi zamiast je ponawiać} many {Naprawiono błędne argumenty # wywołań narzędzi zamiast je ponawiać} other {Naprawiono błędne argumenty # wywołań narzędzi zamiast je ponawiać}}",
+      "servedByFallback": "Odpowiedział {model} (model zapasowy)",
       "cacheSplit": "Z wejścia {read, number} odczytanych z cache dostawcy i {write, number} do niego zapisanych - wyceniane osobno",
       "modelSettings": "Ustawienia modelu",
       "monthToDate": "Od początku miesiąca",
@@ -3253,6 +3262,12 @@
       "codeRuns": "{count, plural, one {1 skrypt} few {# skrypty} many {# skryptów} other {# skryptu}}",
       "codeRunCalls": "{count, plural, =0 {Nie wywołał żadnego narzędzia} one {Wywołał 1 narzędzie} few {Wywołał # narzędzia} many {Wywołał # narzędzi} other {Wywołał # narzędzia}}",
       "codeRunOmittedCalls": "{count, plural, one {i jeszcze 1 wywołanie, niewymienione} few {i jeszcze # wywołania, niewymienione} many {i jeszcze # wywołań, niewymienionych} other {i jeszcze # wywołania, niewymienione}}",
+      "solLoopRounds": "{count, plural, one {1 runda sol-loop} few {# rundy sol-loop} many {# rund sol-loop} other {# rundy sol-loop}}",
+      "solLoopRound": "Runda {round} · {scope} · {verdict}",
+      "solLoopStopReason": "Zatrzymano: {reason}",
+      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFix": "Poprawka: {fix}",
+      "solLoopOutcome": "Wynik: {outcome}",
       "cacheBust": "cache zerwany",
       "cacheExpired": "cache wygasł",
       "cacheBustDetail": "{missed, number} tokenów z cache nieodczytanych z cache - coś przed nimi w prompcie się zmieniło",
@@ -9371,6 +9386,16 @@
         "description": "Czy agent może uruchamiać polecenia powłoki. Wyłączenie zostawia narzędzia plikowe i całkowicie usuwa powłokę, zamiast ją blokować."
       }
     },
+    "sol_loop": {
+      "reviewer": {
+        "title": "Recenzent",
+        "description": "Jedyny recenzent, który ocenia pracę, na swoim modelu Sol."
+      },
+      "max_rounds": {
+        "title": "Najwyżej rund",
+        "description": "Ile rund przeglądu może zażądać jeden run. Świeży przegląd po poprawkach to nowa runda, a limit powstrzymuje powtarzane przeglądy przed rozrostem zakresu. Wydłuż do 5 tylko przy bezpieczeństwie, uprawnieniach, autoryzacji, utracie danych albo stanie i współbieżności, gdy blocker lub should pozostaje otwarty - albo gdy poprosi użytkownik."
+      }
+    },
     "subagents": {
       "inline": {
         "title": "Specjaliści wbudowani",
@@ -9721,6 +9746,16 @@
       "allow_attachments": {
         "title": "Zezwalaj na załączniki plików",
         "description": "Czy ten agent może wysyłać pliki, które już przesłał, razem ze swoimi wiadomościami. Wyłączone oznacza tylko tekst; pliki już załączone pozostają czytelne."
+      }
+    },
+    "babysit_pr": {
+      "poll_interval_seconds": {
+        "title": "Interwał odpytywania",
+        "description": "Sekundy między sprawdzeniami pull requestu. Co najmniej 60, by watcher nigdy nie odpytywał w ciasnej pętli i nie zużywał wspólnego limitu GitHub."
+      },
+      "max_watch_minutes": {
+        "title": "Obserwuj najwyżej",
+        "description": "Minuty, przez które jedna obserwacja może trwać, zanim zatrzyma się i zgłosi blokadę. Obserwacja, która przekroczy ten czas bez zielonego wyniku, nie została zatwierdzona — wygasła."
       }
     }
   },
@@ -12300,6 +12335,14 @@
       "needs": "Skille, napisane w sekcji Skille i wybrane w tym panelu.",
       "never": "Nigdy nie zmienia skilla; agent tylko go czyta."
     },
+    "sol_loop": {
+      "name": "Sol-loop",
+      "does": "Prosi jednego recenzenta o ocenę pracy w rundach, aż przejdzie: runda 1 przegląda całą zmianę, późniejsze rundy tylko zmieniony kod i otwarte ustalenia.",
+      "example1": "Czy ten pull request jest gotowy do połączenia?",
+      "example2": "Przejrzyj ten szkic, zanim wyjdzie",
+      "needs": "Jeden profil modelu dla recenzenta, skierowany na model Sol.",
+      "never": "Nigdy nie zastępuje brakującego recenzenta ani nie wymyśla werdyktu: recenzent nieosiągalny jest zgłaszany jako niedostępny, a koniec budżetu to nie zatwierdzenie."
+    },
     "subagents": {
       "name": "Subagenci",
       "does": "Agent przekazuje część pracy innemu agentowi i korzysta z jego odpowiedzi.",
@@ -12416,6 +12459,14 @@
       "example2": "Śledź log wdrożenia i zgłoś pierwszy błąd",
       "needs": "Przestrzeń robocza z powłoką, np. capability Sandbox albo folder na twoim komputerze.",
       "never": "Nigdy nie zostawia polecenia po końcu tury: każda obserwacja kończy się razem z przebiegiem."
+    },
+    "babysit_pr": {
+      "name": "Babysit PR",
+      "does": "Obserwuje pull request w CI i botach recenzujących, zgłasza tylko to, co się zmieniło, i kończy, gdy boty są zielone na najnowszym commicie.",
+      "example1": "Czy ten pull request jest już zielony?",
+      "example2": "Obserwuj ten PR i powiedz mi, gdy checki przejdą",
+      "needs": "Sposób odczytu checków PR, np. capability monitor z `gh pr checks`.",
+      "never": "Nigdy nie łączy, nie komentuje ani nie robi nic innego na PR: tylko obserwacja i zgłaszanie."
     },
     "background_tasks": {
       "name": "Tematy w tle",

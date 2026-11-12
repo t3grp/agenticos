@@ -1,5 +1,5 @@
 ---
-source_sha: "a2b8e09f7af4"
+source_sha: "7738d8d527e6"
 ---
 
 # Katalog capability { #the-capability-catalog }
@@ -86,6 +86,8 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `harness` | Harness | analiza | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | wymagany | przekazana |
 | `monitor` | Obserwuj polecenie | analiza | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | przekazana |
 | `council` | Rada | analiza | `run_council_review` | `agents:delegate` | — | przekazana |
+| `babysit_pr` | Babysit PR | analiza | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | przekazana |
+| `sol_loop` | Sol-loop | analiza | `run_sol_loop_review` | `agents:delegate` | — | przekazana |
 | `subagents` | Subagenci | rozumowanie | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | przekazana |
 | `background_tasks` | Tematy w tle | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | przekazywane |
 | `planning` | Planowanie | rozumowanie | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | bez zmian |

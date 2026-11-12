@@ -1,5 +1,5 @@
 ---
-source_sha: "8c1dc819b3fa"
+source_sha: "aaae5395a3d5"
 ---
 
 # Glosario { #glossary }
@@ -93,8 +93,10 @@ se describe en [Capabilities](capabilities.md).
 | Temas en segundo plano | `background_tasks` |
 | Mensajes de agentes | `agent_messages` |
 | Watch a command | `monitor` |
+| Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |

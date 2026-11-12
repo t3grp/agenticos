@@ -32,6 +32,10 @@ export interface AgentRun {
    * console must not resume it too.
    */
   continues_in_chat?: boolean;
+  /** The run's unanswered `ask_user` questions, in the order asked; empty unless parked on an answer. */
+  waiting_questions?: string[];
+  /** When the parked question expires unanswered; null unless parked on an answer. */
+  waiting_expires_at?: string | null;
   agent_version_id: string | null;
   user_id: string | null;
   surface: string;
@@ -39,6 +43,14 @@ export interface AgentRun {
   system_role?: string | null;
   status: RunStatus;
   model_label: string | null;
+  /**
+   * True when a fallback model served any request of this run. Optional in
+   * the type because runs recorded before it was tracked carry no value;
+   * the API sends it on every run it writes now.
+   */
+  fallback_used?: boolean;
+  /** The bare model id that answered the last successful request, or null. */
+  serving_model?: string | null;
   /**
    * The vendor the model actually ran at, as the provider catalog spells it -
    * what the table keys a brand mark on. `model_label` names the profile; a
@@ -295,8 +307,34 @@ export interface RunManifest {
   reviews?: ManifestReview[];
   /** Each `run_code` script code mode ran, and the calls it made (#2107). */
   code_runs?: ManifestCodeRun[];
+  /** Each sol-loop review round, with its verdict and findings (#6). */
+  sol_loop_rounds?: ManifestSolLoopRound[];
   /** Whether the record was trimmed to fit its size ceiling. */
   truncated: boolean;
+}
+
+/** One finding in a sol-loop review round. */
+export interface ManifestSolLoopFinding {
+  id: string;
+  severity: "blocker" | "should" | "nit";
+  claim: string;
+  file: string;
+  line: number | null;
+  fix: string;
+  outcome: string | null;
+}
+
+/** One sol-loop review round. */
+export interface ManifestSolLoopRound {
+  round: number;
+  scope: string;
+  verdict: string;
+  model: string;
+  findings: ManifestSolLoopFinding[];
+  dispositions: Record<string, string>;
+  stop_reason: string | null;
+  reason: string | null;
+  satisfied: boolean;
 }
 
 /** One correction a run reviewer sent while the run went. */

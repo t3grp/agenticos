@@ -321,6 +321,17 @@ class TestToolDeclarations:
                 },
             ]
         },
+        # A reviewer is required, with no default: one reviewer is what makes
+        # the config valid, and the widest shape - five rounds - is what the
+        # builder must still resolve without a model for it.
+        "sol_loop": {
+            "reviewer": {
+                "name": "GPT Sol",
+                "provider": "openai",
+                "model_profile_id": "00000000-0000-0000-0000-000000000003",
+            },
+            "max_rounds": 5,
+        },
     }
     """Configurations a capability needs before it offers anything.
 
@@ -1084,6 +1095,8 @@ def test_exactly_the_capabilities_a_call_cannot_run_live_say_so():
             "video_generation",
             "monitor",
             "council",
+            "babysit_pr",
+            "sol_loop",
         },
         "never": {"channel_tools", "follow_ups", "drafts"},
     }

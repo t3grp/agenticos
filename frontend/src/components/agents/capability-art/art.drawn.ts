@@ -15,9 +15,11 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   phone_calls: 195,
 
   monitor: 55,
+  babysit_pr: 160,
   drafts: 36,
   harness: 90,
-  council: 160,
+  council: 280,
+  sol_loop: 120,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -341,6 +343,45 @@ const HARNESS =
   '<text x="0" y="2.4" class="tx mono s7 mid b" >main</text></g></g>' +
   "</svg>";
 
+/** A pull request watched through CI: three checks, each ticking green in turn. */
+const BABYSIT_PR =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<polygon class="ict" points="120,35 195,78 120,121 45,78"/>' +
+  '<path class="igrid" d="M76 70L118 94L165 67M118 94V55"/>' +
+  '<g class="breathe"><circle class="inl" cx="80" cy="52" r="9"/><path class="igrid2" d="M76 52l3 3 5-6"/></g>' +
+  '<g class="bob"><circle class="inr" cx="160" cy="52" r="9"/><path class="igrid2" d="M156 52l3 3 5-6"/></g>' +
+  '<circle class="ict" cx="120" cy="30" r="9"/><path class="igrid2" d="M116 30l3 3 5-6"/>' +
+  "</svg>";
+
+/**
+ * Sol-loop: one reviewer judges the same work, round after round - a verdict
+ * over the ledger, with the findings listed under it until none are open.
+ */
+const SOL_LOOP =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/></g>' +
+  '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
+  '<polygon class="int" points="91.2,10 148.8,42 146.6,43 89.4,11"/>' +
+  '<polygon class="inr" points="148.8,42 148.8,92 146.6,93 146.6,43"/>' +
+  '<polygon class="inl" points="89.4,61 146.6,93 146.6,43 89.4,11"/>' +
+  '<g transform="matrix(0.9 0.5 0 1 89.4 11)">' +
+  '<rect x="6" y="6" width="10" height="8" rx="2" class="ac" />' +
+  '<text x="20" y="13" class="tx s7 b">S1 blocker</text>' +
+  '<g class="breathe" style="animation-delay:-0.8s"><rect x="6" y="18" width="10" height="8" rx="2" class="ac" /></g>' +
+  '<text x="20" y="25" class="tx s7 b">S2 should</text>' +
+  '<rect x="6" y="30" width="10" height="8" rx="2" class="ac" />' +
+  '<text x="20" y="37" class="tx s7 b">S3 nit</text></g>' +
+  '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
+  '<text x="0" y="2.4" class="tx mono s7 mid b" >APPROVE</text></g></g>' +
+  "</svg>";
+
+
 /**
  * Council: three delegates score the same work, one card each on the board,
  * and the round settles under them - a score per delegate, nothing invented.
@@ -376,6 +417,7 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   agent_messages: AGENT_MESSAGES,
   workflows: WORKFLOWS,
   monitor: MONITOR,
+  babysit_pr: BABYSIT_PR,
   text_to_speech: TEXT_TO_SPEECH,
   computer_use: COMPUTER_USE,
   video_generation: VIDEO_GENERATION,
@@ -384,4 +426,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   drafts: DRAFTS,
   harness: HARNESS,
   council: COUNCIL,
+  sol_loop: SOL_LOOP,
 };
