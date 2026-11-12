@@ -1590,6 +1590,39 @@ class TestFiring:
         assert trigger.last_run_id == recorded.id
         assert trigger.is_active is True
 
+    async def test_a_timed_out_one_shot_is_recovered_and_finished(self):
+        agent = _agent()
+        service = _service(agent)
+        conversation_id = uuid.uuid4()
+        trigger = _trigger(
+            agent_id=agent.id, conversation_id=conversation_id, one_shot=True
+        )
+        recorded = MagicMock(id=uuid.uuid4(), status=RunStatus.TIMED_OUT.value)
+        with (
+            patch("app.services.agent_trigger.agent_trigger_repo") as repo,
+            patch("app.services.agent_trigger.member_repo") as members,
+            patch("app.services.agent_trigger.conversation_repo"),
+            patch("app.services.agent_trigger.agent_run_repo") as runs,
+            patch("app.services.agent_trigger.record_audit", new=AsyncMock()),
+            patch("app.services.agent_runner.AgentRunnerService") as runner_cls,
+            patch("app.services.task_execution.TaskExecution") as task_execution_cls,
+        ):
+            repo.get_by_id = AsyncMock(return_value=trigger)
+            members.get_active = AsyncMock(return_value=MagicMock(role=OrgRoleName.OWNER))
+            runs.latest_run_for_conversation = AsyncMock(return_value=recorded)
+            runner_cls.return_value.execute = AsyncMock(
+                side_effect=TimeoutError("model request timed out")
+            )
+            task_execution_cls.return_value.started = AsyncMock(return_value=True)
+            task_execution_cls.return_value.finished = AsyncMock()
+
+            await service.fire(trigger.id)
+
+        assert trigger.last_run_id == recorded.id
+        assert trigger.last_fired_at is not None
+        assert trigger.last_delivery_status == "not_completed"
+        task_execution_cls.return_value.finished.assert_awaited_once_with(trigger, recorded)
+
     async def test_a_fire_that_errors_before_a_run_row_exists_stamps_nothing(self):
         """The error struck before the run was created - a spec that no longer
         builds, a model profile deleted since publish. There is nothing to point

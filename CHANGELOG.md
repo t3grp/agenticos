@@ -22,7 +22,7 @@ Two things are versioned separately from this file and worth knowing about:
 ### Added
 
 - A run parked on an agent's unanswered question is reminded once, halfway to expiry (`QUESTION_NUDGE_HOURS`, default 12 of the 24-hour question window): the hourly sweep posts one notice to the chat the question came from, and stamps the run so the next sweep does not remind it again. Web runs get no chat notice - what tells their person is the waiting state the run already shows in the conversation list and run history. New migration `0304_question_nudge` (number also claimed by #31 and #47 on unmerged branches; re-numbered at merge time if one of them lands first).
-
+- Model requests now have deadlines by default: 300 seconds for one request (`request_timeout`, and `timeout` per attempt) and 120 seconds for the first streamed event (`first_event_timeout`). A model profile or an agent spec can raise or lower them; `request_timeout` and `first_event_timeout` are new optional `model_settings`. When a deadline passes, the run ends as `timed_out` — with the deadline in its stored error — rather than showing "Working" for ever, and the fallback chain is tried first where one is configured. A run whose process has gone quiet shows as stalled in chat once its heartbeat is 90 seconds old; a turn whose model stream closes without producing anything fails loudly instead of completing as an empty answer.
 - Apps can be favourited per person; the app list can return only apps the caller has favourited, newest star first.
 - Chats can be assigned to a project or removed from one after creation. The association changes without moving chat files or project workspace contents.
 - An opt-in finance and accounting pack with 15 agent templates and 43 skills, including all ten Anthropic financial-services agents and five community Agency Agents roles. Templates install as editable organization-owned drafts. The included installer supports read-only planning, organization checks and idempotent re-runs, and refuses conflicts with edited copies. Bundled references retain pinned sources and licences. Configure the model, client knowledge, connectors and artifact runtime, then review before publishing. See the [pack guide](https://github.com/t3grp/agenticos/blob/t3/integrations/accounting-firm/README.md).
@@ -63,6 +63,7 @@ Two things are versioned separately from this file and worth knowing about:
 - Added opt-in systemd units for daily removal of Docker build cache unused for
   24 hours, independent of disk usage. This separate cache-only job leaves images,
   containers, volumes and networks intact.
+- A harness capability backs an agent with a Claude Code or Codex session in its sandbox, kept open across turns: `harness_start` opens a named session with a first prompt, `harness_prompt` sends it the next one, `harness_stop` closes it and `harness_sessions` lists the open ones. The session is the CLI's own, resumed by an id kept beside the work, and a prompt runs through the same detached execution, live narration, budget ledger and approval as a coding agent's task. A ChatGPT sign-in for Codex is not accepted yet; Codex runs on an OpenAI API key.
 
 ### Changed
 

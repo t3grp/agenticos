@@ -122,7 +122,7 @@ describe("the conversation list", () => {
     vi.useRealTimers();
   });
 
-  it("asks only now and then while the live-update socket carries the run's end", async () => {
+  it("keeps reading the list at the short interval while the live-update socket is up, for the heartbeat", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     useLiveFeedStore.setState({ connected: true });
     serve({ items: [conversation("c-1", { running_since: "2026-10-13T12:00:00Z" })] });
@@ -132,10 +132,9 @@ describe("the conversation list", () => {
         .length;
     const first = lists();
 
+    // A socket says when the run ends, not its heartbeat: the page reads the listing on the short interval.
     await act(async () => vi.advanceTimersByTimeAsync(8_000));
-    expect(lists()).toBe(first);
-    await act(async () => vi.advanceTimersByTimeAsync(30_000));
-    await waitFor(() => expect(lists()).toBe(first + 1));
+    await waitFor(() => expect(lists()).toBeGreaterThanOrEqual(first + 2));
     useLiveFeedStore.setState({ connected: false });
     vi.useRealTimers();
   });

@@ -489,6 +489,37 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     opensWhenDone: true,
   },
 
+  // harness - a Claude Code or Codex session kept open across turns. A prompt
+  // streams into the same coding-agent panel while it works; what it read, ran
+  // and changed opens under the step afterwards. Stopping a session and listing
+  // the open ones are bookkeeping on the session files, and read as plain text.
+  harness_start: {
+    kind: "code",
+    render: "coding-agent",
+    captionKey: "runningHarness",
+    displayNameKey: "harnessStarted",
+    opensWhenDone: true,
+  },
+  harness_prompt: {
+    kind: "code",
+    render: "coding-agent",
+    captionKey: "runningHarness",
+    displayNameKey: "harnessPrompted",
+    opensWhenDone: true,
+  },
+  harness_stop: {
+    kind: "shell",
+    render: "generic",
+    captionKey: "harnessStopping",
+    displayNameKey: "harnessStopped",
+  },
+  harness_sessions: {
+    kind: "list",
+    render: "generic",
+    captionKey: "harnessListing",
+    displayNameKey: "harnessListed",
+  },
+
   // monitor - a long-running command watched while the agent works. Starting one is a
   // shell step; what it matched so far and its state read as plain text.
   start_monitor: {

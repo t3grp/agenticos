@@ -915,6 +915,29 @@ class ModelSettingsSpec(BaseModel):
             "deadline the provider's own default does not know about."
         ),
     )
+    request_timeout: float | None = Field(
+        default=None,
+        gt=0.0,
+        le=600.0,
+        description=(
+            "One clock over the whole request to one model, in seconds, "
+            "covering every provider attempt, backoff and streamed chunk. "
+            "Unlike `timeout`, which bounds one attempt, this bounds the "
+            "request however many times the provider retries it."
+        ),
+    )
+    first_event_timeout: float | None = Field(
+        default=None,
+        gt=0.0,
+        le=600.0,
+        description=(
+            "How long a streamed request may go, in seconds, before its "
+            "first event - a part starting or a delta, thinking included. "
+            "It stops applying once the first event arrives, so it catches "
+            "a model that never starts answering, not one that answers "
+            "slowly. Streamed requests only."
+        ),
+    )
 
     @model_serializer
     def _only_what_was_set(self) -> dict[str, float | int | bool]:
