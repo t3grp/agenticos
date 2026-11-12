@@ -1492,6 +1492,25 @@ describe("the work before an answer", () => {
     }
   });
 
+  it("says a quiet run with only text streamed so far is stalled", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-06T00:03:00Z"));
+    useWorkingStore.getState().start("text-quiet-chat", "2026-11-06T00:00:00Z");
+    useWorkingStore.getState().setHeartbeat("text-quiet-chat", "2026-11-06T00:00:50Z");
+    try {
+      item({
+        conversationId: "text-quiet-chat",
+        parts: [text("ans", "Partway through")],
+        isStreaming: true,
+      });
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.getByRole("status")).toHaveTextContent(/Stalled — no heartbeat for 2m/);
+    } finally {
+      useWorkingStore.getState().reset();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps saying thinking while the heartbeat is fresh", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-06T00:03:00Z"));
