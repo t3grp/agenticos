@@ -127,6 +127,13 @@ PLATFORM_MODULES = (
     "app/schemas/workflow_log_alert.py",
     "app/services/workflow_log_alerts.py",
     "app/api/routes/v1/workflow_log_alerts.py",
+    "app/schemas/eval_judging.py",
+    "app/services/eval_judging.py",
+    "app/db/models/failure_learning.py",
+    "app/repositories/failure_learning.py",
+    "app/schemas/failure_learning.py",
+    "app/services/failure_learning.py",
+    "app/api/routes/v1/failure_learning.py",
 )
 
 

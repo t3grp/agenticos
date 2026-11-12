@@ -2676,3 +2676,189 @@ async def list_tool_consents(
         .order_by(ToolApproval.decided_at.desc())
     )
     return [(row[0], row[1]) for row in rows]
+
+
+@dataclass(frozen=True)
+class FailureGroupRow:
+    """One (agent, model, status, stored error sentence) group of real runs.
+
+    The error class is parsed in Python - the stored sentence has no code -
+    so the grouping stops at the sentence and the service merges sentences
+    into classes.
+    """
+
+    agent_id: UUID
+    model_label: str | None
+    status: str
+    error: str | None
+    count: int
+    first_seen: datetime | None
+    last_seen: datetime | None
+
+
+# The statuses mining counts. `guardrail_blocked` is the platform working,
+# not a malfunction, so it is not a failure to learn from.
+MINED_STATUSES = ("failed", "cancelled", "loop_stopped", "budget_exceeded")
+
+
+async def failure_groups(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    agent_id: UUID | None = None,
+    since: datetime,
+    until: datetime | None = None,
+) -> list[FailureGroupRow]:
+    """Real top-level runs in the window, grouped by agent, model, status, error.
+
+    Test runs are the loop's own tries and delegations are already counted
+    inside their parent, so both are left out.
+    """
+    query = (
+        select(
+            AgentRun.agent_id,
+            AgentRun.model_label,
+            AgentRun.status,
+            AgentRun.error,
+            func.count(AgentRun.id),
+            func.min(AgentRun.started_at),
+            func.max(AgentRun.started_at),
+        )
+        .where(
+            AgentRun.organization_id == organization_id,
+            AgentRun.started_at >= since,
+            AgentRun.is_test.is_(False),
+            AgentRun.parent_run_id.is_(None),
+            AgentRun.status.in_(MINED_STATUSES),
+        )
+        .group_by(AgentRun.agent_id, AgentRun.model_label, AgentRun.status, AgentRun.error)
+    )
+    if agent_id is not None:
+        query = query.where(AgentRun.agent_id == agent_id)
+    if until is not None:
+        query = query.where(AgentRun.started_at < until)
+    rows = await db.execute(query)
+    return [FailureGroupRow(*row) for row in rows.all()]
+
+
+async def failure_group_samples(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    agent_id: UUID,
+    model_label: str | None,
+    status: str,
+    error: str | None,
+    limit: int = 5,
+) -> list[UUID]:
+    """The newest run ids of one failure group, for a pattern's evidence."""
+    error_clause = (
+        AgentRun.error.is_(None) if error is None else AgentRun.error == error
+    )
+    model_clause = (
+        AgentRun.model_label.is_(None)
+        if model_label is None
+        else AgentRun.model_label == model_label
+    )
+    result = await db.execute(
+        select(AgentRun.id)
+        .where(
+            AgentRun.organization_id == organization_id,
+            AgentRun.agent_id == agent_id,
+            AgentRun.status == status,
+            AgentRun.is_test.is_(False),
+            AgentRun.parent_run_id.is_(None),
+            error_clause,
+            model_clause,
+        )
+        .order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+
+async def stalled_runs(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    agent_id: UUID | None = None,
+    stale_before: datetime,
+) -> list[AgentRun]:
+    """Runs still `running` whose heartbeat went stale before `stale_before`.
+
+    Only heartbeat-stale runs: a run stuck in a model call keeps beating its
+    heartbeat, so a fresh-heartbeat running run may still be hung - and
+    mining must not claim to catch it.
+    """
+    query = select(AgentRun).where(
+        AgentRun.organization_id == organization_id,
+        AgentRun.status == RunStatus.RUNNING.value,
+        AgentRun.heartbeat_at < stale_before,
+        AgentRun.is_test.is_(False),
+        AgentRun.parent_run_id.is_(None),
+    )
+    if agent_id is not None:
+        query = query.where(AgentRun.agent_id == agent_id)
+    result = await db.execute(query.order_by(AgentRun.started_at))
+    return list(result.scalars())
+
+
+@dataclass(frozen=True)
+class DownRatedRow:
+    """A down-rated answer, attributed to the nearest run before it.
+
+    Ratings attach to messages, not runs, so the attribution is approximate:
+    the run in the same conversation that started most recently before the
+    message. A message in a conversation with no earlier run has no run to
+    attribute to, and is left out rather than guessed.
+    """
+
+    run_id: UUID
+    agent_id: UUID
+    model_label: str | None
+    message_id: UUID
+    rated_at: datetime | None
+
+
+async def down_rated_messages(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    agent_id: UUID | None = None,
+    since: datetime,
+    until: datetime | None = None,
+) -> list[DownRatedRow]:
+    """Down-rated assistant messages in the window, with their nearest run."""
+    nearest_run_id = (
+        select(AgentRun.id)
+        .where(
+            AgentRun.conversation_id == Message.conversation_id,
+            AgentRun.started_at <= Message.created_at,
+            AgentRun.organization_id == organization_id,
+            AgentRun.parent_run_id.is_(None),
+            AgentRun.is_test.is_(False),
+        )
+        .order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
+        .limit(1)
+        .correlate(Message)
+        .scalar_subquery()
+    )
+    query = (
+        select(
+            nearest_run_id,
+            AgentRun.agent_id,
+            AgentRun.model_label,
+            Message.id,
+            Message.created_at,
+        )
+        .select_from(MessageRating)
+        .join(Message, Message.id == MessageRating.message_id)
+        .join(AgentRun, AgentRun.id == nearest_run_id)
+        .where(MessageRating.rating < 0, Message.created_at >= since)
+    )
+    if agent_id is not None:
+        query = query.where(AgentRun.agent_id == agent_id)
+    if until is not None:
+        query = query.where(Message.created_at < until)
+    rows = await db.execute(query)
+    return [DownRatedRow(*row) for row in rows.all()]

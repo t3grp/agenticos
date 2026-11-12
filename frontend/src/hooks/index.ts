@@ -182,6 +182,13 @@ export { useRecentWorkflowLogs } from "./use-recent-workflow-logs";
 export { useWorkflowStats } from "./use-workflow-stats";
 export { useWorkflowApprovalsSummary, useWorkflowsSummary } from "./use-workflows-summary";
 export { useStepEvals } from "./use-step-evals";
+export {
+  ruleCounts,
+  useEvalTry,
+  useFailureLearning,
+  useOrgPatterns,
+  useProposal,
+} from "./use-failure-learning";
 export { useWebhookTest } from "./use-webhook-test";
 export { useWorkflowChat } from "./use-workflow-chat";
 export { useTableTriggerAdmissions, useTableTriggers } from "./use-table-triggers";

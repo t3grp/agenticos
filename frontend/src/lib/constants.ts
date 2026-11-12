@@ -61,6 +61,7 @@ export const ROUTES = {
   WORKFLOW_LOGS: (id: string) => `/workflows/${id}/logs`,
   WORKFLOW_RUN_DETAIL: (id: string, runId: string) => `/workflows/${id}/runs/${runId}`,
   RUNS: "/runs",
+  FAILURE_LEARNING: "/failure-learning",
   ROUTINES: "/routines",
   VAULT: "/connectors/vault",
   SANDBOXES: "/connectors/sandboxes",

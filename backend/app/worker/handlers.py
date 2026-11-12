@@ -51,6 +51,7 @@ def production() -> Handlers:
         channel_tasks,
         conversation_tasks,
         diagnostics_tasks,
+        failure_learning_tasks,
         generated_media_tasks,
         invitation_tasks,
         mcp_tasks,
@@ -141,6 +142,7 @@ def production() -> Handlers:
             Handler(jobs.WATCH_SWEEP, proactive_tasks.watch_sweep),
             Handler(jobs.WEEKLY_USAGE_REPORT, report_tasks.weekly_usage_report),
             Handler(jobs.MONTHLY_USAGE_REPORT, report_tasks.monthly_usage_report),
+            Handler(jobs.FAILURE_LEDGER_DIGEST, failure_learning_tasks.failure_ledger_digest),
         ]
     )
 

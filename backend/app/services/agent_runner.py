@@ -60,6 +60,7 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from functools import partial
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID, uuid4
 
@@ -398,6 +399,25 @@ if TYPE_CHECKING:
     from app.services.run_stream import RunFrames
 
 logger = logging.getLogger(__name__)
+
+
+def _skills_with_content_overrides(
+    skills: Sequence[Any], overrides: Mapping[UUID, str] | None
+) -> list[Any]:
+    if not overrides:
+        return list(skills)
+    return [
+        SimpleNamespace(
+            id=skill.id,
+            name=skill.name,
+            description=skill.description,
+            content=overrides.get(skill.id, skill.content),
+            resources=skill.resources,
+        )
+        if skill.id in overrides
+        else skill
+        for skill in skills
+    ]
 _QUESTION_RESULT = TypeAdapter(dict[str, list[str]] | str)
 
 _DELEGATION_RUN_STATUS: Mapping[DelegationStatus, RunStatus] = {
@@ -3411,6 +3431,8 @@ class AgentRunnerService:
         local: LocalTarget | None = None,
         on_compaction: CompactionSink | None = None,
         output_schema: dict[str, Any] | None = None,
+        instructions_override: str | None = None,
+        skill_content_overrides: Mapping[UUID, str] | None = None,
         on_sandbox_wait: SandboxWaitSink | None = None,
         request_connection: ConnectionCallback | None = None,
         request_computer_access: ComputerAccessCallback | None = None,
@@ -3478,6 +3500,11 @@ class AgentRunnerService:
             output_schema: The shape the answer must have, in place of the
                 version's own `output_schema` - a workflow step that needs an
                 object. Already checked by the caller.
+            instructions_override: Run the resolved spec with only its
+                instructions replaced - an eval try of a proposed instruction
+                change. The overridden spec is frozen as the run's `test_spec`,
+                because no version exists for text nobody published; the run
+                records no version id.
             request_connection: How to ask the person at the keyboard to connect
                 one of their own services while the run waits. Given, a personal
                 binding they have not connected is offered to the model as
@@ -3548,6 +3575,11 @@ class AgentRunnerService:
         spec = _with_channel_tools(spec, exposure)
         if output_schema is not None:
             spec = spec.model_copy(update={"output_schema": output_schema})
+        if instructions_override is not None:
+            spec = spec.model_copy(update={"instructions": instructions_override})
+            test_spec = spec.model_dump(mode="json")
+        if skill_content_overrides and not (test or draft):
+            raise BadRequestError("Skill content overrides are only allowed on test runs")
         if voice is not None:
             spec = without_voice_unavailable(spec)
         if aside:
@@ -3588,6 +3620,7 @@ class AgentRunnerService:
             person_time_zone=person_time_zone,
             is_test=test or draft,
             test_spec=test_spec,
+            skill_content_overrides=skill_content_overrides,
             watch_receipt=watch_receipt,
         )
         prepared.output_schema = output_schema
@@ -3731,6 +3764,7 @@ class AgentRunnerService:
         person_time_zone: str | None = None,
         is_test: bool = False,
         test_spec: dict[str, Any] | None = None,
+        skill_content_overrides: Mapping[UUID, str] | None = None,
         on_sandbox_wait: SandboxWaitSink | None = None,
         channel_file_attempts: int = 0,
         restored_channel_context: str = "",
@@ -3950,9 +3984,12 @@ class AgentRunnerService:
 
         # Everything a capability needs but must not fetch itself. Resolved once,
         # server-side, so the model cannot influence what an agent reaches.
+        skills = _skills_with_content_overrides(
+            await self.skills.resolve_for_agent(ctx, spec.skill_ids), skill_content_overrides
+        )
         resources: dict[str, Any] = {
             **await self._bound_collections(spec, ctx),
-            "skills": await self.skills.resolve_for_agent(ctx, spec.skill_ids),
+            "skills": skills,
             CONTEXT_FILES_RESOURCE: await self.context.resolve_for_agent(
                 ctx, spec.context_ids, config=context_config(spec.capabilities)
             ),
@@ -6444,6 +6481,8 @@ class AgentRunnerService:
         stream: RunStream | None = None,
         on_compaction: CompactionSink | None = None,
         output_schema: dict[str, Any] | None = None,
+        instructions_override: str | None = None,
+        skill_content_overrides: Mapping[UUID, str] | None = None,
         structured: list[dict[str, Any]] | None = None,
         run_limit_usd: Decimal | None = None,
         public_origin: bool = False,
@@ -6452,6 +6491,7 @@ class AgentRunnerService:
         aside: bool = False,
         reports_failure: bool = False,
         draft: bool = False,
+        test: bool = False,
         watch_receipt: WatchReadReceipt | None = None,
         conversation_task_id: UUID | None = None,
         model_profile_id: UUID | None = None,
@@ -6524,6 +6564,8 @@ class AgentRunnerService:
 
         `draft` runs the unpublished draft as a test, as `prepare` documents - the
         HTTP API's way of trying an agent before it is published (#2301).
+        `test` marks the run a test without running the draft - an eval try of
+        the published spec, recorded like any test run and left out of mining.
 
         `generated_files` receives only names recorded by this run's own media
         storage, so a surface need not trust a filename in a tool result.
@@ -6554,10 +6596,13 @@ class AgentRunnerService:
             model_profile_id=model_profile_id,
             on_compaction=on_compaction,
             output_schema=output_schema,
+            instructions_override=instructions_override,
+            skill_content_overrides=skill_content_overrides,
             run_limit_usd=run_limit_usd,
             public_origin=public_origin,
             aside=aside or result_only,
             draft=draft,
+            test=test,
             watch_receipt=watch_receipt,
         )
         prepared.admitted_as.conversation_task_id = conversation_task_id
