@@ -154,6 +154,11 @@ class RunRecorder:
     #: Each `run_code` script code mode ran, and every tool call it made (#2107) -
     #: one `run_code` step otherwise hides all of them.
     code_runs: list[dict[str, Any]] = field(default_factory=list)
+    #: Each babysit-pr watch event the run recorded (#7) - one entry per
+    #: check that changed, with its classification and the decision it
+    #: led to, so the watch is rendered from what the run actually
+    #: heard rather than remembered.
+    babysit_pr_events: list[dict[str, Any]] = field(default_factory=list)
 
     def observe_request(
         self,
@@ -400,6 +405,7 @@ def as_payload(recorder: RunRecorder) -> dict[str, Any]:
         "messages": recorder.messages,
         "reviews": list(recorder.reviews),
         "code_runs": list(recorder.code_runs),
+        "babysit_pr_events": list(recorder.babysit_pr_events),
     }
 
 
@@ -410,6 +416,11 @@ its size ceiling (#2106)."""
 RECORDED_SCRIPTS = 30
 """How many code-mode scripts one run's manifest keeps, so it stays within its
 size ceiling (#2107)."""
+
+MAX_RECORDED_BABYSIT_PR_EVENTS = 50
+"""How many babysit-pr watch events a run's manifest keeps, so it stays within
+its size ceiling. A watch that polls for four hours at five-minute gaps
+reports at most a few dozen changes; fifty is a watch's worth of news."""
 
 
 def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -424,14 +435,17 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     """
     earlier_reviews = previous.get("reviews") or []
     earlier_scripts = previous.get("code_runs") or []
-    if not earlier_reviews and not earlier_scripts:
+    earlier_events = previous.get("babysit_pr_events") or []
+    if not earlier_reviews and not earlier_scripts and not earlier_events:
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
+    events = [*earlier_events, *payload.get("babysit_pr_events", [])]
     return {
         **payload,
         "reviews": reviews[:MAX_RECORDED_REVIEWS],
         "code_runs": scripts[:RECORDED_SCRIPTS],
+        "babysit_pr_events": events[:MAX_RECORDED_BABYSIT_PR_EVENTS],
     }
 
 

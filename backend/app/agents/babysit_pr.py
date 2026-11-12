@@ -28,8 +28,6 @@ prompt:
   used up the watcher waits for its reset instead of polling.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -50,9 +48,6 @@ MAX_POLL_SECONDS = 1800
 RATE_LIMIT_FLOOR = 10
 #: How long one watch may run before it stops and reports blocked.
 DEFAULT_MAX_WATCH_MINUTES = 240
-#: How many watch events one run's manifest keeps, so it stays within
-#: its size ceiling.
-MAX_RECORDED_BABYSIT_PR_EVENTS = 50
 
 CheckState = Literal["passed", "failed", "pending", "cancelled", "skipped", "unknown"]
 FailureKind = Literal["real", "flake", "unknown"]
@@ -268,9 +263,7 @@ def diff_checks(
     return events
 
 
-def _event(
-    check: BabysitCheck, previous_state: CheckState | None, head_sha: str
-) -> BabysitEvent:
+def _event(check: BabysitCheck, previous_state: CheckState | None, head_sha: str) -> BabysitEvent:
     kind, reason = classify_failure(check)
     return BabysitEvent(
         check_name=check.name,
@@ -357,9 +350,7 @@ def rate_limit_decision(
     return "wait", wait
 
 
-def render_report(
-    events: list[BabysitEvent], decision: WatchDecision, reason: str
-) -> str:
+def render_report(events: list[BabysitEvent], decision: WatchDecision, reason: str) -> str:
     """The watch's news as the text the agent reads — empty when none.
 
     When nothing changed and the watch continues, this is the empty
@@ -396,9 +387,7 @@ class BabysitWatcher:
     last_checks: dict[str, BabysitCheck] = field(default_factory=dict)
     active: bool = False
 
-    def start(
-        self, repo: str, pr_number: int, head_sha: str, now: datetime
-    ) -> str | None:
+    def start(self, repo: str, pr_number: int, head_sha: str, now: datetime) -> str | None:
         """Claim this watch, or refuse it with the reason.
 
         Starting the same PR again is a no-op — a resume re-claims

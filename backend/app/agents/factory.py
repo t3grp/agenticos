@@ -49,6 +49,7 @@ from app.agents.capabilities.approval import (
     refuse_ungateable_approvals,
 )
 from app.agents.capabilities.artifacts import ARTIFACTS_CAPABILITY_ID
+from app.agents.capabilities.babysit_pr import BABYSIT_PR_RECORDER_RESOURCE
 from app.agents.capabilities.browser_use import BROWSER_CAPABILITY_ID, WebBrowser
 from app.agents.capabilities.budget import (
     BudgetGuard,
@@ -384,6 +385,10 @@ def build_agent(
     # N requests in a chat of one-request turns. The reminders capability mutates
     # this during the run; the runner writes it back after.
     reminder_state = ReminderState.seed(recorded_reminder_state)
+    # Made before the capabilities, because a run reviewer, code mode and
+    # `CacheWatch` write onto it — and because a capability that records
+    # onto it (babysit-pr) reads it from the resources below.
+    recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
         granted_scopes=granted_scopes,
@@ -413,6 +418,9 @@ def build_agent(
             # Which tools' arguments are what the person is shown, so the output
             # guardrails screen them the way they screen the text around them.
             ANSWER_TOOLS_RESOURCE: answer_tools(bindings),
+            # Where a babysit-pr watch's events are recorded - the run's
+            # recorder, read by the capability, resolved by the runner.
+            BABYSIT_PR_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
@@ -503,9 +511,6 @@ def build_agent(
     # Wrapped, so what the provider is handed is written down as it is handed
     # over. Reconstructing the prompt and the tool schemas from the spec
     # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because a run reviewer, code mode and
-    # `CacheWatch` write onto it.
-    recorder = RunRecorder()
     asking = frozenset(
         name
         for name, kind in (

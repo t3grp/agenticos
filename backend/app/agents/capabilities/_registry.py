@@ -720,6 +720,7 @@ def load_builtins() -> None:
         agent_messages,
         artifacts,
         ask_user,
+        babysit_pr,
         background_tasks,
         background_tools,
         browser_use,
