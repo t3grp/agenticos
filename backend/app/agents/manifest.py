@@ -468,7 +468,9 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     earlier_events = previous.get("babysit_pr_events") or []
     earlier_rounds = previous.get("sol_loop_rounds") or []
     earlier_tuning = previous.get("eval_tool_tuning_runs") or []
-    if not any((earlier_reviews, earlier_scripts, earlier_events, earlier_rounds, earlier_tuning)):
+    if not any(
+        (earlier_reviews, earlier_scripts, earlier_council_rounds, earlier_events, earlier_rounds, earlier_tuning)
+    ):
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
