@@ -163,6 +163,25 @@ async def test_the_challenge_and_the_code_become_a_session(
     assert response.json()["access_token"]
 
 
+async def test_a_successful_mfa_challenge_cannot_be_replayed(
+    client: AsyncClient, mock_user: MockUser, mock_redis: MagicMock
+) -> None:
+    challenge = create_mfa_token(
+        subject=str(mock_user.id), credential_version=mock_user.credential_version
+    )
+    mock_redis.set = AsyncMock(side_effect=[True, False])
+
+    first = await client.post(
+        _mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"}
+    )
+    second = await client.post(
+        _mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"}
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 401
+
+
 async def test_a_wrong_code_at_the_second_step_is_refused(
     client: AsyncClient, mock_user: MockUser, mock_mfa_service: MagicMock
 ) -> None:

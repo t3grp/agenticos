@@ -56,6 +56,12 @@ class MfaRequired(BaseSchema):
     return_to: str | None = None
 
 
+class MfaDesktopCallback(BaseSchema):
+    """A desktop sign-in completed MFA and may continue by one-time code."""
+
+    desktop_callback_url: str
+
+
 class MfaVerifyRequest(BaseSchema):
     """The second step: the challenge token from the password step, plus the code."""
 

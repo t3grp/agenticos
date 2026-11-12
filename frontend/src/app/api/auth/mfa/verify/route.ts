@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const data = await backendFetch<LoginResponse & { return_to?: string | null }>(
+    const data = await backendFetch<
+      (LoginResponse & { return_to?: string | null }) | { desktop_callback_url: string }
+    >(
       "/api/v1/auth/mfa/verify",
       {
         method: "POST",
@@ -31,6 +33,8 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({ mfa_token: body.mfa_token, code: body.code }),
       },
     );
+
+    if ("desktop_callback_url" in data) return bffJson(data);
 
     const user = await backendFetch("/api/v1/auth/me", {
       headers: { Authorization: `Bearer ${data.access_token}` },

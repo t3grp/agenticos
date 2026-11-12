@@ -1,8 +1,10 @@
 """Authentication routes."""
 
 import hashlib
+import json
 import logging
 from typing import Annotated, Any
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request, status
@@ -12,9 +14,12 @@ from app.api.deps import (
     CurrentUser,
     DeploymentSettingsSvc,
     DevicePairingSvc,
+    DirectorySyncSvc,
     ImpersonationSvc,
     InvitationStagingSvc,
     MfaSvc,
+    OAuthExchangeSvc,
+    Redis,
     SessionSvc,
     UserSvc,
     enforce_auth_limit,
@@ -31,6 +36,7 @@ from app.core.security import (
 from app.db.models.user import User
 from app.schemas.mfa import (
     MfaCodeRequest,
+    MfaDesktopCallback,
     MfaRecoveryCodesRead,
     MfaRequired,
     MfaSetupRead,
@@ -59,6 +65,7 @@ from app.schemas.token import (
 from app.schemas.user import MeRead, UserCreate, UserRead
 from app.services import rate_limit
 from app.services.email.service import get_email_service
+from app.services.oauth_exchange import native_code_challenge
 from app.services.session import SessionService, refresh_expiry, successor_refresh_token
 
 logger = logging.getLogger(__name__)
@@ -111,13 +118,16 @@ async def login(
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.post("/mfa/verify", response_model=Token | MagicLinkToken)
+@router.post("/mfa/verify", response_model=Token | MagicLinkToken | MfaDesktopCallback)
 async def verify_mfa(
     request: Request,
     body: MfaVerifyRequest,
     user_service: UserSvc,
     session_service: SessionSvc,
     mfa_service: MfaSvc,
+    exchange_service: OAuthExchangeSvc,
+    directory_sync: DirectorySyncSvc,
+    redis: Redis,
 ) -> Any:
     """Complete the second step of a sign-in: the challenge and the code for tokens.
 
@@ -155,7 +165,41 @@ async def verify_mfa(
         raise AuthenticationError(
             message="That code did not match - try the code your authenticator shows now"
         )
+    challenge_id = payload.get("jti")
+    if not isinstance(challenge_id, str) or not challenge_id:
+        raise AuthenticationError(message="This sign-in step is invalid or has expired")
+    claimed = await redis.set(
+        f"auth:mfa:consumed:{challenge_id}", "1", ttl=300, nx=True
+    )
+    if not claimed:
+        raise AuthenticationError(message="This sign-in step is invalid or has expired")
+    raw_context = await redis.getdel(f"auth:mfa:oauth:{challenge_id}")
+    oauth_context = json.loads(raw_context) if raw_context is not None else None
+    if oauth_context is not None:
+        if not isinstance(oauth_context, dict):
+            raise AuthenticationError(message="This sign-in step is invalid or has expired")
+        groups = oauth_context.get("groups")
+        provider = oauth_context.get("provider")
+        if groups is not None:
+            if provider != "oidc" or not isinstance(groups, list) or not all(
+                isinstance(group, str) for group in groups
+            ):
+                raise AuthenticationError(message="This sign-in step is invalid or has expired")
+            await directory_sync.apply(user.id, groups, provider=provider)
     access_token, refresh_token = await _issue_tokens(user, session_service, request)
+    client = oauth_context.get("client") if oauth_context else None
+    if isinstance(client, dict) and client.get("client") == "desktop":
+        nonce = client.get("nonce")
+        code = await exchange_service.issue(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            code_challenge=native_code_challenge("desktop", nonce),
+        )
+        callback_url = (
+            f"{settings.DESKTOP_DEEP_LINK_SCHEME}://auth/callback?"
+            f"{urlencode({'code': code, 'desktop_nonce': nonce})}"
+        )
+        return MfaDesktopCallback(desktop_callback_url=callback_url)
     return_to = payload.get("rt")
     if return_to is not None:
         return MagicLinkToken(

@@ -17,7 +17,12 @@ import pytest
 from httpx import AsyncClient
 from starlette.responses import Response
 
-from app.api.deps import get_redis, get_session_service
+from app.api.deps import (
+    get_directory_sync_service,
+    get_mfa_service,
+    get_redis,
+    get_session_service,
+)
 from app.api.routes.v1 import oauth as oauth_routes
 from app.core.config import settings
 from app.core.oauth import oauth
@@ -40,6 +45,8 @@ class _FakeRedis:
         self._store: dict[str, str] = {}
 
     async def set(self, key: str, value: str, ttl: int | None = None, nx: bool = False) -> bool:
+        if nx and key in self._store:
+            return False
         self._store[key] = value
         return True
 
@@ -139,6 +146,56 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
     issue_code.assert_not_awaited()
     session_service.create_session.assert_not_awaited()
     assert fake._store == {}
+
+
+async def test_oidc_totp_applies_directory_groups_only_after_mfa(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user_id = uuid4()
+    fake = _FakeRedis()
+    user = SimpleNamespace(
+        id=user_id, is_active=True, totp_enabled=True, credential_version=3
+    )
+    app.dependency_overrides[get_redis] = lambda: fake
+    session_service = MagicMock()
+    session_service.create_session = AsyncMock()
+    app.dependency_overrides[get_session_service] = lambda: session_service
+    mfa_service = MagicMock()
+    mfa_service.verify_challenge = AsyncMock(return_value=True)
+    app.dependency_overrides[get_mfa_service] = lambda: mfa_service
+    directory_sync = MagicMock()
+    directory_sync.admits = AsyncMock(return_value=False)
+    directory_sync.apply = AsyncMock()
+    app.dependency_overrides[get_directory_sync_service] = lambda: directory_sync
+    monkeypatch.setattr(settings, "OIDC_GROUPS_CLAIM", "groups")
+    oidc_client = MagicMock()
+    oidc_client.authorize_access_token = AsyncMock(
+        return_value={
+            "userinfo": {
+                "sub": "s",
+                "email": "u@e.com",
+                "name": "U",
+                "email_verified": True,
+                "groups": ["Finance", "Engineering"],
+            }
+        }
+    )
+    monkeypatch.setattr(oauth_routes, "sign_in_client", lambda provider: oidc_client)
+    monkeypatch.setattr(UserService, "get_or_create_oauth_user", AsyncMock(return_value=user))
+    monkeypatch.setattr(UserService, "get_by_id", AsyncMock(return_value=user))
+
+    redirect = await client.get(_OIDC_CALLBACK)
+    challenge = parse_qs(urlparse(redirect.headers["location"]).fragment)["mfa_token"][0]
+    directory_sync.apply.assert_not_awaited()
+    verified = await client.post(
+        f"{settings.API_V1_STR}/auth/mfa/verify",
+        json={"mfa_token": challenge, "code": "123456"},
+    )
+
+    assert verified.status_code == 200
+    directory_sync.apply.assert_awaited_once_with(
+        user_id, ["Engineering", "Finance"], provider="oidc"
+    )
 
 
 async def test_exchange_returns_the_pair_for_a_valid_code(client: AsyncClient) -> None:

@@ -82,6 +82,7 @@ describe("the OAuth callback", () => {
     window.history.replaceState({}, "", "/auth/callback#mfa_token=challenge-from-oidc");
     mountOver(<CallbackPage />);
 
+    expect(window.location.hash).toBe("");
     expect(await screen.findByText("mfaPrompt")).toBeTruthy();
     expect(screen.getByLabelText("mfaCode")).toBeTruthy();
     expect(window.location.hash).toBe("");
