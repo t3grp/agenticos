@@ -123,6 +123,57 @@ class ManifestCodeRun(BaseSchema):
     omitted_calls: int = 0
 
 
+class ManifestSolLoopFinding(BaseSchema):
+    """One finding in a sol-loop review round (#6).
+
+    Attributes:
+        id: The finding's stable id across rounds, e.g. `S1`.
+        severity: `blocker`, `should`, or `nit`.
+        file: The file the finding is about, empty when it names none.
+        line: The line in that file, or `None` when it names none.
+        claim: What is wrong, in the reviewer's words.
+        fix: The reviewer's suggested fix, empty when it gave none.
+        outcome: What the agent did with it - `agree-fixed`,
+            `disagree-with-evidence`, or `decline-nit` - or `None` while open.
+    """
+
+    id: str
+    severity: Literal["blocker", "should", "nit"]
+    claim: str
+    file: str = ""
+    line: int | None = None
+    fix: str = ""
+    outcome: str | None = None
+
+
+class ManifestSolLoopRound(BaseSchema):
+    """One sol-loop review round (#6).
+
+    Attributes:
+        round: Which round this was, from 1.
+        scope: `full` for round 1, `changed-only` after.
+        verdict: `APPROVE`, `CHANGES`, `no_verdict`, or `unavailable`.
+        model: The reviewer's model label.
+        findings: The findings the reviewer gave this round.
+        dispositions: What the agent did with the last round's findings, by id.
+        stop_reason: Why the loop stopped after this round, or `None` while it
+            runs on - `approved`, `nits_only`, `budget_exhausted`, `stuck`, or
+            `reviewer_unavailable`.
+        reason: Why the reviewer was unavailable, when that is the verdict.
+        satisfied: Whether this round closes the loop.
+    """
+
+    round: int
+    scope: str = "full"
+    verdict: str = "no_verdict"
+    model: str = ""
+    findings: list[ManifestSolLoopFinding] = Field(default_factory=list)
+    dispositions: dict[str, str] = Field(default_factory=dict)
+    stop_reason: str | None = None
+    reason: str | None = None
+    satisfied: bool = False
+
+
 class RunManifestRead(BaseSchema):
     """The whole record, as `GET /runs/{run_id}/manifest` answers it.
 
@@ -161,4 +212,5 @@ class RunManifestRead(BaseSchema):
     )
     reviews: list[ManifestReview] = Field(default_factory=list)
     code_runs: list[ManifestCodeRun] = Field(default_factory=list)
+    sol_loop_rounds: list[ManifestSolLoopRound] = Field(default_factory=list)
     truncated: bool = False
