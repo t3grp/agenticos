@@ -396,6 +396,7 @@ async def mark_running(db: AsyncSession, *, run: AgentRun) -> AgentRun:
     run.ended_at = None
     # The next park starts unannounced.
     run.chat_notice_sent_at = None
+    run.question_nudged_at = None
     db.add(run)
     await db.flush()
     await db.refresh(run)
@@ -416,6 +417,45 @@ async def keep_paused_state(
 async def record_chat_notice(db: AsyncSession, *, run: AgentRun, at: datetime) -> AgentRun:
     """Remember that the run's chat was told this park could not continue."""
     run.chat_notice_sent_at = at
+    db.add(run)
+    await db.flush()
+    await db.refresh(run)
+    return run
+
+
+async def list_unnudged_runs(
+    db: AsyncSession, *, older_than: datetime, younger_than: datetime, limit: int = 500
+) -> list[AgentRun]:
+    """Every run parked on a question that is due its one reminder (#2064).
+
+    Parked longer than `older_than` (half the question window) but not yet
+    past `younger_than` (the expiry itself - those are the expiry sweep's,
+    not a reminder's), never reminded, and with no answer recorded since.
+    Not scoped to an organization, for the reason :func:`list_stale_approvals`
+    gives: its caller is the hourly sweep, which settles each run in its own
+    organization. Do not copy this shape into anything a route can reach.
+    """
+    result = await db.execute(
+        select(AgentRun)
+        .where(
+            AgentRun.status == RunStatus.AWAITING_ANSWER.value,
+            AgentRun.ended_at <= older_than,
+            AgentRun.ended_at > younger_than,
+            AgentRun.question_nudged_at.is_(None),
+            or_(
+                AgentRun.paused_state["question_results"].is_(None),
+                AgentRun.paused_state["question_results"] == {},
+            ),
+        )
+        .order_by(AgentRun.ended_at.asc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def record_question_nudge(db: AsyncSession, *, run: AgentRun, at: datetime) -> AgentRun:
+    """Remember that the run's chat was reminded once about its question."""
+    run.question_nudged_at = at
     db.add(run)
     await db.flush()
     await db.refresh(run)

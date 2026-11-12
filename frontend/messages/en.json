@@ -7249,6 +7249,7 @@
       "anAgent": "An agent",
       "decidedSection": "Decided",
       "waitingSection": "Waiting on you",
+      "questionExpiresIn": "Expires in {duration}",
       "share": "Share",
       "monthAgainstCap": "${spent} of ${cap} this month",
       "spendOverTime": "Spend over time",
