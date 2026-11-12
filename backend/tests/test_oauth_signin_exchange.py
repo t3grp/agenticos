@@ -20,7 +20,7 @@ from starlette.responses import Response
 from app.api.deps import get_redis, get_session_service
 from app.core.config import settings
 from app.core.oauth import oauth
-from app.core.security import verify_token
+from app.core.security import verify_special_token, verify_token
 from app.main import app
 from app.services.oauth_exchange import OAuthExchangeService
 from app.services.user import UserService
@@ -86,6 +86,48 @@ async def test_the_callback_redirect_carries_a_code_not_the_tokens(
     assert "code=" in location
     assert "access_token" not in location
     assert "refresh_token" not in location
+
+
+async def test_oauth_signin_for_totp_user_returns_mfa_challenge_without_session(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The provider identity is only the first factor for an MFA-enabled user."""
+    user_id = uuid4()
+    fake = _FakeRedis()
+    app.dependency_overrides[get_redis] = lambda: fake
+    session_service = MagicMock()
+    session_service.create_session = AsyncMock()
+    app.dependency_overrides[get_session_service] = lambda: session_service
+    monkeypatch.setattr(
+        oauth.google,
+        "authorize_access_token",
+        AsyncMock(
+            return_value={
+                "userinfo": {"sub": "s", "email": "u@e.com", "name": "U", "email_verified": True}
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        UserService,
+        "get_or_create_oauth_user",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                id=user_id, is_active=True, totp_enabled=True, credential_version=3
+            )
+        ),
+    )
+
+    response = await client.get(_CALLBACK)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mfa_required"] is True
+    assert "access_token" not in body and "refresh_token" not in body
+    payload = verify_special_token(body["mfa_token"], expected_type="mfa")
+    assert payload is not None
+    assert payload["sub"] == str(user_id)
+    assert payload["cv"] == 3
+    session_service.create_session.assert_not_awaited()
 
 
 async def test_exchange_returns_the_pair_for_a_valid_code(client: AsyncClient) -> None:

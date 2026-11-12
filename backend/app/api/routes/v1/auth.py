@@ -1,5 +1,6 @@
 """Authentication routes."""
 
+import hashlib
 import logging
 from typing import Annotated, Any
 from uuid import UUID
@@ -19,7 +20,7 @@ from app.api.deps import (
     enforce_auth_limit,
 )
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, NotFoundError
+from app.core.exceptions import AuthenticationError, NotFoundError, RateLimitError
 from app.core.security import (
     create_access_token,
     create_mfa_token,
@@ -57,6 +58,7 @@ from app.schemas.token import (
 )
 from app.schemas.user import MeRead, UserCreate, UserRead
 from app.services.email.service import get_email_service
+from app.services import rate_limit
 from app.services.session import SessionService, refresh_expiry, successor_refresh_token
 
 logger = logging.getLogger(__name__)
@@ -137,6 +139,16 @@ async def verify_mfa(
     except NotFoundError as exc:
         raise AuthenticationError(message="This sign-in step is invalid or has expired") from exc
     await enforce_auth_limit(request, surface="auth_mfa_verify", identifier=str(user.id))
+    challenge_decision = await rate_limit.consume(
+        surface="auth_mfa_challenge",
+        caller=f"token:{hashlib.sha256(body.mfa_token.encode()).hexdigest()}",
+        limit=rate_limit.Limit(attempts=5, window_seconds=300),
+    )
+    if not challenge_decision.allowed:
+        raise RateLimitError(
+            message="Too many attempts for this sign-in step. Please wait and try again.",
+            details={"retry_after_seconds": challenge_decision.retry_after_seconds},
+        )
     if not user.is_active or payload["cv"] != user.credential_version:
         raise AuthenticationError(message="This sign-in step is invalid or has expired")
     if not await mfa_service.verify_challenge(user, body.code):
@@ -159,13 +171,16 @@ async def mfa_status(current_user: CurrentUser, mfa_service: MfaSvc) -> Any:
 
 
 @router.post("/mfa/setup", response_model=MfaSetupRead, status_code=status.HTTP_201_CREATED)
-async def mfa_setup(current_user: CurrentUser, mfa_service: MfaSvc) -> Any:
+async def mfa_setup(
+    request: Request, current_user: CurrentUser, mfa_service: MfaSvc
+) -> Any:
     """Start enrolment: seal a secret and show what the authenticator needs.
 
     The secret is shown once, here. Enabling - proving the authenticator
     can produce a code - is a separate call, so a setup abandoned halfway
     changes nothing about sign-in.
     """
+    await enforce_auth_limit(request, surface="auth_mfa_manage", identifier=str(current_user.id))
     provisioning_uri, secret = await mfa_service.begin_setup(current_user)
     return MfaSetupRead(provisioning_uri=provisioning_uri, secret=secret)
 

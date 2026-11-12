@@ -22,6 +22,7 @@ from app.api.deps import (
     get_session_service,
     get_user_service,
 )
+from app.api.routes.v1 import auth as auth_routes
 from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.core.security import (
@@ -258,21 +259,73 @@ async def test_status_reports_whether_the_second_factor_is_on(
 
 
 async def test_setup_answers_with_the_provisioning_uri_and_the_secret_once(
-    client: AsyncClient,
+    client: AsyncClient, mock_user: MockUser, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    enforce = AsyncMock()
+    monkeypatch.setattr(auth_routes, "enforce_auth_limit", enforce)
     response = await client.post(_mfa_url("/setup"))
 
     assert response.status_code == 201
     body = response.json()
     assert body["provisioning_uri"].startswith("otpauth://totp/")
     assert body["secret"] == "JBSWY3DPEHPK3PXP"
+    enforce.assert_awaited_once()
+    assert enforce.await_args.args[0].url.path.endswith("/mfa/setup")
+    assert enforce.await_args.kwargs == {
+        "surface": "auth_mfa_manage",
+        "identifier": str(mock_user.id),
+    }
 
 
-async def test_enable_answers_with_the_recovery_codes_once(client: AsyncClient) -> None:
+async def test_enable_answers_with_the_recovery_codes_once(
+    client: AsyncClient, mock_user: MockUser, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enforce = AsyncMock()
+    monkeypatch.setattr(auth_routes, "enforce_auth_limit", enforce)
     response = await client.post(_mfa_url("/enable"), json={"code": "123456"})
 
     assert response.status_code == 200
     assert len(response.json()["recovery_codes"]) == 10
+    enforce.assert_awaited_once()
+    assert enforce.await_args.args[0].url.path.endswith("/mfa/enable")
+    assert enforce.await_args.kwargs == {
+        "surface": "auth_mfa_manage",
+        "identifier": str(mock_user.id),
+    }
+
+
+async def test_a_signin_challenge_is_capped_independently_of_user_rate_limit(
+    client: AsyncClient, mock_user: MockUser, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services import rate_limit
+
+    async def consume(**kwargs: object) -> rate_limit.Decision:
+        if kwargs.get("surface") == "auth_mfa_challenge":
+            return rate_limit.Decision(allowed=False, retry_after_seconds=300)
+        return rate_limit.Decision(allowed=True, retry_after_seconds=0)
+
+    limited = AsyncMock(side_effect=consume)
+    monkeypatch.setattr(auth_routes.rate_limit, "consume", limited)
+    challenge = create_mfa_token(
+        subject=str(mock_user.id), credential_version=mock_user.credential_version
+    )
+
+    response = await client.post(
+        _mfa_url("/verify"), json={"mfa_token": challenge, "code": "123456"}
+    )
+
+    assert response.status_code == 429
+    assert "Too many attempts for this sign-in step" in response.json()["error"]["message"]
+    assert [call.kwargs["surface"] for call in limited.await_args_list] == [
+        "auth_mfa_verify",
+        "auth_mfa_verify",
+        "auth_mfa_challenge",
+    ]
+    challenge_limit = limited.await_args_list[-1].kwargs
+    assert challenge_limit["limit"].attempts == 5
+    assert challenge_limit["limit"].window_seconds == 300
+    assert challenge_limit["caller"].startswith("token:")
+    assert not challenge_limit["caller"].endswith(challenge)
 
 
 async def test_disable_answers_with_no_body(client: AsyncClient) -> None:

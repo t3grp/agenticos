@@ -32,7 +32,8 @@ from app.core.oauth import (
     sign_in_client,
     verified_identity,
 )
-from app.core.security import create_access_token, create_refresh_token
+from app.core.security import create_access_token, create_mfa_token, create_refresh_token
+from app.schemas.mfa import MfaRequired
 from app.schemas.token import OAuthExchangeRequest, Token
 from app.services.oauth_exchange import native_code_challenge
 
@@ -231,6 +232,15 @@ async def provider_callback(
             logger.warning("oauth_callback_account_disabled", extra={"user_id": str(user.id)})
             params = urlencode({"error": "User account is disabled"})
             return RedirectResponse(url=f"{frontend}/login?{params}")
+        if getattr(user, "totp_enabled", False):
+            # OAuth proves the external identity, but does not complete this
+            # account's enrolled second factor. Stop before directory changes,
+            # session creation, or token exchange.
+            return MfaRequired(
+                mfa_token=create_mfa_token(
+                    subject=str(user.id), credential_version=user.credential_version
+                )
+            )
         if groups is not None:
             await directory_sync.apply(user.id, groups, provider=provider)
 
