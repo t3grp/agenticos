@@ -1,5 +1,5 @@
 ---
-source_sha: "573be813d5ed"
+source_sha: "5a103c8e255a"
 ---
 
 # Glossar { #glossary }
@@ -93,6 +93,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Einen Befehl beobachten | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Erinnerung an Anweisungen | `system_reminders` |
 | Sprachausgabe | `text_to_speech` |

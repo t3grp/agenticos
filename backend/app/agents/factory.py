@@ -79,6 +79,10 @@ from app.agents.capabilities.media import (
 )
 from app.agents.capabilities.memory_files import MEMORY_FILES_CAPABILITY_ID
 from app.agents.capabilities.skills._loader import SkillLoader
+from app.agents.capabilities.sol_loop import (
+    SOL_LOOP_MODELS_RESOURCE,
+    SOL_LOOP_RECORDER_RESOURCE,
+)
 from app.agents.capabilities.system_reminders import (
     REMINDER_STATE_RESOURCE,
     ReminderState,
@@ -262,6 +266,7 @@ def build_agent(
     resources: dict[str, Any] | None = None,
     secrets: Mapping[UUID, StorableSecret] | None = None,
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
     extra_toolsets: list[AbstractToolset[Any]] | None = None,
     extra_capabilities: Sequence[AbstractCapability[AgentDeps]] = (),
     agent_period_spend: PeriodSpendLookup | None = None,
@@ -393,6 +398,12 @@ def build_agent(
     # N requests in a chat of one-request turns. The reminders capability mutates
     # this during the run; the runner writes it back after.
     reminder_state = ReminderState.seed(recorded_reminder_state)
+    # Wrapped, so what the provider is handed is written down as it is handed
+    # over. Reconstructing the prompt and the tool schemas from the spec
+    # afterwards would be a second implementation of everything above this line.
+    # Made before the capabilities, because a run reviewer, code mode, sol-loop
+    # and `CacheWatch` write onto it.
+    recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
         granted_scopes=granted_scopes,
@@ -422,6 +433,10 @@ def build_agent(
             # Which tools' arguments are what the person is shown, so the output
             # guardrails screen them the way they screen the text around them.
             ANSWER_TOOLS_RESOURCE: answer_tools(bindings),
+            # Which model sol-loop's reviewer reviews on, and where its rounds
+            # are recorded - resolved by the runner, read by the capability.
+            SOL_LOOP_MODELS_RESOURCE: sol_loop_models,
+            SOL_LOOP_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
@@ -509,12 +524,6 @@ def build_agent(
     # a side-effecting capability to a spec is the only thing that has to be
     # right for approval to apply.
     repairs = RepairTally()
-    # Wrapped, so what the provider is handed is written down as it is handed
-    # over. Reconstructing the prompt and the tool schemas from the spec
-    # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because a run reviewer, code mode and
-    # `CacheWatch` write onto it.
-    recorder = RunRecorder()
     asking = frozenset(
         name
         for name, kind in (

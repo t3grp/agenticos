@@ -773,6 +773,16 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "cancellingDelegate",
     displayNameKey: "cancelTask",
   },
+
+  // sol-loop - one review round: one reviewer judges the work. The result is
+  // plain text - a JSON round with the verdict, the findings and the ledger -
+  // so the step renders generic, like any other read-only text tool.
+  run_sol_loop_review: {
+    kind: "read",
+    render: "generic",
+    captionKey: "reviewingWithSolLoop",
+    displayNameKey: "solLoopReview",
+  },
   create_agent: {
     kind: "delegate",
     render: "generic",
