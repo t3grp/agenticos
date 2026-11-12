@@ -1,5 +1,5 @@
 ---
-source_sha: "4e1d79f43728"
+source_sha: "5a103c8e255a"
 ---
 
 # Glossar { #glossary }
@@ -80,6 +80,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Frühere Gespräche | `conversation_search` |
 | Nächste Schritte | `follow_ups` |
 | Schutzregeln | `guardrails` |
+| Harness | `harness` |
 | Bilderzeugung | `image_generation` |
 | Wissenssuche | `knowledge` |
 | Bilder auslagern | `media` |
@@ -92,6 +93,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Einen Befehl beobachten | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Erinnerung an Anweisungen | `system_reminders` |
 | Sprachausgabe | `text_to_speech` |

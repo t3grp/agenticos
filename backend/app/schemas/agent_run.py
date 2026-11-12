@@ -42,6 +42,25 @@ class AgentRunRead(BaseSchema):
     )
     status: str
     model_label: str | None = None
+    fallback_used: bool = Field(
+        default=False,
+        description=(
+            "True when a fallback model served any request of this run. False "
+            "on runs recorded before this was tracked, as well as on runs the "
+            "primary answered throughout - the console renders the fallback "
+            "line only when this is true"
+        ),
+    )
+    serving_model: str | None = Field(
+        default=None,
+        description=(
+            "The bare model id the provider reported for the last successful "
+            "request of this run - the model that actually answered, which is "
+            "a fallback's id when `fallback_used` is true. Null when no "
+            "request succeeded. A model id, not a display label: compare it "
+            "against the profile's model, never against `model_label`"
+        ),
+    )
     provider: str | None = Field(
         default=None,
         description=(
@@ -126,6 +145,23 @@ class AgentRunRead(BaseSchema):
             "Whether the run is parked on a chat platform with its chat recorded and "
             "the caller is a person, so that its continuation is posted to that chat "
             "and a client should not resume it itself. Never true for an API key"
+        ),
+    )
+    waiting_questions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The run's unanswered `ask_user` questions, in the order they were asked. "
+            "Empty unless the run is parked on an answer: a finished thread has "
+            "nothing to answer, and a run parked on an approval alone asked nothing. "
+            "What the Runs view shows instead of a bare 'waiting' badge."
+        ),
+    )
+    waiting_expires_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When the parked question expires unanswered and the run ends cancelled, "
+            "the park time plus `QUESTION_EXPIRY_HOURS`. Null unless the run is "
+            "parked on an answer."
         ),
     )
     error: str | None = None

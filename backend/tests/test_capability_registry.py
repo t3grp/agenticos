@@ -299,6 +299,17 @@ class TestToolDeclarations:
         "system_reminders": {"goal_reanchor": {}},
         # Builds `None` naming no workflow: one named is what makes it offer its tools.
         "workflows": {"workflow_ids": ["00000000-0000-0000-0000-000000000002"]},
+        # A reviewer is required, with no default: one reviewer is what makes
+        # the config valid, and the widest shape - five rounds - is what the
+        # builder must still resolve without a model for it.
+        "sol_loop": {
+            "reviewer": {
+                "name": "GPT Sol",
+                "provider": "openai",
+                "model_profile_id": "00000000-0000-0000-0000-000000000003",
+            },
+            "max_rounds": 5,
+        },
     }
     """Configurations a capability needs before it offers anything.
 
@@ -1058,8 +1069,10 @@ def test_exactly_the_capabilities_a_call_cannot_run_live_say_so():
             "background_tools",
             "background_tasks",
             "coding_agent",
+            "harness",
             "video_generation",
             "monitor",
+            "sol_loop",
         },
         "never": {"channel_tools", "follow_ups", "drafts"},
     }

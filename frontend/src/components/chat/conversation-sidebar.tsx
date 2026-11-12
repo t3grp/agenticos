@@ -168,6 +168,18 @@ function ConversationItem({
       ? serverSince
       : null;
   const runningSince = workingHere ?? listedSince;
+  // The server's word, the same way: a run parked on a question in another tab
+  // or on another device waits here too. This tab's own mark wins while it has
+  // one; a park older than a turn this tab finished is a stale word for a run
+  // that has since gone on, so it reads the same guard the running one does.
+  const serverWaiting =
+    conversation.waiting_status != null &&
+    (!finishedAt ||
+      (conversation.waiting_since != null &&
+        Date.parse(conversation.waiting_since) > Date.parse(finishedAt)))
+      ? conversation.waiting_status
+      : null;
+  const waitingStatus = waiting ?? serverWaiting;
   // A thread this tab left mid-answer keeps its own mark until the listing has
   // the run - then the listing speaks for it, and polls it to its end - or until
   // long enough that a turn the listing never saw has surely finished.
@@ -276,8 +288,8 @@ function ConversationItem({
               id={`${rowId}-metadata`}
               className="text-muted-foreground block truncate text-xs leading-4"
             >
-              {waiting ? (
-                tTools("toolState", { status: waiting })
+              {waitingStatus ? (
+                tTools("toolState", { status: waitingStatus })
               ) : runningSince ? (
                 <RunningFor key={runningSince} since={runningSince} />
               ) : (
@@ -321,7 +333,10 @@ function ConversationItem({
             <>
               <DropdownMenuItem onSelect={() => onFavourite(conversation.is_favourite !== true)}>
                 <Star
-                  className={cn("h-4 w-4", conversation.is_favourite && "text-warning fill-current")}
+                  className={cn(
+                    "h-4 w-4",
+                    conversation.is_favourite && "text-warning fill-current",
+                  )}
                 />
                 {conversation.is_favourite ? t("unfavourite") : t("favourite")}
               </DropdownMenuItem>
@@ -358,7 +373,10 @@ function ConversationItem({
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => onFavourite(conversation.is_favourite !== true)}>
                 <Star
-                  className={cn("h-4 w-4", conversation.is_favourite && "text-warning fill-current")}
+                  className={cn(
+                    "h-4 w-4",
+                    conversation.is_favourite && "text-warning fill-current",
+                  )}
                 />
                 {conversation.is_favourite ? t("unfavourite") : t("favourite")}
               </DropdownMenuItem>

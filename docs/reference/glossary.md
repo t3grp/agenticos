@@ -76,6 +76,7 @@ in [Capabilities](capabilities.md).
 | Past conversations | `conversation_search` |
 | Follow-ups | `follow_ups` |
 | Guardrails | `guardrails` |
+| Harness | `harness` |
 | Image generation | `image_generation` |
 | Knowledge search | `knowledge` |
 | Media offload | `media` |
@@ -88,6 +89,7 @@ in [Capabilities](capabilities.md).
 | Watch a command | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |

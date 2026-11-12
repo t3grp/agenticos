@@ -1,5 +1,5 @@
 ---
-source_sha: "4e1d79f43728"
+source_sha: "5a103c8e255a"
 ---
 
 # Słownik { #glossary }
@@ -79,6 +79,7 @@ w [Capabilities](capabilities.md).
 | Poprzednie rozmowy | `conversation_search` |
 | Następne kroki | `follow_ups` |
 | Zabezpieczenia | `guardrails` |
+| Harness | `harness` |
 | Generowanie obrazów | `image_generation` |
 | Wyszukiwanie wiedzy | `knowledge` |
 | Odciążenie z obrazów | `media` |
@@ -91,6 +92,7 @@ w [Capabilities](capabilities.md).
 | Obserwuj polecenie | `monitor` |
 | Sandbox | `sandbox` |
 | Skille | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagenci | `subagents` |
 | Przypomnienia instrukcji | `system_reminders` |
 | Zamiana tekstu na mowę | `text_to_speech` |

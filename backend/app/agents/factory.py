@@ -79,6 +79,10 @@ from app.agents.capabilities.media import (
 )
 from app.agents.capabilities.memory_files import MEMORY_FILES_CAPABILITY_ID
 from app.agents.capabilities.skills._loader import SkillLoader
+from app.agents.capabilities.sol_loop import (
+    SOL_LOOP_MODELS_RESOURCE,
+    SOL_LOOP_RECORDER_RESOURCE,
+)
 from app.agents.capabilities.system_reminders import (
     REMINDER_STATE_RESOURCE,
     ReminderState,
@@ -231,6 +235,15 @@ class BuiltAgent:
     # capability list, where a capability with one gated tool and one ungated
     # one has no single answer.
     approval_required_tools: frozenset[str]
+    # The chain this run was built with, as raw model ids - the primary, then
+    # its fallbacks in order. The run row records only the label, which is a
+    # display name, so without these the caller that persists the run cannot
+    # tell a fallback's answer from the primary's: it would have to compare a
+    # recorded model id against a label, which false-positives whenever the
+    # two differ. Read by `finish()` to derive `fallback_used` and
+    # `serving_model` from the recorder.
+    primary_model: str
+    fallback_models: tuple[str, ...] = ()
     # How many of the run's tool calls arrived malformed and were repaired, read
     # by whoever persists the run - see `app/agents/tool_repair.py`.
     repairs: RepairTally = field(default_factory=RepairTally)
@@ -253,6 +266,7 @@ def build_agent(
     resources: dict[str, Any] | None = None,
     secrets: Mapping[UUID, StorableSecret] | None = None,
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
     extra_toolsets: list[AbstractToolset[Any]] | None = None,
     extra_capabilities: Sequence[AbstractCapability[AgentDeps]] = (),
     agent_period_spend: PeriodSpendLookup | None = None,
@@ -384,6 +398,12 @@ def build_agent(
     # N requests in a chat of one-request turns. The reminders capability mutates
     # this during the run; the runner writes it back after.
     reminder_state = ReminderState.seed(recorded_reminder_state)
+    # Wrapped, so what the provider is handed is written down as it is handed
+    # over. Reconstructing the prompt and the tool schemas from the spec
+    # afterwards would be a second implementation of everything above this line.
+    # Made before the capabilities, because a run reviewer, code mode, sol-loop
+    # and `CacheWatch` write onto it.
+    recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
         granted_scopes=granted_scopes,
@@ -413,6 +433,10 @@ def build_agent(
             # Which tools' arguments are what the person is shown, so the output
             # guardrails screen them the way they screen the text around them.
             ANSWER_TOOLS_RESOURCE: answer_tools(bindings),
+            # Which model sol-loop's reviewer reviews on, and where its rounds
+            # are recorded - resolved by the runner, read by the capability.
+            SOL_LOOP_MODELS_RESOURCE: sol_loop_models,
+            SOL_LOOP_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
@@ -500,12 +524,6 @@ def build_agent(
     # a side-effecting capability to a spec is the only thing that has to be
     # right for approval to apply.
     repairs = RepairTally()
-    # Wrapped, so what the provider is handed is written down as it is handed
-    # over. Reconstructing the prompt and the tool schemas from the spec
-    # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because a run reviewer, code mode and
-    # `CacheWatch` write onto it.
-    recorder = RunRecorder()
     asking = frozenset(
         name
         for name, kind in (
@@ -644,6 +662,8 @@ def build_agent(
         capabilities=configured,
         recorder=recorder,
         model_label=model_spec.label,
+        primary_model=model_spec.model,
+        fallback_models=tuple(model for _, model in model_spec.fallbacks),
         approval_required_tools=approval_required,
         usage_limits=UsageLimits(request_limit=spec.max_steps or DEFAULT_MAX_STEPS),
         repairs=repairs,

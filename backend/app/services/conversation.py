@@ -1027,6 +1027,7 @@ class ConversationService:
         )
         await self.attach_agents(items)
         await self._attach_running(items)
+        await self._attach_waiting(items)
         await self._attach_unread(items, user_id=user_id)
         await self._attach_people(items)
         return items, total
@@ -1154,19 +1155,21 @@ class ConversationService:
         await self._attach_favourites(items, user_id=user_id)
         await self._attach_fork_origins(items, user_id=user_id)
         await self._attach_running(items)
+        await self._attach_waiting(items)
         await self._attach_unread(items, user_id=user_id)
         return items, total
 
     async def attach_listing_state(
         self, conversations: Sequence[Conversation], *, user_id: UUID
     ) -> None:
-        """What a sidebar row shows beyond the row: its agents, a run at work, an unseen answer.
+        """What a sidebar row shows beyond the row: its agents, a run at work, a run waiting on its person, an unseen answer.
 
         For a listing assembled elsewhere - the conversations shared with the
         reader - so its rows read the way the reader's own list does.
         """
         await self.attach_agents(conversations)
         await self._attach_running(conversations)
+        await self._attach_waiting(conversations)
         await self._attach_unread(conversations, user_id=user_id)
 
     async def _attach_unread(
@@ -1227,6 +1230,23 @@ class ConversationService:
             conversation.running_heartbeat_at = (  # ty: ignore[unresolved-attribute]
                 current.heartbeat_at if current else None
             )
+
+    async def _attach_waiting(self, conversations: Sequence[Conversation]) -> None:
+        """Say, per row, what a parked run is waiting on, so a list can show the
+        thread is waiting on its person - from any tab or device, not only the
+        one the turn ran in. Set on the ORM object for the reason
+        `_attach_running` is, and one query for the page."""
+        if not conversations:
+            return
+        activity = await conversation_repo.waiting_activity(
+            self.db, [conversation.id for conversation in conversations]
+        )
+        for conversation in conversations:
+            current = activity.get(conversation.id)
+            conversation.waiting_since = current.since if current else None  # ty: ignore[unresolved-attribute]
+            conversation.waiting_status = current.status if current else None  # ty: ignore[unresolved-attribute]
+            conversation.waiting_question = current.question if current else None  # ty: ignore[unresolved-attribute]
+            conversation.waiting_run_ids = current.run_ids if current else []  # ty: ignore[unresolved-attribute]
 
     async def attach_agents(self, conversations: Sequence[Conversation]) -> None:
         """Name the agents that answered, on each row of a page.

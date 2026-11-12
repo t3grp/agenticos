@@ -1,5 +1,5 @@
 ---
-source_sha: "4e1d79f43728"
+source_sha: "5a103c8e255a"
 ---
 
 # Glosario { #glossary }
@@ -81,6 +81,7 @@ se describe en [Capabilities](capabilities.md).
 | Past conversations | `conversation_search` |
 | Follow-ups | `follow_ups` |
 | Guardrails | `guardrails` |
+| Harness | `harness` |
 | Image generation | `image_generation` |
 | Knowledge search | `knowledge` |
 | Media offload | `media` |
@@ -93,6 +94,7 @@ se describe en [Capabilities](capabilities.md).
 | Watch a command | `monitor` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |

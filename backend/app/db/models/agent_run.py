@@ -375,6 +375,21 @@ class AgentRun(Base, TimestampMixin):
     # a profile can be repointed at a different provider or key and the run's
     # own history must not change when it is. SET NULL on the key: deleting a
     # credential must not delete the record of what it spent.
+    #
+    # Whether a fallback model served any request of this run, and which model
+    # answered last. Until this change a fallback was invisible in the run
+    # record: the row named the primary profile however the turn was answered,
+    # so a bad answer could not be traced to the model that gave it. These are
+    # the run's own answer to that, derived from the per-request models in its
+    # manifest - never from `model_label`, which is a display name, not a model
+    # id. `fallback_used` is False on rows written before this was tracked;
+    # the console only renders the fallback line when it is True, so those rows
+    # read as they always did. `serving_model` is the serving model's bare id
+    # as the provider reported it, or null when no request succeeded.
+    fallback_used: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    serving_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     provider: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     secret_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -443,6 +458,17 @@ class AgentRun(Base, TimestampMixin):
     # `extra="forbid"`, so a key there would make the run unreadable to an older
     # process on a rollback or a rolling deploy.
     chat_notice_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Set when the hourly sweep reminded the chat once that an `ask_user`
+    # question is still unanswered, so the reminder is sent once and not on
+    # every sweep until the question expires. A column rather than a
+    # `paused_state` key for the same reason as `chat_notice_sent_at` above:
+    # `PausedRunState` is `extra="forbid"`, so a key there would make the run
+    # unreadable to an older process on a rollback or a rolling deploy.
+    # Cleared when the run leaves the queue, like the chat notice.
+    question_nudged_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
