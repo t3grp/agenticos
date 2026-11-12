@@ -2840,6 +2840,7 @@ async def down_rated_messages(
         )
         .order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
         .limit(1)
+        .correlate(Message)
         .scalar_subquery()
     )
     query = (

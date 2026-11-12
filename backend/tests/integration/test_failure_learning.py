@@ -98,7 +98,8 @@ class TestMiningGroups:
         agent = await _agent(db, org)
         await _run(db, org, agent)
         await _run(db, org, agent, is_test=True)
-        await _run(db, org, agent, parent_run_id=uuid.uuid4())
+        parent = await _run(db, org, agent, status=RunStatus.COMPLETED.value, error=None)
+        await _run(db, org, agent, parent_run_id=parent.id)
         await _run(db, org, agent, status=RunStatus.COMPLETED.value, error=None)
 
         groups = await agent_run_repo.failure_groups(

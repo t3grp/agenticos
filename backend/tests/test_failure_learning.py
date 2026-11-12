@@ -2483,6 +2483,7 @@ class TestApplyBranches:
                 )
             ),
         )
+        TestApply()._gate_try(monkeypatch, agent.id, proposal=proposal)
 
         with pytest.raises(BadRequestError, match="has not been published yet"):
             await service.apply_proposal(_ctx(), agent.id, proposal.id)
