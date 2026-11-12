@@ -113,6 +113,8 @@ export interface AgentRun {
    * run's delegations, and this is how a row from that answer says so.
    */
   parent_run_id: string | null;
+  /** The original run this top-level retry repeats, or null when not a retry. */
+  retry_of_run_id: string | null;
   /**
    * Which delegation produced this run - the `task_id` its `subagent_*` frames
    * carried, so a panel in a transcript and a row here are visibly one thing.

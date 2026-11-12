@@ -369,12 +369,12 @@ export function FocusedRun({
         {/* Hidden when it holds none of the three, rather than repeating all
             three conditions around it. */}
         <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
-          {run.parent_run_id !== null && (
+          {(run.retry_of_run_id ?? run.parent_run_id) !== null && (
             <Button
               variant="outline"
               size="sm"
               className="h-7 text-xs"
-              onClick={() => onFocusRun(run.parent_run_id)}
+              onClick={() => onFocusRun(run.retry_of_run_id ?? run.parent_run_id)}
             >
               <CornerLeftUp className="h-3.5 w-3.5" aria-hidden />
               {t("openTheRunItCame")}

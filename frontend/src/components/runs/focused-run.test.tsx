@@ -79,6 +79,7 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
     started_at: "2026-08-14T09:00:00Z",
     ended_at: "2026-08-14T09:00:04Z",
     parent_run_id: null,
+    retry_of_run_id: null,
     subagent_task_id: null,
     modality: "text",
     voice_chain: null,
@@ -184,6 +185,15 @@ describe("stepping to a neighbour", () => {
     serve({ run: run({ status: "timed_out", user_id: "user-1" }) });
     renderRun();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("opens the original run from a retry", async () => {
+    serve({ run: run({ retry_of_run_id: "run-1" }) });
+    const onFocusRun = renderRun();
+
+    await userEvent.click(screen.getByRole("button", { name: "Open the run it came from" }));
+
+    expect(onFocusRun).toHaveBeenCalledWith("run-1");
   });
 
   it("offers no retry on a run somebody else started", () => {

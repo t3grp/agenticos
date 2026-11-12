@@ -3,8 +3,8 @@
 The original row is never mutated or re-executed. A retry reads the run's
 own user turn back off its transcript, rebuilds the conversation's history
 as it stood when that turn was asked, and executes the agent on it - the
-new run linked to the original by `parent_run_id`, so the attempt it
-replaced is still there to be read.
+new run links to the original through `retry_of_run_id`, independently of
+delegation ancestry.
 
 The refusals are the point as much as the run: a retry spends real money as
 the person who started the run, so anybody else, a key, a run that has not
@@ -13,6 +13,7 @@ guessed at.
 """
 
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -22,6 +23,7 @@ import pytest
 from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.permissions import AuthContext, OrgRoleName
 from app.db.models.agent_run import RunStatus
+from app.repositories.agent_run import create_run, sum_cost_since
 from app.services.agent_runner import AgentRunnerService
 
 pytestmark = pytest.mark.anyio
@@ -45,6 +47,8 @@ def _run(**overrides) -> SimpleNamespace:
         "user_id": uuid.uuid4(),
         "organization_id": uuid.uuid4(),
         "conversation_id": uuid.uuid4(),
+        "parent_run_id": None,
+        "retry_of_run_id": None,
         "surface": "web",
         "status": RunStatus.FAILED.value,
         "error": "The run did not finish (ModelHTTPError, HTTP 400)",
@@ -63,6 +67,29 @@ def _message(*, role, content, row_id=None, files=None):
     return SimpleNamespace(
         id=row_id or uuid.uuid4(), role=role, content=content, files=files or []
     )
+
+
+async def test_retry_row_stays_top_level_and_keeps_its_origin():
+    db = MagicMock()
+    db.flush = AsyncMock()
+    db.refresh = AsyncMock()
+    original_id = uuid.uuid4()
+
+    retry = await create_run(
+        db,
+        organization_id=uuid.uuid4(),
+        agent_id=uuid.uuid4(),
+        agent_version_id=None,
+        user_id=uuid.uuid4(),
+        conversation_id=uuid.uuid4(),
+        surface="web",
+        model_label=None,
+        started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        retry_of_run_id=original_id,
+    )
+
+    assert retry.retry_of_run_id == original_id
+    assert retry.parent_run_id is None
 
 
 class TestRetryRefusals:
@@ -177,7 +204,8 @@ class TestRetryRunsTheSameRequest:
             result = await service.retry_run(ctx, original.id)
 
         assert result.run_id == new_run.id
-        assert executed.await_args.kwargs["parent_run_id"] == original.id
+        assert executed.await_args.kwargs["parent_run_id"] is None
+        assert executed.await_args.kwargs["retry_of_run_id"] == original.id
 
     async def test_the_new_run_reissues_the_original_turn(self):
         """The prompt is the original user turn as the model reads it, the
@@ -190,6 +218,8 @@ class TestRetryRunsTheSameRequest:
         failed = _message(role="assistant", content="Working on it, half done")
         new_run = _run(
             id=uuid.uuid4(),
+            parent_run_id=None,
+            retry_of_run_id=original.id,
             status=RunStatus.COMPLETED.value,
             cost_usd=Decimal("0.02"),
             input_tokens=100,
@@ -228,7 +258,8 @@ class TestRetryRunsTheSameRequest:
         assert history_kwargs["exclude_message_id"] == prompt.id
         executed.assert_awaited_once()
         execute_kwargs = executed.await_args.kwargs
-        assert execute_kwargs["parent_run_id"] == original.id
+        assert execute_kwargs["parent_run_id"] is None
+        assert execute_kwargs["retry_of_run_id"] == original.id
         assert execute_kwargs["conversation_id"] == original.conversation_id
         assert execute_kwargs["message_history"] == []
         assert executed.await_args.args[2] == "pay the invoice"
@@ -236,6 +267,28 @@ class TestRetryRunsTheSameRequest:
         assert audited.await_args.kwargs["action"] == "run.retried"
         assert audited.await_args.kwargs["target_id"] == str(new_run.id)
         assert audited.await_args.kwargs["details"]["retried_from"] == str(original.id)
+
+    async def test_retry_cost_is_included_in_top_level_spend(self):
+        organization_id = uuid.uuid4()
+        retry = _run(
+            organization_id=organization_id,
+            parent_run_id=None,
+            retry_of_run_id=uuid.uuid4(),
+            cost_usd=Decimal("0.02"),
+        )
+        db = MagicMock()
+        db.scalar = AsyncMock(return_value=retry.cost_usd)
+
+        total = await sum_cost_since(
+            db,
+            organization_id=organization_id,
+            since=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+
+        statement = db.scalar.await_args.args[0]
+        assert "sum(agent_runs.cost_usd)" in str(statement)
+        assert "agent_runs.parent_run_id IS NULL" in str(statement)
+        assert total == retry.cost_usd
 
     async def test_the_original_turns_files_travel_with_the_retry(self):
         """A question asked with a document is the same request only with the

@@ -3393,6 +3393,7 @@ class AgentRunnerService:
         surface: RunSurface = RunSurface.API,
         conversation_id: UUID | None = None,
         parent_run_id: UUID | None = None,
+        retry_of_run_id: UUID | None = None,
         channel_key: str | None = None,
         memory_room_key: str | None = None,
         channel_directory: ChannelDirectory | None = None,
@@ -3492,18 +3493,8 @@ class AgentRunnerService:
                 cannot run *before* assembly, so no sandbox opens and no
                 delegate resolves; the row is stamped `modality='voice'` with
                 the realtime model and its key.
-            parent_run_id: The run this one retries, when one does. The link
-                is what lets a reader walk from a retry back to the attempt it
-                replaced - but it is the delegation link, so it carries the
-                delegation's reading: the retry is listed under the original
-                run's delegations rather than in top-level history, and the
-                spend breakdowns treat its cost as inside the original's.
-                That reading is only exactly true for a delegation, whose cost
-                the parent's ledger already holds; a retry spends on its own
-                ledger, so the original's own-cost line reads low by the
-                retry's cost and the month-to-date total misses it. Known
-                limitation of reusing this link rather than a column of its
-                own; see the retry endpoint.
+            parent_run_id: The run this execution was delegated from, when it was.
+            retry_of_run_id: The earlier run this execution retries, when it does.
             person_time_zone: The person's own IANA time zone, when the surface
                 knows it - what an agent whose `time_zone` is `user` tells the
                 time in (#2065).
@@ -3567,6 +3558,8 @@ class AgentRunnerService:
             existing_run=None,
             surface=surface,
             conversation_id=conversation_id,
+            parent_run_id=parent_run_id,
+            retry_of_run_id=retry_of_run_id,
             channel_key=channel_key,
             memory_room_key=memory_room_key,
             channel_directory=channel_directory,
@@ -3705,6 +3698,8 @@ class AgentRunnerService:
         existing_run: AgentRun | None,
         surface: RunSurface,
         conversation_id: UUID | None,
+        parent_run_id: UUID | None = None,
+        retry_of_run_id: UUID | None = None,
         channel_key: str | None = None,
         channel_directory: ChannelDirectory | None = None,
         user_name: str | None,
@@ -4166,6 +4161,7 @@ class AgentRunnerService:
                 ),
                 conversation_id=conversation_id,
                 parent_run_id=parent_run_id,
+                retry_of_run_id=retry_of_run_id,
                 environment_id=environment_id,
                 exposure_id=exposure.id if exposure else None,
                 channel_identity_id=ctx.channel_identity_id,
@@ -6419,6 +6415,7 @@ class AgentRunnerService:
         surface: RunSurface = RunSurface.API,
         conversation_id: UUID | None = None,
         parent_run_id: UUID | None = None,
+        retry_of_run_id: UUID | None = None,
         channel_key: str | None = None,
         memory_room_key: str | None = None,
         channel_directory: ChannelDirectory | None = None,
@@ -6537,6 +6534,7 @@ class AgentRunnerService:
             surface=surface,
             conversation_id=conversation_id,
             parent_run_id=parent_run_id,
+            retry_of_run_id=retry_of_run_id,
             channel_key=channel_key,
             memory_room_key=memory_room_key,
             channel_directory=channel_directory,
@@ -7148,9 +7146,8 @@ class AgentRunnerService:
         """Re-run a finished run's own request as a new run linked to it.
 
         The original row is never mutated or re-executed: the new run is a
-        fresh row whose `parent_run_id` names the original, so the attempt it
-        replaced is still there to be read - and so the detail view's
-        delegations section is where the retry is listed from.
+        fresh top-level row whose `retry_of_run_id` names the original, so its
+        cost is counted on its own while the attempt it replaced stays readable.
 
         What "the same request" means is the original run's own user turn,
         read back off its transcript, with the conversation's history as it
@@ -7238,7 +7235,8 @@ class AgentRunnerService:
             prompt,
             surface=RunSurface(run.surface),
             conversation_id=run.conversation_id,
-            parent_run_id=run.id,
+            parent_run_id=None,
+            retry_of_run_id=run.id,
             message_history=history,
             attachments=attached,
             reports_failure=True,
