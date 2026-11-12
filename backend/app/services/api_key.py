@@ -345,12 +345,14 @@ class ApiKeyService:
             NotFoundError: Not this organization's key, or somebody else's for a
                 caller without `api_keys:manage` - the same answer as `revoke`,
                 so an id cannot be used to learn which keys exist.
-            BadRequestError: The key is revoked or expired. Rotating one back
-                to life would undo the revocation that stopped it.
+            BadRequestError: The key is internal, OAuth-grant-backed, revoked,
+                or expired.
         """
         key = await api_key_repo.get(self.db, key_id, organization_id=ctx.organization_id)
-        if key is None or (key.user_id != ctx.subject_id and not ctx.has(Perm.API_KEYS_MANAGE)):
+        if key is None or key.user_id != ctx.subject_id:
             raise NotFoundError(message="API key not found", details={"api_key_id": key_id})
+        if key.internal or key.oauth_grant_id is not None:
+            raise BadRequestError(message="Internal and OAuth keys cannot be rotated")
         now = datetime.now(UTC)
         if _status(key, now) != "active":
             # A revoked key rotated back to life would undo the revocation -

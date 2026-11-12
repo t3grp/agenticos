@@ -51,8 +51,8 @@ def code_now(secret: str, *, at: float | None = None) -> str:
     return _code(secret, int(moment // _STEP_SECONDS))
 
 
-def verify_code(secret: str, code: str, *, at: float | None = None) -> bool:
-    """Whether `code` is the secret's code for now, or the step either side.
+def verify_code(secret: str, code: str, *, at: float | None = None) -> int | None:
+    """Return the counter matched by `code`, or None if no step matches.
 
     The comparison is constant-time, and a code that is not six digits cannot
     match - it is refused before any HMAC runs, so a longer guess is not a
@@ -60,13 +60,13 @@ def verify_code(secret: str, code: str, *, at: float | None = None) -> bool:
     """
     candidate = code.strip()
     if len(candidate) != _DIGITS or not candidate.isdigit():
-        return False
+        return None
     moment = at if at is not None else time.time()
     current = int(moment // _STEP_SECONDS)
-    return any(
-        hmac.compare_digest(_code(secret, step), candidate)
-        for step in range(current - _WINDOW_STEPS, current + _WINDOW_STEPS + 1)
-    )
+    for step in range(current - _WINDOW_STEPS, current + _WINDOW_STEPS + 1):
+        if hmac.compare_digest(_code(secret, step), candidate):
+            return step
+    return None
 
 
 def provisioning_uri(secret: str, *, account_name: str, issuer: str) -> str:

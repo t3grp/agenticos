@@ -46,32 +46,34 @@ def test_a_fresh_secret_is_160_bits_in_base32() -> None:
 
 def test_the_code_shown_now_verifies() -> None:
     secret = generate_secret()
-    assert verify_code(secret, code_now(secret))
+    moment = 1_000_000
+    assert verify_code(secret, code_now(secret, at=moment), at=moment) == moment // 30
 
 
 def test_the_previous_step_still_lands_but_two_back_does_not() -> None:
     secret = generate_secret()
-    assert verify_code(secret, code_now(secret, at=1_000_000), at=1_000_030)
-    assert not verify_code(secret, code_now(secret, at=1_000_000), at=1_000_060)
+    assert verify_code(secret, code_now(secret, at=1_000_000), at=1_000_030) == 1_000_000 // 30
+    assert verify_code(secret, code_now(secret, at=1_000_000), at=1_000_060) is None
 
 
 def test_the_next_step_lands_but_two_ahead_does_not() -> None:
     secret = generate_secret()
-    assert verify_code(secret, code_now(secret, at=1_000_060), at=1_000_030)
-    assert not verify_code(secret, code_now(secret, at=1_000_090), at=1_000_030)
+    assert verify_code(secret, code_now(secret, at=1_000_060), at=1_000_030) == 1_000_060 // 30
+    assert verify_code(secret, code_now(secret, at=1_000_090), at=1_000_030) is None
 
 
 def test_a_code_that_is_not_six_digits_cannot_match() -> None:
     secret = generate_secret()
-    assert not verify_code(secret, "12345")
-    assert not verify_code(secret, "1234567")
-    assert not verify_code(secret, "abcdef")
-    assert not verify_code(secret, "")
+    assert verify_code(secret, "12345") is None
+    assert verify_code(secret, "1234567") is None
+    assert verify_code(secret, "abcdef") is None
+    assert verify_code(secret, "") is None
 
 
 def test_whitespace_around_a_code_is_ignored() -> None:
     secret = generate_secret()
-    assert verify_code(secret, f"  {code_now(secret)}  ")
+    moment = 1_000_000
+    assert verify_code(secret, f"  {code_now(secret, at=moment)}  ", at=moment) == moment // 30
 
 
 def test_the_provisioning_uri_names_the_defaults_explicitly() -> None:

@@ -205,6 +205,27 @@ class TestRotating:
         ):
             await ApiKeyService(MagicMock()).rotate(ctx, other.id)
 
+    async def test_an_admin_cannot_rotate_another_member_s_key(self) -> None:
+        ctx = _ctx(OrgRoleName.ADMIN)
+        other = _key(_ctx(), organization_id=ctx.organization_id)
+        with (
+            patch(f"{PATH}.api_key_repo.get", new=AsyncMock(return_value=other)),
+            pytest.raises(NotFoundError),
+        ):
+            await ApiKeyService(MagicMock()).rotate(ctx, other.id)
+
+    @pytest.mark.parametrize("key_fields", [{"internal": True}, {"oauth_grant_id": uuid.uuid4()}])
+    async def test_internal_and_oauth_keys_cannot_be_rotated(
+        self, key_fields: dict[str, Any]
+    ) -> None:
+        ctx = _ctx()
+        key = _key(ctx, **key_fields)
+        with (
+            patch(f"{PATH}.api_key_repo.get", new=AsyncMock(return_value=key)),
+            pytest.raises(BadRequestError, match="cannot be rotated"),
+        ):
+            await ApiKeyService(MagicMock()).rotate(ctx, key.id)
+
 
 class TestListing:
     async def test_a_manager_lists_every_key_and_a_member_their_own(self) -> None:
