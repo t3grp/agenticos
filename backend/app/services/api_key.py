@@ -342,9 +342,9 @@ class ApiKeyService:
         The plaintext is in exactly one response, this one, like `create`.
 
         Raises:
-            NotFoundError: Not this organization's key, or somebody else's for a
-                caller without `api_keys:manage` - the same answer as `revoke`,
-                so an id cannot be used to learn which keys exist.
+            NotFoundError: Not this organization's key, or not issued by the
+                caller - the same answer as `revoke`, so an id cannot be used
+                to learn which keys exist.
             BadRequestError: The key is internal, OAuth-grant-backed, revoked,
                 or expired.
         """
