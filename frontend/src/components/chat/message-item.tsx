@@ -14,6 +14,8 @@ import type { Agent } from "@/types/agents";
 import { ToolCallCard } from "./tool-call-card";
 import { AgentSteps } from "./agent-step";
 import { foldWork, runsOf, TextBubble, ThinkingBlock, TurnParts } from "./turn-parts";
+import { STALLED_AFTER_MS, useTurnElapsed } from "./work-fold";
+import { formatElapsed } from "@/lib/elapsed";
 import type { PinnedPrompts } from "./chat-container";
 import { CopyButton } from "./copy-button";
 import { MessageSources } from "./message-sources";
@@ -647,6 +649,14 @@ function MessageBody({
     (workingSince ? new Date(workingSince) : message.runStartedAt) ?? message.timestamp;
   const lastHeartbeatAt = workingHeartbeat ? new Date(workingHeartbeat) : undefined;
   const t = useTranslations("chat");
+  const tSteps = useTranslations("chat.steps");
+  // A turn with nothing streamed yet has no work fold to say it has gone quiet,
+  // so the placeholder says so itself once the run's heartbeat is stale.
+  const heartbeatAgeMs = useTurnElapsed(lastHeartbeatAt, Boolean(message.isStreaming));
+  const stalledFor =
+    heartbeatAgeMs !== null && heartbeatAgeMs > STALLED_AFTER_MS
+      ? formatElapsed(heartbeatAgeMs, tSteps)
+      : null;
   const parts = message.parts ?? [];
   const useParts = !isUser && parts.length > 0;
   const legacyCalls = message.toolCalls ?? [];
@@ -669,7 +679,11 @@ function MessageBody({
         <div className="py-1" role="status" aria-live="polite">
           <span className="bg-foreground/[0.04] inline-flex items-center gap-1.5 rounded-full py-1 pr-3.5 pl-1.5">
             <ThinkingOrb state="breathing" size={20} className="h-7 w-7" />
-            <span className="text-muted-foreground text-xs">{t("thinking")}</span>
+            <span className="text-muted-foreground text-xs">
+              {stalledFor === null
+                ? t("thinking")
+                : tSteps("stalledFor", { duration: stalledFor })}
+            </span>
           </span>
         </div>
       )}
