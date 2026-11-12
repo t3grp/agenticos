@@ -421,7 +421,6 @@ them announcing itself:
 | `SMTP_TLS_MODE` | `auto` | How the encrypted connection is opened. `auto` lets the port choose; `implicit` opens TLS from the first byte and `starttls` negotiates the upgrade, whatever the port. Ignored when `SMTP_TLS=false` |
 | `EMAIL_FROM` | `noreply@agenticos.com` | The `From` address on every message |
 | `EMAIL_FROM_NAME` | `agenticos` | The display name shown beside that address |
-| `FAILURE_LEARNING_DIGEST_RECIPIENT` | (empty) | The one address the daily failure-ledger digest goes to. Empty means no recipient has been chosen and the digest job does nothing at all - it creates no draft entries and sends no mail. One address for the whole deployment, so it sees every organization's digest and must be an operator address |
 
 !!! note "How the connection is encrypted"
 

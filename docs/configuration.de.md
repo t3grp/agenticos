@@ -444,7 +444,6 @@ angewiesen ist, hört still auf, ohne dass einer davon es ankündigt:
 | `SMTP_TLS_MODE` | `auto` | Wie die verschlüsselte Verbindung geöffnet wird. `auto` lässt den Port entscheiden; `implicit` öffnet TLS ab dem ersten Byte und `starttls` handelt das Upgrade aus, unabhängig vom Port. Wird bei `SMTP_TLS=false` ignoriert |
 | `EMAIL_FROM` | `noreply@agenticos.com` | Die `From`-Adresse jeder Nachricht |
 | `EMAIL_FROM_NAME` | `agenticos` | Der Anzeigename, der neben dieser Adresse steht |
-| `FAILURE_LEARNING_DIGEST_RECIPIENT` | (leer) | Die eine Adresse, an die die tägliche Zusammenfassung des Fehlerverzeichnisses geht. Leer bedeutet, dass kein Empfänger gewählt wurde und der Zusammenfassungsjob überhaupt nichts tut — er legt keine Entwurfseinträge an und schickt keine Mail. Eine Adresse für das ganze Deployment, also sieht sie die Zusammenfassung jeder Organisation und muss eine Operatoradresse sein |
 
 !!! note "Wie die Verbindung verschlüsselt wird"
 

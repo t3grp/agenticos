@@ -54,7 +54,6 @@ const BUILDER_STEPS = [
   "agent-limits",
   "agent-availability",
   "agent-history",
-  "agent-failure-learning",
   "agent-test",
   "agent-share",
   "agent-publish",
@@ -201,7 +200,6 @@ describe("visibleTourSteps", () => {
       "agent-limits",
       "agent-availability",
       "agent-history",
-      "agent-failure-learning",
       "agent-publish",
     ]) {
       expect(launch).toContain(id);
@@ -229,7 +227,6 @@ describe("visibleTourSteps", () => {
       "agent-limits",
       "agent-availability",
       "agent-history",
-      "agent-failure-learning",
       "kb-documents",
       "app-connections",
       "finish",

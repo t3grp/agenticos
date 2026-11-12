@@ -11,6 +11,7 @@ Writing cases and trying them needs `workflows:edit`, as testing the draft does:
 a case holds test data, and trying one runs the draft.
 """
 
+import json
 from typing import Any
 from uuid import UUID
 
@@ -24,19 +25,18 @@ from app.db.models.workflow_run import WorkflowRunMode, WorkflowRunStatus
 from app.repositories import workflow as workflow_repo
 from app.repositories import workflow_eval as eval_repo
 from app.repositories import workflow_run as workflow_run_repo
-from app.schemas.eval_judging import EvalExpectation
 from app.schemas.workflow_eval import (
     MAX_CASES,
     EvalCaseCreate,
     EvalCaseList,
     EvalCaseRead,
+    EvalExpectation,
     EvalResult,
     EvalRunRead,
 )
 from app.schemas.workflow_run import WorkflowStepTest
 from app.services import rate_limit
 from app.services.access import WORKFLOW, resolve_access
-from app.services.eval_judging import judge
 from app.services.workflow_execution.facade import WorkflowExecutionService, node_run_read
 from app.workflows.graph.model import WorkflowGraph
 
@@ -53,6 +53,39 @@ MODEL_STEPS = frozenset(
     }
 )
 """The steps whose answer a model writes - the ones evals are for."""
+
+_SHOWN = 500
+"""How much of an answer a result shows: enough to see what it said."""
+
+
+def _at(output: dict[str, Any], field: str | None) -> Any:
+    """The value at a dotted path into a step's output, or `None` past its end."""
+    if field is None:
+        return output
+    value: Any = output
+    for part in field.split("."):
+        if not isinstance(value, dict) or part not in value:
+            return None
+        value = value[part]
+    return value
+
+
+def _as_text(value: Any) -> str:
+    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+
+
+def judge(expectation: EvalExpectation, output: dict[str, Any]) -> tuple[bool, str]:
+    """Whether `output` says what `expectation` asks, and what it said there."""
+    value = _at(output, expectation.field)
+    actual = "" if value is None else _as_text(value)
+    said, wanted = actual.strip().casefold(), expectation.value.strip().casefold()
+    if expectation.kind == "equals":
+        passed = said == wanted
+    elif expectation.kind == "contains":
+        passed = wanted in said
+    else:
+        passed = wanted not in said
+    return passed, actual[:_SHOWN]
 
 
 class WorkflowEvalService:

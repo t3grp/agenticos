@@ -34,7 +34,6 @@ _COMPILED_EMAIL_KEYS = (
     "email_change_notice",
     "email_change_verification",
     "email_verification",
-    "failure_learning_digest",
     "impersonation_notice",
     "invitation",
     "low_credits",

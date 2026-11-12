@@ -1,7 +1,6 @@
 import { BackgroundIcon } from "@/components/icons/product-icons";
 import {
   Activity,
-  Bug,
   Building2,
   LayoutDashboard,
   MessagesSquare,
@@ -190,12 +189,6 @@ export const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     items: [
       { labelKey: "activity", href: ROUTES.RUNS, icon: Activity, permission: Perm.runsView },
-      {
-        labelKey: "failureLearning",
-        href: ROUTES.FAILURE_LEARNING,
-        icon: Bug,
-        permission: Perm.runsView,
-      },
       { labelKey: "backgroundWork", href: ROUTES.WORK, icon: BackgroundIcon },
     ],
   },

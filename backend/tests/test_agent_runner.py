@@ -101,7 +101,6 @@ from app.services.agent_runner import (
     _classify_output,
     _connect_on_use,
     _RunRendering,
-    _skills_with_content_overrides,
     _spend_already_booked,
     _start_turn_on_first_use,
     _with_account_notes,
@@ -268,24 +267,6 @@ def _parked_run(**overrides):
     return run
 
 
-class TestSkillContentOverrides:
-    def test_overrides_only_the_test_copy_of_the_selected_skill(self):
-        skill_id = uuid.uuid4()
-        skill = SimpleNamespace(
-            id=skill_id, name="Refunds", description="Rules", content="old", resources=[]
-        )
-        other = SimpleNamespace(
-            id=uuid.uuid4(), name="Other", description="", content="other", resources=[]
-        )
-
-        result = _skills_with_content_overrides([skill, other], {skill_id: "proposed"})
-
-        assert result[0].content == "proposed"
-        assert result[0] is not skill
-        assert skill.content == "old"
-        assert result[1] is other
-
-
 class TestMonthBoundary:
     def test_month_start_is_calendar_aligned(self):
         """A rolling window cannot be reconciled against an invoice."""
@@ -392,49 +373,6 @@ class TestPrepare:
         )
         assert refused.value.details == {"model_profile_id": str(override)}
         create_run.assert_not_awaited()
-
-    @pytest.mark.anyio
-    async def test_an_instructions_override_replaces_only_the_instructions(self):
-        """An eval try runs the published spec with one proposed text swapped in.
-
-        The overridden spec is frozen as the run's `test_spec` - no version
-        exists for text nobody published - so the run records no version id.
-        """
-        ctx = _ctx()
-        service = AgentRunnerService(_db())
-        agent = MagicMock(id=uuid.uuid4(), current_version_id=uuid.uuid4())
-        spec = AgentSpec(name="Support", model_profile_id=uuid.uuid4(), instructions="Old text.")
-        run = MagicMock(id=uuid.uuid4())
-
-        with (
-            patch.object(
-                service.registry,
-                "get_runnable_spec",
-                new=AsyncMock(return_value=(agent, spec, agent.current_version_id)),
-            ),
-            patch.object(
-                service.models, "resolve", new=AsyncMock(return_value=MagicMock(label="gpt-4.1"))
-            ),
-            patch.object(service.skills, "resolve_for_agent", new=AsyncMock(return_value=[])),
-            patch(
-                "app.services.agent_runner.agent_run_repo.create_run",
-                new=AsyncMock(return_value=run),
-            ) as create_run,
-            patch("app.services.agent_runner.build_agent", return_value=MagicMock()),
-        ):
-            prepared = await service.prepare(
-                ctx, agent.id, instructions_override="New text.", test=True
-            )
-
-        opened = create_run.call_args.kwargs
-        assert opened["agent_version_id"] is None
-        assert opened["is_test"] is True
-        frozen = opened["test_spec"]
-        assert frozen["instructions"] == "New text."
-        assert prepared.spec.instructions.startswith("New text.")
-        assert prepared.spec.model_dump(exclude={"instructions"}) == spec.model_dump(
-            exclude={"instructions"}
-        )
 
     @pytest.mark.anyio
     async def test_the_same_id_on_a_custom_endpoint_is_not_refused(self):

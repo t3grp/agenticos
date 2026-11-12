@@ -1,5 +1,5 @@
 ---
-source_sha: "df94a18f6c76"
+source_sha: "1276ed684962"
 ---
 
 # Governance { #governance }
@@ -45,11 +45,6 @@ alerta, que no para nunca.
 
 Un trigger de evento añade un rechazo más en su borde: un webhook cuya firma no se
 verifica contra el secreto propio del trigger es un 403 que nunca llega al runner.
-
-Los fallos que registra la plataforma también alimentan el
-[bucle de aprendizaje de errores](failure-learning.md), que extrae los
-fallos repetidos a un registro y prueba una corrección contra el
-comportamiento anterior antes de aplicar nada.
 
 ## Entrega de rutinas { #routine-delivery }
 

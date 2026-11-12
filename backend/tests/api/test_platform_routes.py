@@ -320,7 +320,6 @@ CALLS: tuple[Call, ...] = (
     # named in the query - a role gate refused the Viewer whose one run grant is
     # exactly what lets them create the trigger there.
     Call("GET", "/runs", Perm.RUNS_VIEW),
-    Call("GET", "/failure-learning/patterns", Perm.RUNS_VIEW),
     Call(
         "GET",
         "/runs/export",
@@ -918,10 +917,6 @@ _PLATFORM_PREFIXES = (
     # Call minutes (#54). The call socket itself is `/ws/voice`, outside this
     # prefix, and an agent's readiness lives under `/agents`.
     "/voice",
-    # The failure-learning loop's org-wide patterns list, gated on
-    # `runs:view` like `GET /runs`. (Its per-agent routes live under
-    # `/agents`.)
-    "/failure-learning",
 )
 
 
@@ -1052,10 +1047,6 @@ RESOURCE_AWARE_SERVICES = (
     # A step's evals are its workflow's: writing and trying them is
     # `workflows:edit` on that workflow, resolved against its grants.
     deps.get_workflow_eval_service,
-    # The failure-learning loop's per-agent routes are its agent's: reading
-    # and curating are `agents:view`/`agents:edit` on that agent, resolved
-    # against its grants - the same shape as a step's evals are its workflow's.
-    deps.get_failure_learning_service,
     # Exporting a workflow reads it through the same registry, so the file is
     # `workflows:view` on that workflow, resolved against its grants (#1953).
     deps.get_workflow_portable_service,

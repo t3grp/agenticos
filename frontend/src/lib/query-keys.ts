@@ -464,30 +464,6 @@ export const qk = {
   },
   // The organization's AI Architect: its agent, status and settings (#2063).
   assistant: (orgId: string) => ["assistant", orgId] as const,
-  // The failure-learning loop: mined patterns, the ledger, eval cases, tries
-  // and proposals. Org patterns live under their own prefix - the per-agent
-  // lists are under the agent, so invalidating one agent never refetches
-  // another's ledger.
-  failureLearning: {
-    orgPatterns: () => ["failure-learning", "patterns"] as const,
-    agentPatterns: (agentId: string) =>
-      ["failure-learning", "agents", agentId, "patterns"] as const,
-    ledger: (agentId: string, status?: string) =>
-      status === undefined
-        ? (["failure-learning", "agents", agentId, "ledger"] as const)
-        : (["failure-learning", "agents", agentId, "ledger", status] as const),
-    ledgerEntry: (agentId: string, entryId: string) =>
-      ["failure-learning", "agents", agentId, "ledger", entryId] as const,
-    cases: (agentId: string) => ["failure-learning", "agents", agentId, "cases"] as const,
-    proposals: (agentId: string, status?: string) =>
-      status === undefined
-        ? (["failure-learning", "agents", agentId, "proposals"] as const)
-        : (["failure-learning", "agents", agentId, "proposals", status] as const),
-    proposal: (agentId: string, proposalId: string) =>
-      ["failure-learning", "agents", agentId, "proposals", proposalId] as const,
-    try: (agentId: string, tryId: string) =>
-      ["failure-learning", "agents", agentId, "tries", tryId] as const,
-  },
   apiKeys: {
     /** Every key query in one organization, for invalidating after a create or revoke. */
     all: (orgId: string) => ["api-keys", orgId] as const,

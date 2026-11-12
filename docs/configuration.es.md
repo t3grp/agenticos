@@ -439,7 +439,6 @@ detienen en silencio, sin que ninguno se anuncie:
 | `SMTP_TLS_MODE` | `auto` | Cómo se abre la conexión cifrada. `auto` deja elegir al puerto; `implicit` abre TLS desde el primer byte y `starttls` negocia la mejora, sea cual sea el puerto. Se ignora con `SMTP_TLS=false` |
 | `EMAIL_FROM` | `noreply@agenticos.com` | La dirección `From` de cada mensaje |
 | `EMAIL_FROM_NAME` | `agenticos` | El nombre visible que se muestra junto a esa dirección |
-| `FAILURE_LEARNING_DIGEST_RECIPIENT` | (vacía) | La única dirección a la que va el resumen diario del registro de errores. Vacía significa que no se ha elegido destinatario y el trabajo de resumen no hace nada en absoluto — no crea entradas en borrador ni envía correo. Una sola dirección para todo el despliegue, así que ve el resumen de cada organización y debe ser una dirección de operador |
 
 !!! note "Cómo se cifra la conexión"
 
