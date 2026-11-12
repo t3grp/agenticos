@@ -1719,6 +1719,12 @@
       "askingDelegateStop": "Asking a delegate to stop",
       "availableContext": "Available Context",
       "availableSteps": "Available Steps",
+      "babysitPrCheck": "Babysit PR Check",
+      "babysitPrRateLimit": "Babysit PR Rate Limit",
+      "babysitPrStop": "Stop Babysit PR",
+      "checkingBabysitPr": "Checking the pull request",
+      "checkingBabysitRateLimit": "Checking the rate limit",
+      "stoppingBabysitPr": "Stopping the PR watch",
       "browseWeb": "Browse the Web",
       "browsingWeb": "Browsing the web",
       "cancelTask": "Cancel Task",
@@ -11733,6 +11739,14 @@
       "needs": "A workspace with a shell, such as the Sandbox capability or a folder on your computer.",
       "never": "Never keeps a command running after the turn ends: every watch stops with the run."
     },
+    "babysit_pr": {
+      "name": "Babysit PR",
+      "does": "Watches a pull request through CI and review bots, reporting only what changed, and stops when the bots are green on the latest commit.",
+      "example1": "Is this pull request green yet?",
+      "example2": "Watch this PR and tell me when the checks pass",
+      "needs": "A way to read the PR's checks, such as the monitor capability running `gh pr checks`.",
+      "never": "Never merges, comments, or takes any other action on the PR: watching and reporting only."
+    },
     "background_tasks": {
       "name": "Background topics",
       "does": "Starts independent work in a fresh topic while you keep talking; returns its result to the original agent.",
@@ -12438,6 +12452,16 @@
       "allow_attachments": {
         "title": "Allow file attachments",
         "description": "Whether this agent may send files it already uploaded along with its messages. Off means text only; files already attached stay readable."
+      }
+    },
+    "babysit_pr": {
+      "poll_interval_seconds": {
+        "title": "Poll interval",
+        "description": "Seconds between checks of the pull request. At least 60, so the watcher never polls in a tight loop and never burns the shared GitHub rate limit."
+      },
+      "max_watch_minutes": {
+        "title": "Watch at most",
+        "description": "Minutes one watch may run before it stops and reports blocked. A watch that runs past this without green has not been approved — it has expired."
       }
     }
   },
