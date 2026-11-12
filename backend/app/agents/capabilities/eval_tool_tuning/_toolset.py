@@ -23,6 +23,12 @@ class _ToolCallInput(BaseModel):
     tool: str
     arguments: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
+    error_type: str | None = Field(
+        default=None,
+        description=(
+            "Exception class for the failure; argument or validation types classify as bad_arguments."
+        ),
+    )
 
 
 class _JudgedCaseInput(BaseModel):
@@ -60,7 +66,10 @@ def build_eval_tool_tuning_toolset(
         behaved on them and what should change about it. Pass the tool and
         every judged case: each case with what its answer was supposed to
         say, whether the judge said it passed, what the answer said, and
-        every tool call the case's run made. One call is one tuning run: it
+        every tool call the case's run made. For failed calls, include the
+        exception class in `error_type`; argument and validation errors are
+        `bad_arguments`, while other or missing error types are `tool_error`.
+        One call is one tuning run: it
         scores the tool, classifies each failure, drafts one proposal per
         failure class, and records the run on the manifest.
 
@@ -100,6 +109,7 @@ def build_eval_tool_tuning_toolset(
                             tool=call.tool,
                             arguments=call.arguments,
                             error=call.error,
+                            error_type=call.error_type,
                         )
                         for call in case.tool_calls
                     ),

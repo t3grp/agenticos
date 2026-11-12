@@ -44,8 +44,10 @@ def _case(name="case", *, passed=False, calls=(), kind="contains", value="total"
     )
 
 
-def _call(tool, *, error=None):
-    return ToolCallObservation(tool=tool, arguments={"q": "x"}, error=error)
+def _call(tool, *, error=None, error_type=None):
+    return ToolCallObservation(
+        tool=tool, arguments={"q": "x"}, error=error, error_type=error_type
+    )
 
 
 class TestEvalToolTuningScoring:
@@ -65,10 +67,21 @@ class TestEvalToolTuningScoring:
         assert scored.other_tools == ("browse", "fetch")
         assert "browse" in scored.detail
 
-    def test_tool_called_and_erroring_is_bad_arguments(self):
-        scored = classify("search", _case(calls=[_call("search", error="400 bad query")]))
+    def test_validation_error_is_bad_arguments(self):
+        scored = classify(
+            "search",
+            _case(calls=[_call("search", error="400 bad query", error_type="ValidationError")]),
+        )
         assert scored.classification == "bad_arguments"
         assert "400 bad query" in scored.detail
+
+    def test_non_validation_error_has_its_own_classification(self):
+        scored = classify(
+            "search",
+            _case(calls=[_call("search", error="upstream timed out", error_type="TimeoutError")]),
+        )
+        assert scored.classification == "tool_error"
+        assert "TimeoutError" in scored.detail
 
     def test_tool_clean_but_answer_missing_is_wrong_answer(self):
         scored = classify("search", _case(calls=[_call("search")], value="total"))

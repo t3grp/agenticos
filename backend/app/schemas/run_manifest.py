@@ -180,14 +180,16 @@ class ManifestEvalToolTuningCase(BaseSchema):
     Attributes:
         name: The case, as its author named it.
         classification: `passed`, `not_called`, `wrong_tool`,
-            `bad_arguments`, or `wrong_answer`.
+            `bad_arguments`, `tool_error`, or `wrong_answer`.
         passed: Whether the judge said the answer met the expectation.
         shown: What the answer said at the expectation's field, clipped.
         detail: Why the case scored as it did, in one sentence.
     """
 
     name: str
-    classification: Literal["passed", "not_called", "wrong_tool", "bad_arguments", "wrong_answer"]
+    classification: Literal[
+        "passed", "not_called", "wrong_tool", "bad_arguments", "tool_error", "wrong_answer"
+    ]
     passed: bool = False
     shown: str = ""
     detail: str = ""

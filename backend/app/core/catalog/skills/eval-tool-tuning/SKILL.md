@@ -28,11 +28,12 @@ call is one tuning run: it scores the tool, classifies each failure, drafts
 one proposal per failure class, and records the run on the manifest. At
 most 3 tuning runs per run.
 
-The four failure classes, and what each one means:
+The five failure classes, and what each one means:
 
 - `not_called` - no tool ran on the case. The tool was never reached.
 - `wrong_tool` - another tool was picked instead.
-- `bad_arguments` - the tool was called and errored.
+- `bad_arguments` - the tool failed with an argument or validation error.
+- `tool_error` - the tool failed for another reason, or the error type was not recorded.
 - `wrong_answer` - the tool ran cleanly, but the answer still missed what
   the expectation asked for.
 
