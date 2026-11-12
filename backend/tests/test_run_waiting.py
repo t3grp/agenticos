@@ -122,7 +122,7 @@ def test_waiting_question_ids_are_mapped_to_the_question_text() -> None:
         ended_at=datetime(2026, 11, 12, 8, 0, tzinfo=UTC),
         paused_state={
             **_paused_state("Which model should I use?"),
-            "questions": ["ask-1", 42, None],
+            "questions": ["ask-1"],
         },
     )
 

@@ -1921,8 +1921,20 @@ def parked_question_items(paused_state: dict[str, Any] | None) -> list[ParkedQue
     payload = dict(paused_state)
     payload.setdefault("tool_call_ids", {})
     question_ids = payload.get("questions", [])
-    if isinstance(question_ids, list):
-        payload["questions"] = [value for value in question_ids if isinstance(value, str)]
+    if not isinstance(question_ids, list):
+        logger.warning(
+            "run_paused_questions_malformed",
+            extra={"value_type": type(question_ids).__name__},
+        )
+        payload["questions"] = []
+    else:
+        valid_question_ids = [value for value in question_ids if isinstance(value, str)]
+        if len(valid_question_ids) != len(question_ids):
+            logger.warning(
+                "run_paused_questions_malformed",
+                extra={"invalid_count": len(question_ids) - len(valid_question_ids)},
+            )
+        payload["questions"] = valid_question_ids
     state = PausedRunState.model_validate(payload)
     if state.question_results:
         return []

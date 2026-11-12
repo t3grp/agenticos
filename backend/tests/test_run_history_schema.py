@@ -101,6 +101,8 @@ def test_a_run_read_declares_its_waiting_fields() -> None:
 
     assert read.waiting_questions == []
     assert read.waiting_expires_at is None
+
+
 def test_a_run_served_by_a_fallback_reports_which_model_answered() -> None:
     """The fallback is visible to the client, which is the whole point of
     recording it: without the schema declaring it, the column exists, the row
