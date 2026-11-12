@@ -85,6 +85,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   delete window.__AGENTICOS_SHELL__;
+  vi.unstubAllGlobals();
   vi.useRealTimers();
   // `clearAllMocks` in beforeEach clears calls but does not undo a `spyOn`;
   // without this, a test that spies on `window.location` freezes it for
@@ -231,6 +232,26 @@ describe("checking the session without a network (#2097)", () => {
 });
 
 describe("signing in", () => {
+  it("opens the desktop callback returned by MFA verification", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    vi.mocked(apiClient.get).mockRejectedValue(new ApiError(401, "Unauthenticated"));
+    vi.mocked(apiClient.post).mockResolvedValue({
+      desktop_callback_url: "agenticos://auth/callback?code=single-use&desktop_nonce=nonce",
+    });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(async () => {
+      await result.current.verifyMfa("challenge", "123456");
+    });
+
+    expect(assign).toHaveBeenCalledWith(
+      "agenticos://auth/callback?code=single-use&desktop_nonce=nonce",
+    );
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("starts the session on an empty cache", async () => {
     // The query cache holds whoever was here last: their conversations, their
     // agents, the device names and IP addresses on their profile. A session

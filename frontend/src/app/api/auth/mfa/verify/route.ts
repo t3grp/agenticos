@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       "/api/v1/auth/mfa/verify",
       {
         method: "POST",
+        redirect: "manual",
         headers: { ...forwardedFor(request) },
         body: JSON.stringify({ mfa_token: body.mfa_token, code: body.code }),
       },
@@ -63,11 +64,34 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof BackendApiError) {
+      const desktopCallback = desktopCallbackFrom(error);
+      if (desktopCallback) return bffJson({ desktop_callback_url: desktopCallback });
+      if (error.status >= 300 && error.status < 400) return bffRefusal("LOGIN_FAILED", 502);
       if (error.status === 429) return forwardRateLimit(error);
       const detail = (error.data as { detail?: string })?.detail;
       if (!detail) return bffRefusal("LOGIN_FAILED", error.status);
       return bffJson({ detail }, { status: error.status });
     }
     return bffRefusal("INTERNAL_SERVER_ERROR", 500);
+  }
+}
+
+function desktopCallbackFrom(error: BackendApiError): string | null {
+  if (error.status < 300 || error.status >= 400) return null;
+  const location = error.headers?.get("location");
+  if (!location) return null;
+  try {
+    const url = new URL(location);
+    if (
+      url.protocol !== "agenticos:" ||
+      url.hostname !== "auth" ||
+      url.pathname !== "/callback" ||
+      !url.searchParams.get("code") ||
+      !url.searchParams.has("desktop_nonce")
+    )
+      return null;
+    return url.href;
+  } catch {
+    return null;
   }
 }
