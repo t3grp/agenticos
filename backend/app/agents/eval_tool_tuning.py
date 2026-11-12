@@ -262,7 +262,7 @@ def _classify_tool_error(error: str | None, error_type: str | None) -> FailureCl
     ):
         return "transient"
     if re.search(
-        r"\b(?:400|argument(?:s)?[_ ]?error|bad[_ ]?arguments?|bad query|"
+        r"\b(?:argument(?:s)?[_ ]?error|bad[_ ]?arguments?|bad query|"
         r"invalid[_ ]?arguments?|invalid[_ ]?parameters?|"
         r"validation(?:error|[_ ]?error| failed)?)\b",
         normalized,

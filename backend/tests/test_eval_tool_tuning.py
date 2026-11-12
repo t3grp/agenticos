@@ -85,6 +85,7 @@ class TestEvalToolTuningScoring:
             ("HTTP 401 unauthorized", "HTTPError", "authorization"),
             ("HTTP 403 forbidden", "HTTPError", "authorization"),
             ("400 bad query", "ValidationError", "bad_arguments"),
+            ("HTTP 400 bad request", "HTTPError", "unknown"),
             ("unclassified service failure", "RuntimeError", "unknown"),
         ],
     )
