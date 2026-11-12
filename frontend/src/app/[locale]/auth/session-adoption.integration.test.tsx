@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,6 +68,7 @@ beforeEach(() => {
   useAuthStore.getState().logout();
   useConversationStore.getState().reset();
   window.sessionStorage.clear();
+  window.history.replaceState({}, "", "/auth/callback");
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
 
@@ -76,6 +77,21 @@ afterEach(() => {
 });
 
 describe("the OAuth callback", () => {
+  it("shows the MFA step from an OIDC challenge without exchanging tokens", async () => {
+    rememberReturnTo("/agents/a-1");
+    window.history.replaceState({}, "", "/auth/callback#mfa_token=challenge-from-oidc");
+    mountOver(<CallbackPage />);
+
+    expect(await screen.findByText("mfaPrompt")).toBeTruthy();
+    expect(screen.getByLabelText("mfaCode")).toBeTruthy();
+    expect(window.location.hash).toBe("");
+    expect(apiClient.post).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    // The callback consumed the deep link into the in-memory challenge for
+    // MfaCodeForm; it must not remain stale for the next sign-in.
+    expect(window.sessionStorage.getItem("oauthReturnTo")).toBeNull();
+  });
+
   it("takes an app-held proof and forwards it only in the exchange body", async () => {
     const verifier = "v".repeat(96);
     window.__AGENTICOS_SHELL__ = {

@@ -1,5 +1,5 @@
 ---
-source_sha: "0a37f530c461"
+source_sha: "960aa2ad5086"
 ---
 
 # Uprawnienia { #permissions }
@@ -135,6 +135,16 @@ więcej, niż jego wydający ma teraz.
     nowy endpoint dostaje ich zapytania od następnego runu. Klucz pozostaje
     chroniony. Ustawienie klucza profilu albo przeniesienie endpointu profilu,
     który ma klucz, wymaga `secrets:view` na tym kluczu ([Modele](models.md#changing-a-profiles-key-or-endpoint)).
+
+    Dołączenie sekretu do połączenia sandboxu albo testowanie usługi z jego
+    użyciem też wymaga `secrets:view` na tym sekrecie: połączenie wydaje klucz
+    w imieniu całej organizacji, więc wskazanie cudzego prywatnego klucza musi
+    zostać odrzucone już w momencie dołączenia. Sprawdzenie celowo *nie*
+    znajduje się w `resolve_for_bindings`: w czasie runu runner rozwija
+    powiązania opublikowanej specyfikacji dla każdego, kto może uruchomić
+    agenta, a sekrety specyfikacji zostały sprawdzone względem publikującego
+    przy publikacji. Vault otwiera się dla runu; bramką jest to, kto może
+    wskazać sekret w zapisie.
 
     `connections:manage` wypisuje też integracje synchronizacji organizacji:
     źródła wszystkich baz, z ich konfiguracją, sekretem w vault, którego każde
@@ -303,6 +313,12 @@ utratę. Osoba trzymająca kilka grantów na jednym wierszu — własny i grant�
 swoich grup — dostaje najwyższy z nich. Baza danych trzyma grant dla dokładnie
 jednego podmiotu, osoby albo grupy, a grupa z innej organizacji nie sięga tutaj
 do nikogo, nawet gdyby jakiś wiersz ją wskazywał.
+
+Udostępnienie może mieć datę wygaśnięcia: po niej grant nie daje nic, bez
+usuwania wiersza przez kogokolwiek - panel udostępniania nadal go pokazuje, więc
+właściciel może go odnowić albo unieważnić. Usunięcie członka unieważnia jego
+bezpośrednie granty razem z członkostwem, więc ponowne zaproszenie go nie budzi
+żadnego z nich.
 
 Tabela jest celowo generyczna — `resource_type` + `resource_id`, bez klucza obcego
 do celu — ponieważ agenci, kolekcje, skille, pliki kontekstu,

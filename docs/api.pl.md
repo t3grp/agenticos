@@ -1,5 +1,5 @@
 ---
-source_sha: "cc88ed3eb4e4"
+source_sha: "20738f21b704"
 ---
 
 # API HTTP { #the-http-api }
@@ -48,9 +48,13 @@ Klucz jest pokazywany **raz**, w odpowiedzi, która go tworzy. Przechowywany jes
 wyłącznie jego SHA-256 i nigdy nie trafia do linii logu, wpisu audytu ani treści
 błędu. Listy pokazują jego prefiks (`aos_1a2b3c4d`) — i tak samo wpis audytu
 nazywa klucz, który zadziałał: każdy wpis zapisany w trakcie żądania
-uwierzytelnionego kluczem niesie w szczegółach `via_api_key`. Klucz może mieć datę
-wygaśnięcia, a jego unieważnienie (`DELETE /api/v1/api-keys/{id}`) działa od
-następnego żądania.
+uwierzytelnionego kluczem niesie w szczegółach `via_api_key`. Klucz domyślnie
+wygasa po 90 dniach; można wybrać wcześniejszą datę, ale nie późniejszą niż za
+90 dni. Podczas rotacji starszego klucza późniejsza data wygaśnięcia nowego
+klucza zostaje ograniczona do 90 dni. Unieważnienie
+(`DELETE /api/v1/api-keys/{id}`) działa od następnego żądania.
+Jego rotacja (`POST /api/v1/api-keys/{id}/rotate`) wymienia jego sekret od razu:
+stary klucz przestaje działać, a odpowiedź zawiera nowy, raz.
 
 **Klucz nie jest osobą, która go wystawiła.** Run, który uruchamia, należy do
 wystawcy, jest liczony w jego budżecie i audycie, ale nie sięga do niczego
@@ -145,6 +149,34 @@ ustawione jest `AGENT_ID`, a na koniec unieważnia klucz.
 BASE=http://localhost:8000 EMAIL=you@example.com PASSWORD=... bash docs/examples/public-api.sh
 ```
 
+
+### Uwierzytelnianie dwuskładnikowe { #two-factor-authentication }
+
+Drugi krok przy logowaniu, z aplikacji uwierzytelniającej (TOTP, sześć cyfr
+co 30 sekund). Rejestracja odbywa się w konsoli, w **Ustawienia → Konto**:
+sekret jest pokazywany raz, dla aplikacji, a włączenie go zwraca dziesięć
+jednorazowych kodów odzyskiwania, również pokazywanych raz - drogę powrotną,
+gdy aplikacja uwierzytelniająca zostanie utracona. Wyłączenie go lub wymiana
+kodów odzyskiwania wymaga kodu z konta, więc sesja pozostawiona otwarta na
+wspólnym ekranie nie może pozbawić ochrony kolejnego logowania.
+
+Logowanie hasłem, przez katalog lub linkiem magic-link dla konta, które je
+ma włączone, zatrzymuje się na wyzwaniu zamiast sesji: odpowiedź zawiera
+`mfa_required`, `mfa_token` i `expires_in` (pięć minut), a ciasteczka nie są
+ustawiane. Klient kończy je w `POST /api/v1/auth/mfa/verify` tokenem i kodem,
+a odpowiedzią jest para tokenów - plus miejsce docelowe linku magic-link, gdy
+wyzwanie pochodzi od niego. Token wyzwania dowodzi kroku hasła i niczego
+więcej: nie może wywoływać API jako sesja, a zmiana hasła od jego wystawienia
+go unieważnia. Kod odzyskiwania również kończy krok i jest przy tym zużywany;
+zużycie jest audytowane, więc właściciel konta widzi, że kod został użyty.
+
+Sekret jest zapieczętowany w sejfie w zakresie własnego konta, a przechowywane
+są tylko skróty kodów odzyskiwania - sam odczyt bazy danych nie daje żadnego
+z nich. Rejestracja dotyczy konta, nie wdrożenia: to, czy wdrożenie jej
+wymaga, jest decyzją operatora dotyczącą polityki, a nie tego mechanizmu.
+Logowanie przez zewnętrzny podmiot uwierzytelniający - dostawcę OAuth lub
+Kerberos - jest tam uwierzytelniane i opiera się na własnej polityce drugiego
+składnika tego dostawcy.
 
 ### Sesje i unieważnianie { #sessions-and-revocation }
 

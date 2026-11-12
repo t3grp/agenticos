@@ -1,5 +1,5 @@
 ---
-source_sha: "0a37f530c461"
+source_sha: "960aa2ad5086"
 ---
 
 # Berechtigungen { #permissions }
@@ -144,6 +144,17 @@ Teilmenge dieser Berechtigungen, nie mehr, als sein Aussteller jetzt hat.
     den Endpunkt eines Profils mit Schlüssel zu verschieben, braucht
     `secrets:view` auf diesem Schlüssel
     ([Modelle](models.md#changing-a-profiles-key-or-endpoint)).
+
+    Ein Secret an eine Sandbox-Verbindung anzuhängen oder einen Dienst damit zu
+    testen, braucht ebenfalls `secrets:view` auf diesem Secret: Die Verbindung
+    gibt den Schlüssel für die gesamte Organisation aus, also muss das Benennen
+    eines fremden privaten Schlüssels schon beim Anhängen abgelehnt werden. Die
+    Prüfung liegt bewusst *nicht* in `resolve_for_bindings`: Zur Laufzeit löst
+    der Runner die Bindungen einer veröffentlichten Spec für jeden auf, der den
+    Agent ausführen darf, und die Secrets der Spec wurden bei der
+    Veröffentlichung gegen den Veröffentlichenden geprüft. Der Vault öffnet sich
+    für einen Run; das Tor ist, wer das Secret in einem Schreibvorgang benennen
+    darf.
 
     `connections:manage` listet auch die Sync-Integrationen der Organisation
     auf: die Quellen jeder Base, mit ihrer Konfiguration, dem Vault-Secret, das
@@ -322,6 +333,12 @@ Zeile hält - ihren eigenen und die ihrer Gruppen -, bekommt den höchsten davon
 Die Datenbank hält einen Grant an genau ein Subjekt, eine Person oder eine
 Gruppe, und eine Gruppe aus einer anderen Organisation erreicht hier niemanden,
 selbst wenn eine Zeile eine benennen würde.
+
+Eine Freigabe kann ein Ablaufdatum tragen: Nach ihm gibt der Grant nichts mehr,
+ohne dass jemand die Zeile löscht - der Teilen-Dialog listet ihn weiterhin,
+sodass der Besitzer ihn erneuern oder widerrufen kann. Das Entfernen eines
+Mitglieds widerruft seine direkten Grants mit der Mitgliedschaft, sodass eine
+erneute Einladung keinen von ihnen wiederbelebt.
 
 Die Tabelle ist bewusst generisch - `resource_type` + `resource_id`, ohne
 Fremdschlüssel auf das Ziel -, weil Agents, Collections, Skills, Context-Dateien,

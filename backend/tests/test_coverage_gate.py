@@ -92,6 +92,10 @@ PLATFORM_MODULES = (
     "app/services/rag/remote_names.py",
     "app/services/rag/filters.py",
     "app/services/sharing.py",
+    # TOTP for console sign-in: the code, its service and its schemas.
+    "app/core/totp.py",
+    "app/services/mfa.py",
+    "app/schemas/mfa.py",
     "app/services/skills.py",
     "app/services/text_similarity.py",
     "app/repositories/agent_environment.py",

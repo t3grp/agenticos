@@ -1,5 +1,5 @@
 ---
-source_sha: "cc88ed3eb4e4"
+source_sha: "20738f21b704"
 ---
 
 # La API HTTP { #the-http-api }
@@ -51,8 +51,13 @@ SHA-256, y nunca aparece en una línea de log, una entrada de auditoría ni el
 cuerpo de un error. Las listas muestran su prefijo (`aos_1a2b3c4d`), que es
 también como una entrada de auditoría nombra la clave que actuó: cada entrada
 registrada durante una petición autenticada con clave lleva `via_api_key` en sus
-detalles. Una clave puede caducar, y revocarla (`DELETE /api/v1/api-keys/{id}`)
-surte efecto en su siguiente petición.
+detalles. De forma predeterminada, una clave caduca a los 90 días; se puede
+elegir una caducidad anterior, pero no una que supere los 90 días. Al rotar una
+clave antigua con una caducidad posterior, la nueva se limita a 90 días.
+Revocarla (`DELETE /api/v1/api-keys/{id}`) surte efecto
+en su siguiente petición. Rotarla (`POST /api/v1/api-keys/{id}/rotate`) sustituye
+su secreto de inmediato: la clave antigua deja de funcionar y la respuesta
+contiene la nueva, una sola vez.
 
 **Una clave no es la persona que la emitió.** Un run que inicia pertenece a quien
 la emitió, cuenta en su presupuesto y en su auditoría, pero no alcanza nada
@@ -152,6 +157,37 @@ run cuando `AGENT_ID` está definido, y revoca la clave al salir.
 BASE=http://localhost:8000 EMAIL=you@example.com PASSWORD=... bash docs/examples/public-api.sh
 ```
 
+
+### Autenticación en dos factores { #two-factor-authentication }
+
+Un segundo paso al iniciar sesión, desde una app autenticadora (TOTP, seis
+dígitos cada 30 segundos). Se configura en la consola, en
+**Ajustes → Cuenta**: el secreto se muestra una vez, para la app, y al
+activarlo se devuelven diez códigos de recuperación de un solo uso, también
+mostrados una vez - el camino de vuelta si se pierde la app autenticadora.
+Desactivarlo, o sustituir los códigos de recuperación, exige un código de la
+cuenta, así que una sesión dejada abierta en una pantalla compartida no puede
+quitar la protección del próximo inicio de sesión.
+
+Un inicio de sesión con contraseña, de directorio o con enlace mágico para
+una cuenta que lo tiene activado se detiene en un desafío en lugar de una
+sesión: la respuesta trae `mfa_required`, un `mfa_token` y `expires_in`
+(cinco minutos), y no se fijan cookies. El cliente lo completa en
+`POST /api/v1/auth/mfa/verify` con el token y el código, y la respuesta es el
+par de tokens - más el destino del enlace mágico, cuando el desafío vino de
+uno. El token de desafío prueba el paso de la contraseña y nada más: no puede
+llamar a la API como una sesión, y un cambio de contraseña desde que se emitió
+lo invalida. Un código de recuperación también completa el paso, y se gasta
+al hacerlo; el gasto queda auditado, así el titular de la cuenta puede ver
+que se usó un código.
+
+El secreto queda sellado en la bóveda bajo el ámbito propio de la cuenta, y
+de los códigos de recuperación solo se guardan resúmenes - una simple lectura
+de la base de datos no entrega ninguno. La configuración es por cuenta, no
+por despliegue: si el despliegue la exige es una decisión de política del
+operador, no de este mecanismo. El inicio de sesión a través de un
+autenticador externo - un proveedor OAuth, o Kerberos - se autentica allí, y
+depende de la propia política de segundo factor de ese proveedor.
 
 ### Sesiones y revocación { #sessions-and-revocation }
 

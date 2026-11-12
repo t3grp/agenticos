@@ -6,6 +6,7 @@ access" answerable after the fact.
 """
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -169,6 +170,50 @@ class TestShare:
         assert audit.call_args.kwargs["action"] == "resource.share"
 
     @pytest.mark.anyio
+    async def test_a_share_with_an_expiry_carries_it_to_the_row_and_the_trail(self):
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+        expires_at = datetime.now(UTC) + timedelta(days=30)
+
+        with (
+            patch("app.services.sharing.member_repo.get", new=AsyncMock(return_value=MagicMock())),
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()) as audit,
+        ):
+            await SharingService(_db()).share(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                subject_user_id=uuid.uuid4(),
+                level=GrantLevel.EDIT,
+                expires_at=expires_at,
+            )
+
+        assert upsert.call_args.kwargs["expires_at"] == expires_at
+        assert audit.call_args.kwargs["details"]["expires_at"] == expires_at.isoformat()
+
+    @pytest.mark.anyio
+    async def test_a_share_that_is_already_expired_is_refused(self):
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+
+        with (
+            patch("app.services.sharing.member_repo.get", new=AsyncMock(return_value=MagicMock())),
+            pytest.raises(BadRequestError),
+        ):
+            await SharingService(_db()).share(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                subject_user_id=uuid.uuid4(),
+                level=GrantLevel.EDIT,
+                expires_at=datetime.now(UTC) - timedelta(days=1),
+            )
+
+    @pytest.mark.anyio
     async def test_member_cannot_share_someone_elses_resource(self):
         ctx = _ctx(OrgRoleName.MEMBER)
         resource = _resource(ctx.organization_id, owner_user_id=uuid.uuid4())
@@ -226,6 +271,7 @@ class TestShareWithGroup:
             # Who is told is `test_group_leads_and_shares`'s, over a real database.
             patch.object(SharingService, "_tell_the_group", new=AsyncMock()),
         ):
+            before = datetime.now(UTC)
             await SharingService(_db()).share_with_group(
                 ctx,
                 resource,
@@ -237,10 +283,13 @@ class TestShareWithGroup:
         assert found.call_args.kwargs["organization_id"] == ctx.organization_id
         assert upsert.call_args.kwargs["subject_group_id"] == group.id
         assert upsert.call_args.kwargs["level"] is GrantLevel.USE
+        expires_at = upsert.call_args.kwargs["expires_at"]
+        assert timedelta(days=89) < expires_at - before < timedelta(days=91)
         assert audit.call_args.kwargs["action"] == "resource.share"
         assert audit.call_args.kwargs["details"] == {
             "subject_group_id": str(group.id),
             "level": "use",
+            "expires_at": expires_at.isoformat(),
         }
 
     @pytest.mark.anyio
