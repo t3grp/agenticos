@@ -83,6 +83,12 @@ def build_babysit_pr_toolset(
             poll_interval_seconds=poll_interval_seconds,
             max_watch_minutes=max_watch_minutes,
         )
+        if dropped and result["decision"] == "green":
+            result["decision"] = "needs_attention"
+            result["reason"] = (
+                f"{dropped} malformed check(s) were dropped; their state is unknown, "
+                "so this snapshot cannot be green"
+            )
         for event in result["events"]:
             recorder.babysit_pr_events.append(
                 {

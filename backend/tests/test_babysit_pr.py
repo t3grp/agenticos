@@ -522,6 +522,17 @@ class TestBabysitPrTool:
         assert result["dropped_checks"] == 1
         assert len(recorder.babysit_pr_events) == 1
 
+    async def test_dropped_check_prevents_green_decision(self):
+        toolset, _ = self._toolset()
+        result = json.loads(
+            await self._check(toolset)(
+                None, "owner/repo", 7, "abc", [_snapshot(), {"status": "completed"}]
+            )
+        )
+        assert result["dropped_checks"] == 1
+        assert result["decision"] == "needs_attention"
+        assert "state is unknown" in result["reason"]
+
     async def test_the_manifest_keeps_fifty_events(self):
         recorder = RunRecorder()
         recorder.babysit_pr_events = [{"check": f"old-{n}", "state": "passed"} for n in range(49)]
