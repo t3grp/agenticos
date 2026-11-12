@@ -734,6 +734,7 @@ def load_builtins() -> None:
         context,
         conversation_search,
         drafts,
+        eval_tool_tuning,
         follow_ups,
         guardrails,
         harness,

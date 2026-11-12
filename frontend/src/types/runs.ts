@@ -311,6 +311,8 @@ export interface RunManifest {
   code_runs?: ManifestCodeRun[];
   /** Each sol-loop review round, with its verdict and findings (#6). */
   sol_loop_rounds?: ManifestSolLoopRound[];
+  /** Each eval-driven tool-tuning run, with its score and draft proposals (#11). */
+  eval_tool_tuning_runs?: ManifestEvalToolTuningRun[];
   /** Whether the record was trimmed to fit its size ceiling. */
   truncated: boolean;
 }
@@ -337,6 +339,46 @@ export interface ManifestSolLoopRound {
   stop_reason: string | null;
   reason: string | null;
   satisfied: boolean;
+}
+
+/** One eval case scored for one tool in a tuning run. */
+export interface ManifestEvalToolTuningCase {
+  name: string;
+  classification:
+    | "passed"
+    | "not_called"
+    | "wrong_tool"
+    | "transient"
+    | "authorization"
+    | "bad_arguments"
+    | "unknown"
+    | "wrong_answer";
+  passed: boolean;
+  shown: string;
+  detail: string;
+}
+
+/** One tuning proposal a tuning run drafted - a draft, never applied. */
+export interface ManifestEvalToolTuningProposal {
+  kind: "prompt_wording" | "tool_parameters" | "tool_choice";
+  tool: string;
+  title: string;
+  current: string;
+  proposed: string;
+  rationale: string;
+  evidence: string[];
+  status: "draft";
+}
+
+/** One eval-driven tool-tuning run. */
+export interface ManifestEvalToolTuningRun {
+  tool: string;
+  total: number;
+  passed: number;
+  pass_rate: number;
+  dominant_failure: string | null;
+  cases: ManifestEvalToolTuningCase[];
+  proposals: ManifestEvalToolTuningProposal[];
 }
 
 /** One correction a run reviewer sent while the run went. */

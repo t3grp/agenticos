@@ -175,6 +175,67 @@ describe("what the model was told", () => {
     expect(screen.queryByText(/sol-loop round/)).toBeNull();
   });
 
+  it("shows each eval tool-tuning run, its cases, and its draft proposals (#11)", () => {
+    serve({
+      manifest: record({
+        eval_tool_tuning_runs: [
+          {
+            tool: "search",
+            total: 2,
+            passed: 1,
+            pass_rate: 0.5,
+            dominant_failure: "not_called",
+            cases: [
+              {
+                name: "total",
+                classification: "passed",
+                passed: true,
+                shown: "The total is 42.",
+                detail: "The answer met the expectation.",
+              },
+              {
+                name: "missing",
+                classification: "not_called",
+                passed: false,
+                shown: "No answer given.",
+                detail: "No tool was called, so search never ran.",
+              },
+            ],
+            proposals: [
+              {
+                kind: "tool_choice",
+                tool: "search",
+                title: "Route these requests to search",
+                current: "No routing rule names search for these requests.",
+                proposed:
+                  "Name search in the agent's instructions as the tool for requests like missing.",
+                rationale: "The tool was never called on these cases (1/2 cases passed).",
+                evidence: ["missing"],
+                status: "draft",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    renderManifest();
+
+    expect(screen.getByText("1 eval tool-tuning run")).toBeInTheDocument();
+    expect(screen.getByText("search · 1/2 passed")).toBeInTheDocument();
+    expect(screen.getByText("Most common failure: not_called")).toBeInTheDocument();
+    expect(screen.getByText("total · passed")).toBeInTheDocument();
+    expect(screen.getByText("missing · not_called")).toBeInTheDocument();
+    expect(screen.getByText("No tool was called, so search never ran.")).toBeInTheDocument();
+    expect(screen.getByText("[tool_choice] Route these requests to search")).toBeInTheDocument();
+    expect(screen.getByText("Evidence: missing · draft")).toBeInTheDocument();
+  });
+
+  it("shows no eval tool-tuning section for a run that scored no tool", () => {
+    serve({ manifest: record() });
+    renderManifest();
+    expect(screen.queryByText(/eval tool-tuning run/)).toBeNull();
+  });
+
   it("reads a round the reviewer never answered as unavailable, never as approval", () => {
     serve({
       manifest: record({
