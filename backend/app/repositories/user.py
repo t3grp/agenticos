@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.locks import LockScope, hold_name
@@ -39,7 +39,7 @@ async def get_by_id(db: AsyncSession, user_id: UUID) -> User | None:
 async def consume_totp_recovery_hash(db: AsyncSession, user_id: UUID, digest: str) -> list[str] | None:
     """Remove one recovery digest only if it is still present."""
     result = await db.execute(
-        update(User)
+        sa_update(User)
         .where(User.id == user_id, User.totp_recovery_hashes.contains([digest]))
         .values(totp_recovery_hashes=User.totp_recovery_hashes - digest)
         .returning(User.totp_recovery_hashes)
