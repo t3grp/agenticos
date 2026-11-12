@@ -173,7 +173,10 @@ def build_harness_toolset(
                 "Name the session in lower case letters, digits, `-` or `_`, up to 40 "
                 "characters, such as `main` or `api`.",
             )
-        stopped = await forget_session(ctx, session)
+        # Under the same lock as a prompt: a stop during an in-flight prompt waits for
+        # it, so remember_session cannot re-add the session after it is forgotten.
+        async with sandbox_tasks:
+            stopped = await forget_session(ctx, session)
         return json.dumps({"session": session, "stopped": stopped is not None, "harness": stopped})
 
     async def harness_sessions(ctx: RunContext[Any]) -> str:
