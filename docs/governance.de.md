@@ -1,5 +1,5 @@
 ---
-source_sha: "1276ed684962"
+source_sha: "df94a18f6c76"
 ---
 
 # Governance { #governance }
@@ -47,6 +47,11 @@ ein Alert, die niemals aufhören.
 Ein Event-Trigger fügt an seinem Rand eine weitere Ablehnung hinzu: ein Webhook,
 dessen Signatur sich nicht gegen das eigene Secret des Triggers verifizieren
 lässt, ist ein 403, der den Runner überhaupt nie erreicht.
+
+Die Fehler, die die Plattform aufzeichnet, speisen auch die
+[Lernschleife aus Fehlern](failure-learning.md), die sich wiederholende
+Fehler in ein Verzeichnis schürft und eine Korrektur am alten Verhalten
+prüft, bevor irgendetwas angewendet wird.
 
 ## Zustellung von Routinen { #routine-delivery }
 

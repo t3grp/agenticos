@@ -1163,6 +1163,16 @@ def get_workflow_eval_service(db: DBSession) -> WorkflowEvalService:
 
 WorkflowEvalSvc = Annotated[WorkflowEvalService, Depends(get_workflow_eval_service)]
 
+from app.services.failure_learning import FailureLearningService
+
+
+def get_failure_learning_service(db: DBSession) -> FailureLearningService:
+    """Create FailureLearningService instance with database session."""
+    return FailureLearningService(db)
+
+
+FailureLearningSvc = Annotated[FailureLearningService, Depends(get_failure_learning_service)]
+
 from app.services.workflow_log_alerts import WorkflowLogAlertService
 
 
@@ -1458,6 +1468,25 @@ async def limit_workflow_run(ctx: Auth) -> None:
         limit=rate_limit.run_limit(),
     )
     _refuse_if_over(decision, "Too many workflow runs in the last minute. Wait and try again.")
+
+
+async def limit_agent_eval_run(ctx: Auth) -> None:
+    """Refuse a caller starting more agent eval runs than its share.
+
+    The same allowance as `limit_agent_run`, counted on a surface of its own:
+    an eval try starts a test run of the agent per case, per side, per sample,
+    and each of those runs can spend the organization's budget.
+
+    Usage::
+
+        @router.post("", dependencies=[Depends(limit_agent_eval_run)])
+    """
+    decision = await rate_limit.consume(
+        surface="agent_eval_run",
+        caller=f"user:{ctx.subject_id}",
+        limit=rate_limit.run_limit(),
+    )
+    _refuse_if_over(decision, "Too many agent eval runs in the last minute. Wait and try again.")
 
 
 async def limit_ml_call(ctx: Auth) -> None:

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
+  Bug,
   SlidersHorizontal,
   Wrench,
   ShieldCheck,
@@ -94,6 +95,7 @@ import { EnvironmentsPanel } from "@/components/agents/environments-panel";
 import { TestPanel } from "@/components/agents/test-panel/test-panel";
 import { useTestShortcut } from "@/components/agents/test-panel/use-test-shortcut";
 import { VersionHistory } from "@/components/agents/version-history";
+import { FailureLearningTab } from "@/components/failure-learning/failure-learning-tab";
 import { ErrorState } from "@/components/states";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SharingPanel } from "@/components/sharing/sharing-panel";
@@ -218,7 +220,15 @@ function toolChoice(
 }
 
 /** The Builder's tabs, as `?tab=` names them; anything else is the first. */
-const BUILDER_TABS = new Set(["build", "toolbox", "mcp", "limits", "availability", "history"]);
+const BUILDER_TABS = new Set([
+  "build",
+  "toolbox",
+  "mcp",
+  "limits",
+  "availability",
+  "history",
+  "failure-learning",
+]);
 
 export default function AgentBuilderPage({ params }: PageProps) {
   const t = useTranslations("pages.agents");
@@ -1450,6 +1460,10 @@ export default function AgentBuilderPage({ params }: PageProps) {
               <History className="mr-1.5 size-4 shrink-0" aria-hidden />
               {t("history")}
             </TabsTrigger>
+            <TabsTrigger value="failure-learning" data-tour="agent-tab-failure-learning">
+              <Bug className="mr-1.5 size-4 shrink-0" aria-hidden />
+              {t("failureLearning")}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="build" className="mt-4 space-y-4">
@@ -1970,6 +1984,9 @@ export default function AgentBuilderPage({ params }: PageProps) {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="failure-learning" className="mt-4 space-y-4">
+            <FailureLearningTab agentId={id} />
           </TabsContent>
         </Tabs>
       </div>
