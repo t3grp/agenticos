@@ -93,6 +93,7 @@ w [Capabilities](capabilities.md).
 | Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skille | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagenci | `subagents` |
 | Przypomnienia instrukcji | `system_reminders` |
 | Zamiana tekstu na mowę | `text_to_speech` |

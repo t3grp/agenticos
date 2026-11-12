@@ -95,6 +95,7 @@ se describe en [Capabilities](capabilities.md).
 | Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |

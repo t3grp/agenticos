@@ -159,6 +159,10 @@ class RunRecorder:
     #: led to, so the watch is rendered from what the run actually
     #: heard rather than remembered.
     babysit_pr_events: list[dict[str, Any]] = field(default_factory=list)
+    #: Each sol-loop review round the run recorded (#6) - one entry per round,
+    #: with the verdict and every finding, so the ledger is rendered from what
+    #: the run actually heard rather than remembered.
+    sol_loop_rounds: list[dict[str, Any]] = field(default_factory=list)
 
     def observe_request(
         self,
@@ -406,6 +410,7 @@ def as_payload(recorder: RunRecorder) -> dict[str, Any]:
         "reviews": list(recorder.reviews),
         "code_runs": list(recorder.code_runs),
         "babysit_pr_events": list(recorder.babysit_pr_events),
+        "sol_loop_rounds": list(recorder.sol_loop_rounds),
     }
 
 
@@ -421,6 +426,10 @@ MAX_RECORDED_BABYSIT_PR_EVENTS = 50
 """How many babysit-pr watch events a run's manifest keeps, so it stays within
 its size ceiling. A watch that polls for four hours at five-minute gaps
 reports at most a few dozen changes; fifty is a watch's worth of news."""
+MAX_RECORDED_SOL_LOOP_ROUNDS = 10
+"""How many sol-loop review rounds a run's manifest keeps, so it stays within
+its size ceiling. A capability caps rounds per agent at five, so ten is two
+agents' worth of reviewing in one run."""
 
 
 def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -436,16 +445,19 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     earlier_reviews = previous.get("reviews") or []
     earlier_scripts = previous.get("code_runs") or []
     earlier_events = previous.get("babysit_pr_events") or []
-    if not earlier_reviews and not earlier_scripts and not earlier_events:
+    earlier_rounds = previous.get("sol_loop_rounds") or []
+    if not any((earlier_reviews, earlier_scripts, earlier_events, earlier_rounds)):
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
     events = [*earlier_events, *payload.get("babysit_pr_events", [])]
+    rounds = [*earlier_rounds, *payload.get("sol_loop_rounds", [])]
     return {
         **payload,
         "reviews": reviews[:MAX_RECORDED_REVIEWS],
         "code_runs": scripts[:RECORDED_SCRIPTS],
         "babysit_pr_events": events[:MAX_RECORDED_BABYSIT_PR_EVENTS],
+        "sol_loop_rounds": rounds[:MAX_RECORDED_SOL_LOOP_ROUNDS],
     }
 
 

@@ -94,6 +94,7 @@ Jede ist unter [Capabilities](capabilities.md) beschrieben.
 | Babysit PR | `babysit_pr` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
+| Sol-loop | `sol_loop` |
 | Subagents | `subagents` |
 | Erinnerung an Anweisungen | `system_reminders` |
 | Sprachausgabe | `text_to_speech` |

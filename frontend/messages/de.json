@@ -1804,6 +1804,7 @@
       "removeStep": "Schritt entfernen",
       "removingStep": "Entfernt einen Schritt",
       "result": "Ergebnis",
+      "reviewingWithSolLoop": "Prüft mit Sol-loop",
       "runPython": "Python ausführen",
       "running": "Läuft …",
       "runningCalculations": "Rechnet",
@@ -1819,6 +1820,7 @@
       "showFormatted": "Die formatierte Ansicht zeigen",
       "showRaw": "Argumente und Rohausgabe zeigen",
       "skillResource": "Skill-Ressource",
+      "solLoopReview": "Sol-loop-Prüfung",
       "sourceCount": "{count, plural, =1 {1 Quelle} other {# Quellen}}",
       "steeringDelegate": "Steuert einen Delegaten",
       "stopTask": "Aufgabe stoppen",
@@ -6415,6 +6417,12 @@
       "codeRuns": "{count, plural, =1 {1 Skript} other {# Skripte}}",
       "codeRunCalls": "{count, plural, =0 {Es hat kein Tool aufgerufen} =1 {Es hat 1 Tool aufgerufen} other {Es hat # Tools aufgerufen}}",
       "codeRunOmittedCalls": "{count, plural, =1 {und 1 weiterer Aufruf, nicht aufgeführt} other {und # weitere Aufrufe, nicht aufgeführt}}",
+      "solLoopRounds": "{count, plural, =1 {1 Sol-loop-Runde} other {# Sol-loop-Runden}}",
+      "solLoopRound": "Runde {round} · {scope} · {verdict}",
+      "solLoopStopReason": "Gestoppt: {reason}",
+      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFix": "Fix: {fix}",
+      "solLoopOutcome": "Ergebnis: {outcome}",
       "cacheBust": "Cache gebrochen",
       "cacheExpired": "Cache abgelaufen",
       "cacheBustDetail": "{missed, number} gecachte Tokens nicht aus dem Cache gelesen - davor im Prompt hat sich etwas geändert",
@@ -11392,6 +11400,14 @@
       "needs": "Skills, unter Skills geschrieben und in diesem Bereich ausgewählt.",
       "never": "Ändert nie einen Skill; der Agent liest ihn nur."
     },
+    "sol_loop": {
+      "name": "Sol-loop",
+      "does": "Lässt einen Prüfer die Arbeit in Runden beurteilen, bis sie besteht: Runde 1 prüft die ganze Änderung, spätere Runden nur den geänderten Code und die offenen Befunde.",
+      "example1": "Ist dieser Pull Request bereit zum Zusammenführen?",
+      "example2": "Prüfe diesen Entwurf, bevor er rausgeht",
+      "needs": "Ein Modellprofil für den Prüfer, ausgerichtet auf ein Sol-Modell.",
+      "never": "Ersetzt nie einen fehlenden Prüfer und erfindet nie ein Urteil: Ein Prüfer, der nicht erreichbar ist, wird als nicht verfügbar gemeldet, und ein Budgetende ist keine Freigabe."
+    },
     "subagents": {
       "name": "Subagents",
       "does": "Der Agent gibt einen Teil der Arbeit an einen anderen Agenten ab und nutzt dessen Antwort.",
@@ -11860,6 +11876,16 @@
       "include_execute": {
         "title": "Shell-Befehle erlauben",
         "description": "Ob der Agent Shell-Befehle ausführen darf. Ausschalten lässt die Datei-Tools bestehen und entfernt die Shell vollständig, statt sie zu sperren."
+      }
+    },
+    "sol_loop": {
+      "reviewer": {
+        "title": "Prüfer",
+        "description": "Der eine Prüfer, der die Arbeit beurteilt, auf seinem Sol-Modell."
+      },
+      "max_rounds": {
+        "title": "Runden höchstens",
+        "description": "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten. Nur auf 5 ausweiten bei Sicherheit, Berechtigungen, Auth, Datenverlust oder Zustand und Nebenläufigkeit, solange ein Blocker oder Should offen ist - oder wenn der Nutzer darum bittet."
       }
     },
     "subagents": {
