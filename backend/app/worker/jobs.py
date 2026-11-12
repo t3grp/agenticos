@@ -158,6 +158,11 @@ class FireTrigger(Payload):
     source_policy_id: UUID | None = None
     activation_id: UUID | None = None
     event_context: str | None = None
+    event_payload: dict[str, JsonValue] | None = None
+    """The full event payload beside the rendered `event_context` (#14): a
+    GitHub delivery's `GithubTriggerOutput`-shaped dict, or `None` for a
+    scheduled fire and any event whose source sends none. Untrusted external
+    content, fenced again where the run reads it."""
     claimed_at: datetime | None = None
     """The `fire_in_flight_since` the scheduled claim stamped - its claim ticket."""
 

@@ -1,5 +1,5 @@
 ---
-source_sha: "2df43efb8afc"
+source_sha: "271f866901a1"
 ---
 
 # Einen Event-Trigger einrichten { #setting-up-an-event-trigger }
@@ -66,11 +66,19 @@ hat. **If the previous run is still going** im Formular des Zeitplans,
 Ein Event-Trigger hat keine solche Einstellung: Jede Zustellung ist ein eigenes
 Auslösen.
 
+**In welcher Unterhaltung ein Lauf stattfindet.** `conversation_mode` in der API
+entscheidet es: `continue`, der Standard, hängt jeden Lauf an das eine
+Ausführungsprotokoll des Triggers an, sodass der Runs-Tab sie alle aufführt;
+`fresh` öffnet pro Auslösung eine neue Unterhaltung, sodass ein Lauf nie die Turns
+der vorherigen Läufe liest — und der Runs-Tab keine eine Unterhaltung zum
+Aufführen hat. Ein `fresh`-Trigger öffnet beim Anlegen kein Ausführungsprotokoll,
+sodass es bis zum ersten Auslösen keinen Eintrag in der Seitenleiste gibt.
+
 Alles Weitere unten gilt dem Event-Fall.
 
 ## Wohin die Antwort geht und wann eine Routine endet { #answers-and-ends }
 
-Jeder Lauf wird im Ausführungsprotokoll des Triggers festgehalten. `answer_to` sagt, wohin die Antwort
+Jeder Lauf wird in der Unterhaltung festgehalten, in der er läuft — dem Ausführungsprotokoll des Triggers, es sei denn, der Trigger öffnet pro Auslösung eine frische Unterhaltung. `answer_to` sagt, wohin die Antwort
 zusätzlich an die Person geht, die ihn angelegt hat (#2575): `primary`, der Standard, ist ihre eigene
 Unterhaltung mit dem Agenten, sodass alles, was er ihr sagt, an einem Ort steht; `conversation` ist einer
 ihrer anderen Chats (`delivery_conversation_id`), für eine in diesem Chat angelegte Routine; `run_log`
@@ -210,6 +218,14 @@ Prompt, danach das Ereignis in einem `<event_content>`-Block, der dem Modell sag
 es als Daten zu lesen. Ein Issue, eine E-Mail oder ein Dateiname stammt von dem,
 der sie geschickt hat, und ein Satz darin, der wie ein Befehl klingt, ist trotzdem
 Teil des Ereignisses.
+
+Eine GitHub-Zustellung erreicht den Run außerdem als ein strukturierter Teil: die
+ganze Zustellung als JSON, in derselben Form, in der der Workflow-GitHub-Trigger
+sie einem Run übergibt, in einem `<event_payload>`-Block neben dem gerenderten
+Text. Es ist derselbe nicht vertrauenswürdige Inhalt — der Run liest ihn als
+Information, mit der er arbeitet, nie als Anweisung — und er wird aus der
+Wartezeile geschwärzt, sobald der Lauf sich legt, sodass eine beendete Wartezeile
+weder die Payload noch den gerenderten Kontext behält.
 
 ## Das Secret rotieren und den Filter bearbeiten { #rotating-the-secret-and-editing-the-filter }
 
