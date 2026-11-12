@@ -438,6 +438,10 @@ class Settings(BaseSettings):
     # How long an agent's unanswered `ask_user` question keeps its run parked
     # before the run is ended with the question expired (#2064).
     QUESTION_EXPIRY_HOURS: int = 24
+    # How long after a question parks before the hourly sweep reminds the chat
+    # once that an answer is still needed. Half the expiry window: early
+    # enough to act on, late enough not to nag a person who just stepped away.
+    QUESTION_NUDGE_HOURS: int = 12
     # How long a chat turn goes on after the person who asked it has left - a
     # closed tab, a quit app, a dropped connection - before it is stopped (#2108).
     # The answer lands in the conversation and they are notified, so this bounds
