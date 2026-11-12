@@ -58,6 +58,7 @@ from app.agents.capabilities.budget import (
     SpendLedger,
     SpendLimit,
 )
+from app.agents.capabilities.burst import BURST_RECORDER_RESOURCE
 from app.agents.capabilities.compaction import (
     CONTEXT_GAUGE_RESOURCE,
     MODEL_CONTEXT_WINDOW_RESOURCE,
@@ -405,8 +406,9 @@ def build_agent(
     # Wrapped, so what the provider is handed is written down as it is handed
     # over. Reconstructing the prompt and the tool schemas from the spec
     # afterwards would be a second implementation of everything above this line.
-    # The run reviewer, code mode, sol-loop, `CacheWatch` and babysit-pr write
-    # onto it, and babysit-pr reads it through the resources below.
+    # Made before the capabilities, because a run reviewer, code mode, sol-loop,
+    # the burst, `CacheWatch` and babysit-pr write onto it, and babysit-pr reads
+    # it through the resources below.
     recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
@@ -447,6 +449,9 @@ def build_agent(
             # Where eval-driven tool-tuning runs are recorded - the run's
             # recorder, read by the capability.
             EVAL_TOOL_TUNING_RECORDER_RESOURCE: recorder,
+            # Where its bursts are recorded - the run's recorder, read by the
+            # capability.
+            BURST_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
@@ -534,9 +539,6 @@ def build_agent(
     # a side-effecting capability to a spec is the only thing that has to be
     # right for approval to apply.
     repairs = RepairTally()
-    # Wrapped, so what the provider is handed is written down as it is handed
-    # over. Reconstructing the prompt and the tool schemas from the spec
-    # afterwards would be a second implementation of everything above this line.
     asking = frozenset(
         name
         for name, kind in (

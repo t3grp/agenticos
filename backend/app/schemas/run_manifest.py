@@ -249,6 +249,42 @@ class ManifestEvalToolTuningRun(BaseSchema):
     proposals: list[ManifestEvalToolTuningProposal] = Field(default_factory=list)
 
 
+class ManifestBurstSubtask(BaseSchema):
+    """One subtask's outcome in a burst (#10).
+
+    Attributes:
+        id: The subtask's stable id in the burst, e.g. `B1`.
+        title: The part's title, e.g. `Part 1`.
+        status: `completed`, or `failed` when the worker raised or returned
+            nothing usable.
+        result: The part's result, empty when it failed.
+        reason: Why the part failed, or `None` when it completed.
+    """
+
+    id: str
+    title: str
+    status: Literal["completed", "failed"]
+    result: str = ""
+    reason: str | None = None
+
+
+class ManifestBurstRun(BaseSchema):
+    """One burst (#10).
+
+    Attributes:
+        burst: Which burst this was, from 1.
+        task: The whole task the burst split.
+        merged: The parts' results merged into one outcome, with failed parts
+            named under a `FAILED` heading.
+        results: Every part's outcome, in subtask order.
+    """
+
+    burst: int
+    task: str = ""
+    merged: str = ""
+    results: list[ManifestBurstSubtask] = Field(default_factory=list)
+
+
 class RunManifestRead(BaseSchema):
     """The whole record, as `GET /runs/{run_id}/manifest` answers it.
 
@@ -289,4 +325,5 @@ class RunManifestRead(BaseSchema):
     code_runs: list[ManifestCodeRun] = Field(default_factory=list)
     sol_loop_rounds: list[ManifestSolLoopRound] = Field(default_factory=list)
     eval_tool_tuning_runs: list[ManifestEvalToolTuningRun] = Field(default_factory=list)
+    burst_runs: list[ManifestBurstRun] = Field(default_factory=list)
     truncated: bool = False

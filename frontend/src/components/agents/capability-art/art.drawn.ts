@@ -20,6 +20,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   harness: 90,
   sol_loop: 120,
   eval_tool_tuning: 150,
+  burst: 150,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -353,7 +354,6 @@ const BABYSIT_PR =
   '<g class="bob"><circle class="inr" cx="160" cy="52" r="9"/><path class="igrid2" d="M156 52l3 3 5-6"/></g>' +
   '<circle class="ict" cx="120" cy="30" r="9"/><path class="igrid2" d="M116 30l3 3 5-6"/>' +
   "</svg>";
-
 /**
  * Sol-loop: one reviewer judges the same work, round after round - a verdict
  * over the ledger, with the findings listed under it until none are open.
@@ -380,7 +380,6 @@ const SOL_LOOP =
   '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
   '<text x="0" y="2.4" class="tx mono s7 mid b" >APPROVE</text></g></g>' +
   "</svg>";
-
 /**
  * Eval tool tuning: one tool scored against a row of eval cases - a pass
  * tick, a miss, and the draft proposal written under the score.
@@ -401,7 +400,32 @@ const EVAL_TOOL_TUNING =
   '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
   '<text x="0" y="2.4" class="tx mono s7 mid b" >DRAFT</text></g></g>' +
   "</svg>";
-
+/**
+ * Burst: one task splits into three parallel lanes, each doing its part,
+ * and the lanes merge back into one outcome.
+ */
+const BURST =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/></g>' +
+  '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
+  '<g class="breathe"><rect x="96" y="14" width="48" height="14" rx="7" class="ac" />' +
+  '<text x="120" y="23.5" class="tx s7 mid b">one task</text></g>' +
+  '<path class="igrid" d="M120 28L84 48M120 28L120 46M120 28L156 48"/>' +
+  '<g class="bob"><rect x="52" y="48" width="52" height="20" rx="4" class="inl" />' +
+  '<text x="78" y="61" class="tx s7 mid b">B1</text></g>' +
+  '<g class="bob" style="animation-delay:-0.6s"><rect x="94" y="46" width="52" height="20" rx="4" class="inl" />' +
+  '<text x="120" y="59" class="tx s7 mid b">B2</text></g>' +
+  '<g class="bob" style="animation-delay:-1.2s"><rect x="136" y="48" width="52" height="20" rx="4" class="inl" />' +
+  '<text x="162" y="61" class="tx s7 mid b">B3</text></g>' +
+  '<path class="igrid" d="M78 68L120 92M120 66L120 92M162 68L120 92"/>' +
+  '<g><rect x="88" y="92" width="64" height="16" rx="8" class="pp" />' +
+  '<text x="120" y="102.4" class="tx mono s7 mid b">one outcome</text></g>' +
+  "</svg>";
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
@@ -419,4 +443,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   harness: HARNESS,
   sol_loop: SOL_LOOP,
   eval_tool_tuning: EVAL_TOOL_TUNING,
+  burst: BURST,
 };

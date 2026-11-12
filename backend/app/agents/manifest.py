@@ -168,6 +168,10 @@ class RunRecorder:
     #: the draft proposals, so the tuning is read from what the run actually
     #: scored rather than remembered.
     eval_tool_tuning_runs: list[dict[str, Any]] = field(default_factory=list)
+    #: Each burst the run recorded (#10) - one entry per burst, with the merged
+    #: outcome and every part's status, so the merge is rendered from what the
+    #: run actually heard rather than remembered.
+    burst_runs: list[dict[str, Any]] = field(default_factory=list)
 
     def observe_request(
         self,
@@ -417,6 +421,7 @@ def as_payload(recorder: RunRecorder) -> dict[str, Any]:
         "babysit_pr_events": list(recorder.babysit_pr_events),
         "sol_loop_rounds": list(recorder.sol_loop_rounds),
         "eval_tool_tuning_runs": list(recorder.eval_tool_tuning_runs),
+        "burst_runs": list(recorder.burst_runs),
     }
 
 
@@ -442,6 +447,11 @@ MAX_RECORDED_EVAL_TOOL_TUNING_RUNS = 10
 within its size ceiling. A capability caps tuning runs per agent at five, so
 ten is two agents' worth of tuning in one run."""
 
+MAX_RECORDED_BURSTS = 10
+"""How many bursts a run's manifest keeps, so it stays within its size
+ceiling. A capability caps bursts per agent at five, so ten is two agents'
+worth of bursting in one run."""
+
 
 def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """This segment's payload with what earlier segments of the run recorded and it cannot.
@@ -458,13 +468,22 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
     earlier_events = previous.get("babysit_pr_events") or []
     earlier_rounds = previous.get("sol_loop_rounds") or []
     earlier_tuning = previous.get("eval_tool_tuning_runs") or []
-    if not any((earlier_reviews, earlier_scripts, earlier_events, earlier_rounds, earlier_tuning)):
+    earlier_bursts = previous.get("burst_runs") or []
+    if (
+        not earlier_reviews
+        and not earlier_scripts
+        and not earlier_events
+        and not earlier_rounds
+        and not earlier_tuning
+        and not earlier_bursts
+    ):
         return payload
     reviews = [*earlier_reviews, *payload.get("reviews", [])]
     scripts = [*earlier_scripts, *payload.get("code_runs", [])]
     events = [*earlier_events, *payload.get("babysit_pr_events", [])]
     rounds = [*earlier_rounds, *payload.get("sol_loop_rounds", [])]
     tuning = [*earlier_tuning, *payload.get("eval_tool_tuning_runs", [])]
+    bursts = [*earlier_bursts, *payload.get("burst_runs", [])]
     return {
         **payload,
         "reviews": reviews[:MAX_RECORDED_REVIEWS],
@@ -472,6 +491,7 @@ def carried_over(previous: dict[str, Any], payload: dict[str, Any]) -> dict[str,
         "babysit_pr_events": events[:MAX_RECORDED_BABYSIT_PR_EVENTS],
         "sol_loop_rounds": rounds[:MAX_RECORDED_SOL_LOOP_ROUNDS],
         "eval_tool_tuning_runs": tuning[:MAX_RECORDED_EVAL_TOOL_TUNING_RUNS],
+        "burst_runs": bursts[:MAX_RECORDED_BURSTS],
     }
 
 

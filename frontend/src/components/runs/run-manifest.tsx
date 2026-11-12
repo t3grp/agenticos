@@ -298,6 +298,40 @@ export function RunManifest({ runId }: { runId: string }) {
         </Section>
       )}
 
+      {/* The burst ledger: each burst's merged outcome and every part's
+          status. A part that failed reads as exactly that, never as a part
+          that finished - the merge is the record, not a summary of it. */}
+      {!!manifest.burst_runs?.length && (
+        <Section title={t("burstRuns", { count: manifest.burst_runs.length })}>
+          <ul className="space-y-3">
+            {manifest.burst_runs.map((burst) => (
+              <li key={burst.burst} className="space-y-1.5">
+                <p className="text-sm font-medium">
+                  {t("burstRun", { burst: burst.burst, task: burst.task })}
+                </p>
+                <ol className="space-y-0.5">
+                  {burst.results.map((part) => (
+                    <li key={part.id} className="text-sm">
+                      <span className={part.status === "failed" ? "text-destructive" : ""}>
+                        {t("burstPart", {
+                          id: part.id,
+                          title: part.title,
+                          status: part.status,
+                        })}
+                        {part.reason ? ` (${part.reason})` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <pre className="bg-muted/50 max-h-64 overflow-auto rounded-md p-3 text-xs whitespace-pre-wrap">
+                  {burst.merged}
+                </pre>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {manifest.messages.length > 0 && (
         <Section
           title={t("lastRequestContext")}

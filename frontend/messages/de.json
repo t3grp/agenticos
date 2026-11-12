@@ -2001,7 +2001,9 @@
       "tablesCreating": "Erstellt eine Tabelle",
       "tablesDescribing": "Liest die Spalten einer Tabelle",
       "tablesListing": "Prüft, welche Tabellen es nutzen kann",
-      "viewsListing": "Listet die gespeicherten Ansichten einer Tabelle auf"
+      "viewsListing": "Listet die gespeicherten Ansichten einer Tabelle auf",
+      "burstRun": "Burst-Durchlauf",
+      "burstingSubtasks": "Führt Teilaufgaben parallel aus"
     },
     "turnWasStopped": "gestoppt",
     "unfavourite": "Aus den Favoriten entfernen",
@@ -6581,7 +6583,10 @@
       "decisionApprovedInChat": "Freigegeben. Sobald nichts anderes mehr wartet, macht der Agent in dem Chat weiter, in dem gefragt wurde.",
       "decisionRejectedInChat": "Abgelehnt. Sobald nichts anderes mehr wartet, antwortet der Agent in dem Chat, in dem gefragt wurde.",
       "runResumedInChat": "Run fortgesetzt – die Antwort geht auch in den Chat, in dem gefragt wurde.",
-      "alreadyContinuing": "Dieser Run läuft in seinem Chat bereits weiter."
+      "alreadyContinuing": "Dieser Run läuft in seinem Chat bereits weiter.",
+      "burstRuns": "{count, plural, =1 {1 Burst} other {# Bursts}}",
+      "burstRun": "Burst {burst} · {task}",
+      "burstPart": "{id} · {title} — {status}"
     },
     "sandboxes": {
       "addConnection": "Verbindung hinzufügen",
@@ -11617,6 +11622,14 @@
       "needs": "Zwei veröffentlichte Agenten, die der Aufrufer ausführen darf, und die Berechtigung agents:run zum Lesen des Themas.",
       "never": "Erreicht keinen Agenten, den der Aufrufer nicht ausführen darf, sendet nicht im Namen eines Menschen und stellt keine Nachricht außerhalb des Themas zu.",
       "example1": "Bitte den Recherche-Agenten, seine Ergebnisse vor der Frist an den Schreib-Agenten zu übergeben."
+    },
+    "burst": {
+      "name": "Burst",
+      "does": "Teilt eine Aufgabe in unabhängige Teilaufgaben, führt sie parallel aus und führt die Ergebnisse zu einem Ergebnis zusammen.",
+      "example1": "Recherchiere drei Ansätze gleichzeitig und führe zusammen, was sie finden",
+      "example2": "Entwerfe die Abschnitte einer Anleitung parallel",
+      "needs": "Eine Aufgabe, die sich in unabhängige Teile zerlegen lässt, jeder mit eigenem Prompt.",
+      "never": "Lässt nie einen fehlgeschlagenen Teil fallen und stellt die Zusammenführung nie als vollständig dar, solange einer fehlgeschlagen ist: Ein Teil, der fehlschlägt, wird mit seinem Grund gemeldet."
     }
   },
   "capabilityCategories": {
@@ -12308,6 +12321,16 @@
       "max_watch_minutes": {
         "title": "Höchstens beobachten",
         "description": "Minuten, die eine Beobachtung laufen darf, bevor sie stoppt und blockiert meldet. Eine Beobachtung, die ohne Grün darüber hinaus läuft, wurde nicht freigegeben — sie ist abgelaufen."
+      }
+    },
+    "burst": {
+      "max_subtasks": {
+        "title": "Teilaufgaben höchstens",
+        "description": "Wie viele Teilaufgaben ein Burst höchstens gleichzeitig ausführt. 3 ist der Standard von Subagents max_fanout und 10 sein Höchstwert: Ein Burst teilt diese Obergrenze, statt sie zu erhöhen. Bei Erreichen lehnt das Tool die übrigen Teile mit einer Meldung ab, auf die das Modell reagieren kann."
+      },
+      "max_bursts": {
+        "title": "Bursts höchstens",
+        "description": "Wie viele Bursts ein Run höchstens verlangen darf. Ein neuer Burst nach Korrekturen ist ein neuer Burst, und die Obergrenze verhindert, dass wiederholte Bursts den Umfang ausweiten."
       }
     }
   },

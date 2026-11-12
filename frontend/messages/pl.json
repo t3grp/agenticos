@@ -1052,7 +1052,9 @@
       "tablesCreating": "Tworzę tabelę",
       "tablesDescribing": "Czytam kolumny tabeli",
       "tablesListing": "Sprawdzam, których tabel może używać",
-      "viewsListing": "Przeglądam zapisane widoki tabeli"
+      "viewsListing": "Przeglądam zapisane widoki tabeli",
+      "burstRun": "Przebieg Burst",
+      "burstingSubtasks": "Wykonuje podzadania równolegle"
     },
     "turnWasStopped": "zatrzymano",
     "unfavourite": "Usuń z ulubionych",
@@ -3459,7 +3461,10 @@
       "decisionApprovedInChat": "Zatwierdzono. Gdy nic innego nie czeka, agent kontynuuje w czacie, w którym o to poproszono.",
       "decisionRejectedInChat": "Odrzucono. Gdy nic innego nie czeka, agent odpowie w czacie, w którym o to poproszono.",
       "runResumedInChat": "Run wznowiony. Odpowiedź trafi też do czatu, w którym o to poproszono.",
-      "alreadyContinuing": "Ten run jest już kontynuowany w swoim czacie."
+      "alreadyContinuing": "Ten run jest już kontynuowany w swoim czacie.",
+      "burstRuns": "{count, plural, =1 {1 burst} other {# burstów}}",
+      "burstRun": "Burst {burst} · {task}",
+      "burstPart": "{id} · {title} — {status}"
     },
     "sandboxes": {
       "addConnection": "Dodaj połączenie",
@@ -9795,6 +9800,16 @@
         "title": "Obserwuj najwyżej",
         "description": "Minuty, przez które jedna obserwacja może trwać, zanim zatrzyma się i zgłosi blokadę. Obserwacja, która przekroczy ten czas bez zielonego wyniku, nie została zatwierdzona — wygasła."
       }
+    },
+    "burst": {
+      "max_subtasks": {
+        "title": "Najwyżej podzadań",
+        "description": "Ile podzadań jeden burst wykonuje najwyżej naraz. 3 to domyślna wartość max_fanout dla subagentów, a 10 to jego twardy limit: burst dzieli ten limit, zamiast go podnosić. Po jego osiągnięciu narzędzie odrzuca dodatkowe części z komunikatem, na który model może zareagować."
+      },
+      "max_bursts": {
+        "title": "Najwyżej burstów",
+        "description": "Ile burstów może zażądać jeden run. Świeży burst po poprawkach to nowy burst, a limit powstrzymuje powtarzane bursty przed rozrostem zakresu."
+      }
     }
   },
   "apiReference": {
@@ -12534,6 +12549,14 @@
       "needs": "Dwa opublikowane agenty, które wywołujący może uruchomić, oraz uprawnienie agents:run do odczytu wątku.",
       "never": "Nie dociera do agenta, którego wywołujący nie może uruchomić, nie wysyła w imieniu człowieka ani nie dostarcza wiadomości poza wątkiem.",
       "example1": "Poproś agenta badawczego, żeby przekazał ustalenia agentowi piszącemu, zanim będzie gotowy szkic."
+    },
+    "burst": {
+      "name": "Burst",
+      "does": "Dzieli jedno zadanie na niezależne podzadania, wykonuje je równolegle i łączy wyniki w jeden wynik.",
+      "example1": "Zbadaj trzy podejścia naraz i połącz to, co znajdą",
+      "example2": "Szkicuj sekcje przewodnika równolegle",
+      "needs": "Zadanie, które dzieli się na niezależne części, każdą z własnym poleceniem.",
+      "never": "Nigdy nie pomija podzadania, które się nie powiodło, ani nie przedstawia połączenia jako kompletnego, gdy jedno się nie powiodło: podzadanie, które się nie powiodło, jest zgłaszane z powodem."
     }
   },
   "capabilityCategories": {
