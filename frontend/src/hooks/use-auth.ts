@@ -81,6 +81,10 @@ interface SignInResponse {
   return_to?: string | null;
 }
 
+interface DesktopMfaHandoff {
+  desktop_callback_url: string;
+}
+
 /**
  * The password step passed and the sign-in is waiting on the second factor.
  * Carried through `signIn` untouched - no user is adopted, nothing
@@ -315,11 +319,18 @@ export function useAuth() {
   // through untouched: no user is adopted, nothing navigates, and the form
   // that asked shows the code step.
   const signIn = useCallback(
-    async (request: () => Promise<SignInResponse | MfaChallenge>, returnTo?: string | null) => {
+    async (
+      request: () => Promise<SignInResponse | MfaChallenge | DesktopMfaHandoff>,
+      returnTo?: string | null,
+    ) => {
       setLoading(true);
       try {
         const response = await request();
         if ("mfa_required" in response) return response;
+        if ("desktop_callback_url" in response) {
+          window.location.assign(response.desktop_callback_url);
+          return response;
+        }
         // A check that set out before this sign-in - the page's own /auth/me,
         // answering late over a slow network - must not land afterwards and
         // sign out the account that just arrived.
@@ -358,7 +369,7 @@ export function useAuth() {
     (mfaToken: string, code: string, returnTo?: string | null) =>
       signIn(
         () =>
-          apiClient.post<SignInResponse>(
+          apiClient.post<SignInResponse | DesktopMfaHandoff>(
             "/auth/mfa/verify",
             { mfa_token: mfaToken, code },
             {
