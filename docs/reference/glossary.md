@@ -90,6 +90,7 @@ in [Capabilities](capabilities.md).
 | Agent messages | `agent_messages` |
 | Watch a command | `monitor` |
 | Babysit PR | `babysit_pr` |
+| Proof scenario | `proof_scenario` |
 | Sandbox | `sandbox` |
 | Skills | `skills` |
 | Sol-loop | `sol_loop` |

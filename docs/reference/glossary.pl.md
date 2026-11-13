@@ -93,6 +93,7 @@ w [Capabilities](capabilities.md).
 | Wiadomości agentów | `agent_messages` |
 | Obserwuj polecenie | `monitor` |
 | Babysit PR | `babysit_pr` |
+| Scenariusz dowodowy | `proof_scenario` |
 | Sandbox | `sandbox` |
 | Skille | `skills` |
 | Sol-loop | `sol_loop` |

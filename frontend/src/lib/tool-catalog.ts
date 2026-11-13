@@ -572,6 +572,22 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     displayNameKey: "babysitPrStop",
   },
 
+  // proof-scenario - observed evidence for a change: record one attempt, then
+  // ask for the coverage verdict. Both results are plain text, so the steps
+  // render generic, like any other read-only text tool.
+  proof_scenario_record: {
+    kind: "read",
+    render: "generic",
+    captionKey: "recordingProofScenario",
+    displayNameKey: "proofScenarioRecord",
+  },
+  proof_scenario_verdict: {
+    kind: "read",
+    render: "generic",
+    captionKey: "checkingProofCoverage",
+    displayNameKey: "proofScenarioVerdict",
+  },
+
   // code_execution
   run_python: {
     kind: "code",

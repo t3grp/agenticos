@@ -86,6 +86,7 @@ from app.agents.capabilities.media import (
     ORGANIZATION_RESOURCE as MEDIA_ORGANIZATION_RESOURCE,
 )
 from app.agents.capabilities.memory_files import MEMORY_FILES_CAPABILITY_ID
+from app.agents.capabilities.proof_scenario import PROOF_SCENARIO_RECORDER_RESOURCE
 from app.agents.capabilities.skills._loader import SkillLoader
 from app.agents.capabilities.sol_loop import (
     SOL_LOOP_MODELS_RESOURCE,
@@ -410,8 +411,9 @@ def build_agent(
     # Wrapped, so what the provider is handed is written down as it is handed
     # over. Reconstructing the prompt and the tool schemas from the spec
     # afterwards would be a second implementation of everything above this line.
-    # Made before the capabilities, because run reviewers, council, sol-loop,
-    # code mode, `CacheWatch` and babysit-pr write onto it.
+    # Made before the capabilities, because run reviewers, council, code mode,
+    # sol-loop, proof scenarios, `CacheWatch` and babysit-pr write onto it.
+    # Babysit-pr also reads it through the resources below.
     recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
@@ -456,6 +458,9 @@ def build_agent(
             # Where eval-driven tool-tuning runs are recorded - the run's
             # recorder, read by the capability.
             EVAL_TOOL_TUNING_RECORDER_RESOURCE: recorder,
+            # Where proof scenarios are recorded - resolved by the runner, read
+            # by the capability.
+            PROOF_SCENARIO_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )

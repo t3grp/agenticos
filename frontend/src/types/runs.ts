@@ -315,6 +315,8 @@ export interface RunManifest {
   sol_loop_rounds?: ManifestSolLoopRound[];
   /** Each eval-driven tool-tuning run, with its score and draft proposals (#11). */
   eval_tool_tuning_runs?: ManifestEvalToolTuningRun[];
+  /** Each proof scenario the run recorded, with its attempts (#8). */
+  proof_scenarios?: ManifestProofScenario[];
   /** Whether the record was trimmed to fit its size ceiling. */
   truncated: boolean;
 }
@@ -381,6 +383,28 @@ export interface ManifestEvalToolTuningRun {
   dominant_failure: string | null;
   cases: ManifestEvalToolTuningCase[];
   proposals: ManifestEvalToolTuningProposal[];
+}
+
+/** One observed run of a proof scenario. */
+export interface ManifestProofAttempt {
+  scenario_id: string;
+  phase: "before_fix" | "after_fix";
+  status: "passed" | "failed" | "inconclusive";
+  evidence_kind: string;
+  command: string;
+  observed: string;
+  duration_ms: number;
+  observed_at: string | null;
+}
+
+/** One reproduction for a change, and every attempt made at it. */
+export interface ManifestProofScenario {
+  id: string;
+  name: string;
+  kind: "command" | "reproduction" | "ui";
+  command: string;
+  covers: string[];
+  attempts: ManifestProofAttempt[];
 }
 
 /** One correction a run reviewer sent while the run went. */

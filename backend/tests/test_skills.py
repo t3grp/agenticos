@@ -1554,10 +1554,10 @@ class TestTheGalleryOnDisk:
 
         names = [s.name for i in skill_library.gallery() for s in i.skills]
         names += [entry.name for entry in skill_library.library()]
-        # The current 144 shipped names include the 43 opt-in accounting/finance
-        # skills and the council-review, babysit-pr, sol-loop and eval-tool-tuning
-        # skills added across the current t3 feature set.
-        assert len(names) == 144
+        # The shipped names include 43 opt-in accounting/finance skills and the
+        # council-review, babysit-pr, sol-loop, eval-tool-tuning and proof-scenario
+        # skills.
+        assert len(names) == 145
         for name in names:
             assert SKILL_NAME_PATTERN.fullmatch(name), name
             SkillCreate(name=name, description="d")

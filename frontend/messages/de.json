@@ -1831,6 +1831,10 @@
       "result": "Ergebnis",
       "reviewingWithCouncil": "Prüft mit dem Rat",
       "reviewingWithSolLoop": "Prüft mit Sol-loop",
+      "checkingProofCoverage": "Nachweisabdeckung wird geprüft",
+      "proofScenarioRecord": "Nachweis-Szenario-Eintrag",
+      "proofScenarioVerdict": "Nachweis-Szenario-Urteil",
+      "recordingProofScenario": "Nachweisversuch wird aufgezeichnet",
       "runPython": "Python ausführen",
       "running": "Läuft …",
       "runningCalculations": "Rechnet",
@@ -6457,6 +6461,12 @@
       "evalToolTuningCase": "{name} · {classification}",
       "evalToolTuningProposal": "[{kind}] {title}",
       "evalToolTuningProposalEvidence": "Belege: {evidence} · {status}",
+      "proofScenarios": "{count, plural, =1 {1 Nachweis-Szenario} other {# Nachweis-Szenarien}}",
+      "proofScenario": "{id} {name} — {proven}",
+      "proofScenarioProven": "nachgewiesen",
+      "proofScenarioUnproven": "nicht nachgewiesen",
+      "proofScenarioCovers": "Deckt ab: {files}",
+      "proofAttempt": "{phase} · {status} · {evidence}",
       "cacheBust": "Cache gebrochen",
       "cacheExpired": "Cache abgelaufen",
       "cacheBustDetail": "{missed, number} gecachte Tokens nicht aus dem Cache gelesen - davor im Prompt hat sich etwas geändert",
@@ -11622,6 +11632,14 @@
       "example2": "Beobachte diesen PR und sag mir, wenn die Checks bestehen",
       "needs": "Ein Weg, die Checks des PR zu lesen, etwa die Monitor-Capability mit `gh pr checks`.",
       "never": "Mergt, kommentiert oder unternimmt nie etwas anderes auf dem PR: nur beobachten und melden."
+    },
+    "proof_scenario": {
+      "name": "Nachweis-Szenario",
+      "does": "Weist eine Änderung mit beobachteten Belegen nach: zeichnet eine Reproduktion vor und nach der Korrektur auf und meldet, welche geänderten Dateien einen Nachweis haben und welche nicht.",
+      "example1": "Hat diese Änderung wirklich funktioniert?",
+      "example2": "Weise diese Korrektur nach, bevor ich sie zusammenführe",
+      "needs": "Eine Reproduktion des Fehlers, die vor und nach der Korrektur läuft.",
+      "never": "Führt nie eine Zusammenführung, Genehmigung oder eine andere Aktion für die Änderung aus und zählt einen grünen Unit-Test nie als Nachweis."
     },
     "background_tasks": {
       "name": "Hintergrundthemen",
