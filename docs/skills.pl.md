@@ -1,5 +1,5 @@
 ---
-source_sha: "740acc9b4b0d"
+source_sha: "963031b98a33"
 ---
 
 # Skille { #skills }
@@ -197,6 +197,22 @@ od 1 do 64 znaków i opis do 500 znaków. Zmiana poza limitem jest pomijana z
 ostrzeżeniem; oryginalne pliki pozostają bez zmian. Zapis propozycji używa
 savepointu, więc odrzucona propozycja nie wycofa tury ani nie zablokuje zapisania
 jej statusu i kosztu.
+
+### Skille wyuczone — zatwierdzona propozycja staje się własnym skillem { #learned-skills-an-approved-proposal-becomes-a-skill-on-its-own }
+
+Zastosowanie propozycji edytuje skill, który ona wskazuje. Gdy zatwierdzona
+propozycja *jest* nowym skillem — powtarzający się błąd bez skilla, do którego
+można by go przypisać — automatyczne uczenie skilli tworzy go zamiast tego:
+`POST /v1/agents/{agent_id}/learned-skills` z tekstem propozycji i jej
+pochodzeniem. Nowy skill trafia do kategorii `learned`, więc lista pokazuje,
+czego pętla nauczyła organizację, a zapis jest audytowany jako `skill.learned`
+wraz z propozycją, wpisem w ledgerze i kluczem wzorca, które go zmotywowały.
+
+Dwukrotne wyuczenie tej samej propozycji za drugim razem niczego nie zapisuje,
+a skill, który ktoś przepisał po napisaniu propozycji, jest odrzucany zamiast
+nadpisywany. Wyuczony skill jest od tej pory zwykłym skillem: edytowalnym,
+wersjonowanym tym samym przyrostem wersji co każda edycja i cofanym nową
+edycją, a nie przywróceniem.
 
 
 ## Jak skille trafiają do organizacji { #getting-skills-into-an-organization }
