@@ -1,4 +1,9 @@
 {
+  "appUpdate": {
+    "title": "{appName} zostało zaktualizowane",
+    "description": "Odśwież stronę, aby korzystać z najnowszej wersji.",
+    "reload": "Odśwież"
+  },
   "appConnections": {
     "enable": "Włącz",
     "enabled": "Konto zostało włączone.",
