@@ -41,7 +41,7 @@ migration graph shape; it does not replace the database migration checks.
 ## Triggers and status
 
 The expected Armada webhook runs when a commit is pushed to `t3`, and for
-same-repository pull requests when they are `opened`, `synchronize`d or `reopened`.
+same-repository pull requests on `opened`, `synchronize` and `reopened` events.
 It rejects fork pull requests. These triggers belong to the Armada Worker and
 GitHub webhook configuration; this change does not modify GitHub Actions or
 provision that infrastructure.

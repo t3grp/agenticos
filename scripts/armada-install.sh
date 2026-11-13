@@ -3,5 +3,5 @@
 set -eu
 
 uv sync --directory backend --dev
-cd frontend
+cd frontend || exit 1
 bun install --frozen-lockfile
