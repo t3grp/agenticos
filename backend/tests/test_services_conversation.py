@@ -2699,7 +2699,10 @@ class TestTheThreadAModelIsGivenBack:
             conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
         )
         window = AsyncMock(
-            return_value=[self._row("user", "First question"), self._row("assistant", "First answer")]
+            return_value=[
+                self._row("user", "First question"),
+                self._row("assistant", "First answer"),
+            ]
         )
         monkeypatch.setattr(conversation_repo, "get_room_history_messages", window)
         recent = AsyncMock()
@@ -2724,27 +2727,35 @@ class TestTheThreadAModelIsGivenBack:
         recent.assert_not_awaited()
         after.assert_not_awaited()
 
-    async def test_a_room_history_still_withholds_refused_content_and_capabilities(
-        self, monkeypatch, capability_loads_repo
-    ):
+    @pytest.mark.security
+    @pytest.mark.parametrize("room", [False, True])
+    async def test_history_still_withholds_refused_content_and_capabilities(
+        self, monkeypatch: pytest.MonkeyPatch, capability_loads_repo: AsyncMock, room: bool
+    ) -> None:
         conversation = MockConversation()
         refused = self._row("user", "REFUSED_SECRET")
         refused.guardrail_refused = True
         refused.attachment_context = "REFUSED_ATTACHMENT"
         answer = self._row("assistant", "REFUSED_ANSWER")
         answer.guardrail_refused = True
+        answer.attachment_context = "REFUSED_ASSISTANT_ATTACHMENT"
+        answer.parts = [
+            {"type": "text", "text": "REFUSED_STREAMED_TEXT"},
+            {"type": "steer", "text": "REFUSED_STEER"},
+            {"type": "ask_user", "question": "REFUSED_QUESTION", "answer": "REFUSED_CARD_ANSWER"},
+        ]
         safe = self._row("assistant", "An earlier allowed answer")
         monkeypatch.setattr(
             conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
         )
         monkeypatch.setattr(
             conversation_repo,
-            "get_room_history_messages",
+            "get_room_history_messages" if room else "get_recent_messages",
             AsyncMock(return_value=[refused, answer, safe]),
         )
 
         history = await ConversationService(AsyncMock()).model_history(
-            conversation.id, limit=25, room_request_message_id=uuid4()
+            conversation.id, limit=25, room_request_message_id=uuid4() if room else None
         )
 
         assert [part.content for message in history for part in message.parts] == [
@@ -2786,9 +2797,7 @@ class TestTheThreadAModelIsGivenBack:
         monkeypatch.setattr(
             conversation_repo, "messages_by_id", AsyncMock(return_value={prompt.id: prompt})
         )
-        window = AsyncMock(
-            return_value=[self._row("user", "hi"), self._row("assistant", "hello")]
-        )
+        window = AsyncMock(return_value=[self._row("user", "hi"), self._row("assistant", "hello")])
         monkeypatch.setattr(conversation_repo, "get_messages_by_conversation", window)
 
         history = await ConversationService(AsyncMock()).model_history(
@@ -2802,9 +2811,7 @@ class TestTheThreadAModelIsGivenBack:
         assert window.await_args.kwargs["before"] == prompt.id
         assert window.await_args.kwargs["latest"] is True
 
-    async def test_a_retry_after_a_summary_keeps_only_what_preceded_the_turn(
-        self, monkeypatch
-    ):
+    async def test_a_retry_after_a_summary_keeps_only_what_preceded_the_turn(self, monkeypatch):
         """The summary half is older than the turn, so it stands; the rows since
         it are cut at the turn, dropping the question and its failed answer."""
         conversation = MockConversation()
@@ -2958,10 +2965,7 @@ class TestTheThreadAModelIsGivenBack:
 
         history = await ConversationService(AsyncMock()).model_history(conversation.id, limit=50)
 
-        assert [part.content for message in history for part in message.parts] == [
-            REFUSED_TURN,
-            "Working",
-        ]
+        assert [part.content for message in history for part in message.parts] == [REFUSED_TURN]
 
     @pytest.mark.security
     async def test_nor_is_it_replayed_after_a_summary(self, monkeypatch):
@@ -2976,11 +2980,15 @@ class TestTheThreadAModelIsGivenBack:
             role="user", content="SECRETWORD", run_id=run_id, guardrail_refused=True
         )
         refused.context_used_tokens = None
+        answer = MockMessage(
+            role="assistant", content="REFUSED_ANSWER", run_id=run_id, guardrail_refused=True
+        )
+        answer.context_used_tokens = None
         monkeypatch.setattr(
             conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
         )
         monkeypatch.setattr(
-            conversation_repo, "get_messages_after", AsyncMock(return_value=[refused])
+            conversation_repo, "get_messages_after", AsyncMock(return_value=[refused, answer])
         )
 
         history = await ConversationService(AsyncMock()).model_history(conversation.id, limit=50)
@@ -2991,14 +2999,18 @@ class TestTheThreadAModelIsGivenBack:
         ]
 
     @pytest.mark.security
-    async def test_a_reply_to_a_refused_turn_does_not_quote_it(self, monkeypatch):
+    @pytest.mark.parametrize("role", ["user", "assistant"])
+    @pytest.mark.parametrize("room", [False, True])
+    async def test_a_reply_to_a_refused_turn_does_not_quote_it(
+        self, monkeypatch: pytest.MonkeyPatch, role: str, room: bool
+    ) -> None:
         """Quoting is the second way a turn's words reach the model: a reply to
         the refused message would carry an excerpt of it, from inside the window
         or from outside it."""
         conversation = MockConversation()
         run_id = uuid4()
         refused = MockMessage(
-            role="user", content="SECRETWORD", run_id=run_id, guardrail_refused=True
+            role=role, content="SECRETWORD", run_id=run_id, guardrail_refused=True
         )
         refused.context_used_tokens = None
         reply = MockMessage(role="user", content="and this?")
@@ -3008,14 +3020,18 @@ class TestTheThreadAModelIsGivenBack:
             conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
         )
         monkeypatch.setattr(
-            conversation_repo, "get_recent_messages", AsyncMock(return_value=[reply])
+            conversation_repo,
+            "get_room_history_messages" if room else "get_recent_messages",
+            AsyncMock(return_value=[reply]),
         )
         monkeypatch.setattr(
             conversation_repo, "messages_by_id", AsyncMock(return_value={refused.id: refused})
         )
         monkeypatch.setattr(conversation_repo, "users_by_id", AsyncMock(return_value={}))
 
-        history = await ConversationService(AsyncMock()).model_history(conversation.id, limit=50)
+        history = await ConversationService(AsyncMock()).model_history(
+            conversation.id, limit=50, room_request_message_id=uuid4() if room else None
+        )
 
         [replayed] = [part.content for message in history for part in message.parts]
         assert "SECRETWORD" not in replayed

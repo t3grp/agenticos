@@ -133,12 +133,12 @@ def _as_history(
     person's turn reads as `spoken` says where it says anything - who said it
     and what it answers - see `ConversationService._spoken`. A prompt of a turn
     a guardrail stopped reads as `REFUSED_TURN`, with nothing its files added
-    (#2578).
+    (#2578). A refused assistant's text and parts are omitted entirely.
     """
     spoken = spoken or {}
     history: list[HistoryMessage] = []
     for row in rows:
-        if row.id == exclude_message_id:
+        if row.id == exclude_message_id or (row.role == "assistant" and row.guardrail_refused):
             continue
         # Rebuild the assistant's spoken sequence around human answers, instead
         # of moving every answer before the text that originally asked for it.
@@ -2317,8 +2317,8 @@ def _excerpt(text: str) -> str:
 
 def _said(message: Message) -> str:
     """What a quoted message says, as the model may be told it: a quote is the
-    other way a refused prompt's words would reach it (#2578)."""
-    if message.role == "user" and message.guardrail_refused:
+    other way a refused turn's words would reach it (#2578)."""
+    if message.guardrail_refused:
         return REFUSED_TURN
     return message.content
 
