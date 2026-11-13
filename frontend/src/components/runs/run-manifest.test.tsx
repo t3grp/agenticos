@@ -263,6 +263,45 @@ describe("what the model was told", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows each burst's merged outcome, and a failed part as failed (#10)", () => {
+    serve({
+      manifest: record({
+        burst_runs: [
+          {
+            burst: 1,
+            task: "Write the guide",
+            merged: "# Burst: Write the guide\n\n## B1 — Part 1\n\nIntro done.",
+            results: [
+              {
+                id: "B1",
+                title: "Part 1",
+                status: "completed",
+                result: "Intro done.",
+                reason: null,
+              },
+              { id: "B2", title: "Part 2", status: "failed", result: "", reason: "TimeoutError" },
+            ],
+          },
+        ],
+      }),
+    });
+    const { container } = renderManifest();
+
+    expect(screen.getByText("1 burst")).toBeInTheDocument();
+    expect(screen.getByText("Burst 1 · Write the guide")).toBeInTheDocument();
+    expect(screen.getByText("B1 · Part 1 — completed")).toBeInTheDocument();
+    expect(screen.getByText("B2 · Part 2 — failed (TimeoutError)")).toBeInTheDocument();
+    expect(container.textContent).toContain("# Burst: Write the guide");
+    expect(container.textContent).toContain("## B1 — Part 1");
+    expect(container.textContent).toContain("Intro done.");
+  });
+
+  it("shows no burst section for a run that never burst", () => {
+    serve({ manifest: record() });
+    renderManifest();
+    expect(screen.queryByText(/burst/)).toBeNull();
+  });
+
   it("shows each proof scenario, its attempts, and whether it is proven (#8)", () => {
     serve({
       manifest: record({

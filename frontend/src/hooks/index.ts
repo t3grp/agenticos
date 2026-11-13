@@ -1,4 +1,5 @@
 export { useAuth } from "./use-auth";
+export { useAppUpdate } from "./use-app-update";
 export { useClaudeSubscription } from "./use-claude-subscription";
 export { useCopyToClipboard } from "./use-copy-to-clipboard";
 export { useApiKeys } from "./use-api-keys";

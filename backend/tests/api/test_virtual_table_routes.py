@@ -95,6 +95,7 @@ def service() -> MagicMock:
         archive_table=AsyncMock(return_value=_table()),
         unarchive_table=AsyncMock(return_value=_table()),
         update_schema=AsyncMock(return_value=_table()),
+        set_row_policy=AsyncMock(return_value=_table()),
         list_schema_versions=AsyncMock(return_value={"items": []}),
         list_records=AsyncMock(return_value=RecordList(items=[], skip=0, limit=50, has_more=False)),
         count_records=AsyncMock(return_value=RecordCount(count=3, capped=False)),
@@ -177,6 +178,42 @@ async def test_the_per_table_routes_answer_with_the_table(client):
 
     assert [r.status_code for r in responses] == [200, 200, 200, 200, 200]
     assert versions.json() == {"items": []}
+
+
+async def test_setting_a_row_policy_passes_the_document_to_the_service(client, service):
+    assignee = str(uuid.uuid4())
+    async with client() as http:
+        response = await http.put(
+            _url(f"/{_TABLE}/row-policy"),
+            json={
+                "rule": "assignee",
+                "view_column_id": assignee,
+                "edit_column_id": assignee,
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Orders"
+    ctx, table_id, data = service.set_row_policy.await_args.args
+    assert table_id == _TABLE
+    assert data.rule == "assignee"
+    assert str(data.view_column_id) == assignee
+
+
+async def test_a_viewer_reaches_the_row_policy_service_because_no_route_gate_blocks_them(
+    client, service
+):
+    """The access decision is the service's, via `resolve_access`: a route-level
+    role gate would refuse a grant holder before the service is reached, so
+    this route carries none - a viewer gets the service's answer, not a 403."""
+    viewer = AuthContext(user_id=uuid.uuid4(), organization_id=_ORG, role=OrgRoleName.VIEWER)
+    app.dependency_overrides[deps.get_auth_context] = lambda: viewer
+
+    async with client() as http:
+        response = await http.put(_url(f"/{_TABLE}/row-policy"), json={"rule": "none"})
+
+    assert response.status_code == 200
+    service.set_row_policy.assert_awaited_once()
 
 
 async def test_creating_a_record_is_a_201_and_passes_the_operation_key_through(client, service):
@@ -614,6 +651,7 @@ _MUTATIONS = [
     ("post", _url(f"/{_TABLE}/archive"), None),
     ("post", _url(f"/{_TABLE}/unarchive"), None),
     ("put", _url(f"/{_TABLE}/schema"), {"expected_version": 1, "columns": []}),
+    ("put", _url(f"/{_TABLE}/row-policy"), {"rule": "none"}),
     ("post", _records(), {"values": {}}),
     ("patch", _records(f"/{_RECORD}"), {"expected_revision": 1, "values": {}}),
     ("put", _records("/by-external-id/A-1"), {"values": {}}),
@@ -633,6 +671,7 @@ _MUTATIONS = [
         "archive-table",
         "unarchive-table",
         "change-schema",
+        "set-row-policy",
         "create-record",
         "update-record",
         "upsert-record",

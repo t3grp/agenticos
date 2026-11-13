@@ -334,6 +334,7 @@ nav:
           - babysit-pr.md
           - sol-loop.md
           - eval-tool-tuning.md
+          - burst.md
           - proof-scenario.md
           - context.md
           - virtual-tables.md

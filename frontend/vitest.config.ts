@@ -148,6 +148,7 @@ export default defineConfig({
         "src/components/layout/navigation-progress.tsx",
         // The offline strip in the apps (#2097).
         "src/components/layout/offline-banner.tsx",
+        "src/components/layout/app-update-banner.tsx",
         "src/components/layout/notification-glyph.tsx",
         "src/components/chat/project-chip.tsx",
         "src/components/chat/chat-room-bar.tsx",

@@ -680,14 +680,14 @@ export interface SubagentStartFrame extends SubagentFrameBase {
    */
   specialist: SpecialistDefinition | null;
   /**
-   * Set when the worker is Claude Code or Codex, started by the `coding_agent`
+   * Set when the worker is a coding harness, started by the `coding_agent`
    * capability rather than delegated to an agent, so the panel draws its mark.
    */
   harness?: CodingHarness | null;
 }
 
 /** The coding harnesses the `coding_agent` capability runs. */
-export type CodingHarness = "claude_code" | "codex";
+export type CodingHarness = "claude_code" | "codex" | "opencode" | "gemini" | "pi";
 
 export interface SubagentTextDeltaFrame extends SubagentFrameBase {
   kind: "subagent_text_delta";
@@ -830,7 +830,7 @@ export interface Delegation {
    * chat reads, and what its absence hides that action for. See `SpecialistDefinition`.
    */
   specialist: SpecialistDefinition | null;
-  /** Claude Code or Codex, when the worker is a coding harness rather than an agent. */
+  /** A coding harness, when the worker is one rather than an agent. */
   harness: CodingHarness | null;
   text: string;
   thinking: string;
