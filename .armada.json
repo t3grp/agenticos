@@ -1,0 +1,32 @@
+{
+  "name": "agenticos",
+  "deadline": 3600,
+  "environment": {
+    "setup": "scripts/armada-setup.sh",
+    "install": "scripts/armada-install.sh",
+    "key": [
+      "backend/pyproject.toml",
+      "backend/uv.lock",
+      "frontend/package.json",
+      "frontend/bun.lock"
+    ]
+  },
+  "history": "commit",
+  "pool": 2,
+  "size": "medium",
+  "plan": {
+    "command": [
+      "echo",
+      "{\"include\":[{\"name\":\"backend-ruff-check\"},{\"name\":\"backend-ruff-format\"},{\"name\":\"backend-pytest\"},{\"name\":\"alembic-single-head\"},{\"name\":\"frontend-typecheck\"},{\"name\":\"frontend-vitest\"},{\"name\":\"frontend-prettier\"},{\"name\":\"frontend-eslint\"}]}"
+    ]
+  },
+  "task": {
+    "command": [
+      "sh",
+      "-c",
+      "name=\"{name}\"; case \"$name\" in backend-ruff-check) uv run --directory backend ruff check . ../scripts ../deploy/updater ;; backend-ruff-format) uv run --directory backend ruff format . ../scripts ../deploy/updater --check ;; backend-pytest) uv run --directory backend pytest tests/ --ignore=tests/integration -q -n auto --maxprocesses 4 ;; alembic-single-head) heads=$(uv run --directory backend alembic heads); printf '%s\\n' \"$heads\"; count=$(printf '%s\\n' \"$heads\" | awk 'NF { n++ } END { print n+0 }'); test \"$count\" -eq 1 ;; frontend-typecheck) cd frontend && bun run type-check ;; frontend-vitest) cd frontend && bun run test:coverage ;; frontend-prettier) cd frontend && bunx prettier --check \"scripts/**/*.ts\" \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" ;; frontend-eslint) cd frontend && bun run lint ;; *) echo \"unknown Armada task: {name}\" >&2; exit 2 ;; esac"
+    ],
+    "verdict": false,
+    "timeout": 1800
+  }
+}
