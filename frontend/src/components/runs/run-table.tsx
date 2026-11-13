@@ -52,8 +52,11 @@ function WaitingQuestion({ run }: { run: AgentRun }) {
   if (run.status !== "awaiting_answer" || (questions.length === 0 && secrets.length === 0)) {
     return null;
   }
+  const firstSecret = secrets[0];
+  const first =
+    questions[0] ?? (firstSecret === undefined ? null : t("needsSecret", { name: firstSecret }));
+  if (first === null) return null;
   const remaining = timeUntil(run.waiting_expires_at);
-  const first = questions[0] ?? t("needsSecret", { name: secrets[0] });
   return (
     <span
       className="text-muted-foreground block max-w-72 truncate text-xs"
