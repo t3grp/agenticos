@@ -339,26 +339,33 @@ export function FocusedRun({
             the whole question is read rather than the row's first line: every
             unanswered question, and how long is left to answer it. The answer
             goes in the chat behind the run - the button below - not here. */}
-        {run.status === "awaiting_answer" && (run.waiting_questions?.length ?? 0) > 0 && (
-          <section
-            aria-label={t("waitingSection")}
-            className="space-y-1.5 rounded-xl border px-3 py-2.5"
-          >
-            <h3 className="text-foreground text-sm font-semibold">{t("waitingSection")}</h3>
-            <ul className="space-y-1">
-              {(run.waiting_questions ?? []).map((question, index) => (
-                <li key={index} className="text-sm">
-                  {question}
-                </li>
-              ))}
-            </ul>
-            {waitingExpiresIn !== null && (
-              <p className="text-muted-foreground text-xs">
-                {t("questionExpiresIn", { duration: waitingExpiresIn })}
-              </p>
-            )}
-          </section>
-        )}
+        {run.status === "awaiting_answer" &&
+          ((run.waiting_questions?.length ?? 0) > 0 ||
+            (run.waiting_secret_requests?.length ?? 0) > 0) && (
+            <section
+              aria-label={t("waitingSection")}
+              className="space-y-1.5 rounded-xl border px-3 py-2.5"
+            >
+              <h3 className="text-foreground text-sm font-semibold">{t("waitingSection")}</h3>
+              <ul className="space-y-1">
+                {(run.waiting_questions ?? []).map((question, index) => (
+                  <li key={index} className="text-sm">
+                    {question}
+                  </li>
+                ))}
+                {(run.waiting_secret_requests ?? []).map((secretName) => (
+                  <li key={secretName} className="text-sm">
+                    {t("needsSecret", { name: secretName })}
+                  </li>
+                ))}
+              </ul>
+              {waitingExpiresIn !== null && (
+                <p className="text-muted-foreground text-xs">
+                  {t("questionExpiresIn", { duration: waitingExpiresIn })}
+                </p>
+              )}
+            </section>
+          )}
 
         {!!run.tool_args_repaired && (
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">

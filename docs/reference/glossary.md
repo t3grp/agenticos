@@ -62,6 +62,7 @@ in [Capabilities](capabilities.md).
 |---|---|
 | Apps | `artifacts` |
 | Ask the user | `ask_user` |
+| Request a secret | `secret_request` |
 | Drafts | `drafts` |
 | Web browser | `browser_use` |
 | Chat channel lookup | `channel_tools` |
@@ -72,6 +73,7 @@ in [Capabilities](capabilities.md).
 | Coding agent | `coding_agent` |
 | Long conversations | `compaction` |
 | Computer use | `computer_use` |
+| Council | `council` |
 | Context | `context` |
 | Past conversations | `conversation_search` |
 | Follow-ups | `follow_ups` |

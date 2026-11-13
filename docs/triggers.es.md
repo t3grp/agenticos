@@ -1,5 +1,5 @@
 ---
-source_sha: "2df43efb8afc"
+source_sha: "271f866901a1"
 ---
 
 # Configurar un trigger de evento { #setting-up-an-event-trigger }
@@ -66,11 +66,20 @@ pasa:
 
 Un trigger de evento no tiene este ajuste: cada entrega es su propio disparo.
 
+**En qué conversación corre cada disparo.** `conversation_mode` en la API lo
+decide: `continue`, el valor por defecto, añade cada disparo al único registro de
+ejecuciones del trigger, así que la pestaña Runs los enumera todos; `fresh` abre
+una conversación nueva por disparo, así que un disparo nunca lee los turnos de
+los disparos anteriores — y la pestaña Runs no tiene una conversación que
+enumerar. Un trigger `fresh` no abre ningún registro de ejecuciones al crearse,
+así que no hay ningún elemento en la barra lateral hasta que corre el primer
+disparo.
+
 Todo lo de abajo es para el caso de los eventos.
 
 ## Adónde va la respuesta y cuándo termina una rutina { #answers-and-ends }
 
-Cada ejecución queda registrada en el registro de ejecuciones del trigger. `answer_to` dice adónde va
+Cada ejecución queda registrada en la conversación en la que corre: el registro de ejecuciones del trigger, salvo que el trigger abra una conversación nueva por disparo. `answer_to` dice adónde va
 además la respuesta, para la persona que lo creó (#2575): `primary`, el valor por defecto, es su propia
 conversación con el agente, así que todo lo que le dice está en un solo lugar; `conversation` es uno de
 sus otros chats (`delivery_conversation_id`), para una rutina creada en ese chat; `run_log` no la publica
@@ -203,6 +212,14 @@ y después el evento dentro de un bloque `<event_content>` que le dice al modelo
 que lo lea como datos. Una issue, un correo o un nombre de archivo lo escribe
 quien lo envió, y una frase dentro que suene a orden sigue siendo parte del
 evento.
+
+Una entrega de GitHub también llega al run como una parte estructurada: la
+entrega completa como JSON, con la misma forma con la que el trigger GitHub de
+workflows se la entrega a un run, dentro de un bloque `<event_payload>` junto al
+texto renderizado. Es el mismo contenido no confiable — el run lo lee como
+información con la que trabajar, nunca como instrucciones — y se redacta de la
+fila de espera una vez que el disparo se asienta, así que una espera terminada no
+conserva ni el payload ni el contexto renderizado.
 
 ## Rotar el secreto y editar el filtro { #rotating-the-secret-and-editing-the-filter }
 

@@ -321,6 +321,11 @@
     "delegationModeLabel": "When it hands back",
     "delegationModeSync": "Wait for it",
     "delegationModeSyncDetail": "The parent stops until the delegate answers. The default, and what makes a delegation read like a function call.",
+    "councilMemberRow": "Member {number}",
+    "councilMemberName": "Name",
+    "councilMemberProvider": "Provider",
+    "councilMemberModel": "Model profile",
+    "councilMembersProviderHint": "Choose a different provider for each council member.",
     "delegationOffButConfigured": "Delegation is switched off, so none of this is reached. The delegates below stay in the spec and are still checked at publish - switch it on above, or remove them.",
     "delegationPolicyDetail": "What bounds every delegation this agent makes, delegates and specialists alike.",
     "delegationPolicyHeading": "Policy",
@@ -1260,6 +1265,17 @@
     "askUserAnswered": "You answered",
     "askUserAsked": "Asked you",
     "askUserAskedBy": "Asked by {name}",
+    "secretRequest": {
+      "title": "The agent needs a secret",
+      "provide": "Provide secret",
+      "decline": "Decline",
+      "valueLabel": "Secret value",
+      "valuePlaceholder": "Paste the secret here — it is never shown again",
+      "provided": "Secret provided",
+      "declined": "You declined to provide this secret",
+      "storedHint": "Stored as {name} (…{hint})",
+      "waiting": "Waiting for the secret"
+    },
     "attachedFile": "Attached file",
     "backAgentAposS": "Back to the agent's own model",
     "cancel": "Cancel",
@@ -1747,6 +1763,7 @@
       "chunkCount": "{count, plural, =1 {1 chunk} other {# chunks}}",
       "chunkNumber": "chunk {number}",
       "collectionNamed": "Collection: {name}",
+      "councilReview": "Council Review",
       "createSpecialist": "Create Specialist",
       "creating": "Creating",
       "creatingChart": "Creating a chart",
@@ -1814,6 +1831,7 @@
       "removeStep": "Remove Step",
       "removingStep": "Removing a step",
       "result": "Result",
+      "reviewingWithCouncil": "Reviewing with the council",
       "reviewingWithSolLoop": "Reviewing with Sol-loop",
       "checkingProofCoverage": "Checking the proof coverage",
       "proofScenarioRecord": "Proof Scenario Record",
@@ -1865,6 +1883,8 @@
       "artifactUnchanged": "Unchanged, still version {version} · open the page",
       "askingYou": "Waiting for your answer",
       "askedYou": "Asked you",
+      "requestingSecret": "Waiting for your secret",
+      "requestedSecret": "Requested a secret",
       "notAnsweredYet": "Not answered yet",
       "listMemory": "List memories",
       "readMemory": "Read a memory",
@@ -7406,6 +7426,7 @@
       "decidedSection": "Decided",
       "waitingSection": "Waiting on you",
       "questionExpiresIn": "Expires in {duration}",
+      "needsSecret": "Needs secret: {name}",
       "share": "Share",
       "monthAgainstCap": "${spent} of ${cap} this month",
       "spendOverTime": "Spend over time",
@@ -9377,6 +9398,15 @@
       "skip": "The schedule waits for its next time. A slow agent runs as often as it can finish.",
       "queue": "Runs once the previous run ends, however many times were missed.",
       "allow": "Starts on time alongside the run still going. Both runs are paid for."
+    },
+    "conversationModeLabel": "Each fire runs in",
+    "conversationMode": {
+      "continue": "The same run log",
+      "fresh": "A new conversation"
+    },
+    "conversationModeHint": {
+      "continue": "Every fire appends to the trigger's one run log, so its Runs tab lists them all.",
+      "fresh": "Each fire opens its own conversation, so one fire never reads the previous fires' turns. The Runs tab has no one conversation to list."
     },
     "howOften": "How often",
     "choiceEvery15m": "Every 15 min",
@@ -11626,6 +11656,14 @@
       "needs": "Nothing extra.",
       "never": "Never answers for the person. In Slack or Telegram it waits for their reply."
     },
+    "secret_request": {
+      "name": "Request a secret",
+      "does": "Lets the agent ask for a secret it needs but does not have, naming it and what it is for.",
+      "example1": "What is the Acme API key for listing contacts?",
+      "example2": "Which secret should the nightly report use?",
+      "needs": "Nothing extra.",
+      "never": "Never shows the value to the model, the transcript or a log. The card seals it straight into the vault."
+    },
     "browser_use": {
       "name": "Web browser",
       "does": "Gives the agent a real web browser it works step by step - reading pages, clicking, filling forms and searching - to finish a task.",
@@ -11704,6 +11742,14 @@
       "example2": "Pick up a task where the last chat left off",
       "needs": "Nothing extra.",
       "never": "Never reads anybody else's conversations, and is off in group chats."
+    },
+    "council": {
+      "name": "Council",
+      "does": "Asks three delegate reviewers, one strong model from each of three different providers, to score the work out of 10 in parallel rounds until all agree.",
+      "example1": "Is this pull request ready to merge?",
+      "example2": "Score this draft proposal before it goes out",
+      "needs": "One model profile per delegate, from three different providers.",
+      "never": "Never substitutes a missing delegate or invents a score: a delegate that cannot be reached is reported unavailable, and one that gives no score reads no score."
     },
     "guardrails": {
       "name": "Guardrails",
@@ -12117,6 +12163,20 @@
       "max_results": {
         "title": "Conversations per search",
         "description": "How many conversations one search returns at most. Each brings back a short passage, so a high number costs context on every search."
+      }
+    },
+    "council": {
+      "members": {
+        "title": "Council members",
+        "description": "The delegates, one strong model from each of three different providers at high reasoning effort. Exactly three members."
+      },
+      "agreement_threshold": {
+        "title": "Agreement threshold",
+        "description": "The score out of 10 every delegate must reach for a round to satisfy the council. A round below it means fix and review again."
+      },
+      "max_rounds": {
+        "title": "Rounds at most",
+        "description": "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep."
       }
     },
     "guardrails": {

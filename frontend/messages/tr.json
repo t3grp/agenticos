@@ -5664,6 +5664,14 @@
       "needs": "Ek bir şey gerekmez.",
       "never": "Kişi adına yanıt vermez. Slack veya Telegram'da yanıtınızı bekler."
     },
+    "secret_request": {
+      "name": "Gizli bilgi iste",
+      "does": "Agent'ın ihtiyaç duyduğu ama sahip olmadığı bir gizli bilgiyi, adını ve ne için olduğunu belirterek istemesini sağlar.",
+      "example1": "Kişileri listelemek için Acme API anahtarı nedir?",
+      "example2": "Gece raporu hangi gizli bilgiyi kullanmalı?",
+      "needs": "Ek bir şey gerekmez.",
+      "never": "Değeri modele, transkripte veya günlüklere asla göstermez. Kart onu doğrudan kasaya mühürler."
+    },
     "browser_use": {
       "name": "Web browser",
       "does": "Görevi tamamlamak için sayfaları okuyup tıklamalar, formları doldurur ve arama yapar; Agent'a adım adım çalışabileceği gerçek bir web browser sağlar.",
@@ -8706,6 +8714,17 @@
     "askUserAnswered": "Yanıt verdiniz",
     "askUserAsked": "Size soruldu",
     "askUserAskedBy": "{name} sordu",
+    "secretRequest": {
+      "title": "Agent'ın bir gizli bilgiye ihtiyacı var",
+      "provide": "Gizli bilgiyi ver",
+      "decline": "Reddet",
+      "valueLabel": "Gizli bilgi değeri",
+      "valuePlaceholder": "Gizli bilgiyi buraya yapıştırın — bir daha asla gösterilmez",
+      "provided": "Gizli bilgi verildi",
+      "declined": "Bu gizli bilgiyi vermeyi reddettiniz",
+      "storedHint": "{name} olarak saklandı (…{hint})",
+      "waiting": "Gizli bilgi bekleniyor"
+    },
     "attachedFile": "Ekli dosya",
     "backAgentAposS": "Agent'ın kendi modeline dön",
     "cancel": "İptal",
@@ -9289,6 +9308,8 @@
       "artifactUnchanged": "Değişmedi, hâlâ {version} sürümü · sayfayı aç",
       "askingYou": "Yanıtınız bekleniyor",
       "askedYou": "Size soruldu",
+      "requestingSecret": "Gizli bilginiz bekleniyor",
+      "requestedSecret": "Gizli bilgi istendi",
       "notAnsweredYet": "Henüz yanıtlanmadı",
       "listMemory": "Anıları listele",
       "readMemory": "Bir anıyı oku",
@@ -10716,6 +10737,15 @@
       "skip": "Schedule bir sonraki zamana kadar bekler. Yavaş bir agent ancak bitirebildiği sıklıkta çalışır.",
       "queue": "Kaç çalışma zamanı kaçırılmış olursa olsun, önceki run bitince bir kez çalışır.",
       "allow": "Devam eden run’ın yanında zamanında başlar. Her iki run için de ücret alınır."
+    },
+    "conversationModeLabel": "Her çalıştırma şurada çalışır",
+    "conversationMode": {
+      "continue": "Aynı çalışma günlüğünde",
+      "fresh": "Yeni bir konuşmada"
+    },
+    "conversationModeHint": {
+      "continue": "Her çalıştırma tetikleyicinin tek çalışma günlüğüne eklenir, böylece Runs sekmesi hepsini listeler.",
+      "fresh": "Her çalıştırma kendi konuşmasını açar, böylece bir çalıştırma önceki çalıştırmaların turlarını asla okumaz. Runs sekmesinin listeleyeceği tek bir konuşma yoktur."
     },
     "howOften": "Ne sıklıkta",
     "choiceEvery15m": "15 dakikada bir",

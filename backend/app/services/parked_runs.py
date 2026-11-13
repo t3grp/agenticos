@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from pydantic import JsonValue
+from pydantic import JsonValue, SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import current_impersonator
@@ -35,13 +35,20 @@ from app.db.models.agent_run import (
 )
 from app.repositories import agent_run_repo, channel_prompt_repo
 from app.repositories.channel_prompt import SettledBy
-from app.schemas.agent import AgentRunResult, RunStep, SettledCall, SettledDelegation
+from app.schemas.agent import (
+    AgentRunResult,
+    RunStep,
+    SecretRequestRead,
+    SettledCall,
+    SettledDelegation,
+)
 from app.services.agent_runner import AgentRunnerService, RunSegment
 from app.services.approvals import ApprovalService
 from app.services.channels.continuation import continue_in_chat
 from app.services.channels.handback import chat_destination, continues_in_chat
 from app.services.channels.handback_jobs import queue_segment
 from app.services.channels.prompts import ChannelPrompts
+from app.services.secret_requests import SecretRequestService
 
 
 @dataclass(frozen=True)
@@ -69,6 +76,7 @@ class ParkedRunService:
         self.db = db
         self.runner = runner
         self.approvals = approvals
+        self.secrets = SecretRequestService(db, runner=runner)
 
     async def decide(
         self,
@@ -184,6 +192,47 @@ class ParkedRunService:
             by="answered",
             step=lambda callback: self.runner.answer(ctx, run_id, responses, on_segment=callback),
         )
+
+    async def fulfil_secret_request(
+        self,
+        ctx: AuthContext,
+        run_id: UUID,
+        request_id: UUID,
+        *,
+        value: SecretStr,
+    ) -> Continued:
+        """Seal a secret request's value and continue the run when it is the last outstanding one (#13).
+
+        A run parked on more than one secret stays parked until each is in:
+        the continuation is an empty segment over the still-parked run, and
+        the remaining cards stay up. A workflow run is refused, like an
+        answer: its owning workflow continues it.
+        """
+        run = await self.runner.get_run(ctx, run_id)
+        if run.surface == RunSurface.WORKFLOW.value:
+            raise BadRequestError(
+                message="This run is continued by its workflow",
+                details={"run_id": run_id},
+            )
+
+        async def step(
+            callback: Callable[[RunSegment], Awaitable[None]] | None,
+        ) -> RunSegment:
+            segment = await self.secrets.fulfil(
+                ctx, run_id, request_id, value=value, on_segment=callback
+            )
+            if segment is not None:
+                return segment
+            refreshed = await self.runner.get_run(ctx, run_id)
+            return RunSegment(output="", run=refreshed, tool_calls=[], settled={})
+
+        return await self._continue(ctx, run_id, by="answered", step=step)
+
+    async def decline_secret_request(
+        self, ctx: AuthContext, run_id: UUID, request_id: UUID
+    ) -> SecretRequestRead:
+        """Decline a secret request, ending its run failed (#13)."""
+        return await self.secrets.decline(ctx, run_id, request_id)
 
     async def _continue(
         self,

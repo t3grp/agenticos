@@ -1,5 +1,5 @@
 ---
-source_sha: "2df43efb8afc"
+source_sha: "271f866901a1"
 ---
 
 # Konfigurowanie triggera zdarzeniowego { #setting-up-an-event-trigger }
@@ -64,11 +64,19 @@ decyduje **If the previous run is still going** w formularzu harmonogramu,
 Trigger zdarzeniowy nie ma takiego ustawienia: każde dostarczenie to osobne
 odpalenie.
 
+**W której rozmowie działa odpalenie.** Decyduje o tym `conversation_mode` w API:
+`continue`, domyślnie, dopisuje każde odpalenie do jednego dziennika uruchomień
+triggera, więc karta Runs wymienia je wszystkie; `fresh` otwiera nową rozmowę na
+każde odpalenie, więc jedno odpalenie nigdy nie czyta tur poprzednich odpaleń —
+a karta Runs nie ma jednej rozmowy do wymienienia. Trigger `fresh` nie otwiera
+dziennika uruchomień przy utworzeniu, więc do pierwszego odpalenia nie ma żadnego
+elementu na pasku bocznym.
+
 Wszystko poniżej dotyczy przypadku zdarzeniowego.
 
 ## Dokąd trafia odpowiedź i kiedy rutyna się kończy { #answers-and-ends }
 
-Każde uruchomienie jest zapisane w dzienniku uruchomień triggera. `answer_to` mówi, gdzie odpowiedź
+Każde uruchomienie jest zapisane w rozmowie, w której działa — dzienniku uruchomień triggera, chyba że trigger otwiera nową rozmowę na każde odpalenie. `answer_to` mówi, gdzie odpowiedź
 trafia dodatkowo do osoby, która go utworzyła (#2575): `primary`, domyślnie, to jej własna rozmowa z
 agentem, więc wszystko, co jej mówi, jest w jednym miejscu; `conversation` to jeden z jej innych czatów
 (`delivery_conversation_id`), dla rutyny utworzonej w tym czacie; `run_log` nie wysyła nigdzie indziej.
@@ -200,6 +208,14 @@ sekret albo przekaźnik w pętli przed wydaniem budżetu w jedno popołudnie.
 potem zdarzenie w bloku `<event_content>`, który mówi modelowi, by czytał je jako
 dane. Issue, mail czy nazwę pliku pisze ten, kto je wysłał, a zdanie w nich, które
 brzmi jak rozkaz, nadal jest częścią zdarzenia.
+
+Dostarczenie z GitHub dociera do runa także jako jedna uporządkowana część: całe
+dostarczenie jako JSON, w tym samym kształcie, w jakim trigger GitHub przepływów
+pracy przekazuje je runowi, w bloku `<event_payload>` obok wyrenderowanego tekstu.
+To ta sama niezaufana treść — run czyta ją jako informację do pracy, nigdy jako
+polecenia — i jest ona zaciemniana w wierszu oczekiwania, gdy tylko odpalenie się
+ustali, więc zakończone oczekiwanie nie zachowuje ani payloadu, ani wyrenderowanego
+kontekstu.
 
 ## Rotowanie sekretu i edytowanie filtra { #rotating-the-secret-and-editing-the-filter }
 

@@ -1,5 +1,5 @@
 ---
-source_sha: "7738d8d527e6"
+source_sha: "d90fe4bc29a0"
 ---
 
 # Der Capability-Katalog { #the-capability-catalog }
@@ -86,6 +86,7 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `coding_agent` | Coding Agent | analysis | `run_coding_agent` | `sandbox:execute` | erforderlich | übergeben |
 | `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | erforderlich | übergeben |
 | `monitor` | Einen Befehl beobachten | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | übergeben |
+| `council` | Rat | analysis | `run_council_review` | `agents:delegate` | — | übergeben |
 | `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | übergeben |
 | `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | übergeben |
 | `eval_tool_tuning` | Eval-Tool-Tuning | analysis | `record_eval_tool_tuning` | — | — | unverändert |
@@ -105,6 +106,7 @@ hält er nur Dateien. Der Webbrowser zeigt auf den Browser-Dienst der Installati
 | `channel_tools` | Infos zum Chat-Kanal | channels | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | nicht verfügbar |
 | `phone_calls` | [Telefonanrufe](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Rückfragen | utility | `ask_user_question` | — | — | auf dem Bildschirm |
+| `secret_request` | Geheimnis anfragen | utility | `request_secret` | — | — | auf dem Bildschirm |
 | `drafts` | Entwürfe | utility | `write_draft` | — | — | nicht verfügbar |
 | `follow_ups` | Nächste Schritte | utility | `suggest_next_steps`, `propose_setup` | — | — | nicht verfügbar |
 

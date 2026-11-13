@@ -17,6 +17,7 @@ import { Bot, Gauge, PhoneCall, SlidersHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessageFile, ChatPerson } from "@/types";
 import type { PublishedModel } from "@/types/agents";
+import type { ParkedSecretRequest } from "@/types/runs";
 import {
   useAgents,
   useChat,
@@ -66,6 +67,7 @@ import { PlanStrip } from "./plan-strip";
 import { BackgroundTasks } from "./background-tasks";
 import { ToolApprovalDialog } from "./tool-approval-dialog";
 import { QuestionPrompt } from "@/components/ui";
+import { SecretRequestCard } from "./secret-request-card";
 import type {
   PendingApproval,
   AskUserQuestion,
@@ -497,6 +499,9 @@ export function ChatContainer({
     sendResumeDecisions,
     pendingQuestions,
     sendAskUserResponses,
+    pendingSecretRequests,
+    submitSecretRequest,
+    declineSecretRequest,
     pendingConnection,
     sendConnectionResponse,
     pendingComputerAccess,
@@ -976,6 +981,9 @@ export function ChatContainer({
         mayRememberApproval={mayRememberApproval}
         pendingQuestions={pendingQuestions}
         onAnswerQuestions={sendAskUserResponses}
+        pendingSecretRequests={pendingSecretRequests}
+        onSubmitSecretRequest={submitSecretRequest}
+        onDeclineSecretRequest={declineSecretRequest}
         pendingConnection={pendingConnection}
         onConnectionResponse={sendConnectionResponse}
         onStop={stopGeneration}
@@ -1113,6 +1121,10 @@ interface ChatUIProps {
   mayRememberApproval?: boolean;
   pendingQuestions?: AskUserQuestion[] | null;
   onAnswerQuestions?: (answers: AskUserAnswer[]) => void;
+  /** The secrets a parked run asked its person for. See `SecretRequestCard`. */
+  pendingSecretRequests?: ParkedSecretRequest[] | null;
+  onSubmitSecretRequest?: (requestId: string, value: string) => void;
+  onDeclineSecretRequest?: (requestId: string) => void;
   /** The service a paused run waits for the person to connect. */
   pendingConnection?: ConnectionRequest | null;
   onConnectionResponse?: (connected: boolean) => void;
@@ -1190,6 +1202,9 @@ function ChatUI({
   mayRememberApproval,
   pendingQuestions,
   onAnswerQuestions,
+  pendingSecretRequests,
+  onSubmitSecretRequest,
+  onDeclineSecretRequest,
   pendingConnection,
   onConnectionResponse,
   onStop,
@@ -1715,6 +1730,19 @@ function ChatUI({
                 />
               </div>
             )}
+            {pendingSecretRequests &&
+              pendingSecretRequests.length > 0 &&
+              onSubmitSecretRequest &&
+              onDeclineSecretRequest && (
+                <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
+                  <SecretRequestCard
+                    requests={pendingSecretRequests}
+                    disabled={readOnly || !isConnected || isStopping}
+                    onSubmit={onSubmitSecretRequest}
+                    onDecline={onDeclineSecretRequest}
+                  />
+                </div>
+              )}
             <div
               className={cn(
                 "pointer-events-auto mx-auto w-full min-w-0",

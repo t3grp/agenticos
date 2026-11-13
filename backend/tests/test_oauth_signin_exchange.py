@@ -41,6 +41,8 @@ class _FakeRedis:
         self._store: dict[str, str] = {}
 
     async def set(self, key: str, value: str, ttl: int | None = None, nx: bool = False) -> bool:
+        if nx and key in self._store:
+            return False
         self._store[key] = value
         return True
 
@@ -125,15 +127,15 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
         }
     )
     monkeypatch.setattr(oauth_routes, "sign_in_client", lambda provider: oidc_client)
-    monkeypatch.setattr(
-        UserService,
-        "get_or_create_oauth_user",
-        AsyncMock(
-            return_value=SimpleNamespace(
-                id=user_id, is_active=True, totp_enabled=True, credential_version=3
-            )
-        ),
+    oidc_user = SimpleNamespace(
+        id=user_id,
+        is_active=True,
+        totp_enabled=True,
+        credential_version=3,
+        created_at=None,
+        updated_at=None,
     )
+    monkeypatch.setattr(UserService, "get_or_create_oauth_user", AsyncMock(return_value=oidc_user))
 
     response = await client.get(_OIDC_CALLBACK)
 
@@ -146,14 +148,28 @@ async def test_oidc_signin_for_totp_user_redirects_to_mfa_without_issuing_tokens
     assert payload is not None
     assert payload["sub"] == str(user_id)
     assert payload["cv"] == 3
-    directory_sync.apply.assert_awaited_once_with(
-        user_id, frozenset({"admins"}), provider="oidc"
-    )
+    assert payload["jti"]
+    directory_sync.apply.assert_not_awaited()
     make_access.assert_not_called()
     make_refresh.assert_not_called()
     issue_code.assert_not_awaited()
     session_service.create_session.assert_not_awaited()
-    assert fake._store == {}
+
+    auth_user_service = MagicMock()
+    auth_user_service.get_by_id = AsyncMock(return_value=oidc_user)
+    auth_mfa_service = MagicMock()
+    auth_mfa_service.verify_challenge = AsyncMock(return_value=True)
+    app.dependency_overrides[deps.get_user_service] = lambda: auth_user_service
+    app.dependency_overrides[deps.get_mfa_service] = lambda: auth_mfa_service
+
+    verified = await client.post(
+        f"{settings.API_V1_STR}/auth/mfa/verify",
+        json={"mfa_token": mfa_token, "code": "123456"},
+    )
+
+    assert verified.status_code == 200
+    directory_sync.apply.assert_awaited_once_with(user_id, frozenset({"admins"}), provider="oidc")
+    assert not any(key.startswith("auth:mfa:oauth:") for key in fake._store)
 
 
 async def test_exchange_returns_the_pair_for_a_valid_code(client: AsyncClient) -> None:

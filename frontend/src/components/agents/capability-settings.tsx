@@ -8,6 +8,7 @@ import { CODING_AGENT_ID, capabilityConfigErrors } from "@/lib/agent-spec";
 import { getErrorMessage } from "@/lib/api-error";
 import type { FieldProblem } from "@/lib/api-error";
 import { useCapabilityFieldCopy } from "@/components/agents/capability-field-copy";
+import { CouncilMembersField } from "@/components/agents/council-members-field";
 import { SchemaForm } from "@/components/agents/schema-form";
 import { ContextHelp } from "@/components/ui/context-help";
 import {
@@ -323,7 +324,13 @@ export function CapabilityDetail({
 
       {definition.config_schema && !hideConfigForm && (
         <SchemaForm
-          hiddenFields={binding.id === "context" ? ["file_settings"] : undefined}
+          hiddenFields={
+            binding.id === "context"
+              ? ["file_settings"]
+              : binding.id === "council"
+                ? ["members"]
+                : undefined
+          }
           idPrefix={binding.id}
           schema={definition.config_schema}
           value={binding.config}
@@ -331,6 +338,15 @@ export function CapabilityDetail({
           errors={configErrors}
           copyFor={copyFor}
           onChange={(config) => onChange({ ...binding, config })}
+        />
+      )}
+
+      {binding.id === "council" && (
+        <CouncilMembersField
+          idPrefix={binding.id}
+          value={binding.config.members}
+          disabled={disabled}
+          onChange={(members) => onChange({ ...binding, config: { ...binding.config, members } })}
         />
       )}
 

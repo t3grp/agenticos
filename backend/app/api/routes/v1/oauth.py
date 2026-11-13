@@ -6,6 +6,7 @@ swaps for the token pair. `google` and a deployment's own `oidc` differ in their
 discovery document and in nothing this module does (#1419).
 """
 
+import json
 import logging
 import secrets
 from datetime import UTC, datetime
@@ -20,6 +21,7 @@ from app.api.deps import (
     DirectorySyncSvc,
     InvitationStagingSvc,
     OAuthExchangeSvc,
+    Redis,
     SessionSvc,
     UserSvc,
 )
@@ -106,16 +108,22 @@ def _return_url(request: Request, code: str) -> str:
     it decides nothing here; it is what lets the shell refuse a deep link it did
     not ask for, since any local process can invoke a custom scheme.
     """
+    started = _take_started_client(request)
+    if isinstance(started, dict) and started.get("client") == _DESKTOP:
+        params = urlencode({"code": code, "desktop_nonce": started.get("nonce") or ""})
+        return f"{settings.DESKTOP_DEEP_LINK_SCHEME}://auth/callback?{params}"
+    return f"{settings.FRONTEND_URL.rstrip('/')}/auth/callback?{urlencode({'code': code})}"
+
+
+def _take_started_client(request: Request) -> dict[str, str] | None:
+    """Consume this OAuth state's client handoff marker, if it had one."""
     pending = dict(request.session.get(_CLIENT_KEY) or {})
     started = pending.pop(request.query_params.get("state") or "", None)
     if pending:
         request.session[_CLIENT_KEY] = pending
     else:
         request.session.pop(_CLIENT_KEY, None)
-    if isinstance(started, dict) and started.get("client") == _DESKTOP:
-        params = urlencode({"code": code, "desktop_nonce": started.get("nonce") or ""})
-        return f"{settings.DESKTOP_DEEP_LINK_SCHEME}://auth/callback?{params}"
-    return f"{settings.FRONTEND_URL.rstrip('/')}/auth/callback?{urlencode({'code': code})}"
+    return started if isinstance(started, dict) else None
 
 
 #: Where an invitation token waits while the caller is away at the provider.
@@ -183,6 +191,7 @@ async def provider_callback(
     exchange_service: OAuthExchangeSvc,
     session_service: SessionSvc,
     directory_sync: DirectorySyncSvc,
+    redis: Redis,
 ):
     """Finish the round trip and hand the frontend a code for its tokens.
 
@@ -232,20 +241,31 @@ async def provider_callback(
             logger.warning("oauth_callback_account_disabled", extra={"user_id": str(user.id)})
             params = urlencode({"error": "User account is disabled"})
             return RedirectResponse(url=f"{frontend}/login?{params}")
-        if groups is not None:
-            await directory_sync.apply(user.id, groups, provider=provider)
         if getattr(user, "totp_enabled", False):
             # OAuth proves the external identity, but does not complete this
-            # account's enrolled second factor. Apply directory changes first,
-            # then stop before session creation or token exchange. The
-            # challenge stays in the URL fragment, which the browser can read
-            # but never sends in an HTTP request.
+            # account's enrolled second factor. Stop before directory changes,
+            # session creation, or token exchange. The challenge stays in the
+            # URL fragment, which the browser can read but never sends in an
+            # HTTP request.
+            started = _take_started_client(request)
+            challenge_id = secrets.token_urlsafe(32)
             mfa_token = create_mfa_token(
-                subject=str(user.id), credential_version=user.credential_version
+                subject=str(user.id), credential_version=user.credential_version, jti=challenge_id
             )
+            if groups is not None or (
+                isinstance(started, dict) and started.get("client") == _DESKTOP
+            ):
+                context = {
+                    "groups": sorted(groups) if groups is not None else None,
+                    "provider": provider,
+                    "client": started,
+                }
+                await redis.set(f"auth:mfa:oauth:{challenge_id}", json.dumps(context), ttl=300)
             return RedirectResponse(
                 url=f"{frontend}/auth/callback#{urlencode({'mfa_token': mfa_token})}"
             )
+        if groups is not None:
+            await directory_sync.apply(user.id, groups, provider=provider)
         refresh_token = create_refresh_token(subject=str(user.id))
 
         # An OAuth sign-in is an ordinary session, so the access token names its

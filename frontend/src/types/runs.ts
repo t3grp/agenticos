@@ -34,6 +34,8 @@ export interface AgentRun {
   continues_in_chat?: boolean;
   /** The run's unanswered `ask_user` questions, in the order asked; empty unless parked on an answer. */
   waiting_questions?: string[];
+  /** The names of the secrets the run's `request_secret` calls wait on (#13); empty unless parked on an answer. */
+  waiting_secret_requests?: string[];
   /** When the parked question expires unanswered; null unless parked on an answer. */
   waiting_expires_at?: string | null;
   agent_version_id: string | null;
@@ -752,6 +754,19 @@ export interface WireQuestion {
 export interface ParkedQuestion {
   tool_call_id: string;
   questions: WireQuestion[];
+}
+
+/** A secret an agent asked its person for, which the run is waiting on (#13). */
+export interface ParkedSecretRequest {
+  id: string;
+  run_id: string;
+  tool_call_id: string;
+  secret_name: string;
+  kind: string;
+  what_for: string;
+  status: string;
+  fulfilled_secret_id?: string | null;
+  fulfilled_hint?: string | null;
 }
 
 /** A live chat's correlated acknowledgement for a parked question answer. */

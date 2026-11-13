@@ -1,5 +1,5 @@
 ---
-source_sha: "aaae5395a3d5"
+source_sha: "9e0431b220c5"
 ---
 
 # Słownik { #glossary }
@@ -65,6 +65,7 @@ w [Capabilities](capabilities.md).
 |---|---|
 | Aplikacje | `artifacts` |
 | Pytania do użytkownika | `ask_user` |
+| Prośba o sekret | `secret_request` |
 | Wersje robocze | `drafts` |
 | Przeglądarka | `browser_use` |
 | Informacje o kanale czatu | `channel_tools` |
@@ -75,6 +76,7 @@ w [Capabilities](capabilities.md).
 | Coding agent | `coding_agent` |
 | Długie rozmowy | `compaction` |
 | Obsługa komputera | `computer_use` |
+| Rada | `council` |
 | Kontekst | `context` |
 | Poprzednie rozmowy | `conversation_search` |
 | Następne kroki | `follow_ups` |
