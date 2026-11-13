@@ -1,5 +1,6 @@
 import { DiagnosticsPresence } from "@/components/layout/diagnostics-presence";
 import { ReleaseNotes } from "@/components/layout/release-notes";
+import { AppUpdateBanner } from "@/components/layout/app-update-banner";
 import { Suspense } from "react";
 
 import { AddToAgentPrompt } from "@/components/agents/add-to-agent";
@@ -35,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           lives beside the navigation it would otherwise silently strip. */}
       <ActiveOrgGuard />
       <ReleaseNotes />
+      <AppUpdateBanner />
       {/* The language the account chose, here or on another device or by asking an agent. */}
       <AccountLocale />
       <AccountTimeZone />

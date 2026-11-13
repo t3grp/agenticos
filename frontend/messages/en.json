@@ -1,4 +1,9 @@
 {
+  "appUpdate": {
+    "title": "{appName} has been updated",
+    "description": "Reload to get the newest version.",
+    "reload": "Reload"
+  },
   "appConnections": {
     "enable": "Enable",
     "enabled": "Account enabled.",
