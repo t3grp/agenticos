@@ -95,6 +95,7 @@ in [Capabilities](capabilities.md).
 | Skills | `skills` |
 | Sol-loop | `sol_loop` |
 | Eval tool tuning | `eval_tool_tuning` |
+| Burst | `burst` |
 | Subagents | `subagents` |
 | Instruction reminders | `system_reminders` |
 | Text to speech | `text_to_speech` |
