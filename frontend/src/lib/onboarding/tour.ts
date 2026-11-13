@@ -412,6 +412,14 @@ export const TOUR_STEPS: readonly TourStep[] = [
     permission: Perm.agentsView,
     inTour: true,
   },
+  {
+    id: "agent-failure-learning",
+    page: AGENT_BUILDER,
+    target: "agent-failure-learning",
+    activate: "agent-tab-failure-learning",
+    permission: Perm.agentsView,
+    inTour: true,
+  },
   // Trying it beside the Builder before publishing (#2074).
   {
     id: "agent-test",

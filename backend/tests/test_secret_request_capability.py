@@ -158,9 +158,7 @@ class TestRequestSecretValidation:
             result = await toolset.request_secret(
                 ctx, "acme_api_key", "Acme CRM", kind="not_a_secret_kind"
             )
-            none_result = await toolset.request_secret(
-                ctx, "acme_api_key", "Acme CRM", kind="none"
-            )
+            none_result = await toolset.request_secret(ctx, "acme_api_key", "Acme CRM", kind="none")
 
         assert "supported secret kinds" in result
         assert "api_key" in result
@@ -175,9 +173,7 @@ class TestRequestSecretValidation:
             "app.agents.capabilities.secret_request._toolset.park_the_secret_request",
             AsyncMock(),
         ) as park:
-            result = await toolset.request_secret(
-                ctx, "acme_api_key", "Acme CRM", kind="k" * 33
-            )
+            result = await toolset.request_secret(ctx, "acme_api_key", "Acme CRM", kind="k" * 33)
 
         assert "supported secret kinds" in result
         park.assert_not_awaited()

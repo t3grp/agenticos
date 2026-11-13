@@ -10738,6 +10738,15 @@
       "queue": "Kaç çalışma zamanı kaçırılmış olursa olsun, önceki run bitince bir kez çalışır.",
       "allow": "Devam eden run’ın yanında zamanında başlar. Her iki run için de ücret alınır."
     },
+    "conversationModeLabel": "Her çalıştırma şurada çalışır",
+    "conversationMode": {
+      "continue": "Aynı çalışma günlüğünde",
+      "fresh": "Yeni bir konuşmada"
+    },
+    "conversationModeHint": {
+      "continue": "Her çalıştırma tetikleyicinin tek çalışma günlüğüne eklenir, böylece Runs sekmesi hepsini listeler.",
+      "fresh": "Her çalıştırma kendi konuşmasını açar, böylece bir çalıştırma önceki çalıştırmaların turlarını asla okumaz. Runs sekmesinin listeleyeceği tek bir konuşma yoktur."
+    },
     "howOften": "Ne sıklıkta",
     "choiceEvery15m": "15 dakikada bir",
     "choiceHourly": "Saatte bir",

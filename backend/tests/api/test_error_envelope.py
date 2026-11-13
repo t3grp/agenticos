@@ -25,8 +25,8 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.exceptions import RequestValidationError
-from pydantic import ValidationError
 from httpx import AsyncClient, Response
+from pydantic import ValidationError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.datastructures import State
 from starlette.exceptions import HTTPException as StarletteHTTPException

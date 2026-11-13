@@ -713,13 +713,22 @@ def parse_storable_secret(kind: str, value: str) -> StorableSecret:
     """
     try:
         secret_kind = SecretKind(kind)
+    except ValueError:
+        raise BadRequestError(
+            message="Secret value is not valid for the requested kind",
+            details={"kind": kind},
+        ) from None
+    if secret_kind is SecretKind.NONE:
+        raise BadRequestError(
+            message="Secret value is not valid for the requested kind",
+            details={"kind": kind},
+        )
+    try:
         if secret_kind is SecretKind.API_KEY:
             secret = ApiKeySecret(api_key=value)
-        elif secret_kind is SecretKind.NONE:
-            raise ValueError
         else:
             secret = _STORABLE_ADAPTER.validate_json(value)
-    except (ValueError, ValidationError):
+    except ValueError, ValidationError:
         raise BadRequestError(
             message="Secret value is not valid for the requested kind",
             details={"kind": kind},

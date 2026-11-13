@@ -6,9 +6,9 @@ for, and what happened to it. The value is never stored here - fulfil seals
 it straight into `organization_secrets` and this table keeps only the
 created secret's id and hint, so no read of a request can leak a value.
 
-This revision follows #51's `0306_run_retry_link`. The chain has one head
-here; #32's draft also claims 0304/0305 and the upstream sync claims
-0304-0307, so the number must be re-checked against `main` at merge time.
+This revision follows `0309_trigger_conversation_mode`, the current `t3` head.
+That revision already descends from `0306_run_retry_link` through the
+failure-learning migrations.
 """
 
 from collections.abc import Sequence
@@ -18,8 +18,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0307_secret_requests"
-down_revision: str | None = "0306_run_retry_link"
+revision: str = "0310_secret_requests"
+down_revision: str | None = "0309_trigger_conversation_mode"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

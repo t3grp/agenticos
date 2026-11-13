@@ -12,12 +12,12 @@ from pydantic_ai.tools import AgentDepsT, RunContext
 from pydantic_ai.toolsets import FunctionToolset
 
 from app.agents.capabilities._failures import steer
-from app.core.secret_kinds import SecretKind
 from app.agents.secret_request import (
     MAX_SECRET_NAME_CHARS,
     MAX_WHAT_FOR_CHARS,
     park_the_secret_request,
 )
+from app.core.secret_kinds import SecretKind
 
 
 class SecretRequestToolset(FunctionToolset[AgentDepsT]):

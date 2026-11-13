@@ -8022,6 +8022,15 @@
       "queue": "Uruchamia się raz po zakończeniu poprzedniego, niezależnie od liczby pominiętych terminów.",
       "allow": "Startuje o czasie obok trwającego uruchomienia. Płacisz za oba."
     },
+    "conversationModeLabel": "Każde uruchomienie działa w",
+    "conversationMode": {
+      "continue": "Tym samym dzienniku uruchomień",
+      "fresh": "Nowej rozmowie"
+    },
+    "conversationModeHint": {
+      "continue": "Każde uruchomienie dopisuje się do jednego dziennika uruchomień wyzwalacza, więc karta Runs wymienia je wszystkie.",
+      "fresh": "Każde uruchomienie otwiera własną rozmowę, więc jedno uruchomienie nigdy nie czyta tur poprzednich uruchomień. Karta Runs nie ma jednej rozmowy do wymienienia."
+    },
     "howOften": "Jak często",
     "choiceEvery15m": "Co 15 min",
     "choiceHourly": "Co godzinę",

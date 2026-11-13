@@ -1,5 +1,5 @@
 ---
-source_sha: "1276ed684962"
+source_sha: "df94a18f6c76"
 ---
 
 # Governance { #governance }
@@ -45,6 +45,11 @@ nigdy się nie kończy.
 Trigger zdarzeniowy dokłada na swojej krawędzi jeszcze jedną odmowę: webhook,
 którego podpis nie weryfikuje się względem własnego sekretu triggera, to 403,
 które w ogóle nie dociera do runnera.
+
+Awarie zapisywane przez platformę zasilają też
+[pętlę uczenia się na błędach](failure-learning.md), która wydobywa
+powtarzające się awarie do rejestru i sprawdza poprawkę na tle starego
+zachowania, zanim cokolwiek zostanie zastosowane.
 
 ## Dostarczanie wyników rutyny { #routine-delivery }
 

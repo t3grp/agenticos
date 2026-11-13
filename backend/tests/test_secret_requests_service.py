@@ -20,7 +20,7 @@ from pydantic import SecretStr
 
 from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.permissions import AuthContext, OrgRoleName, Perm
-from app.core.secret_kinds import AwsCredentialsSecret, unseal_secret, seal_secret
+from app.core.secret_kinds import AwsCredentialsSecret, seal_secret, unseal_secret
 from app.core.vault import VaultScope
 from app.db.models.agent_run import ApprovalStatus, RunStatus
 from app.schemas.agent import SecretRequestFulfil

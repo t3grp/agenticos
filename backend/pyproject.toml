@@ -1262,8 +1262,17 @@ include = [
     "app/db/models/workflow_eval.py",
     "app/repositories/workflow_eval.py",
     "app/schemas/workflow_eval.py",
+    "app/schemas/eval_judging.py",
     "app/services/workflow_evals.py",
+    "app/services/eval_judging.py",
     "app/api/routes/v1/workflow_evals.py",
+    # The failure-learning loop: mined patterns, the ledger, eval cases, tries.
+    "app/db/models/failure_learning.py",
+    "app/repositories/failure_learning.py",
+    "app/schemas/failure_learning.py",
+    "app/services/failure_learning.py",
+    "app/api/routes/v1/failure_learning.py",
+    "app/worker/tasks/failure_learning_tasks.py",
     # The ways in to a workflow (#1792): its webhooks and schedules, the
     # workflow-run WebSocket and the chat's door through it, and the publish
     # that switches its trigger node on.
@@ -2062,8 +2071,17 @@ include = [
     "app/db/models/workflow_eval.py",
     "app/repositories/workflow_eval.py",
     "app/schemas/workflow_eval.py",
+    "app/schemas/eval_judging.py",
     "app/services/workflow_evals.py",
+    "app/services/eval_judging.py",
     "app/api/routes/v1/workflow_evals.py",
+    # The failure-learning loop: mined patterns, the ledger, eval cases, tries.
+    "app/db/models/failure_learning.py",
+    "app/repositories/failure_learning.py",
+    "app/schemas/failure_learning.py",
+    "app/services/failure_learning.py",
+    "app/api/routes/v1/failure_learning.py",
+    "app/worker/tasks/failure_learning_tasks.py",
     # The ways in to a workflow (#1792): its webhooks and schedules, the
     # workflow-run WebSocket and the chat's door through it, and the publish
     # that switches its trigger node on.
