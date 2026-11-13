@@ -76,6 +76,7 @@ w [Capabilities](capabilities.md).
 | Coding agent | `coding_agent` |
 | Długie rozmowy | `compaction` |
 | Obsługa komputera | `computer_use` |
+| Rada | `council` |
 | Kontekst | `context` |
 | Poprzednie rozmowy | `conversation_search` |
 | Następne kroki | `follow_ups` |

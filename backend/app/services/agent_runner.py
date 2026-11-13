@@ -158,6 +158,7 @@ from app.agents.capabilities.coding_agent import (
     CodingPreferences,
 )
 from app.agents.capabilities.context import CONTEXT_FILES_RESOURCE, context_config
+from app.agents.capabilities.council import CouncilConfig
 from app.agents.capabilities.drafts._spec import draft_tool_names
 from app.agents.capabilities.guardrails import (
     GuardrailBlocked,
@@ -3005,6 +3006,7 @@ def _delegate_builder(
     secrets: Mapping[UUID, StorableSecret],
     extra_toolsets: list[AbstractToolset[Any]],
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    council_models: Mapping[UUID, ModelRequestSpec] | None = None,
     sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
 ) -> Callable[[], PydanticAgent[Any, Any]]:
     """A closure that builds one delegate, with nothing left to look up.
@@ -3053,6 +3055,9 @@ def _delegate_builder(
             # models `_reviewers` leaves each one out, and an agent reviewed when
             # called directly would run unreviewed as a delegate.
             reviewer_models=reviewer_models,
+            # Its own council, resolved the same way: a delegate bound with a
+            # council reviews with it when called directly and as a delegate.
+            council_models=council_models,
             # Its own sol-loop reviewer, resolved the same way: a delegate bound
             # with sol-loop reviews with it when called directly and as a delegate.
             sol_loop_models=sol_loop_models,
@@ -3264,13 +3269,26 @@ def _browser_step_profile(spec: AgentSpec) -> UUID | None:
     return None
 
 
-def _sol_loop_profile_ids(spec: AgentSpec) -> list[UUID]:
-    """The model profile the agent's sol-loop reviewer reviews on, if it has one.
+def _council_profile_ids(spec: AgentSpec) -> list[UUID]:
+    """The model profiles the agent's council members review on, if it has one."""
+    profile_ids: list[UUID] = []
+    for binding in spec.capabilities:
+        if binding.id != "council" or not binding.enabled:
+            continue
+        try:
+            config = CouncilConfig.model_validate(binding.config)
+        except Exception:
+            logger.warning(
+                "Council binding has an invalid config; reviewing without it",
+                exc_info=True,
+            )
+            continue
+        profile_ids.extend(member.model_profile_id for member in config.members)
+    return profile_ids
 
-    A binding whose config no longer validates is left out with a warning
-    rather than taking the agent offline: sol-loop is advisory, and a stale
-    config must cost the review, never the run.
-    """
+
+def _sol_loop_profile_ids(spec: AgentSpec) -> list[UUID]:
+    """The model profile the agent's sol-loop reviewer reviews on, if it has one."""
     profile_ids: list[UUID] = []
     for binding in spec.capabilities:
         if binding.id != "sol_loop" or not binding.enabled:
@@ -3785,16 +3803,28 @@ class AgentRunnerService:
                 )
         return models
 
+    async def _council_models(
+        self, ctx: AuthContext, spec: AgentSpec
+    ) -> dict[UUID, ModelRequestSpec]:
+        """Resolve configured council members, leaving unavailable profiles out."""
+        models: dict[UUID, ModelRequestSpec] = {}
+        for profile_id in _council_profile_ids(spec):
+            if profile_id in models:
+                continue
+            try:
+                models[profile_id] = await self.models.resolve(ctx, profile_id=profile_id)
+            except AppException:
+                logger.warning(
+                    "Council member model %s cannot resolve; the run goes on without it",
+                    profile_id,
+                    exc_info=True,
+                )
+        return models
+
     async def _sol_loop_models(
         self, ctx: AuthContext, spec: AgentSpec
     ) -> dict[UUID, ModelRequestSpec]:
-        """The sol-loop reviewer's model, by profile id - if it still resolves.
-
-        A reviewer is advisory to the run it reviews: one whose profile was
-        deleted since publish, or whose key no longer unseals, is left out with
-        a warning rather than taking the agent offline, and sol-loop reports it
-        unavailable instead of substituting another model.
-        """
+        """Resolve the sol-loop reviewer, leaving an unavailable profile out."""
         models: dict[UUID, ModelRequestSpec] = {}
         for profile_id in _sol_loop_profile_ids(spec):
             if profile_id in models:
@@ -4183,6 +4213,7 @@ class AgentRunnerService:
         # from `resources`, which every capability reads and a log line may carry:
         # a resolved model holds its unsealed credential.
         reviewer_models = await self._reviewer_models(models_ctx, spec)
+        council_models = await self._council_models(models_ctx, spec)
         sol_loop_models = await self._sol_loop_models(models_ctx, spec)
         step_profile = _browser_step_profile(spec)
         if step_profile is not None:
@@ -4855,6 +4886,7 @@ class AgentRunnerService:
                     resources=resources,
                     secrets=secrets,
                     reviewer_models=reviewer_models,
+                    council_models=council_models,
                     sol_loop_models=sol_loop_models,
                     extra_toolsets=[*(extra_toolsets or []), *spec_toolsets],
                     request_approval=channel,
@@ -4923,6 +4955,7 @@ class AgentRunnerService:
             resources=resources,
             secrets=secrets,
             reviewer_models=reviewer_models,
+            council_models=council_models,
             sol_loop_models=sol_loop_models,
             extra_toolsets=[
                 *(extra_toolsets or []),
@@ -5731,6 +5764,7 @@ class AgentRunnerService:
                 secrets=secrets,
                 extra_toolsets=toolsets,
                 reviewer_models=await self._reviewer_models(delegation.models_ctx, runnable),
+                council_models=await self._council_models(delegation.models_ctx, runnable),
                 sol_loop_models=await self._sol_loop_models(delegation.models_ctx, runnable),
             ),
             max_steps=runnable.max_steps,

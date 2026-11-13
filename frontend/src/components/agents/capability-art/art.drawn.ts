@@ -18,6 +18,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   babysit_pr: 160,
   drafts: 36,
   harness: 90,
+  council: 280,
   sol_loop: 120,
   eval_tool_tuning: 150,
   secret_request: 45,
@@ -355,6 +356,25 @@ const BABYSIT_PR =
   '<circle class="ict" cx="120" cy="30" r="9"/><path class="igrid2" d="M116 30l3 3 5-6"/>' +
   "</svg>";
 
+/** A council weighing several reviews into one shared verdict. */
+const COUNCIL =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<g><polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/></g>' +
+  '<g><polygon class="int" points="120,30 195.7,73.7 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inl" points="44.3,76.8 120,120.5 120,117.4 44.3,73.7"/>' +
+  '<polygon class="inr" points="195.7,76.8 120,120.5 120,117.4 195.7,73.7"/></g>' +
+  '<g transform="matrix(0.9 0.5 -0.9 0.5 120 30)">' +
+  '<circle class="icl" cx="22" cy="27" r="9"/><circle class="icr" cx="40" cy="20" r="9"/>' +
+  '<circle class="icl" cx="58" cy="27" r="9"/><path class="igrid2" d="M22 42v12m18-19v19m18-12v12"/>' +
+  '<rect class="term" x="8" y="61" width="64" height="15" rx="3"/>' +
+  '<text class="termtx s5 mid" x="40" y="71">shared verdict</text></g>' +
+  '<g class="bob"><g transform="translate(176 32)"><rect x="-23" y="-9" width="46" height="16" rx="8" class="pp" />' +
+  '<text x="0" y="2.4" class="tx mono s7 mid b" >COUNCIL</text></g></g>' +
+  "</svg>";
+
 /**
  * Sol-loop: one reviewer judges the same work, round after round - a verdict
  * over the ledger, with the findings listed under it until none are open.
@@ -430,6 +450,7 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   phone_calls: PHONE_CALLS,
   drafts: DRAFTS,
   harness: HARNESS,
+  council: COUNCIL,
   sol_loop: SOL_LOOP,
   eval_tool_tuning: EVAL_TOOL_TUNING,
   secret_request: SECRET_REQUEST,

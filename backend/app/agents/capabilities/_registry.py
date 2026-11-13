@@ -733,6 +733,7 @@ def load_builtins() -> None:
         computer_use,
         context,
         conversation_search,
+        council,
         drafts,
         eval_tool_tuning,
         follow_ups,

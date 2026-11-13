@@ -85,6 +85,7 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `coding_agent` | Coding agent | analiza | `run_coding_agent` | `sandbox:execute` | wymagany | przekazana |
 | `harness` | Harness | analiza | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | wymagany | przekazana |
 | `monitor` | Obserwuj polecenie | analiza | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | przekazana |
+| `council` | Rada | analiza | `run_council_review` | `agents:delegate` | — | przekazana |
 | `babysit_pr` | Babysit PR | analiza | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | przekazana |
 | `sol_loop` | Sol-loop | analiza | `run_sol_loop_review` | `agents:delegate` | — | przekazana |
 | `eval_tool_tuning` | Dostrajanie narzędzi na podstawie ewaluacji | analiza | `record_eval_tool_tuning` | — | — | bez zmian |

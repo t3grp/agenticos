@@ -78,6 +78,7 @@ se describe en [Capabilities](capabilities.md).
 | Coding agent | `coding_agent` |
 | Long conversations | `compaction` |
 | Computer use | `computer_use` |
+| Consejo | `council` |
 | Context | `context` |
 | Past conversations | `conversation_search` |
 | Follow-ups | `follow_ups` |

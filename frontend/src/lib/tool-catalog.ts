@@ -805,6 +805,15 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     displayNameKey: "cancelTask",
   },
 
+  // council - one review round: three delegates score the work in parallel.
+  // The result is plain text - a JSON round with the scores and the table -
+  // so the step renders generic, like any other read-only text tool.
+  run_council_review: {
+    kind: "read",
+    render: "generic",
+    captionKey: "reviewingWithCouncil",
+    displayNameKey: "councilReview",
+  },
   // sol-loop - one review round: one reviewer judges the work. The result is
   // plain text - a JSON round with the verdict, the findings and the ledger -
   // so the step renders generic, like any other read-only text tool.

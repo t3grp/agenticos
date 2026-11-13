@@ -78,6 +78,7 @@ browser is pointed at the deployment's browser service
 | `coding_agent` | Coding agent | analysis | `run_coding_agent` | `sandbox:execute` | required | handed off |
 | `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | required | handed off |
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | handed off |
+| `council` | Council | analysis | `run_council_review` | `agents:delegate` | — | handed off |
 | `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | handed off |
 | `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | handed off |
 | `eval_tool_tuning` | Eval tool tuning | analysis | `record_eval_tool_tuning` | — | — | as-is |

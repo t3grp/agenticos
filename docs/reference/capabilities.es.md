@@ -85,6 +85,7 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `coding_agent` | Coding agent | analysis | `run_coding_agent` | `sandbox:execute` | obligatoria | delegada |
 | `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | obligatoria | delegada |
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | delegada |
+| `council` | Consejo | analysis | `run_council_review` | `agents:delegate` | — | delegada |
 | `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | delegada |
 | `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | delegada |
 | `eval_tool_tuning` | Ajuste de herramientas con evals | analysis | `record_eval_tool_tuning` | — | — | tal cual |
