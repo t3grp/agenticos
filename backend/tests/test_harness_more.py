@@ -58,7 +58,10 @@ def _opencode_stream() -> list[dict[str, Any]]:
         {
             "type": "tool_use",
             "sessionID": "ses_abc",
-            "part": {"tool": "read", "input": {"file_path": "app.py"}},
+            "part": {
+                "tool": "read",
+                "state": {"status": "completed", "input": {"filePath": "app.py"}},
+            },
         },
         {
             "type": "step_finish",
@@ -77,7 +80,10 @@ def _opencode_stream() -> list[dict[str, Any]]:
         {
             "type": "tool_use",
             "sessionID": "ses_abc",
-            "part": {"tool": "edit", "input": {"file_path": "app.py"}},
+            "part": {
+                "tool": "edit",
+                "state": {"status": "completed", "input": {"filePath": "app.py"}},
+            },
         },
         {"type": "text", "sessionID": "ses_abc", "part": {"text": "It adds."}},
     ]
@@ -355,7 +361,13 @@ class TestLiveItems:
     def test_opencode_and_gemini_close_a_tool_call_on_its_use_event(self) -> None:
         opencode = live_items(
             "opencode",
-            {"type": "tool_use", "part": {"tool": "read", "input": {"file_path": "app.py"}}},
+            {
+                "type": "tool_use",
+                "part": {
+                    "tool": "read",
+                    "state": {"status": "running", "input": {"filePath": "app.py"}},
+                },
+            },
         )
         assert [type(item) for item in opencode] == [StepStarted, StepEnded]
         assert isinstance(opencode[0], StepStarted)

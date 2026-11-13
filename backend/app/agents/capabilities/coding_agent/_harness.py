@@ -669,7 +669,12 @@ def opencode_report(
                 or _text(part.get("name"))
                 or "tool"
             )
-            arguments = _mapping(part.get("input")) or _mapping(part.get("args"))
+            state = _mapping(part.get("state"))
+            arguments = (
+                _mapping(state.get("input"))
+                or _mapping(part.get("input"))
+                or _mapping(part.get("args"))
+            )
             step = _named_step(tool, arguments, _OPENCODE_KINDS)
             if step.kind == "edit" and step.title not in files:
                 files.append(step.title)
@@ -946,7 +951,12 @@ def _opencode_live(event: dict[str, Any]) -> list[LiveItem]:
     if kind != "tool_use":
         return []
     tool = _text(part.get("tool")) or _text(part.get("toolName")) or "tool"
-    arguments = _mapping(part.get("input")) or _mapping(part.get("args"))
+    state = _mapping(part.get("state"))
+    arguments = (
+        _mapping(state.get("input"))
+        or _mapping(part.get("input"))
+        or _mapping(part.get("args"))
+    )
     step = _named_step(tool, arguments, _OPENCODE_KINDS)
     key = _text(part.get("id")) or tool
     # The stream carries no per-call finish event - a `step_finish` closes a
@@ -1009,6 +1019,7 @@ def _named_step(tool: str, arguments: dict[str, Any], kinds: dict[str, StepKind]
     title = (
         _text(arguments.get("command"))
         or _text(arguments.get("file_path"))
+        or _text(arguments.get("filePath"))
         or _text(arguments.get("file"))
         or _text(arguments.get("path"))
         or _text(arguments.get("pattern"))
