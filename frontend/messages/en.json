@@ -1,4 +1,9 @@
 {
+  "appUpdate": {
+    "title": "{appName} has been updated",
+    "description": "Reload to get the newest version.",
+    "reload": "Reload"
+  },
   "appConnections": {
     "enable": "Enable",
     "enabled": "Account enabled.",
@@ -2027,7 +2032,9 @@
       "tablesCreating": "Creating a table",
       "tablesDescribing": "Reading a table's columns",
       "tablesListing": "Checking which tables it can use",
-      "viewsListing": "Listing a table's saved views"
+      "viewsListing": "Listing a table's saved views",
+      "burstRun": "Burst Run",
+      "burstingSubtasks": "Running subtasks in parallel"
     },
     "turnWasStopped": "stopped",
     "unfavourite": "Remove from favourites",
@@ -2490,6 +2497,9 @@
     "localAgent": {
       "claudeCode": "Claude Code",
       "codex": "Codex",
+      "opencode": "OpenCode",
+      "gemini": "Gemini CLI",
+      "pi": "Pi",
       "ready": "{agent} · {folder} · {access}",
       "edit": "can edit",
       "readOnly": "read only",
@@ -7479,7 +7489,10 @@
       "decisionApprovedInChat": "Approved. Once nothing else is waiting, the agent goes on in the chat it was asked in.",
       "decisionRejectedInChat": "Rejected. Once nothing else is waiting, the agent answers in the chat it was asked in.",
       "runResumedInChat": "Run resumed. Its answer is also sent to the chat it was asked in.",
-      "alreadyContinuing": "This run is already continuing in its chat."
+      "alreadyContinuing": "This run is already continuing in its chat.",
+      "burstRuns": "{count, plural, =1 {1 burst} other {# bursts}}",
+      "burstRun": "Burst {burst} · {task}",
+      "burstPart": "{id} · {title} — {status}"
     },
     "sandboxes": {
       "addConnection": "Add connection",
@@ -12000,6 +12013,14 @@
       "needs": "Two published agents the caller may run, and the agents:run permission to read the thread.",
       "never": "Does not reach an agent the caller may not run, send on a human's behalf, or deliver a message outside the thread.",
       "example1": "Ask the research agent to hand its findings to the writing agent before the draft is due."
+    },
+    "burst": {
+      "name": "Burst",
+      "does": "Splits one task into independent subtasks, runs them in parallel, and merges the results into one outcome.",
+      "example1": "Research three approaches at once and merge what they find",
+      "example2": "Draft the sections of a guide in parallel",
+      "needs": "A task that splits into independent parts, each with its own prompt.",
+      "never": "Never drops a failed part or presents the merge as complete while one is failed: a part that fails is reported with its reason."
     }
   },
   "capabilityCategories": {
@@ -12705,6 +12726,16 @@
       "max_watch_minutes": {
         "title": "Watch at most",
         "description": "Minutes one watch may run before it stops and reports blocked. A watch that runs past this without green has not been approved — it has expired."
+      }
+    },
+    "burst": {
+      "max_subtasks": {
+        "title": "Subtasks at most",
+        "description": "How many subtasks one burst runs at once. 3 is the subagents max_fanout default and 10 its hard max: a burst shares that ceiling rather than raising it. Reached, the tool refuses the extra parts with a message the model can act on."
+      },
+      "max_bursts": {
+        "title": "Bursts at most",
+        "description": "How many bursts one run may ask for. A fresh burst after fixes is a new burst, and the cap is what stops repeated bursts turning into scope creep."
       }
     }
   },

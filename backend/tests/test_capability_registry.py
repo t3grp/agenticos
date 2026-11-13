@@ -1097,6 +1097,7 @@ def test_exactly_the_capabilities_a_call_cannot_run_live_say_so():
             "council",
             "babysit_pr",
             "sol_loop",
+            "burst",
             "proof_scenario",
         },
         "never": {"channel_tools", "follow_ups", "drafts"},

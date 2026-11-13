@@ -37,7 +37,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
-from pydantic_ai.workspaces import CommandResult, Workspace, WorkspaceError
+from pydantic_ai.workspaces import CommandResult, Workspace, WorkspaceError, WorkspaceRef
 from pydantic_ai_backends import StateBackend
 
 from app.agents.browser_events import BrowserEvent
@@ -77,6 +77,7 @@ from app.agents.capabilities.computer_use._backends import (
     x11_keys,
     xdotool,
 )
+from app.agents.capabilities.computer_use._lease import LeasedComputer
 from app.agents.capabilities.computer_use._toolset import (
     SEEN,
     ComputerToolset,
@@ -815,6 +816,7 @@ class _Box:
         self.fails = fails
         self.attached = attached
         self.backend = self
+        self.ref = WorkspaceRef(provider="sandboxd:test", id="test-desktop")
         self.unreadable = False
         self.undeletable = False
         self.removed: list[str] = []
@@ -1582,9 +1584,16 @@ class TestTheCapability:
         desktop = await capability._open(box)  # ty: ignore[invalid-argument-type] - the members it uses
 
         assert isinstance(desktop, SandboxComputer)
+        assert box.ran == []
+        await desktop.start()
         assert "Xvfb :0 -ac -screen 0 1024x768x24" in box.ran[0][0]
 
-    async def test_the_toolset_hands_the_runs_workspace_to_the_desktop(self):
+    async def test_the_toolset_hands_the_runs_workspace_to_the_desktop(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(
+            LeasedComputer, "acquire", AsyncMock(side_effect=lambda computer, *_: computer)
+        )
         frames = _Frames()
         box = _Box()
         toolset = ComputerUse().get_toolset()

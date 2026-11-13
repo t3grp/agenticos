@@ -20,6 +20,7 @@ from app.db.locks import LockScope, hold_subject
 from app.db.models.virtual_table import VirtualTable
 from app.db.updates import writable
 from app.repositories import table_view_repo, virtual_table_repo
+from app.repositories import task as task_repo
 from app.schemas.virtual_table import (
     MAX_LABEL,
     MAX_OPTIONS,
@@ -28,6 +29,7 @@ from app.schemas.virtual_table import (
     ColumnTypeName,
     OperationKey,
     OptionDef,
+    RowPolicyUpdate,
     SchemaUpdate,
     SchemaVersionList,
     SchemaVersionRead,
@@ -52,7 +54,8 @@ from app.services.virtual_tables.exceptions import (
 from app.services.virtual_tables.principals import principal_problems
 from app.services.virtual_tables.quotas import enforce_table_count
 from app.services.virtual_tables.receipts import run_once
-from app.services.virtual_tables.schema import build_columns, diff
+from app.services.virtual_tables.row_policy import parse_policy
+from app.services.virtual_tables.schema import SchemaDiff, build_columns, diff
 from app.services.virtual_tables.types import COMPUTED_TYPES, READ_THROUGH_LINK, CellProblem
 
 _OPERATION_KEY = TypeAdapter(OperationKey)
@@ -383,6 +386,7 @@ class TableOperations(Operations):
             return self._read(table, previous, can_edit=True)
         await self._check_references(ctx, columns, previous)
         change = diff(previous, columns)
+        self._refuse_policy_column_change(table, columns, change)
         await self._refuse_dependents(ctx, table, column_ids=change.archived | change.retyped)
         columns = await self._retype(table, previous, columns, change.retyped)
         await self._refuse_empty_required(table, columns, change.required)
@@ -407,6 +411,157 @@ class TableOperations(Operations):
             details={"version": version, "archived_columns": len(change.archived)},
         )
         return self._read(table, columns, can_edit=True)
+
+    async def set_row_policy(
+        self, ctx: AuthContext, table_id: UUID, data: RowPolicyUpdate
+    ) -> TableRead:
+        """Set or clear a table's row-level access policy.
+
+        Anyone holding `tables:edit` on the table may set it: the access
+        decision is the service's, via `resolve_access`, so a grant holder
+        is not refused by a route-level role gate before the service is
+        reached. A managed board table and an archived table refuse.
+
+        Raises:
+            NotFoundError: The table is out of reach, or this caller may not edit it.
+            BadRequestError: The table is a managed board table.
+            InvalidSchemaError: A named column does not exist, is archived,
+                or is not a user/multi_user (assignee) or link (project)
+                column; or the projects table cannot be read.
+        """
+        table = await self._load_table(ctx, table_id, Perm.TABLES_EDIT, lock=True)
+        self._ensure_live(table)
+        if await task_repo.for_table(self.db, table.id, ctx.organization_id) is not None:
+            raise BadRequestError(
+                message=f"Table '{table.name}' is a managed board table and takes no row policy",
+                details={"table_id": table.id},
+            )
+        columns = await self._columns(table)
+        if data.rule == "none":
+            document: dict[str, object] | None = None
+        else:
+            await self._validate_row_policy(ctx, columns, data)
+            document = data.model_dump(mode="json")
+        table = await virtual_table_repo.update_table(
+            self.db, table=table, update_data={"row_policy": document}
+        )
+        await record_audit(
+            self.db,
+            actor_user_id=ctx.subject_id,
+            organization_id=ctx.organization_id,
+            action="table.row_policy_changed",
+            target_type="table",
+            target_id=str(table.id),
+            details={"rule": data.rule},
+        )
+        return self._read(table, columns, can_edit=True)
+
+    async def _validate_row_policy(
+        self, ctx: AuthContext, columns: list[ColumnDef], data: RowPolicyUpdate
+    ) -> None:
+        """The columns a policy names exist, are live, and are the right kind.
+
+        The project half names a link column on this table, a projects
+        table the caller may view, and a members column on it. A projects
+        table the caller cannot reach is an invalid policy, not a 404: the
+        caller named a table they may not see, and the policy could not be
+        honoured. An archived projects table is accepted: its records stay
+        readable, so its membership still resolves.
+        """
+        by_id = {column.id: column for column in columns}
+        for field in ("view_column_id", "edit_column_id"):
+            column_id = getattr(data, field)
+            column = by_id.get(column_id)
+            if column is None:
+                raise InvalidSchemaError(field, "No column with this id on the table")
+            if column.archived:
+                raise InvalidSchemaError(field, f"Column '{column.label}' is archived")
+            if column.type not in ("user", "multi_user"):
+                raise InvalidSchemaError(
+                    field, f"Column '{column.label}' is {column.type}, not a user column"
+                )
+        if data.view_projects_table_id is None:
+            return
+        link = by_id.get(data.view_project_link_column_id)
+        if link is None:
+            raise InvalidSchemaError(
+                "view_project_link_column_id", "No column with this id on the table"
+            )
+        if link.archived:
+            raise InvalidSchemaError(
+                "view_project_link_column_id", f"Column '{link.label}' is archived"
+            )
+        if link.type != "link" or link.link_table_id != data.view_projects_table_id:
+            raise InvalidSchemaError(
+                "view_project_link_column_id",
+                f"Column '{link.label}' does not link to the projects table",
+            )
+        try:
+            projects = await self._load_table(ctx, data.view_projects_table_id, Perm.TABLES_VIEW)
+        except NotFoundError:
+            raise InvalidSchemaError(
+                "view_projects_table_id",
+                "No projects table with this id that this caller may view",
+            ) from None
+        project_columns = await self._columns(projects)
+        members = next(
+            (
+                column
+                for column in project_columns
+                if column.id == data.view_project_members_column_id
+            ),
+            None,
+        )
+        if members is None:
+            raise InvalidSchemaError(
+                "view_project_members_column_id",
+                "No column with this id on the projects table",
+            )
+        if members.archived:
+            raise InvalidSchemaError(
+                "view_project_members_column_id", f"Column '{members.label}' is archived"
+            )
+        if members.type not in ("user", "multi_user"):
+            raise InvalidSchemaError(
+                "view_project_members_column_id",
+                f"Column '{members.label}' is {members.type}, not a user column",
+            )
+
+    def _refuse_policy_column_change(
+        self, table: VirtualTable, columns: list[ColumnDef], change: SchemaDiff
+    ) -> None:
+        """Refuse archiving or retyping a column a row policy drives.
+
+        Archiving the assignee column would leave every row invisible to
+        everyone but the bypass roles; retyping it away from a user column
+        would leave the policy unreadable. Either way the fix is to clear
+        the policy first, not to silently break it.
+        """
+        policy = parse_policy(table.row_policy)
+        if policy is None:
+            return
+        driving: dict[UUID, tuple[str, ...]] = {
+            policy.view_column_id: ("user", "multi_user"),
+            policy.edit_column_id: ("user", "multi_user"),
+        }
+        if policy.view_project_link_column_id is not None:
+            driving[policy.view_project_link_column_id] = ("link",)
+        for index, column in enumerate(columns):
+            if column.id in change.archived and column.id in driving:
+                raise InvalidSchemaError(
+                    f"columns.{index}.archived",
+                    f"Column '{column.label}' drives the table's row policy. "
+                    "Clear the policy before archiving it.",
+                )
+            if column.id in change.retyped and column.id in driving:
+                allowed = driving[column.id]
+                if column.type not in allowed:
+                    raise InvalidSchemaError(
+                        f"columns.{index}.type",
+                        f"Column '{column.label}' drives the table's row policy and "
+                        f"must stay a {' or '.join(allowed)} column. "
+                        "Clear the policy before changing its type.",
+                    )
 
     async def _retype(
         self,
@@ -534,6 +689,9 @@ class TableOperations(Operations):
         self, table: VirtualTable, columns: list[ColumnDef], required: frozenset[UUID]
     ) -> None:
         for index, column in enumerate(columns):
+            # Table-wide by design, like the record-count quota: whether a
+            # column may become required depends on every record, not only
+            # the ones its caller may see under the table's row policy.
             if column.id in required and await virtual_table_repo.count_records_without_value(
                 self.db, table_id=table.id, column_id=column.id
             ):

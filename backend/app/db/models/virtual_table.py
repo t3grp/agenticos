@@ -88,6 +88,10 @@ class VirtualTable(Base, TimestampMixin):
         index=True,
     )
     schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Row-level access, one policy document per table (see `RowPolicy` in
+    # `app/schemas/virtual_table.py`). NULL is no policy: today's behaviour,
+    # every row visible to anyone who may read the table.
+    row_policy: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     # Archiving keeps the rows and the history readable and refuses writes. A
     # ordinary table stays because a workflow or view may still name it. Managed
     # task tables are purged when their owning scope is deleted.

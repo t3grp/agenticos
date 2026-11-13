@@ -1,4 +1,10 @@
-"""Durable, idempotent project-room messages and ordered explicit agent requests."""
+"""Durable, idempotent project-room messages and ordered explicit agent requests.
+
+Revision ID: 0311_room_submissions
+Revises: 0303_virtual_table_row_policy
+
+The room ledger follows table row policies so installations have one migration head.
+"""
 
 from collections.abc import Sequence
 
@@ -8,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0311_room_submissions"
-down_revision: str | None = "0310_secret_requests"
+down_revision: str | None = "0303_virtual_table_row_policy"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
