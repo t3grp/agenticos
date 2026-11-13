@@ -279,7 +279,7 @@ describe("what the model was told", () => {
                 phase: "before_fix",
                 status: "failed",
                 evidence_kind: "reproduction",
-                command: "pytest tests/test_widget.py -q",
+                command: "  pytest  tests/test_widget.py -q ",
                 observed: "AssertionError: widget did not render",
                 duration_ms: 120,
                 observed_at: "2026-11-12T06:00:00Z",
@@ -315,12 +315,41 @@ describe("what the model was told", () => {
               },
             ],
           },
+          {
+            id: "P3",
+            name: "different reproductions",
+            kind: "reproduction",
+            command: "pytest tests/test_widget.py -q",
+            covers: ["backend/app/other.py"],
+            attempts: [
+              {
+                scenario_id: "P3",
+                phase: "before_fix",
+                status: "failed",
+                evidence_kind: "ui_observation",
+                command: "pytest tests/test_widget.py -q",
+                observed: "AssertionError",
+                duration_ms: 120,
+                observed_at: "2026-11-12T06:00:00Z",
+              },
+              {
+                scenario_id: "P3",
+                phase: "after_fix",
+                status: "passed",
+                evidence_kind: "ui_observation",
+                command: "pytest tests/test_other.py -q",
+                observed: "other reproduction passed",
+                duration_ms: 110,
+                observed_at: "2026-11-12T06:05:00Z",
+              },
+            ],
+          },
         ],
       }),
     });
     renderManifest();
 
-    expect(screen.getByText("2 proof scenarios")).toBeInTheDocument();
+    expect(screen.getByText("3 proof scenarios")).toBeInTheDocument();
     expect(screen.getByText("P1 reproduce the failure — proven")).toBeInTheDocument();
     expect(screen.getByText("Covers: backend/app/widget.py")).toBeInTheDocument();
     expect(screen.getByText("Covers: frontend/src/widget.tsx")).toBeInTheDocument();
@@ -330,6 +359,7 @@ describe("what the model was told", () => {
     expect(screen.getByText("1 passed")).toBeInTheDocument();
     // A unit-test attempt never counts as proof, so it reads as unproven.
     expect(screen.getByText("P2 unit tests only — unproven")).toBeInTheDocument();
+    expect(screen.getByText("P3 different reproductions — unproven")).toBeInTheDocument();
   });
 
   it("shows no proof section for a run that recorded no scenarios", () => {

@@ -193,29 +193,42 @@ def evidence_counts_as_proof(kind: str) -> bool:
     return kind in PROOF_EVIDENCE_KINDS
 
 
+def _normalize_reproduction(command: str) -> str:
+    """Collapse whitespace so equivalent command strings identify one reproduction."""
+    return " ".join(command.split())
+
+
 def scenario_proven(scenario: ProofScenario) -> bool:
     """Whether this scenario proves its change.
 
     Proven means the same reproduction failed before the fix and passed after
-    it, both times with evidence that counts as proof. One half alone proves
-    nothing: a failure with no passing re-run is a bug report, and a pass
-    with no failing before-run never showed the fix fixing anything. An
-    inconclusive attempt counts as neither half, and a unit-test attempt
-    counts as neither half either.
+    it, both times with evidence that counts as proof. Commands are compared
+    after whitespace normalization. Two blank commands also match, which
+    preserves command-less scenarios identified by a UI flow's name or id.
+    One half alone proves nothing: a failure with no passing re-run is a bug
+    report, and a pass with no failing before-run never showed the fix fixing
+    anything. An inconclusive attempt and a unit-test attempt count as neither
+    half.
     """
-    before_failed = any(
-        attempt.phase == "before_fix"
+    before_failed = [
+        attempt
+        for attempt in scenario.attempts
+        if attempt.phase == "before_fix"
         and attempt.status == "failed"
         and evidence_counts_as_proof(attempt.evidence_kind)
+    ]
+    after_passed = [
+        attempt
         for attempt in scenario.attempts
-    )
-    after_passed = any(
-        attempt.phase == "after_fix"
+        if attempt.phase == "after_fix"
         and attempt.status == "passed"
         and evidence_counts_as_proof(attempt.evidence_kind)
-        for attempt in scenario.attempts
+    ]
+    return any(
+        _normalize_reproduction(before.command) == _normalize_reproduction(after.command)
+        for before in before_failed
+        for after in after_passed
     )
-    return before_failed and after_passed
 
 
 def record_attempt(
@@ -251,7 +264,7 @@ def record_attempt(
         phase=attempt.phase,
         status=attempt.status,
         evidence_kind=attempt.evidence_kind,
-        command=attempt.command,
+        command=attempt.command if attempt.command.strip() else scenario.command,
         observed=_clipped(attempt.observed),
         duration_ms=attempt.duration_ms,
         observed_at=attempt.observed_at or datetime.now(UTC),
@@ -379,6 +392,8 @@ def describe_scenario(scenario: ProofScenario) -> str:
         missing = "no failing before-fix attempt and no passing after-fix attempt"
     elif not before:
         missing = "no failing before-fix attempt"
+    elif after:
+        missing = "before and after ran different reproductions"
     else:
         missing = "no passing after-fix attempt"
     return f"{scenario.id} {scenario.name} - unproven ({missing})"

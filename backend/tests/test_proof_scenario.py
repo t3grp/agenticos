@@ -95,6 +95,41 @@ class TestScenarioProven:
     def test_failed_before_and_passed_after_proves_it(self):
         assert scenario_proven(_proven()) is True
 
+    def test_failed_before_and_passed_after_on_different_commands_do_not_prove_it(self):
+        scenario = _scenario(
+            attempts=[
+                _attempt("before_fix", "failed"),
+                _attempt("after_fix", "passed", observed="1 passed"),
+            ]
+        )
+        scenario.attempts[0].command = "pytest tests/test_widget.py -q"
+        scenario.attempts[1].command = "pytest tests/test_other.py -q"
+
+        assert scenario_proven(scenario) is False
+        assert proof_coverage(["backend/app/widget.py"], [scenario]).verdict == "unproven"
+        gate = merge_gate_proof(["backend/app/widget.py"], [scenario], checks_green=True)
+        assert gate.ready is False
+
+    def test_matching_commands_with_different_whitespace_prove_it(self):
+        scenario = _proven()
+        scenario.attempts[0].command = "  pytest   tests/test_widget.py -q  "
+        scenario.attempts[1].command = "pytest tests/test_widget.py -q"
+
+        assert scenario_proven(scenario) is True
+
+    def test_both_blank_commands_prove_a_commandless_scenario(self):
+        scenario = _scenario(
+            attempts=[
+                _attempt("before_fix", "failed"),
+                _attempt("after_fix", "passed", observed="visible"),
+            ]
+        )
+        scenario.command = ""
+        scenario.attempts[0].command = ""
+        scenario.attempts[1].command = ""
+
+        assert scenario_proven(scenario) is True
+
     def test_a_pass_with_no_failing_before_run_proves_nothing(self):
         assert (
             scenario_proven(
@@ -165,6 +200,25 @@ class TestRecordAttempt:
         assert recorded[0].name == "reproduce the failure, wider"
         assert recorded[0].covers == ["backend/app/widget.py", "frontend/src/widget.tsx"]
         assert len(recorded[0].attempts) == 2
+
+    def test_blank_attempt_commands_snapshot_the_scenario_command_when_recorded(self):
+        first = _scenario()
+        first.command = "pytest tests/test_widget.py -q"
+        before = _attempt("before_fix", "failed")
+        before.command = ""
+        recorded = record_attempt([], first, before)
+
+        later = _scenario()
+        later.command = "pytest tests/test_other.py -q"
+        after = _attempt("after_fix", "passed", observed="1 passed")
+        after.command = ""
+        recorded = record_attempt(recorded, later, after)
+
+        assert [attempt.command for attempt in recorded[0].attempts] == [
+            "pytest tests/test_widget.py -q",
+            "pytest tests/test_other.py -q",
+        ]
+        assert scenario_proven(recorded[0]) is False
 
     def test_observed_output_is_clipped_before_it_is_kept(self):
         recorded = record_attempt([], _scenario(), _attempt(observed="x" * 5000))
@@ -320,6 +374,18 @@ class TestDescribeAndRender:
         scenario = _scenario(attempts=[_attempt("after_fix", "passed", "reproduction", "1 passed")])
         assert describe_scenario(scenario).endswith("unproven (no failing before-fix attempt)")
 
+    def test_different_commands_explain_why_a_scenario_is_unproven(self):
+        scenario = _scenario(
+            attempts=[
+                _attempt("before_fix", "failed"),
+                _attempt("after_fix", "passed", observed="1 passed"),
+            ]
+        )
+        scenario.attempts[0].command = "pytest tests/test_widget.py -q"
+        scenario.attempts[1].command = "pytest tests/test_other.py -q"
+
+        assert "before and after ran different reproductions" in describe_scenario(scenario)
+
     def test_the_report_names_proven_and_unproven_files(self):
         coverage = proof_coverage(["backend/app/widget.py", "frontend/src/widget.tsx"], [_proven()])
         report = render_proof_report(coverage)
@@ -328,9 +394,7 @@ class TestDescribeAndRender:
         assert "no proof: frontend/src/widget.tsx" in report
 
     def test_the_report_names_an_unproven_scenario(self):
-        coverage = proof_coverage(
-            ["backend/app/widget.py"], [_scenario(attempts=[_attempt()])]
-        )
+        coverage = proof_coverage(["backend/app/widget.py"], [_scenario(attempts=[_attempt()])])
         report = render_proof_report(coverage)
         assert report.startswith("Proof: unproven")
         assert "unproven: P1" in report
@@ -362,6 +426,10 @@ class TestDictRoundTrip:
         scenario = _proven()
         restored = proof_scenario_from_dict(proof_scenario_to_dict(scenario))
         assert restored == scenario
+        assert (
+            proof_scenario_to_dict(restored)["attempts"][0]["command"]
+            == scenario.attempts[0].command
+        )
 
     def test_from_dict_tolerates_a_row_from_an_older_build(self):
         restored = proof_scenario_from_dict({"id": "P9", "name": "old row"})

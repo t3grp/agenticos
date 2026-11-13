@@ -306,19 +306,26 @@ export function RunManifest({ runId }: { runId: string }) {
         <Section title={t("proofScenarios", { count: manifest.proof_scenarios.length })}>
           <ul className="space-y-3">
             {manifest.proof_scenarios.map((scenario) => {
-              const proven =
-                scenario.attempts.some(
-                  (attempt) =>
-                    attempt.phase === "before_fix" &&
-                    attempt.status === "failed" &&
-                    attempt.evidence_kind !== "unit_test",
-                ) &&
-                scenario.attempts.some(
-                  (attempt) =>
-                    attempt.phase === "after_fix" &&
-                    attempt.status === "passed" &&
-                    attempt.evidence_kind !== "unit_test",
-                );
+              const beforeFailed = scenario.attempts.filter(
+                (attempt) =>
+                  attempt.phase === "before_fix" &&
+                  attempt.status === "failed" &&
+                  attempt.evidence_kind !== "unit_test",
+              );
+              const afterPassed = scenario.attempts.filter(
+                (attempt) =>
+                  attempt.phase === "after_fix" &&
+                  attempt.status === "passed" &&
+                  attempt.evidence_kind !== "unit_test",
+              );
+              const normalizeCommand = (command: string) => command.trim().replace(/\s+/g, " ");
+              const proven = beforeFailed.some((before) =>
+                afterPassed.some(
+                  (after) =>
+                    normalizeCommand(before.command ?? "") ===
+                    normalizeCommand(after.command ?? ""),
+                ),
+              );
               return (
                 <li key={scenario.id} className="space-y-1.5">
                   <p className="text-sm font-medium">
