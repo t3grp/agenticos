@@ -57,6 +57,7 @@ from app.api.routes.v1 import visuals
 from app.api.routes.v1 import context as context_files
 from app.api.routes.v1 import virtual_tables, tasks
 from app.api.routes.v1 import (
+    failure_learning,
     workflow_approvals,
     workflow_evals,
     workflow_exposures,
@@ -158,6 +159,7 @@ v1_router.include_router(
     workflow_approvals.router, prefix="/workflow-approvals", tags=["workflow-approvals"]
 )
 v1_router.include_router(workflow_evals.router, prefix="/workflows", tags=["workflows:evals"])
+v1_router.include_router(failure_learning.router, tags=["failure-learning"])
 v1_router.include_router(
     workflow_log_alerts.router, prefix="/workflows", tags=["workflows:log-alerts"]
 )
@@ -315,9 +317,7 @@ v1_router.include_router(invitations_org_router, prefix="/orgs", tags=["invitati
 v1_router.include_router(invitations_token_router, tags=["invitations"])
 
 v1_router.include_router(knowledge_bases.router, prefix="/kb", tags=["knowledge-bases"])
-v1_router.include_router(
-    sync_source_gdrive.router, prefix="/sync-sources", tags=["sync-sources"]
-)
+v1_router.include_router(sync_source_gdrive.router, prefix="/sync-sources", tags=["sync-sources"])
 v1_router.include_router(
     me_slash_commands.router, prefix="/me/slash-commands", tags=["me:slash-commands"]
 )

@@ -176,6 +176,37 @@ async def test_admission_and_rollback_leave_no_started_gap_and_second_admission_
         await admit_activation(db, ctx)
 
 
+async def test_a_parked_event_keeps_its_payload_until_it_settles(db: AsyncSession) -> None:
+    """#14: the full GitHub delivery waits beside its rendered context, and
+    settling redacts both - the payload is untrusted external content, so it
+    must not linger on a finished wait."""
+    w = await world(db, event=True)
+    payload = {
+        "event": "issues",
+        "action": "opened",
+        "repository": "acme/repo",
+        "sender": "octo",
+        "delivery_id": "delivery-1",
+        "payload": {"issue": {"number": 7}},
+    }
+    activation = uuid4()
+    assert await repo.park(
+        db,
+        activation_id=activation,
+        trigger=w.trigger,
+        user_id=w.user.id,
+        device_id=w.device.id,
+        intent_hash=activation_intent(w.trigger),
+        event_context="ISSUE #7 opened",
+        event_payload=payload,
+    )
+    assert (await repo.get(db, activation)).event_payload == payload
+    assert await repo.settle(db, activation_id=activation, status="started")
+    wait = await repo.get(db, activation)
+    assert wait.event_context is None
+    assert wait.event_payload is None
+
+
 @pytest.mark.parametrize("change", ["pause", "prompt", "folder", "owner", "end", "acting"])
 async def test_changed_authority_cancels_old_wait_without_retargeting_its_event(
     db: AsyncSession, change: str

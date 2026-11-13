@@ -567,6 +567,8 @@ oauth2_scheme_optional = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
 )
 
+_RECENT_AUTH_MAX_AGE_SECONDS = 300
+
 
 async def _authenticate_api_key(request: Request, token: str, api_keys: ApiKeyService) -> User:
     """Resolve an organization key to its issuer, on a public route only (#1794).
@@ -655,6 +657,23 @@ async def get_current_user(
 # resolved per row by `resolve_access` - never a role name on a route. The one
 # global privilege is `CurrentAppAdmin` below, which gates the deployment's own
 # administration rather than a tenant's.
+def require_recent_authentication(
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> None:
+    """Require an access token minted within five minutes of authentication."""
+    payload = verify_token(token)
+    auth_time = payload.get("auth_time") if payload else None
+    if (
+        payload is None
+        or payload.get("type") != "access"
+        or isinstance(auth_time, bool)
+        or not isinstance(auth_time, (int, float))
+        or not 0 <= datetime.now(UTC).timestamp() - auth_time <= _RECENT_AUTH_MAX_AGE_SECONDS
+    ):
+        raise AuthenticationError(message="Please sign in again before changing MFA settings")
+
+
+RecentAuth = Annotated[None, Depends(require_recent_authentication)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
@@ -1144,6 +1163,16 @@ def get_workflow_eval_service(db: DBSession) -> WorkflowEvalService:
 
 WorkflowEvalSvc = Annotated[WorkflowEvalService, Depends(get_workflow_eval_service)]
 
+from app.services.failure_learning import FailureLearningService
+
+
+def get_failure_learning_service(db: DBSession) -> FailureLearningService:
+    """Create FailureLearningService instance with database session."""
+    return FailureLearningService(db)
+
+
+FailureLearningSvc = Annotated[FailureLearningService, Depends(get_failure_learning_service)]
+
 from app.services.workflow_log_alerts import WorkflowLogAlertService
 
 
@@ -1439,6 +1468,25 @@ async def limit_workflow_run(ctx: Auth) -> None:
         limit=rate_limit.run_limit(),
     )
     _refuse_if_over(decision, "Too many workflow runs in the last minute. Wait and try again.")
+
+
+async def limit_agent_eval_run(ctx: Auth) -> None:
+    """Refuse a caller starting more agent eval runs than its share.
+
+    The same allowance as `limit_agent_run`, counted on a surface of its own:
+    an eval try starts a test run of the agent per case, per side, per sample,
+    and each of those runs can spend the organization's budget.
+
+    Usage::
+
+        @router.post("", dependencies=[Depends(limit_agent_eval_run)])
+    """
+    decision = await rate_limit.consume(
+        surface="agent_eval_run",
+        caller=f"user:{ctx.subject_id}",
+        limit=rate_limit.run_limit(),
+    )
+    _refuse_if_over(decision, "Too many agent eval runs in the last minute. Wait and try again.")
 
 
 async def limit_ml_call(ctx: Auth) -> None:

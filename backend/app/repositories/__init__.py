@@ -32,6 +32,7 @@ from app.repositories import embed_visitor as embed_visitor_repo
 from app.repositories import agent_environment as agent_environment_repo
 from app.repositories import agent_exposure as agent_exposure_repo
 from app.repositories import agent_run as agent_run_repo
+from app.repositories import failure_learning as failure_learning_repo
 from app.repositories import agent_trigger as agent_trigger_repo
 from app.repositories import run_manifest as run_manifest_repo
 from app.repositories import agent_workspace as agent_workspace_repo
@@ -138,6 +139,7 @@ __all__ = [
     "embed_visitor_repo",
     "agent_run_repo",
     "agent_trigger_repo",
+    "failure_learning_repo",
     "run_manifest_repo",
     "agent_workspace_repo",
     "agent_message_repo",

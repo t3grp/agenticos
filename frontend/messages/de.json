@@ -9051,6 +9051,15 @@
       "queue": "Startet einmal, sobald der vorige Lauf endet, egal wie viele Termine verpasst wurden.",
       "allow": "Startet pünktlich neben dem laufenden Lauf. Beide Läufe werden bezahlt."
     },
+    "conversationModeLabel": "Jede Ausführung läuft in",
+    "conversationMode": {
+      "continue": "Demselben Ausführungsprotokoll",
+      "fresh": "Einer neuen Unterhaltung"
+    },
+    "conversationModeHint": {
+      "continue": "Jede Ausführung hängt an das eine Ausführungsprotokoll des Triggers an, sodass der Runs-Tab sie alle aufführt.",
+      "fresh": "Jede Ausführung öffnet ihre eigene Unterhaltung, sodass eine Ausführung nie die Turns der vorherigen Ausführungen liest. Der Runs-Tab hat keine eine Unterhaltung zum Aufführen."
+    },
     "howOften": "Wie oft",
     "choiceEvery15m": "Alle 15 Min.",
     "choiceHourly": "Stündlich",

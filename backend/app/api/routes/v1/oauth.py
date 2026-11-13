@@ -9,6 +9,7 @@ discovery document and in nothing this module does (#1419).
 import json
 import logging
 import secrets
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 from uuid import uuid4
@@ -273,7 +274,11 @@ async def provider_callback(
         # front so the row can be written *after* the code is issued: a failure
         # handing out the code then leaves no phantom session behind.
         session_id = uuid4()
-        access_token = create_access_token(subject=str(user.id), sid=str(session_id))
+        access_token = create_access_token(
+            subject=str(user.id),
+            sid=str(session_id),
+            auth_time=int(datetime.now(UTC).timestamp()),
+        )
 
         # A single-use code, not the tokens: a token in the redirect URL reaches
         # the address bar, the server access log, and the `Referer` of the next

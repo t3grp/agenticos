@@ -30,6 +30,7 @@ def create_access_token(
     *,
     act: str | None = None,
     sid: str | None = None,
+    auth_time: int | None = None,
 ) -> str:
     """Create a JWT access token.
 
@@ -39,8 +40,9 @@ def create_access_token(
     only to the account they are acting as (#943). `sid` names the session row the
     token belongs to: on an impersonation so the token can be refused once the row
     has been ended (#1044), and on an ordinary login so a password change can spare
-    the session that made it while revoking the account's others (#1439). Each is
-    omitted when unset, so a token minted without one is byte-for-byte what it was.
+    the session that made it while revoking the account's others (#1439).
+    `auth_time` records a successful fresh authentication for sensitive settings.
+    Optional claims are omitted when unset.
     """
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
@@ -52,6 +54,8 @@ def create_access_token(
         to_encode["act"] = str(act)
     if sid is not None:
         to_encode["sid"] = str(sid)
+    if auth_time is not None:
+        to_encode["auth_time"] = auth_time
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

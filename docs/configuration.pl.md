@@ -427,6 +427,7 @@ się zatrzymuje i żaden z nich tego nie oznajmia:
 | `SMTP_TLS_MODE` | `auto` | Jak otwierane jest szyfrowane połączenie. `auto` pozwala wybrać portowi; `implicit` otwiera TLS od pierwszego bajtu, a `starttls` negocjuje podniesienie, niezależnie od portu. Ignorowane, gdy `SMTP_TLS=false` |
 | `EMAIL_FROM` | `noreply@agenticos.com` | Adres w polu `From` każdej wiadomości |
 | `EMAIL_FROM_NAME` | `agenticos` | Nazwa wyświetlana obok tego adresu |
+| `FAILURE_LEARNING_DIGEST_RECIPIENT` | (pusty) | Jeden adres, na który trafia codzienne podsumowanie rejestru błędów. Pusty oznacza, że nie wybrano odbiorcy, a zadanie podsumowania nie robi nic — nie tworzy roboczych wpisów i nie wysyła maili. Jeden adres dla całego wdrożenia, więc widzi podsumowania każdej organizacji i musi to być adres operatora |
 
 !!! note "Jak szyfrowane jest połączenie"
 

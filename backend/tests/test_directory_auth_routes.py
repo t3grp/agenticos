@@ -7,6 +7,7 @@ is `tests/test_directory_sign_in.py`'s.
 """
 
 import base64
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from urllib.parse import parse_qs, urlparse
@@ -59,7 +60,7 @@ def sign_in() -> MagicMock:
 
 @pytest.fixture
 def sessions(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    created = AsyncMock(return_value=SimpleNamespace(id=uuid4()))
+    created = AsyncMock(return_value=SimpleNamespace(id=uuid4(), created_at=datetime.now(UTC)))
     monkeypatch.setattr(SessionService, "create_session", created)
     return created
 

@@ -79,7 +79,9 @@ async def ldap_login(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("User-Agent"),
     )
-    access_token = create_access_token(subject=str(user.id), sid=str(session.id))
+    access_token = create_access_token(
+        subject=str(user.id), sid=str(session.id), auth_time=int(session.created_at.timestamp())
+    )
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 
