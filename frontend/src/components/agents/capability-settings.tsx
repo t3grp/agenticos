@@ -861,11 +861,14 @@ const SECRET_HELP: Record<string, string | undefined> = {
  * Which subscription sign-in a capability offers beside its key, as it is set up.
  *
  * Only the coding agent has one, and which is the harness's: Codex signs in with
- * ChatGPT, Claude Code with the token `claude setup-token` prints.
+ * ChatGPT, Claude Code with the token `claude setup-token` prints. The new
+ * harnesses offer none - they take an API key only - so they get no sign-in.
  */
 function signInFor(binding: CapabilityBindingSpec): "chatgpt" | "claudeToken" | null {
   if (binding.id !== CODING_AGENT_ID) return null;
-  return binding.config.harness === "codex" ? "chatgpt" : "claudeToken";
+  if (binding.config.harness === "codex") return "chatgpt";
+  if (binding.config.harness === "claude_code") return "claudeToken";
+  return null;
 }
 
 /**

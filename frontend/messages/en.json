@@ -2492,6 +2492,9 @@
     "localAgent": {
       "claudeCode": "Claude Code",
       "codex": "Codex",
+      "opencode": "OpenCode",
+      "gemini": "Gemini CLI",
+      "pi": "Pi",
       "ready": "{agent} · {folder} · {access}",
       "edit": "can edit",
       "readOnly": "read only",
