@@ -100,6 +100,7 @@ import { useInChatScope } from "@/stores/chat-scope-context";
 import { useComposerIntentStore } from "@/stores/composer-intent-store";
 import { cn } from "@/lib/utils";
 import { useConversations } from "@/hooks";
+import { useTenantId } from "@/hooks/use-organizations";
 import { useMounted } from "@/hooks/use-mounted";
 import { useOnline } from "@/hooks/use-online";
 import { offlineAvailable } from "@/lib/offline/device-cache";
@@ -228,10 +229,14 @@ export function ChatContainer({
     currentConversationId,
     pendingProjectId,
     currentMessages,
+    loadedTranscript,
+    selectionVersion,
     currentCost,
     isLoading: isConversationLoading,
   } = useConversationStore();
   const rereadMessages = useChatStore((state) => state.rereadMessages);
+  const committedTranscript = useChatStore((state) => state.loadedTranscript);
+  const unresolvedTranscript = loadedTranscript ?? committedTranscript;
   const chatApi = useChatStore.useApi();
   // The model override the picker holds, mirrored here because the context gauge
   // is a share of *its* window rather than of the agent's default.
@@ -266,6 +271,7 @@ export function ChatContainer({
   const listed = conversations.find((conversation) => conversation.id === currentConversationId);
   const notListed = currentConversationId !== null && listed === undefined;
   const meId = useAuthStore((state) => state.user?.id);
+  const tenantId = useTenantId();
   const needsAccess = currentConversationId !== null && (notListed || listed?.user_id !== meId);
   const access = useConversationAccess(currentConversationId, needsAccess);
   const sharedConversation = useSharedConversation(currentConversationId);
@@ -737,9 +743,34 @@ export function ChatContainer({
   }, [currentConversationId, clearMessages, clearQueued]);
 
   useEffect(() => {
+    // A request made before the organization list resolved has no concrete
+    // tenant proof. Read it once under the resolved tenant instead of rebinding
+    // that history to whichever organization happens to be selected now.
     if (
-      currentMessages.length > 0 &&
-      currentMessages[0]?.conversation_id === currentConversationId
+      unresolvedTranscript?.conversationId === currentConversationId &&
+      unresolvedTranscript.selectionVersion === selectionVersion &&
+      unresolvedTranscript.accountId === (meId ?? null) &&
+      unresolvedTranscript.tenantId === null &&
+      tenantId !== null
+    ) {
+      void rereadConversation(unresolvedTranscript.conversationId);
+    }
+  }, [
+    unresolvedTranscript,
+    currentConversationId,
+    selectionVersion,
+    meId,
+    tenantId,
+    rereadConversation,
+  ]);
+
+  useEffect(() => {
+    if (
+      loadedTranscript?.conversationId === currentConversationId &&
+      loadedTranscript.selectionVersion === selectionVersion &&
+      loadedTranscript.accountId === (meId ?? null) &&
+      loadedTranscript.tenantId === tenantId &&
+      currentMessages.every((message) => message.conversation_id === currentConversationId)
     ) {
       // Not `clearMessages`: a re-read of this same conversation - a followed
       // turn ending, a teammate's answer landing - must not drop the reply
@@ -757,9 +788,19 @@ export function ChatContainer({
             agentId: message.agentId ?? soleAgentId,
           };
         }),
+        loadedTranscript,
       );
     }
-  }, [currentMessages, currentConversationId, rereadMessages, soleAgentId]);
+  }, [
+    currentMessages,
+    currentConversationId,
+    loadedTranscript,
+    selectionVersion,
+    meId,
+    tenantId,
+    rereadMessages,
+    soleAgentId,
+  ]);
 
   // Whether the reader has moved up to read, so the transcript stops following.
   useReaderScrolledUp(scrollContainerRef, userScrolledUpRef);

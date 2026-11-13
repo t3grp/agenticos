@@ -208,6 +208,7 @@ export function useChat(options: UseChatOptions = {}) {
   const conversationApi = useConversationStore.useApi();
   const selectionApi = useAgentSelectionStore.useApi();
   const scoped = useInChatScope();
+  const tenantId = useTenantId();
   const captureSubmission = useCallback((): ChatSubmissionContext | undefined => {
     const read = pageContextRef.current;
     if (!read) return undefined;
@@ -221,9 +222,11 @@ export function useChat(options: UseChatOptions = {}) {
     setCurrentConversationId,
     setCurrentCost,
     currentConversationId: currentConversationIdFromStore,
+    selectionVersion,
   } = useConversationStore();
   const {
     messages,
+    loadedTranscript,
     addMessage,
     updateMessage,
     appendTextDelta,
@@ -928,11 +931,19 @@ export function useChat(options: UseChatOptions = {}) {
           setCurrentConversationId(conversation_id);
           // Reflect the new ID in the URL so the page is refreshable + shareable.
           if (!scoped) setUrlParam("id", conversation_id);
-          const { updateMessagesWhere } = chatApi.getState();
-          updateMessagesWhere(
-            (msg) => !msg.conversationId,
-            (msg) => ({ ...msg, conversationId: conversation_id }),
-          );
+          // A first turn has no HTTP history to load. Its live transcript is
+          // already here, and must be able to reattach after a later reconnect.
+          chatApi.setState((state) => ({
+            messages: state.messages.map((msg) =>
+              msg.conversationId ? msg : { ...msg, conversationId: conversation_id },
+            ),
+            loadedTranscript: {
+              conversationId: conversation_id,
+              selectionVersion: conversationApi.getState().selectionVersion,
+              accountId: useAuthStore.getState().user?.id ?? null,
+              tenantId,
+            },
+          }));
           onConversationCreated?.(conversation_id);
           break;
         }
@@ -1628,6 +1639,7 @@ export function useChat(options: UseChatOptions = {}) {
       chatApi,
       conversationApi,
       scoped,
+      tenantId,
       // currentMessageId is read via currentMessageIdRef inside the handler,
       // so we deliberately omit it here - that's the whole point of the ref.
       addMessage,
@@ -1675,7 +1687,6 @@ export function useChat(options: UseChatOptions = {}) {
   // socket otherwise. Switching orgs changes the URL, which reconnects the
   // socket, so a conversation never continues under the wrong organization.
   const activeOrgId = useOrgStore((state) => state.activeOrgId);
-  const tenantId = useTenantId();
   const queueAccountId = useAuthStore((state) => state.user?.id);
   useLayoutEffect(() => {
     pendingNextSteps.current.clear();
@@ -2109,6 +2120,12 @@ export function useChat(options: UseChatOptions = {}) {
   const queueAccount = useRef(queueAccountId);
   useLayoutEffect(() => {
     if (queueBelongsTo.current === tenantId && queueAccount.current === queueAccountId) return;
+    if (queueAccount.current !== queueAccountId || queueBelongsTo.current !== null) {
+      // Global session resets do not reach a floating ChatScope. Invalidate its
+      // load too, so returning to an account or tenant cannot revive old readiness.
+      conversationApi.getState().invalidateTranscript();
+      chatApi.setState({ loadedTranscript: null });
+    }
     queueBelongsTo.current = tenantId;
     queueAccount.current = queueAccountId;
     decidedApprovalIdsRef.current = new Set();
@@ -2141,7 +2158,15 @@ export function useChat(options: UseChatOptions = {}) {
     // picture of somebody else's data.
     setBrowses([]);
     closeBrowserPanel();
-  }, [tenantId, queueAccountId, clearQueued, closeBrowserPanel, abandonRunAnswer]);
+  }, [
+    tenantId,
+    queueAccountId,
+    clearQueued,
+    closeBrowserPanel,
+    abandonRunAnswer,
+    conversationApi,
+    chatApi,
+  ]);
 
   const queuedConversation = useRef(activeConversationId);
   useLayoutEffect(() => {
@@ -3476,7 +3501,11 @@ export function useChat(options: UseChatOptions = {}) {
   // room it was in, which otherwise went on counting this person there and sending
   // them its turns.
   const transcriptHere =
-    activeConversationId !== null && messages.at(-1)?.conversationId === activeConversationId;
+    activeConversationId !== null &&
+    loadedTranscript?.conversationId === activeConversationId &&
+    loadedTranscript.selectionVersion === selectionVersion &&
+    loadedTranscript.accountId === (queueAccountId ?? null) &&
+    loadedTranscript.tenantId === tenantId;
   useEffect(() => {
     if (!isConnected || processingRef.current) return;
     if (activeConversationId === null ? attachedRef.current === null : !transcriptHere) return;

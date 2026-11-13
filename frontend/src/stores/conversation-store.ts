@@ -5,11 +5,22 @@ import { create, createStore, type StateCreator } from "zustand";
 import { scopedStore } from "./chat-scope-context";
 import type { ConversationCost, ConversationMessage } from "@/types";
 
+/** The selection and session that successfully read a transcript, including an empty one. */
+export interface TranscriptIdentity {
+  conversationId: string;
+  selectionVersion: number;
+  accountId: string | null;
+  tenantId: string | null;
+}
+
 export interface ConversationState {
   // UI state only. The conversations LIST is owned by React Query
   // (qk.conversations.list). This store holds the current selection, the
   // loaded messages for that selection, and the fetch/select status.
   currentConversationId: string | null;
+  /** Advances even when the same conversation is selected again. */
+  selectionVersion: number;
+  loadedTranscript: TranscriptIdentity | null;
   /** Explicit New chat requests, including starting over in an empty draft. */
   composerFocusRequest: number;
   requestComposerFocus: () => void;
@@ -37,7 +48,9 @@ export interface ConversationState {
     messages: ConversationMessage[],
     cost?: ConversationCost | null,
     hasEarlier?: boolean,
+    loadedTranscript?: TranscriptIdentity | null,
   ) => void;
+  invalidateTranscript: () => void;
   /**
    * Replace the thread's total on its own, without touching the transcript.
    *
@@ -58,6 +71,8 @@ export interface ConversationState {
 
 const initialState = {
   currentConversationId: null,
+  selectionVersion: 0,
+  loadedTranscript: null,
   composerFocusRequest: 0,
   currentMessages: [],
   hasEarlierMessages: false,
@@ -70,15 +85,28 @@ const initialState = {
 const conversationState: StateCreator<ConversationState> = (set) => ({
   ...initialState,
 
-  setCurrentConversationId: (id) => set({ currentConversationId: id }),
+  setCurrentConversationId: (id) =>
+    set((state) => ({
+      currentConversationId: id,
+      selectionVersion: state.selectionVersion + 1,
+      loadedTranscript: null,
+    })),
   requestComposerFocus: () =>
     set((state) => ({ composerFocusRequest: state.composerFocusRequest + 1 })),
 
   // The total travels with the messages it totals. Set separately, a switch
   // between conversations would leave one thread's figure under another's
   // transcript for as long as the second fetch took.
-  setCurrentMessages: (messages, cost = null, hasEarlier = false) =>
-    set({ currentMessages: messages, currentCost: cost, hasEarlierMessages: hasEarlier }),
+  setCurrentMessages: (messages, cost = null, hasEarlier = false, loadedTranscript = null) =>
+    set({
+      currentMessages: messages,
+      currentCost: cost,
+      hasEarlierMessages: hasEarlier,
+      loadedTranscript,
+    }),
+
+  invalidateTranscript: () =>
+    set((state) => ({ selectionVersion: state.selectionVersion + 1, loadedTranscript: null })),
 
   setCurrentCost: (cost) => set({ currentCost: cost }),
 
@@ -93,7 +121,7 @@ const conversationState: StateCreator<ConversationState> = (set) => ({
 
   setError: (error) => set({ error }),
 
-  reset: () => set(initialState),
+  reset: () => set((state) => ({ ...initialState, selectionVersion: state.selectionVersion + 1 })),
 });
 
 /** A copy of its own, for a conversation in a scope - see `ChatScope`. */
