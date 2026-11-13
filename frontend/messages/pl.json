@@ -414,6 +414,17 @@
     "askUserAnswered": "Odpowiedziałeś",
     "askUserAsked": "Pytanie do Ciebie",
     "askUserAskedBy": "Pyta {name}",
+    "secretRequest": {
+      "title": "Agent potrzebuje sekretu",
+      "provide": "Podaj sekret",
+      "decline": "Odmów",
+      "valueLabel": "Wartość sekretu",
+      "valuePlaceholder": "Wklej sekret tutaj — nigdy nie zostanie pokazany ponownie",
+      "provided": "Sekret podany",
+      "declined": "Odmówiono podania tego sekretu",
+      "storedHint": "Zapisano jako {name} (…{hint})",
+      "waiting": "Oczekiwanie na sekret"
+    },
     "attachedFile": "Załączony plik",
     "backAgentAposS": "Wróć do modelu agenta",
     "cancel": "Anuluj",
@@ -825,6 +836,8 @@
       "artifactUnchanged": "Bez zmian, nadal wersja {version} · otwórz stronę",
       "askingYou": "Czekam na twoją odpowiedź",
       "askedYou": "Zapytał cię",
+      "requestingSecret": "Czekam na twój sekret",
+      "requestedSecret": "Poproszono o sekret",
       "notAnsweredYet": "Jeszcze bez odpowiedzi",
       "listMemory": "Lista wspomnień",
       "readMemory": "Odczyt wspomnienia",
@@ -12213,6 +12226,14 @@
       "example2": "Którego z tych trzech plików użyć?",
       "needs": "Nic dodatkowego.",
       "never": "Nigdy nie odpowiada za osobę. W Slacku czy Telegramie czeka na jej odpowiedź."
+    },
+    "secret_request": {
+      "name": "Prośba o sekret",
+      "does": "Agent prosi o sekret, którego potrzebuje, a którego nie ma, podając jego nazwę i przeznaczenie.",
+      "example1": "Jaki jest klucz API Acme do listowania kontaktów?",
+      "example2": "Którego sekretu ma użyć raport nocny?",
+      "needs": "Nic dodatkowego.",
+      "never": "Nigdy nie pokazuje wartości modelowi, transkryptowi ani logom. Karta zapisuje ją prosto do sejfu."
     },
     "browser_use": {
       "name": "Przeglądarka",

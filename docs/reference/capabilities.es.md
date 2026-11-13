@@ -1,5 +1,5 @@
 ---
-source_sha: "7738d8d527e6"
+source_sha: "d90fe4bc29a0"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -103,6 +103,7 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `channel_tools` | Información del canal de chat | channels | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | no disponible |
 | `phone_calls` | [Llamadas telefónicas](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Preguntar al usuario | utility | `ask_user_question` | — | — | en pantalla |
+| `secret_request` | Solicitar un secreto | utility | `request_secret` | — | — | en pantalla |
 | `drafts` | Borradores | utility | `write_draft` | — | — | no disponible |
 | `follow_ups` | Follow-ups | utility | `suggest_next_steps`, `propose_setup` | — | — | no disponible |
 

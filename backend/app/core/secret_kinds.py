@@ -704,6 +704,43 @@ STORABLE_KINDS: frozenset[SecretKind] = frozenset(SecretKind) - {SecretKind.NONE
 _STORABLE_ADAPTER: TypeAdapter[StorableSecret] = TypeAdapter(StorableSecret)
 
 
+def parse_storable_secret(kind: str, value: str) -> StorableSecret:
+    """Parse a submitted vault value as its requested kind without leaking it on failure.
+
+    API keys keep their plain-text card input. Structured kinds are submitted as
+    their JSON object, which is validated against the same discriminator used by
+    the vault when it unseals a stored value.
+    """
+    try:
+        secret_kind = SecretKind(kind)
+    except ValueError:
+        raise BadRequestError(
+            message="Secret value is not valid for the requested kind",
+            details={"kind": kind},
+        ) from None
+    if secret_kind is SecretKind.NONE:
+        raise BadRequestError(
+            message="Secret value is not valid for the requested kind",
+            details={"kind": kind},
+        )
+    try:
+        if secret_kind is SecretKind.API_KEY:
+            secret = ApiKeySecret(api_key=value)
+        else:
+            secret = _STORABLE_ADAPTER.validate_json(value)
+    except ValueError, ValidationError:
+        raise BadRequestError(
+            message="Secret value is not valid for the requested kind",
+            details={"kind": kind},
+        ) from None
+    if secret.kind is not secret_kind:
+        raise BadRequestError(
+            message="Secret value does not match the requested kind",
+            details={"kind": secret_kind.value},
+        )
+    return secret
+
+
 def seal_secret(
     value: StorableSecret, *, scope: VaultScope, key_version: int | None = None
 ) -> SealedSecret:

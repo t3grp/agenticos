@@ -34,7 +34,14 @@ from app.db.models.agent_run import (
     RunSurface,
     ToolApproval,
 )
-from app.repositories import agent_run_repo, channel_prompt_repo, organization_repo, voice_call_repo
+from app.db.models.secret_request import SecretRequestStatus
+from app.repositories import (
+    agent_run_repo,
+    channel_prompt_repo,
+    organization_repo,
+    secret_request_repo,
+    voice_call_repo,
+)
 from app.repositories import workflow_run as workflow_run_repo
 from app.repositories.agent_run import ApprovalFilters, ApprovalRow
 from app.schemas.agent_run import ToolConsentRead
@@ -525,8 +532,26 @@ class ApprovalService:
             if destination is not None:
                 await channel_prompt_repo.settle_open(self.db, run_id=run.id, by="expired")
             questions: list[str] = (run.paused_state or {}).get("questions", [])
+            secret_requests: list[str] = (run.paused_state or {}).get("secret_requests", [])
             await TranscriptService(self.db).record(
-                run, prompt=None, answer="", settled=dict.fromkeys(questions, TIMED_OUT)
+                run,
+                prompt=None,
+                answer="",
+                settled=dict.fromkeys([*questions, *secret_requests], TIMED_OUT),
+            )
+            for row in (
+                await secret_request_repo.list_for_run(
+                    self.db, run_id=run.id, organization_id=run.organization_id
+                )
+                if secret_requests
+                else []
+            ):
+                if row.status == SecretRequestStatus.PENDING:
+                    await secret_request_repo.mark_expired(self.db, request=row)
+            error = (
+                f"No answer within {settings.QUESTION_EXPIRY_HOURS}h - the secret request expired"
+                if secret_requests and not questions
+                else f"No answer within {settings.QUESTION_EXPIRY_HOURS}h - the question expired"
             )
             await agent_run_repo.finish_run(
                 self.db,
@@ -537,7 +562,7 @@ class ApprovalService:
                 cost_usd=run.cost_usd,
                 cost_is_partial=run.cost_is_partial,
                 ended_at=now,
-                error=f"No answer within {settings.QUESTION_EXPIRY_HOURS}h - the question expired",
+                error=error,
                 paused_state=None,
             )
             if destination is not None:
@@ -589,6 +614,12 @@ class ApprovalService:
             if run is None or run.status != RunStatus.AWAITING_ANSWER.value:
                 continue
             if (run.paused_state or {}).get("question_results"):
+                continue
+            # A run parked only on a secret gets no question nudge: the
+            # reminder names a question nobody asked, and the Runs view
+            # already shows the secret it is waiting on (#13).
+            paused = run.paused_state or {}
+            if paused.get("secret_requests") and not paused.get("questions"):
                 continue
             if run.question_nudged_at is not None:
                 continue

@@ -1,5 +1,5 @@
 ---
-source_sha: "7738d8d527e6"
+source_sha: "d90fe4bc29a0"
 ---
 
 # Katalog capability { #the-capability-catalog }
@@ -103,6 +103,7 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `channel_tools` | Informacje o kanale czatu | kanały | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | niedostępna |
 | `phone_calls` | [Połączenia telefoniczne](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Pytania do użytkownika | narzędzia | `ask_user_question` | — | — | na ekranie |
+| `secret_request` | Prośba o sekret | narzędzia | `request_secret` | — | — | na ekranie |
 | `drafts` | Wersje robocze | narzędzia | `write_draft` | — | — | niedostępna |
 | `follow_ups` | Następne kroki | narzędzia | `suggest_next_steps`, `propose_setup` | — | — | niedostępna |
 

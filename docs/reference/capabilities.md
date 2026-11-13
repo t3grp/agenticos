@@ -97,6 +97,7 @@ browser is pointed at the deployment's browser service
 | `channel_tools` | Chat channel lookup | channels | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | not available |
 | `phone_calls` | [Telephone calls](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Ask the user | utility | `ask_user_question` | — | — | on screen |
+| `secret_request` | Request a secret | utility | `request_secret` | — | — | on screen |
 | `drafts` | Drafts | utility | `write_draft` | — | — | not available |
 | `follow_ups` | Follow-ups | utility | `suggest_next_steps`, `propose_setup` | — | — | not available |
 

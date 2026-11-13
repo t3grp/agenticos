@@ -62,6 +62,7 @@ in [Capabilities](capabilities.md).
 |---|---|
 | Apps | `artifacts` |
 | Ask the user | `ask_user` |
+| Request a secret | `secret_request` |
 | Drafts | `drafts` |
 | Web browser | `browser_use` |
 | Chat channel lookup | `channel_tools` |

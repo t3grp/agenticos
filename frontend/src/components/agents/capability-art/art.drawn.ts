@@ -20,6 +20,7 @@ export const DRAWN_HUE: Readonly<Record<string, number>> = {
   harness: 90,
   sol_loop: 120,
   eval_tool_tuning: 150,
+  secret_request: 45,
 };
 
 /** Independent topic windows with a return path to the main conversation. */
@@ -402,6 +403,18 @@ const EVAL_TOOL_TUNING =
   '<text x="0" y="2.4" class="tx mono s7 mid b" >DRAFT</text></g></g>' +
   "</svg>";
 
+/** A key over the base: the agent asks, the person hands over the credential. */
+const SECRET_REQUEST =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<polygon class="ict" points="120,35 195,78 120,121 45,78"/>' +
+  '<path class="igrid" d="M76 70L118 94L165 67M118 94V55"/>' +
+  '<g class="bob"><circle class="inl" cx="102" cy="52" r="13"/><circle class="ict" cx="102" cy="52" r="6"/>' +
+  '<path class="igrid2" d="M112 60L138 74M130 68V76M138 72V80"/></g>' +
+  '<g class="breathe"><rect class="inr" x="143" y="38" width="39" height="30" rx="4"/><path class="igrid2" d="M151 47H174M151 55H168"/></g>' +
+  '<rect class="ict" x="57" y="40" width="39" height="30" rx="4"/><path class="igrid2" d="M64 49H87M64 57H81"/>' +
+  "</svg>";
+
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
@@ -419,4 +432,5 @@ export const DRAWN_ART: Readonly<Record<string, string>> = {
   harness: HARNESS,
   sol_loop: SOL_LOOP,
   eval_tool_tuning: EVAL_TOOL_TUNING,
+  secret_request: SECRET_REQUEST,
 };
