@@ -1554,10 +1554,9 @@ class TestTheGalleryOnDisk:
 
         names = [s.name for i in skill_library.gallery() for s in i.skills]
         names += [entry.name for entry in skill_library.library()]
-        # The existing 97 skills plus 43 opt-in accounting/finance skills from
-        # Anthropic's releases and the shared accounting engagement procedure,
-        # plus the babysit-pr, sol-loop, eval-tool-tuning and burst-mode skills.
-        assert len(names) == 144
+        # The shipped names include the opt-in accounting/finance, council, proof,
+        # burst, babysit-pr, sol-loop and eval-tool-tuning skills.
+        assert len(names) == 146
         for name in names:
             assert SKILL_NAME_PATTERN.fullmatch(name), name
             SkillCreate(name=name, description="d")

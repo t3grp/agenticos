@@ -332,6 +332,77 @@ export function RunManifest({ runId }: { runId: string }) {
         </Section>
       )}
 
+
+
+      {/* The proof scenarios: each reproduction and its observed attempts. A
+          scenario is proven only when the same reproduction failed before the
+          fix and passed after it - a unit-test attempt never counts, so it
+          reads as exactly that, never as proof. */}
+      {!!manifest.proof_scenarios?.length && (
+        <Section title={t("proofScenarios", { count: manifest.proof_scenarios.length })}>
+          <ul className="space-y-3">
+            {manifest.proof_scenarios.map((scenario) => {
+              const beforeFailed = scenario.attempts.filter(
+                (attempt) =>
+                  attempt.phase === "before_fix" &&
+                  attempt.status === "failed" &&
+                  attempt.evidence_kind !== "unit_test",
+              );
+              const afterPassed = scenario.attempts.filter(
+                (attempt) =>
+                  attempt.phase === "after_fix" &&
+                  attempt.status === "passed" &&
+                  attempt.evidence_kind !== "unit_test",
+              );
+              const normalizeCommand = (command: string) => command.trim().replace(/\s+/g, " ");
+              const proven = beforeFailed.some((before) =>
+                afterPassed.some(
+                  (after) =>
+                    normalizeCommand(before.command ?? "") ===
+                    normalizeCommand(after.command ?? ""),
+                ),
+              );
+              return (
+                <li key={scenario.id} className="space-y-1.5">
+                  <p className="text-sm font-medium">
+                    {t("proofScenario", {
+                      id: scenario.id,
+                      name: scenario.name,
+                      proven: proven ? t("proofScenarioProven") : t("proofScenarioUnproven"),
+                    })}
+                  </p>
+                  {!!scenario.covers.length && (
+                    <p className="text-muted-foreground text-xs">
+                      {t("proofScenarioCovers", { files: scenario.covers.join(", ") })}
+                    </p>
+                  )}
+                  {scenario.attempts.length > 0 && (
+                    <ol className="space-y-1.5">
+                      {scenario.attempts.map((attempt, index) => (
+                        <li key={index} className="space-y-0.5 text-sm">
+                          <p>
+                            {t("proofAttempt", {
+                              phase: attempt.phase,
+                              status: attempt.status,
+                              evidence: attempt.evidence_kind,
+                            })}
+                          </p>
+                          {!!attempt.observed && (
+                            <pre className="bg-muted/40 max-h-40 overflow-auto rounded p-3 text-xs whitespace-pre-wrap">
+                              {attempt.observed}
+                            </pre>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
+
       {manifest.messages.length > 0 && (
         <Section
           title={t("lastRequestContext")}

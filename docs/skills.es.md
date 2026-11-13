@@ -1,5 +1,5 @@
 ---
-source_sha: "740acc9b4b0d"
+source_sha: "963031b98a33"
 ---
 
 # Skills { #skills }
@@ -203,6 +203,22 @@ almacenados: nombre de 1 a 64 caracteres y descripción de hasta 500. Una
 propuesta fuera de estos límites se omite con una advertencia; sus archivos
 originales permanecen intactos. Un savepoint aísla la escritura para que una
 propuesta rechazada no impida guardar el estado y el coste del turno.
+
+### Skills aprendidos — una propuesta aprobada se convierte en un skill propio { #learned-skills-an-approved-proposal-becomes-a-skill-on-its-own }
+
+Aplicar una propuesta edita el skill que nombra. Cuando la propuesta aprobada
+*es* un skill nuevo — un error recurrente sin skill al que vincularlo — el
+aprendizaje automático de skills lo crea: `POST /v1/agents/{agent_id}/learned-skills`
+con el texto de la propuesta y su procedencia. El nuevo skill queda en la
+categoría `learned`, para que la lista muestre lo que el bucle enseñó a la
+organización, y la escritura se audita como `skill.learned` con la propuesta,
+la entrada del libro de registro y la clave del patrón que la motivaron.
+
+Aprender la misma propuesta dos veces no escribe nada la segunda vez, y un
+skill que alguien reescribió desde que se escribió la propuesta se rechaza en
+lugar de sobrescribirse. Un skill aprendido es a partir de ahí un skill
+ordinario: editable, versionado con el mismo incremento que cualquier edición,
+y deshecho con una edición nueva en lugar de una restauración.
 
 
 ## Cómo llegan los skills a una organización { #getting-skills-into-an-organization }

@@ -66,6 +66,7 @@ from app.db.models.background_worker import BackgroundWorker
 from app.db.models.purged_run_spend import PurgedRunSpend
 from app.db.models.credential import ModelProfile
 from app.db.models.organization_secret import OrganizationSecret
+from app.db.models.secret_request import SecretRequest, SecretRequestStatus
 from app.db.models.context import ContextFile, ContextMode
 from app.db.models.memory import AgentMemoryFile
 from app.db.models.memory_claim import MemoryClaim, MemoryScopeState
@@ -268,6 +269,8 @@ __all__ = [
     "ApprovalStatus",
     "ModelProfile",
     "OrganizationSecret",
+    "SecretRequest",
+    "SecretRequestStatus",
     "PendingSandboxDestroy",
     "BackgroundJob",
     "BackgroundSchedule",

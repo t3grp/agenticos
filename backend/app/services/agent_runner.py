@@ -158,6 +158,7 @@ from app.agents.capabilities.coding_agent import (
     CodingPreferences,
 )
 from app.agents.capabilities.context import CONTEXT_FILES_RESOURCE, context_config
+from app.agents.capabilities.council import CouncilConfig
 from app.agents.capabilities.drafts._spec import draft_tool_names
 from app.agents.capabilities.guardrails import (
     GuardrailBlocked,
@@ -212,6 +213,12 @@ from app.agents.observability import current_trace_id
 from app.agents.person_briefing import Person, with_person
 from app.agents.routine_actions import RoutineToolCheck
 from app.agents.routine_authority import RoutineCheck, guard_for
+from app.agents.secret_request import (
+    SECRET_DECLINED_RESULT,
+    SECRET_REQUEST_DEFERRED_KIND,
+    SECRET_REQUEST_TOOL,
+    parked_secret_requests_by_call,
+)
 from app.agents.spec import (
     AgentSpec,
     CapabilityBindingSpec,
@@ -295,12 +302,13 @@ from app.repositories import (
     message_rating_repo,
     organization_repo,
     run_manifest_repo,
+    secret_request_repo,
     user_repo,
     voice_call_repo,
 )
 from app.repositories.agent_run import AgentSpendRow, RunFilters
 from app.repositories.voice_call import VoiceChain
-from app.schemas.agent import AgentRunResult, ParkedCall, ParkedQuestion
+from app.schemas.agent import AgentRunResult, ParkedCall, ParkedQuestion, ParkedSecretRequest
 from app.schemas.user import WorkingHours
 from app.services import change_feed
 from app.services.agent_registry import (
@@ -421,6 +429,8 @@ def _skills_with_content_overrides(
         else skill
         for skill in skills
     ]
+
+
 _QUESTION_RESULT = TypeAdapter(dict[str, list[str]] | str)
 
 _DELEGATION_RUN_STATUS: Mapping[DelegationStatus, RunStatus] = {
@@ -974,7 +984,7 @@ class PausedRunState(BaseModel):
     )
     tool_call_ids: dict[str, str] = Field(
         default_factory=dict,
-        description="Approval id -> the tool call it parked, so a decision can be replayed"
+        description="Approval id -> the tool call it parked, so a decision can be replayed",
     )
     guardrail_revision: int | None = Field(
         default=None, ge=0, exclude_if=lambda value: value is None
@@ -991,6 +1001,26 @@ class PausedRunState(BaseModel):
             "The run's own `ask_user_question` calls left unanswered, by tool call id "
             "(#2064). Answered from the person's reply on resume - or as declined, "
             "where the run parked on an approval in the same step"
+        ),
+    )
+    secret_requests: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The run's own `request_secret` calls left unanswered, by tool call "
+            "id (#13). Answered from the fulfil endpoint on resume - or as "
+            "declined, where the run parked on an approval in the same step. "
+            "The value itself is never stored here, only the call ids."
+        ),
+    )
+    secret_results: dict[str, str] = Field(
+        default_factory=dict,
+        exclude_if=lambda results: not results,
+        description=(
+            "Accepted secret-request results, saved before a resume: the safe "
+            "acknowledgement string per call - secret name and hint only, "
+            "never the value. Mirrors `question_results` for a run parked on "
+            "more than one secret, so each fulfil can land without resuming "
+            "until the last one is in."
         ),
     )
     question_results: dict[str, dict[str, list[str]] | str] = Field(
@@ -1963,11 +1993,25 @@ def parked_question_items(paused_state: dict[str, Any] | None) -> list[ParkedQue
         ParkedQuestion(
             tool_call_id=tool_call_id,
             questions=[
-                QuestionItem.model_validate(item)
-                for item in wire_questions(question_request(call))
+                QuestionItem.model_validate(item) for item in wire_questions(question_request(call))
             ],
         )
         for tool_call_id, call in _question_calls(state).items()
+    ]
+
+
+def parked_secret_request_items(paused_state: dict[str, Any] | None) -> list[ParkedSecretRequest]:
+    """Map parked call ids back to the secret request the card draws (#13).
+
+    A pure mapping over the persisted state so a run list can derive waiting
+    text without querying once per row. A call whose arguments do not parse
+    is skipped by the mapping, so a malformed park cannot break the read.
+    """
+    if paused_state is None:
+        return []
+    return [
+        ParkedSecretRequest(tool_call_id=tool_call_id, **item.model_dump())
+        for tool_call_id, item in parked_secret_requests_by_call(paused_state).items()
     ]
 
 
@@ -1995,18 +2039,25 @@ def _classify_output(
             or result.output.metadata.get(call.tool_call_id, {}).get("kind")
             == QUESTION_DEFERRED_KIND
         ]
+        secret_requests = [
+            call.tool_call_id
+            for call in result.output.calls
+            if call.tool_name == SECRET_REQUEST_TOOL
+            or result.output.metadata.get(call.tool_call_id, {}).get("kind")
+            == SECRET_REQUEST_DEFERRED_KIND
+        ]
         paused = PausedRunState(
             messages=dump_messages(result.all_messages()),
             tool_call_ids=parked,
             questions=questions,
+            secret_requests=secret_requests,
             guardrail_revision=history_revision,
         )
         # Waiting on a decision outranks waiting on an answer: the approval queue
         # is where somebody can release it, and a question in the same step is
         # answered as declined when that happens.
-        status = (
-            RunStatus.AWAITING_ANSWER if questions and not parked else RunStatus.AWAITING_APPROVAL
-        )
+        waiting_answer = (questions or secret_requests) and not parked
+        status = RunStatus.AWAITING_ANSWER if waiting_answer else RunStatus.AWAITING_APPROVAL
         return status, "", None, paused
     if isinstance(result.output, dict):
         return RunStatus.COMPLETED, answer_text(result.output), result.output, None
@@ -2955,6 +3006,7 @@ def _delegate_builder(
     secrets: Mapping[UUID, StorableSecret],
     extra_toolsets: list[AbstractToolset[Any]],
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    council_models: Mapping[UUID, ModelRequestSpec] | None = None,
     sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
 ) -> Callable[[], PydanticAgent[Any, Any]]:
     """A closure that builds one delegate, with nothing left to look up.
@@ -3003,6 +3055,9 @@ def _delegate_builder(
             # models `_reviewers` leaves each one out, and an agent reviewed when
             # called directly would run unreviewed as a delegate.
             reviewer_models=reviewer_models,
+            # Its own council, resolved the same way: a delegate bound with a
+            # council reviews with it when called directly and as a delegate.
+            council_models=council_models,
             # Its own sol-loop reviewer, resolved the same way: a delegate bound
             # with sol-loop reviews with it when called directly and as a delegate.
             sol_loop_models=sol_loop_models,
@@ -3214,13 +3269,26 @@ def _browser_step_profile(spec: AgentSpec) -> UUID | None:
     return None
 
 
-def _sol_loop_profile_ids(spec: AgentSpec) -> list[UUID]:
-    """The model profile the agent's sol-loop reviewer reviews on, if it has one.
+def _council_profile_ids(spec: AgentSpec) -> list[UUID]:
+    """The model profiles the agent's council members review on, if it has one."""
+    profile_ids: list[UUID] = []
+    for binding in spec.capabilities:
+        if binding.id != "council" or not binding.enabled:
+            continue
+        try:
+            config = CouncilConfig.model_validate(binding.config)
+        except Exception:
+            logger.warning(
+                "Council binding has an invalid config; reviewing without it",
+                exc_info=True,
+            )
+            continue
+        profile_ids.extend(member.model_profile_id for member in config.members)
+    return profile_ids
 
-    A binding whose config no longer validates is left out with a warning
-    rather than taking the agent offline: sol-loop is advisory, and a stale
-    config must cost the review, never the run.
-    """
+
+def _sol_loop_profile_ids(spec: AgentSpec) -> list[UUID]:
+    """The model profile the agent's sol-loop reviewer reviews on, if it has one."""
     profile_ids: list[UUID] = []
     for binding in spec.capabilities:
         if binding.id != "sol_loop" or not binding.enabled:
@@ -3735,16 +3803,28 @@ class AgentRunnerService:
                 )
         return models
 
+    async def _council_models(
+        self, ctx: AuthContext, spec: AgentSpec
+    ) -> dict[UUID, ModelRequestSpec]:
+        """Resolve configured council members, leaving unavailable profiles out."""
+        models: dict[UUID, ModelRequestSpec] = {}
+        for profile_id in _council_profile_ids(spec):
+            if profile_id in models:
+                continue
+            try:
+                models[profile_id] = await self.models.resolve(ctx, profile_id=profile_id)
+            except AppException:
+                logger.warning(
+                    "Council member model %s cannot resolve; the run goes on without it",
+                    profile_id,
+                    exc_info=True,
+                )
+        return models
+
     async def _sol_loop_models(
         self, ctx: AuthContext, spec: AgentSpec
     ) -> dict[UUID, ModelRequestSpec]:
-        """The sol-loop reviewer's model, by profile id - if it still resolves.
-
-        A reviewer is advisory to the run it reviews: one whose profile was
-        deleted since publish, or whose key no longer unseals, is left out with
-        a warning rather than taking the agent offline, and sol-loop reports it
-        unavailable instead of substituting another model.
-        """
+        """Resolve the sol-loop reviewer, leaving an unavailable profile out."""
         models: dict[UUID, ModelRequestSpec] = {}
         for profile_id in _sol_loop_profile_ids(spec):
             if profile_id in models:
@@ -4133,6 +4213,7 @@ class AgentRunnerService:
         # from `resources`, which every capability reads and a log line may carry:
         # a resolved model holds its unsealed credential.
         reviewer_models = await self._reviewer_models(models_ctx, spec)
+        council_models = await self._council_models(models_ctx, spec)
         sol_loop_models = await self._sol_loop_models(models_ctx, spec)
         step_profile = _browser_step_profile(spec)
         if step_profile is not None:
@@ -4805,6 +4886,7 @@ class AgentRunnerService:
                     resources=resources,
                     secrets=secrets,
                     reviewer_models=reviewer_models,
+                    council_models=council_models,
                     sol_loop_models=sol_loop_models,
                     extra_toolsets=[*(extra_toolsets or []), *spec_toolsets],
                     request_approval=channel,
@@ -4873,6 +4955,7 @@ class AgentRunnerService:
             resources=resources,
             secrets=secrets,
             reviewer_models=reviewer_models,
+            council_models=council_models,
             sol_loop_models=sol_loop_models,
             extra_toolsets=[
                 *(extra_toolsets or []),
@@ -5681,6 +5764,7 @@ class AgentRunnerService:
                 secrets=secrets,
                 extra_toolsets=toolsets,
                 reviewer_models=await self._reviewer_models(delegation.models_ctx, runnable),
+                council_models=await self._council_models(delegation.models_ctx, runnable),
                 sol_loop_models=await self._sol_loop_models(delegation.models_ctx, runnable),
             ),
             max_steps=runnable.max_steps,
@@ -6084,6 +6168,38 @@ class AgentRunnerService:
                 ),
             )
 
+    async def _write_secret_requests(
+        self, prepared: PreparedRun, paused_state: PausedRunState | None, *, include_pending: bool
+    ) -> None:
+        """Write the secret-request rows the run parked, once (#13).
+
+        The same deferral as `_write_approvals`: the rows are written from
+        the run's terminal write, off the shared session, so two calls in one
+        model step cannot race two inserts. Only the ask is recorded here -
+        the name and what it is for, copied from the tool call - never a
+        value; fulfil is the only path that touches the vault, and it keeps
+        only the created secret's id and hint on the row.
+        """
+        if paused_state is None or not include_pending or not paused_state.secret_requests:
+            return
+        run = prepared.run
+        items = parked_secret_requests_by_call(paused_state.model_dump(mode="json"))
+        for tool_call_id in paused_state.secret_requests:
+            item = items.get(tool_call_id)
+            if item is None:
+                continue
+            await secret_request_repo.create(
+                self.db,
+                organization_id=run.organization_id,
+                run_id=run.id,
+                agent_id=run.agent_id,
+                tool_call_id=tool_call_id,
+                secret_name=item.secret_name,
+                kind=item.kind,
+                what_for=item.what_for,
+                requested_by_user_id=run.user_id,
+            )
+
     @staticmethod
     async def _collect_outbound(prepared: PreparedRun) -> None:
         """Collect files for surfaces with automatic delivery; channels use an explicit action."""
@@ -6221,6 +6337,11 @@ class AgentRunnerService:
         # so the rows the `paused_state` names exist by the time it is stored.
         await self._write_approvals(
             prepared,
+            include_pending=status in (RunStatus.AWAITING_APPROVAL, RunStatus.AWAITING_ANSWER),
+        )
+        await self._write_secret_requests(
+            prepared,
+            paused_state,
             include_pending=status in (RunStatus.AWAITING_APPROVAL, RunStatus.AWAITING_ANSWER),
         )
 
@@ -7029,10 +7150,30 @@ class AgentRunnerService:
                 message="This run is waiting for an answer from the person it asked",
                 details={"run_id": str(run_id)},
             )
+        secret_given: dict[str, str] = dict(state.secret_results)
+        if answers is not None:
+            secret_given.update(
+                {
+                    tool_call_id: value
+                    for tool_call_id, value in answers.items()
+                    if tool_call_id in set(state.secret_requests) and isinstance(value, str)
+                }
+            )
+        if run.status == RunStatus.AWAITING_ANSWER.value and any(
+            request not in secret_given for request in state.secret_requests
+        ):
+            raise BadRequestError(
+                message="This run is waiting for a secret from the person it asked",
+                details={"run_id": str(run_id)},
+            )
 
         decided, plan = await self._decisions(ctx, run=run, state=state)
         for question in state.questions:
             plan.results.calls[question] = given.get(question, DECLINED)
+        for request in state.secret_requests:
+            # A secret parked beside an approval is answered as declined when
+            # the approval releases the run, like a question in the same step.
+            plan.results.calls[request] = secret_given.get(request, SECRET_DECLINED_RESULT)
 
         agent, spec = await self._parked_spec(ctx, run)
         # The continuation traces where the original did: the environment that
@@ -7530,7 +7671,11 @@ class AgentRunnerService:
         frames = [] if state is None else list(state.delegations)
         for frame in frames:
             frames.extend(frame.delegations)
-        calls = [] if state is None else [*state.questions, *state.tool_call_ids.values()]
+        calls = (
+            []
+            if state is None
+            else [*state.questions, *state.secret_requests, *state.tool_call_ids.values()]
+        )
         calls.extend(frame.tool_call_id for frame in frames)
         await self._cancel_delegations(run, frames, at=at)
         if state is not None and state.plan and run.conversation_id is not None:
@@ -7743,6 +7888,25 @@ class AgentRunnerService:
         ):
             return []
         return parked_question_items(run.paused_state)
+
+    async def parked_secret_requests(
+        self, ctx: AuthContext, run: AgentRun
+    ) -> list[ParkedSecretRequest]:
+        """The secret requests this run is waiting on the caller to answer, right now.
+
+        Only for the person it asked - to anybody else a run waiting on
+        somebody's secret has nothing to offer them - and empty for a run not
+        waiting at all. The value is never part of the answer: fulfil seals it
+        from the card, and this read carries only the name and what it is for.
+        """
+        if (
+            run.status != RunStatus.AWAITING_ANSWER.value
+            or run.paused_state is None
+            or run.user_id != ctx.user_id
+            or not _key_may_continue(ctx, run)
+        ):
+            return []
+        return parked_secret_request_items(run.paused_state)
 
     async def _decisions(
         self, ctx: AuthContext, *, run: AgentRun, state: PausedRunState

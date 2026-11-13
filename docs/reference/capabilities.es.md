@@ -1,5 +1,5 @@
 ---
-source_sha: "7738d8d527e6"
+source_sha: "d90fe4bc29a0"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -85,10 +85,12 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `coding_agent` | Coding agent | analysis | `run_coding_agent` | `sandbox:execute` | obligatoria | delegada |
 | `harness` | Harness | analysis | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | obligatoria | delegada |
 | `monitor` | Watch a command | analysis | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | delegada |
+| `council` | Consejo | analysis | `run_council_review` | `agents:delegate` | — | delegada |
 | `babysit_pr` | Babysit PR | analysis | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | delegada |
 | `sol_loop` | Sol-loop | analysis | `run_sol_loop_review` | `agents:delegate` | — | delegada |
 | `eval_tool_tuning` | Ajuste de herramientas con evals | analysis | `record_eval_tool_tuning` | — | — | tal cual |
 | `burst` | Burst | analysis | `run_burst` | `agents:delegate` | — | delegada |
+| `proof_scenario` | Escenario de prueba | analysis | `proof_scenario_record`, `proof_scenario_verdict` | — | — | delegada |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | delegada |
 | `background_tasks` | Temas en segundo plano | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | delegado |
 | `planning` | Planificación | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | tal cual |
@@ -104,6 +106,7 @@ guarda archivos. El navegador web apunta al servicio de navegador del despliegue
 | `channel_tools` | Información del canal de chat | channels | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | no disponible |
 | `phone_calls` | [Llamadas telefónicas](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Preguntar al usuario | utility | `ask_user_question` | — | — | en pantalla |
+| `secret_request` | Solicitar un secreto | utility | `request_secret` | — | — | en pantalla |
 | `drafts` | Borradores | utility | `write_draft` | — | — | no disponible |
 | `follow_ups` | Follow-ups | utility | `suggest_next_steps`, `propose_setup` | — | — | no disponible |
 

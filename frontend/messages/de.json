@@ -321,6 +321,11 @@
     "delegationModeLabel": "Wann er zurückgibt",
     "delegationModeSync": "Darauf warten",
     "delegationModeSyncDetail": "Der Eltern-Agent hält an, bis der Delegat antwortet. Der Standard, und das, was eine Delegation wie einen Funktionsaufruf wirken lässt.",
+    "councilMemberRow": "Mitglied {number}",
+    "councilMemberName": "Name",
+    "councilMemberProvider": "Anbieter",
+    "councilMemberModel": "Modellprofil",
+    "councilMembersProviderHint": "Wählen Sie für jedes Ratsmitglied einen anderen Anbieter.",
     "delegationOffButConfigured": "Delegation ist ausgeschaltet, nichts davon wird also erreicht. Die Delegaten unten bleiben im Spec und werden beim Veröffentlichen weiterhin geprüft – schalten Sie sie oben ein, oder entfernen Sie sie.",
     "delegationPolicyDetail": "Was jede Delegation dieses Agents begrenzt, Delegaten wie Spezialisten.",
     "delegationPolicyHeading": "Richtlinie",
@@ -1259,6 +1264,17 @@
     "askUserAnswered": "Sie haben geantwortet",
     "askUserAsked": "Hat Sie gefragt",
     "askUserAskedBy": "Gefragt von {name}",
+    "secretRequest": {
+      "title": "Der Agent braucht ein Geheimnis",
+      "provide": "Geheimnis angeben",
+      "decline": "Ablehnen",
+      "valueLabel": "Wert des Geheimnisses",
+      "valuePlaceholder": "Geheimnis hier einfügen — es wird nie wieder angezeigt",
+      "provided": "Geheimnis angegeben",
+      "declined": "Sie haben abgelehnt, dieses Geheimnis anzugeben",
+      "storedHint": "Gespeichert als {name} (…{hint})",
+      "waiting": "Warte auf das Geheimnis"
+    },
     "attachedFile": "Angehängte Datei",
     "backAgentAposS": "Zurück zum eigenen Modell des Agents",
     "cancel": "Abbrechen",
@@ -1745,6 +1761,7 @@
       "chunkCount": "{count, plural, =1 {1 Chunk} other {# Chunks}}",
       "chunkNumber": "Chunk {number}",
       "collectionNamed": "Collection: {name}",
+      "councilReview": "Ratsprüfung",
       "createSpecialist": "Spezialisten erstellen",
       "creating": "Erstellt",
       "creatingChart": "Erstellt ein Diagramm",
@@ -1812,7 +1829,12 @@
       "removeStep": "Schritt entfernen",
       "removingStep": "Entfernt einen Schritt",
       "result": "Ergebnis",
+      "reviewingWithCouncil": "Prüft mit dem Rat",
       "reviewingWithSolLoop": "Prüft mit Sol-loop",
+      "checkingProofCoverage": "Nachweisabdeckung wird geprüft",
+      "proofScenarioRecord": "Nachweis-Szenario-Eintrag",
+      "proofScenarioVerdict": "Nachweis-Szenario-Urteil",
+      "recordingProofScenario": "Nachweisversuch wird aufgezeichnet",
       "runPython": "Python ausführen",
       "running": "Läuft …",
       "runningCalculations": "Rechnet",
@@ -1859,6 +1881,8 @@
       "artifactUnchanged": "Unverändert, weiterhin Version {version} · Seite öffnen",
       "askingYou": "Warte auf Ihre Antwort",
       "askedYou": "Hat Sie gefragt",
+      "requestingSecret": "Warte auf Ihr Geheimnis",
+      "requestedSecret": "Geheimnis angefragt",
       "notAnsweredYet": "Noch nicht beantwortet",
       "listMemory": "Erinnerungen auflisten",
       "readMemory": "Erinnerung lesen",
@@ -6439,6 +6463,12 @@
       "evalToolTuningCase": "{name} · {classification}",
       "evalToolTuningProposal": "[{kind}] {title}",
       "evalToolTuningProposalEvidence": "Belege: {evidence} · {status}",
+      "proofScenarios": "{count, plural, =1 {1 Nachweis-Szenario} other {# Nachweis-Szenarien}}",
+      "proofScenario": "{id} {name} — {proven}",
+      "proofScenarioProven": "nachgewiesen",
+      "proofScenarioUnproven": "nicht nachgewiesen",
+      "proofScenarioCovers": "Deckt ab: {files}",
+      "proofAttempt": "{phase} · {status} · {evidence}",
       "cacheBust": "Cache gebrochen",
       "cacheExpired": "Cache abgelaufen",
       "cacheBustDetail": "{missed, number} gecachte Tokens nicht aus dem Cache gelesen - davor im Prompt hat sich etwas geändert",
@@ -11302,6 +11332,14 @@
       "needs": "Nichts weiter.",
       "never": "Antwortet nie für die Person. In Slack oder Telegram wartet er auf ihre Antwort."
     },
+    "secret_request": {
+      "name": "Geheimnis anfragen",
+      "does": "Der Agent fragt nach einem Geheimnis, das er braucht und nicht hat, und nennt dabei Namen und Zweck.",
+      "example1": "Wie lautet der Acme-API-Schlüssel zum Auflisten von Kontakten?",
+      "example2": "Welches Geheimnis soll der nächtliche Bericht verwenden?",
+      "needs": "Nichts weiter.",
+      "never": "Zeigt den Wert nie dem Modell, dem Transkript oder einem Log. Die Karte versiegelt ihn direkt im Tresor."
+    },
     "browser_use": {
       "name": "Webbrowser",
       "does": "Gibt dem Agenten einen echten Webbrowser, den er Schritt für Schritt bedient - Seiten lesen, klicken, Formulare ausfüllen, suchen -, um eine Aufgabe zu erledigen.",
@@ -11380,6 +11418,14 @@
       "example2": "Eine Aufgabe dort fortsetzen, wo der letzte Chat aufhörte",
       "needs": "Nichts weiter.",
       "never": "Liest nie die Gespräche anderer und ist in Gruppenchats aus."
+    },
+    "council": {
+      "name": "Rat",
+      "does": "Lässt drei delegierte Prüfer – je ein starkes Modell von drei verschiedenen Anbietern – die Arbeit in parallelen Runden mit bis zu 10 Punkten bewerten, bis alle zustimmen.",
+      "example1": "Ist dieser Pull Request bereit zum Zusammenführen?",
+      "example2": "Bewerte diesen Entwurf, bevor er rausgeht",
+      "needs": "Ein Modellprofil pro Delegiertem, von drei verschiedenen Anbietern.",
+      "never": "Ersetzt nie einen fehlenden Delegierten und erfindet nie eine Punktzahl: Ein Delegierter, der nicht erreichbar ist, wird als nicht verfügbar gemeldet, und einer ohne Punktzahl liest sich als keine Punktzahl."
     },
     "guardrails": {
       "name": "Schutzregeln",
@@ -11592,6 +11638,14 @@
       "needs": "Ein Weg, die Checks des PR zu lesen, etwa die Monitor-Capability mit `gh pr checks`.",
       "never": "Mergt, kommentiert oder unternimmt nie etwas anderes auf dem PR: nur beobachten und melden."
     },
+    "proof_scenario": {
+      "name": "Nachweis-Szenario",
+      "does": "Weist eine Änderung mit beobachteten Belegen nach: zeichnet eine Reproduktion vor und nach der Korrektur auf und meldet, welche geänderten Dateien einen Nachweis haben und welche nicht.",
+      "example1": "Hat diese Änderung wirklich funktioniert?",
+      "example2": "Weise diese Korrektur nach, bevor ich sie zusammenführe",
+      "needs": "Eine Reproduktion des Fehlers, die vor und nach der Korrektur läuft.",
+      "never": "Führt nie eine Zusammenführung, Genehmigung oder eine andere Aktion für die Änderung aus und zählt einen grünen Unit-Test nie als Nachweis."
+    },
     "background_tasks": {
       "name": "Hintergrundthemen",
       "does": "Startet unabhängige Arbeit in einem neuen Thema, während das Gespräch weitergeht, und meldet das Ergebnis dem ursprünglichen Agenten.",
@@ -11793,6 +11847,20 @@
       "max_results": {
         "title": "Gespräche pro Suche",
         "description": "Wie viele Gespräche eine Suche höchstens liefert. Jedes bringt einen kurzen Ausschnitt mit, eine hohe Zahl kostet also bei jeder Suche Kontext."
+      }
+    },
+    "council": {
+      "members": {
+        "title": "Ratsmitglieder",
+        "description": "Die Delegierten: je ein starkes Modell von drei verschiedenen Anbietern mit hohem Reasoning-Aufwand. Genau drei Mitglieder."
+      },
+      "agreement_threshold": {
+        "title": "Einigungsschwelle",
+        "description": "Die Punktzahl von 10, die jeder Delegierte erreichen muss, damit eine Runde den Rat zufriedenstellt. Eine Runde darunter heißt: beheben und erneut prüfen lassen."
+      },
+      "max_rounds": {
+        "title": "Runden höchstens",
+        "description": "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten."
       }
     },
     "guardrails": {

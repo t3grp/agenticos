@@ -56,6 +56,7 @@ import type {
 import type {
   ParkedCall,
   ParkedQuestion,
+  ParkedSecretRequest,
   ResumedRun,
   RunAnswerResult,
   ToolApproval,
@@ -372,6 +373,19 @@ export function useChat(options: UseChatOptions = {}) {
   const parkedQuestionRunRef = useRef<string | null>(null);
   const answeringQuestionRef = useRef<object | null>(null);
   const liveQuestionRef = useRef(false);
+  // A run parked on a secret it asked for (#13): the requests the card
+  // shows, and the run and message they belong to. The value is typed into
+  // the card and posted straight to the fulfil endpoint - it never enters
+  // this hook's state, the socket, or the transcript.
+  const [pendingSecretRequests, setPendingSecretRequests] = useState<ParkedSecretRequest[] | null>(
+    null,
+  );
+  const [parkedSecretRequest, setParkedSecretRequest] = useState<{
+    runId: string;
+    messageId: string;
+  } | null>(null);
+  const secretOfferedForRef = useRef<Set<string>>(new Set());
+  const answeringSecretRef = useRef<object | null>(null);
   const pendingRunAnswerRef = useRef<{
     requestId: string;
     runId: string;
@@ -603,6 +617,16 @@ export function useChat(options: UseChatOptions = {}) {
         })),
         messageId,
       });
+    },
+    [],
+  );
+
+  /** Put an agent's unanswered secret requests back in front of its person (#13). */
+  const offerParkedSecretRequests = useCallback(
+    (requests: ParkedSecretRequest[], runId: string, messageId: string) => {
+      secretOfferedForRef.current.add(runId);
+      setPendingSecretRequests(requests.filter((request) => request.status === "pending"));
+      setParkedSecretRequest({ runId, messageId });
     },
     [],
   );
@@ -2548,6 +2572,56 @@ export function useChat(options: UseChatOptions = {}) {
     offerParkedQuestion,
   ]);
 
+  // The same for a secret: an agent asked for one and its person left before
+  // providing it, so the run parked on it (#13). Reopening the conversation
+  // is where the card comes back - and only for the person asked, which the
+  // endpoint decides by answering everybody else with nothing.
+  useEffect(() => {
+    if (
+      !isConnected ||
+      pendingSecretRequests !== null ||
+      isProcessing ||
+      answeringSecretRef.current !== null
+    )
+      return;
+    const askedMessage = [...messages]
+      .reverse()
+      .find(
+        (message) =>
+          message.role === "assistant" &&
+          (message.conversationId === undefined ||
+            message.conversationId === activeConversationId) &&
+          (message.runWaitingFor === "answer" ||
+            (message.toolCalls ?? []).some((call) => call.status === "awaiting_answer")),
+      );
+    if (askedMessage === undefined || askedMessage.runId === undefined) return;
+    const runId = askedMessage.runId;
+    if (secretOfferedForRef.current.has(runId) || terminalRunIdsRef.current.has(runId)) return;
+    secretOfferedForRef.current.add(runId);
+    const conversation = activeConversationId;
+    void (async () => {
+      try {
+        const requests = await apiClient.get<ParkedSecretRequest[]>(
+          `/runs/${runId}/secret-requests`,
+        );
+        if (requests.length === 0 || panelsBelongTo.current !== conversation) return;
+        offerParkedSecretRequests(requests, runId, askedMessage.id);
+      } catch {
+        // Quiet, like the question restore above: the transcript still says
+        // the step is waiting, and a toast over it buys nothing. Unmarked so
+        // the next render - or reopening the conversation - tries again.
+        secretOfferedForRef.current.delete(runId);
+      }
+    })();
+  }, [
+    messages,
+    pendingSecretRequests,
+    isProcessing,
+    isConnected,
+    activeConversationId,
+    offerParkedSecretRequests,
+  ]);
+
   // Stop belongs to the run's owner independently of the decision panel.
   // Query owns retries and cancellation; deriving the control from the current
   // permission and transcript prevents late responses from reviving stale UI.
@@ -2906,6 +2980,120 @@ export function useChat(options: UseChatOptions = {}) {
       sendMessage({ type: "ask_user_response", answers });
     },
     [parkedQuestion, answerParkedQuestion, isConnected, sendMessage, chatApi, updateToolCallPart],
+  );
+
+  /** Provide a secret a parked run asked for, and continue it (#13).
+   *
+   * The value goes to the fulfil endpoint over HTTP and nowhere else: this
+   * hook never stores it, never sends it on the socket, and never writes it
+   * into the transcript. The fulfil seals it and resumes the run inline, so
+   * the continuation is in the response, like `resumeRun`.
+   */
+  const submitSecretRequest = useCallback(
+    async (requestId: string, value: string) => {
+      const parked = parkedSecretRequest;
+      if (parked === null || answeringSecretRef.current !== null) return;
+      const request = (pendingSecretRequests ?? []).find((item) => item.id === requestId);
+      if (request === undefined) return;
+      const ticket = {};
+      answeringSecretRef.current = ticket;
+      updateToolCallPart(parked.messageId, request.tool_call_id, { status: "running" });
+      try {
+        processingRef.current = true;
+        setIsProcessing(true);
+        const resumed = await apiClient.post<ResumedRun>(
+          `/runs/${parked.runId}/secret-requests/${requestId}/fulfil`,
+          { value },
+        );
+        if (answeringSecretRef.current !== ticket) return;
+        setPendingSecretRequests((current) =>
+          (current ?? []).filter((item) => item.id !== requestId),
+        );
+        if ((pendingSecretRequests ?? []).length <= 1) {
+          setParkedSecretRequest(null);
+        }
+        updateMessage(parked.messageId, (message) => ({ ...message, runWaitingFor: undefined }));
+        const settled = (resumed.settled ?? []).find(
+          (settledCall) => settledCall.tool_call_id === request.tool_call_id,
+        );
+        updateToolCallPart(parked.messageId, request.tool_call_id, {
+          status: "completed",
+          result: settled?.result,
+        });
+        if (resumed.status === "awaiting_answer") {
+          // Parked again - on another secret, or a question: the restore
+          // effect must be allowed to offer it anew.
+          secretOfferedForRef.current.delete(parked.runId);
+          setPendingSecretRequests(null);
+        }
+        showContinuation(resumed, parked.runId, new Set([request.tool_call_id]));
+        if (resumed.continues_in_chat) toast.info(t("answerAlsoInTheChat"));
+      } catch (error) {
+        if (answeringSecretRef.current !== ticket) return;
+        toast.error(getErrorMessage(error, tErrors));
+        updateToolCallPart(parked.messageId, request.tool_call_id, {
+          status: "awaiting_answer",
+        });
+      } finally {
+        if (answeringSecretRef.current === ticket) {
+          answeringSecretRef.current = null;
+          processingRef.current = false;
+          setIsProcessing(false);
+        }
+      }
+    },
+    [
+      parkedSecretRequest,
+      pendingSecretRequests,
+      updateToolCallPart,
+      updateMessage,
+      showContinuation,
+      tErrors,
+      t,
+    ],
+  );
+
+  /** Decline a secret a parked run asked for: the run ends failed (#13). */
+  const declineSecretRequest = useCallback(
+    async (requestId: string) => {
+      const parked = parkedSecretRequest;
+      if (parked === null || answeringSecretRef.current !== null) return;
+      const request = (pendingSecretRequests ?? []).find((item) => item.id === requestId);
+      if (request === undefined) return;
+      const ticket = {};
+      answeringSecretRef.current = ticket;
+      try {
+        await apiClient.post(`/runs/${parked.runId}/secret-requests/${requestId}/decline`, {});
+        if (answeringSecretRef.current !== ticket) return;
+        setPendingSecretRequests((current) =>
+          (current ?? []).filter((item) => item.id !== requestId),
+        );
+        if ((pendingSecretRequests ?? []).length <= 1) {
+          setParkedSecretRequest(null);
+        }
+        terminalRunIdsRef.current.add(parked.runId);
+        updateMessage(parked.messageId, (message) => ({ ...message, runWaitingFor: undefined }));
+        updateToolCallPart(parked.messageId, request.tool_call_id, {
+          status: "completed",
+          result: t("secretRequest.declined"),
+        });
+        abandonOpenCalls(parked.messageId);
+      } catch (error) {
+        if (answeringSecretRef.current !== ticket) return;
+        toast.error(getErrorMessage(error, tErrors));
+      } finally {
+        if (answeringSecretRef.current === ticket) answeringSecretRef.current = null;
+      }
+    },
+    [
+      parkedSecretRequest,
+      pendingSecretRequests,
+      updateToolCallPart,
+      updateMessage,
+      abandonOpenCalls,
+      tErrors,
+      t,
+    ],
   );
 
   /** Release a run paused on `connect_account`: `true` once connected, `false` to go on without. */
@@ -3520,6 +3708,10 @@ export function useChat(options: UseChatOptions = {}) {
     sendResumeDecisions,
     pendingQuestions,
     sendAskUserResponses,
+    /** The secrets a parked run asked its person for. See `SecretRequestCard`. */
+    pendingSecretRequests,
+    submitSecretRequest,
+    declineSecretRequest,
     /** The service a paused run is waiting for the person to connect. See `ConnectAccountPrompt`. */
     pendingConnection,
     sendConnectionResponse,

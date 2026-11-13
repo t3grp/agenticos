@@ -414,6 +414,17 @@
     "askUserAnswered": "Odpowiedziałeś",
     "askUserAsked": "Pytanie do Ciebie",
     "askUserAskedBy": "Pyta {name}",
+    "secretRequest": {
+      "title": "Agent potrzebuje sekretu",
+      "provide": "Podaj sekret",
+      "decline": "Odmów",
+      "valueLabel": "Wartość sekretu",
+      "valuePlaceholder": "Wklej sekret tutaj — nigdy nie zostanie pokazany ponownie",
+      "provided": "Sekret podany",
+      "declined": "Odmówiono podania tego sekretu",
+      "storedHint": "Zapisano jako {name} (…{hint})",
+      "waiting": "Oczekiwanie na sekret"
+    },
     "attachedFile": "Załączony plik",
     "backAgentAposS": "Wróć do modelu agenta",
     "cancel": "Anuluj",
@@ -778,7 +789,12 @@
       "removeStep": "Usuń krok",
       "removingStep": "Usuwa krok",
       "result": "Wynik",
+      "reviewingWithCouncil": "Sprawdza pracę z radą",
       "reviewingWithSolLoop": "Sprawdza pracę w sol-loop",
+      "checkingProofCoverage": "Sprawdzanie pokrycia dowodowego",
+      "proofScenarioRecord": "Zapis scenariusza dowodowego",
+      "proofScenarioVerdict": "Werdykt scenariusza dowodowego",
+      "recordingProofScenario": "Zapisywanie próby dowodowej",
       "runPython": "Uruchom Python",
       "running": "Działa…",
       "runningCalculations": "Liczy",
@@ -825,6 +841,8 @@
       "artifactUnchanged": "Bez zmian, nadal wersja {version} · otwórz stronę",
       "askingYou": "Czekam na twoją odpowiedź",
       "askedYou": "Zapytał cię",
+      "requestingSecret": "Czekam na twój sekret",
+      "requestedSecret": "Poproszono o sekret",
       "notAnsweredYet": "Jeszcze bez odpowiedzi",
       "listMemory": "Lista wspomnień",
       "readMemory": "Odczyt wspomnienia",
@@ -930,6 +948,7 @@
       "chunkCount": "{count, plural, one {1 chunk} few {# chunki} many {# chunków} other {# chunku}}",
       "chunkNumber": "chunk {number}",
       "collectionNamed": "Kolekcja: {name}",
+      "councilReview": "Ocena rady",
       "createSpecialist": "Utwórz specjalistę",
       "creating": "Tworzy",
       "creatingChart": "Tworzy wykres",
@@ -3282,6 +3301,12 @@
       "evalToolTuningCase": "{name} · {classification}",
       "evalToolTuningProposal": "[{kind}] {title}",
       "evalToolTuningProposalEvidence": "Dowody: {evidence} · {status}",
+      "proofScenarios": "{count, plural, =1 {1 scenariusz dowodowy} other {# scenariusze dowodowe}}",
+      "proofScenario": "{id} {name} — {proven}",
+      "proofScenarioProven": "udowodniony",
+      "proofScenarioUnproven": "nieudowodniony",
+      "proofScenarioCovers": "Obejmuje: {files}",
+      "proofAttempt": "{phase} · {status} · {evidence}",
       "cacheBust": "cache zerwany",
       "cacheExpired": "cache wygasł",
       "cacheBustDetail": "{missed, number} tokenów z cache nieodczytanych z cache - coś przed nimi w prompcie się zmieniło",
@@ -8339,6 +8364,11 @@
     "delegationModeLabel": "Kiedy oddaje z powrotem",
     "delegationModeSync": "Poczekaj na niego",
     "delegationModeSyncDetail": "Rodzic zatrzymuje się, aż delegat odpowie. Ustawienie domyślne i to, co sprawia, że delegacja czyta się jak wywołanie funkcji.",
+    "councilMemberRow": "Członek {number}",
+    "councilMemberName": "Imię",
+    "councilMemberProvider": "Dostawca",
+    "councilMemberModel": "Profil modelu",
+    "councilMembersProviderHint": "Wybierz innego dostawcę dla każdego członka rady.",
     "delegationOffButConfigured": "Delegacja jest wyłączona, więc nic z tego nie zostaje osiągnięte. Delegaty poniżej pozostają w spec i nadal są sprawdzane przy publikacji - włącz ją powyżej albo je usuń.",
     "delegationPolicyDetail": "Co ogranicza każdą delegację, którą wykonuje ten agent, zarówno delegaty, jak i specjalistów.",
     "delegationPolicyHeading": "Polityka",
@@ -9271,6 +9301,20 @@
       "max_results": {
         "title": "Rozmów na wyszukiwanie",
         "description": "Ile rozmów zwraca co najwyżej jedno wyszukiwanie. Każda przynosi krótki fragment, więc duża liczba kosztuje kontekst przy każdym wyszukiwaniu."
+      }
+    },
+    "council": {
+      "members": {
+        "title": "Członkowie rady",
+        "description": "Delegaci: po jednym silnym modelu od trzech różnych dostawców, przy wysokim wysiłku rozumowania. Dokładnie trzech członków."
+      },
+      "agreement_threshold": {
+        "title": "Próg zgodności",
+        "description": "Ocena w skali do 10, którą każdy delegat musi osiągnąć, żeby runda zadowoliła radę. Runda poniżej progu oznacza: popraw i poproś o ponowną ocenę."
+      },
+      "max_rounds": {
+        "title": "Maksymalnie rund",
+        "description": "Ile rund oceny może poprosić jeden run. Nowa ocena po poprawkach to nowa runda, a limit powstrzymuje kolejne oceny przed rozrostem zakresu."
       }
     },
     "guardrails": {
@@ -12229,6 +12273,14 @@
       "needs": "Nic dodatkowego.",
       "never": "Nigdy nie odpowiada za osobę. W Slacku czy Telegramie czeka na jej odpowiedź."
     },
+    "secret_request": {
+      "name": "Prośba o sekret",
+      "does": "Agent prosi o sekret, którego potrzebuje, a którego nie ma, podając jego nazwę i przeznaczenie.",
+      "example1": "Jaki jest klucz API Acme do listowania kontaktów?",
+      "example2": "Którego sekretu ma użyć raport nocny?",
+      "needs": "Nic dodatkowego.",
+      "never": "Nigdy nie pokazuje wartości modelowi, transkryptowi ani logom. Karta zapisuje ją prosto do sejfu."
+    },
     "browser_use": {
       "name": "Przeglądarka",
       "does": "Daje agentowi prawdziwą przeglądarkę, którą obsługuje krok po kroku - czyta strony, klika, wypełnia formularze i wyszukuje - żeby skończyć zadanie.",
@@ -12307,6 +12359,14 @@
       "example2": "Wrócić do zadania tam, gdzie skończył się ostatni czat",
       "needs": "Nic dodatkowego.",
       "never": "Nigdy nie czyta cudzych rozmów i jest wyłączone w czatach grupowych."
+    },
+    "council": {
+      "name": "Rada",
+      "does": "Prosi trzech recenzentów-delegatów, po jednym silnym modelu od trzech różnych dostawców, o ocenę pracy w skali do 10 w równoległych rundach, aż wszyscy się zgodzą.",
+      "example1": "Czy ten pull request jest gotowy do połączenia?",
+      "example2": "Oceń tę wersję roboczą propozycji, zanim zostanie wysłana",
+      "needs": "Jeden profil modelu na delegata, od trzech różnych dostawców.",
+      "never": "Nigdy nie zastępuje brakującego delegata ani nie wymyśla oceny: delegat, do którego nie można dotrzeć, jest zgłaszany jako niedostępny, a ten, który nie podał oceny, ma wpis „brak oceny”."
     },
     "guardrails": {
       "name": "Zabezpieczenia",
@@ -12518,6 +12578,14 @@
       "example2": "Obserwuj ten PR i powiedz mi, gdy checki przejdą",
       "needs": "Sposób odczytu checków PR, np. capability monitor z `gh pr checks`.",
       "never": "Nigdy nie łączy, nie komentuje ani nie robi nic innego na PR: tylko obserwacja i zgłaszanie."
+    },
+    "proof_scenario": {
+      "name": "Scenariusz dowodowy",
+      "does": "Udowadnia zmianę na podstawie zaobserwowanych dowodów: zapisuje odtworzenie błędu przed poprawką i po niej oraz zgłasza, które zmienione pliki mają dowód, a które nie.",
+      "example1": "Czy ta zmiana naprawdę zadziałała?",
+      "example2": "Udowodnij tę poprawkę, zanim ją scalę",
+      "needs": "Odtworzenie błędu do uruchomienia przed poprawką i po niej.",
+      "never": "Nigdy nie scala, nie zatwierdza ani nie podejmuje innych działań wobec zmiany i nigdy nie uznaje zielonego testu jednostkowego za dowód."
     },
     "background_tasks": {
       "name": "Tematy w tle",

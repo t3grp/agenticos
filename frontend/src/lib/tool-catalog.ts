@@ -75,6 +75,7 @@ export type ToolRenderer =
   | "context-list"
   | "plan"
   | "asked"
+  | "secret-request"
   | "delegation"
   | "workspace"
   | "memory"
@@ -186,6 +187,15 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     render: "asked",
     captionKey: "askingYou",
     displayNameKey: "askedYou",
+  },
+  // secret_request - the agent needs a credential it does not have (#13).
+  // The step draws the request - name and what it is for - and never the
+  // value, which only the card the run is parked on ever carries.
+  request_secret: {
+    kind: "read",
+    render: "secret-request",
+    captionKey: "requestingSecret",
+    displayNameKey: "requestedSecret",
   },
   // artifacts - the published page is the answer, so its card sits under the
   // answer (`publishedApps` in `message-item.tsx`) and the step stays one line,
@@ -562,6 +572,22 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     displayNameKey: "babysitPrStop",
   },
 
+  // proof-scenario - observed evidence for a change: record one attempt, then
+  // ask for the coverage verdict. Both results are plain text, so the steps
+  // render generic, like any other read-only text tool.
+  proof_scenario_record: {
+    kind: "read",
+    render: "generic",
+    captionKey: "recordingProofScenario",
+    displayNameKey: "proofScenarioRecord",
+  },
+  proof_scenario_verdict: {
+    kind: "read",
+    render: "generic",
+    captionKey: "checkingProofCoverage",
+    displayNameKey: "proofScenarioVerdict",
+  },
+
   // code_execution
   run_python: {
     kind: "code",
@@ -795,6 +821,15 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     displayNameKey: "cancelTask",
   },
 
+  // council - one review round: three delegates score the work in parallel.
+  // The result is plain text - a JSON round with the scores and the table -
+  // so the step renders generic, like any other read-only text tool.
+  run_council_review: {
+    kind: "read",
+    render: "generic",
+    captionKey: "reviewingWithCouncil",
+    displayNameKey: "councilReview",
+  },
   // sol-loop - one review round: one reviewer judges the work. The result is
   // plain text - a JSON round with the verdict, the findings and the ledger -
   // so the step renders generic, like any other read-only text tool.
