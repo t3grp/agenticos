@@ -34,6 +34,9 @@ import { ChatControls } from "./chat-controls";
 import { SheetRow } from "./composer-sheet";
 import { ChatEmptyState } from "./chat-empty-state";
 import { ChatRoomBar } from "./chat-room-bar";
+import { TeamRoomHeader, TeamRoomEmpty } from "./team-room-header";
+import { TeamRoomComposer } from "./team-room-composer";
+import { useRoomSync } from "@/hooks/use-room";
 import { TypingIndicator } from "./typing-indicator";
 import { useProjectMentions } from "@/hooks/use-project-mentions";
 import type { PageComment } from "./browser-comment";
@@ -223,6 +226,7 @@ export function ChatContainer({
   }, [shared, clearShared]);
   const {
     currentConversationId,
+    pendingProjectId,
     currentMessages,
     currentCost,
     isLoading: isConversationLoading,
@@ -271,6 +275,18 @@ export function ChatContainer({
   // Somebody else's thread: its project is read-only until the access result says
   // otherwise. Owned threads need no access read, so they are never read-only here.
   const projectReadOnly = needsAccess && (!access.known || access.conversation?.user_id !== meId);
+  const scoped = useInChatScope();
+  // Project access defines the audience; a floating assistant keeps its own composer.
+  const roomProjectId =
+    scoped || agentFixed
+      ? null
+      : currentConversationId === null
+        ? pendingProjectId
+        : (listed?.project_id ??
+          access.conversation?.project_id ??
+          sharedConversation?.project_id ??
+          null);
+  useRoomSync(roomProjectId === null ? null : currentConversationId, rereadConversation);
 
   // The one agent a conversation used, when it used exactly one. Recovered from the
   // conversation rather than the message, which is the only source history has left.
@@ -637,13 +653,13 @@ export function ChatContainer({
       : null;
   const askAgain = useCallback(
     (question: string) => {
-      if (sendDisabled) return;
+      if (sendDisabled || roomProjectId !== null) return;
       const submission = pageContext ? captureSubmission() : undefined;
       setLostIn(null);
       if (submission) sendMessage(question, undefined, undefined, undefined, submission);
       else sendMessage(question);
     },
-    [sendMessage, sendDisabled, pageContext, captureSubmission],
+    [sendMessage, sendDisabled, pageContext, captureSubmission, roomProjectId],
   );
 
   // What the file panel watches, rather than a timer. Counted from the transcript
@@ -784,7 +800,7 @@ export function ChatContainer({
     (content: string, fileIds?: string[], files?: ChatMessageFile[], mentions?: Mentionable[]) => {
       // Typing on after a call: its summary has said its piece, and would otherwise
       // sit under the new turn.
-      if (sendDisabled) return;
+      if (sendDisabled || roomProjectId !== null) return;
       dismissCall();
       const submission = pageContext ? captureSubmission() : undefined;
       if (selectedWorkflow) void workflowChat.send(selectedWorkflow, content);
@@ -804,16 +820,17 @@ export function ChatContainer({
       pageContext,
       captureSubmission,
       sendDisabled,
+      roomProjectId,
     ],
   );
   useEffect(() => {
-    if (held.current === null || holdSending || sendDisabled) return;
+    if (held.current === null || holdSending || sendDisabled || roomProjectId !== null) return;
     const waiting = held.current;
     // A held contextual question must pass the gate for its chosen agent.
     if (waiting[4] && waiting[4].agentId !== selectedAgentId) return;
     held.current = null;
     sendMessage(...waiting);
-  }, [holdSending, sendMessage, sendDisabled, selectedAgentId]);
+  }, [holdSending, sendMessage, sendDisabled, selectedAgentId, roomProjectId]);
 
   const handleRegenerate = useCallback(
     (assistantMessageId: string) => {
@@ -892,6 +909,8 @@ export function ChatContainer({
     <>
       <LocalAccessDialog />
       <ChatUI
+        roomProjectId={roomProjectId}
+        roomReadOnly={isArchived || !access.known}
         hasEarlierMessages={hasEarlierMessages}
         isLoadingEarlier={isLoadingEarlier}
         loadEarlierMessages={loadEarlierMessages}
@@ -915,7 +934,9 @@ export function ChatContainer({
         detachedTurnPending={detachedTurnPending}
         leftTurnPending={leftTurnPending || answeringElsewhere}
         answerLost={lostQuestion !== null}
-        onAskAgain={lostQuestion === null ? undefined : () => askAgain(lostQuestion)}
+        onAskAgain={
+          lostQuestion === null || roomProjectId !== null ? undefined : () => askAgain(lostQuestion)
+        }
         onRecheck={handleRecheck}
         personalGaps={personalGaps}
         // The live turn's cost while there is one, and the newest measured answer in
@@ -958,7 +979,7 @@ export function ChatContainer({
         // Only into the hook: nothing on screen is a share of it, unlike the
         // context gauge the model switch has to move.
         onApprovalModeChange={setApprovalMode}
-        onRegenerate={readOnly ? undefined : handleRegenerate}
+        onRegenerate={readOnly || roomProjectId !== null ? undefined : handleRegenerate}
         onFork={ownsOpenConversation && access.known ? handleFork : undefined}
         forkingMessageId={forkingMessageId}
         forkedFrom={forkableConversation?.forked_from ?? null}
@@ -1002,6 +1023,8 @@ export function ChatContainer({
 }
 
 interface ChatUIProps {
+  roomProjectId: string | null;
+  roomReadOnly: boolean;
   sendDisabled?: boolean;
   hasEarlierMessages: boolean;
   isLoadingEarlier: boolean;
@@ -1138,6 +1161,8 @@ interface ChatUIProps {
 }
 
 function ChatUI({
+  roomProjectId,
+  roomReadOnly,
   hasEarlierMessages,
   isLoadingEarlier,
   loadEarlierMessages,
@@ -1310,7 +1335,7 @@ function ChatUI({
   // The test panel runs the draft while a call runs what is published, so there
   // the button says so.
   const tVoice = useTranslations("chat.voice");
-  const offerCall = hasAgent;
+  const offerCall = hasAgent && roomProjectId === null;
   const { readiness, failed: readinessFailed } = useVoiceReadiness(
     offerCall ? selectedAgentId : null,
   );
@@ -1491,7 +1516,11 @@ function ChatUI({
     </span>
   );
   const showWorkspaceHome =
-    !compact && messages.length === 0 && voice.call.phase === "idle" && !isLoadingConversation;
+    !compact &&
+    roomProjectId === null &&
+    messages.length === 0 &&
+    voice.call.phase === "idle" &&
+    !isLoadingConversation;
   return (
     <div className="chat-surface @container/sources-layout relative flex h-full min-h-0 w-full min-w-0 overflow-hidden">
       <div className="@container/browser-layout relative flex h-full min-h-0 min-w-0 flex-1">
@@ -1542,20 +1571,27 @@ function ChatUI({
             >
               {/* Who else has this chat open, held at the top while the transcript scrolls:
                 a project's chat is several people's at once. */}
-              {conversationId && !compact && (
-                <ChatRoomBar
-                  conversationId={conversationId}
-                  present={present}
-                  meId={authUser?.id}
-                  canShare={ownsConversation}
-                  className="sticky top-2 z-20 mb-3"
-                />
+              {roomProjectId !== null ? (
+                <TeamRoomHeader projectId={roomProjectId} present={present} />
+              ) : (
+                conversationId &&
+                !compact && (
+                  <ChatRoomBar
+                    conversationId={conversationId}
+                    present={present}
+                    meId={authUser?.id}
+                    canShare={ownsConversation}
+                    className="sticky top-2 z-20 mb-3"
+                  />
+                )
               )}
               {isLoadingConversation ? (
                 <ConversationSkeleton />
               ) : messages.length === 0 && voice.call.phase === "idle" ? (
                 <div className={cn("flex h-full items-center", !emptyState && "chat-empty-state")}>
-                  {emptyState ? (
+                  {roomProjectId !== null ? (
+                    <TeamRoomEmpty />
+                  ) : emptyState ? (
                     emptyState((picked) => sendMessage(picked))
                   ) : (
                     <ChatEmptyState
@@ -1764,7 +1800,7 @@ function ChatUI({
               />
               <CompactionNotice compacting={compacting} impossible={compactionImpossible} />
               {sandboxPreparing && <SandboxPreparingNotice />}
-              {onCancelQueued && (
+              {roomProjectId === null && onCancelQueued && (
                 <PendingMessages
                   messages={queuedMessages ?? []}
                   steers={steers}
@@ -1792,7 +1828,15 @@ function ChatUI({
                 same question: at 900px with the conversation list open this box
                 is 360px wide, and a viewport breakpoint showed a reading there
                 that had nowhere to go. */}
-              {(viewOnly || accessState) && !onCall ? (
+              {roomProjectId !== null ? (
+                <TeamRoomComposer
+                  key={`${activeOrgId}:${authUser?.id}:${conversationId}`}
+                  projectId={roomProjectId}
+                  conversationId={conversationId}
+                  readOnly={roomReadOnly}
+                  onTyping={onTyping}
+                />
+              ) : (viewOnly || accessState) && !onCall ? (
                 <ConversationAccessNotice state={accessState ?? "view"} onRetry={onRetryAccess} />
               ) : (
                 <div className="@container min-w-0">

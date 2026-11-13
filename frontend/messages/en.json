@@ -1239,6 +1239,54 @@
     "title": "Billing"
   },
   "chat": {
+    "teamRoom": {
+      "title": "Team room",
+      "titleInProject": "Team room · {name}",
+      "audience": "Everyone with access to this project can read this room.",
+      "alone": "You're the only person here right now.",
+      "here": "{count, plural, =1 {{names} is here} other {# teammates are here}}",
+      "emptyTitle": "A shared conversation for your team",
+      "emptyDescription": "Post an update, reply to a teammate, or choose an agent to help. Messages stay in this project for everyone with access.",
+      "newRoom": "New team room",
+      "defaultTitle": "Team room",
+      "creating": "Creating room…",
+      "createFailed": "Couldn't create the team room.",
+      "message": "Message to the team",
+      "placeholder": "Write to your team…",
+      "responder": "Who should answer",
+      "chooseResponder": "Choose who should answer",
+      "humanOnly": "Team only",
+      "askAgent": "Ask @{name}",
+      "responderHint": "Messages go to your team. Choose an agent only when you want an AI answer.",
+      "post": "Post message",
+      "posting": "Posting…",
+      "postFailed": "Couldn't confirm that your message was saved.",
+      "retryPost": "Retry same message",
+      "retryHint": "The result is unconfirmed. Retrying sends the same message once, with the same agent and reply.",
+      "checking": "Checking room access…",
+      "readOnly": "You can read this room. Posting requires permission to use its project.",
+      "loadFailed": "Couldn't load room access and agent requests.",
+      "retry": "Try again",
+      "queueTitle": "Agent requests · {count, plural, =0 {none active} =1 {1 active} other {# active}}",
+      "requests": "Agent requests",
+      "requestedBy": "{name} asked @{agent}",
+      "you": "You",
+      "teammate": "A teammate",
+      "agent": "agent",
+      "viewRun": "View run",
+      "cancel": "Cancel request",
+      "cancelFailed": "Couldn't cancel this request.",
+      "status": {
+        "queued": "Queued",
+        "running": "Working",
+        "awaiting_approval": "Waiting for approval",
+        "awaiting_answer": "Waiting for an answer",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "interrupted": "Interrupted"
+      }
+    },
     "loadEarlierMessages": "Load earlier messages",
     "accessLevel": "Access level",
     "accessRevoked": "Access revoked",
@@ -4874,6 +4922,14 @@
       "chat-your-connections": {
         "title": "Your own accounts, where the agent uses them",
         "body": "An agent bound to each person's own account speaks to Notion or Jira as you. This lists which of its services need an account of yours, and connects one without leaving the chat."
+      },
+      "chat-team-room": {
+        "title": "Your team's room",
+        "body": "This conversation follows the project's sharing permissions. See who is here and use Share to check or manage its audience."
+      },
+      "chat-team-composer": {
+        "title": "Talk first, ask an agent when needed",
+        "body": "Post to your teammates without starting an agent. Choose an agent explicitly for an AI answer; its request joins the shared queue."
       },
       "chat-composer": {
         "title": "Ask anything",

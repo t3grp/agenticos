@@ -328,6 +328,8 @@ export type WSEventType =
   | "background_task_turn"
   | "turn_prompt"
   | "presence"
+  | "room_message"
+  | "room_request"
   | "typing"
   | "turn_followed_to_end"
   // Sent on every turn and deliberately unread, because each only announces a step

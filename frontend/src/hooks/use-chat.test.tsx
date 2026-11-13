@@ -13,6 +13,7 @@ import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { useVisualImagesStore, useVisualStreamStore } from "@/stores/visual-stream-store";
 import { ApiError } from "@/lib/api-error";
 import { qk } from "@/lib/query-keys";
+import { onRoomChange } from "@/lib/room-events";
 import type { ResumedRun } from "@/types/runs";
 import type { AskUserAnswer } from "@/types/chat";
 import {
@@ -148,6 +149,83 @@ function receive(type: string, data: Record<string, unknown>): void {
 function frame(nth = 0): Record<string, unknown> {
   return sent.mock.calls[nth]![0] as Record<string, unknown>;
 }
+
+describe("room persistence events", () => {
+  it("announces only the selected room's message and request changes", () => {
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    const changed = vi.fn();
+    const unsubscribe = onRoomChange(changed);
+    receive("room_message", { conversation_id: "c-other", message_id: "other" });
+    expect(changed).not.toHaveBeenCalled();
+    receive("room_message", { conversation_id: "c-1", message_id: "saved-human" });
+    receive("room_request", { conversation_id: "c-1", request_id: "request" });
+    expect(changed).toHaveBeenCalledTimes(2);
+    expect(changed).toHaveBeenLastCalledWith({
+      conversationId: "c-1",
+      accountId: undefined,
+      organizationId: null,
+    });
+    unsubscribe();
+  });
+
+  it("reconciles a saved room prompt and streamed answer into one final answer", () => {
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    const prompt = {
+      id: "saved-human",
+      clientMessageId: "room-token",
+      role: "user" as const,
+      content: "Check the launch",
+      timestamp: new Date(),
+      conversationId: "c-1",
+    };
+    act(() => useChatStore.getState().rereadMessages([prompt]));
+    receive("turn_attached", { conversation_id: "c-1" });
+    receive("turn_prompt", {
+      conversation_id: "c-1",
+      message_id: "saved-human",
+      client_message_id: "room-token",
+      content: prompt.content,
+      agent_id: "writer",
+    });
+    receive("model_request_start", {});
+    receive("text_delta", { index: 0, content: "Checking" });
+    const temporary = streaming()?.id;
+    act(() => useChatStore.getState().rereadMessages([prompt]));
+    expect(streaming()?.id).toBe(temporary);
+    expect(streaming()?.content).toContain("Checking");
+    receive("final_result", { output: "Ready" });
+    receive("message_saved", {
+      message_id: "saved-answer",
+      run_id: "room-run",
+      run_status: "completed",
+    });
+    receive("complete", {});
+    receive("turn_followed_to_end", { conversation_id: "c-1" });
+    act(() =>
+      useChatStore
+        .getState()
+        .rereadMessages([
+          prompt,
+          {
+            id: "saved-answer",
+            role: "assistant",
+            content: "Ready",
+            timestamp: new Date(),
+            conversationId: "c-1",
+            agentId: "writer",
+            runId: "room-run",
+          },
+        ]),
+    );
+    const messages = useChatStore.getState().messages;
+    expect(messages.filter((message) => message.role === "user")).toHaveLength(1);
+    expect(messages.filter((message) => message.role === "assistant")).toEqual([
+      expect.objectContaining({ id: "saved-answer", content: "Ready", renderKey: temporary }),
+    ]);
+  });
+});
 
 /** The assistant message being streamed. */
 function streaming() {
@@ -6802,7 +6880,6 @@ it("does not restore approvals from stale transcript rows after a terminal recei
   await act(async () => {});
   expect(get).not.toHaveBeenCalledWith("/runs/r-1/parked");
 });
-
 
 describe("useChat - the floating assistant's submitted page and agent", () => {
   afterEach(() => vi.useRealTimers());

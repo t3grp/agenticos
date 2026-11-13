@@ -1,6 +1,7 @@
 "use client";
 
 import { toolLookupName } from "@/lib/tool-identity";
+import { announceRoomChange } from "@/lib/room-events";
 
 import type { Mentionable } from "@/types/mention";
 import type { AssistantPageContext } from "@/lib/assistant-page-context";
@@ -861,6 +862,19 @@ export function useChat(options: UseChatOptions = {}) {
 
         // Who has this conversation open now: its room says so whenever somebody
         // comes or goes.
+        case "room_message":
+        case "room_request": {
+          const data = wsEvent.data as { conversation_id: string };
+          if (conversationApi.getState().currentConversationId === data.conversation_id) {
+            announceRoomChange({
+              conversationId: data.conversation_id,
+              accountId: useAuthStore.getState().user?.id,
+              organizationId: useOrgStore.getState().activeOrgId,
+            });
+          }
+          break;
+        }
+
         case "presence": {
           const data = wsEvent.data as { conversation_id: string; people: ChatPerson[] };
           setPresent({ conversationId: data.conversation_id, people: data.people });

@@ -388,6 +388,54 @@
     "deleteAccount": "Usuń konto"
   },
   "chat": {
+    "teamRoom": {
+      "title": "Pokój zespołu",
+      "titleInProject": "Pokój zespołu · {name}",
+      "audience": "Każdy z dostępem do tego projektu może czytać ten pokój.",
+      "alone": "Jesteś teraz jedyną osobą w tym pokoju.",
+      "here": "{count, plural, one {{names} jest tutaj} few {# osoby z zespołu są tutaj} many {# osób z zespołu jest tutaj} other {# osoby z zespołu są tutaj}}",
+      "emptyTitle": "Wspólna rozmowa dla zespołu",
+      "emptyDescription": "Podziel się informacją, odpowiedz komuś z zespołu lub wybierz agenta do pomocy. Wiadomości pozostają w projekcie dla wszystkich z dostępem.",
+      "newRoom": "Nowy pokój zespołu",
+      "defaultTitle": "Pokój zespołu",
+      "creating": "Tworzenie pokoju…",
+      "createFailed": "Nie udało się utworzyć pokoju zespołu.",
+      "message": "Wiadomość do zespołu",
+      "placeholder": "Napisz do zespołu…",
+      "responder": "Kto ma odpowiedzieć",
+      "chooseResponder": "Wybierz, kto ma odpowiedzieć",
+      "humanOnly": "Tylko zespół",
+      "askAgent": "Zapytaj @{name}",
+      "responderHint": "Wiadomości trafiają do zespołu. Wybierz agenta, jeśli chcesz odpowiedź AI.",
+      "post": "Wyślij wiadomość",
+      "posting": "Wysyłanie…",
+      "postFailed": "Nie udało się potwierdzić zapisania wiadomości.",
+      "retryPost": "Ponów tę samą wiadomość",
+      "retryHint": "Wynik nie jest potwierdzony. Ponowienie zapisuje tę samą wiadomość tylko raz, z tym samym agentem i odniesieniem.",
+      "checking": "Sprawdzanie dostępu do pokoju…",
+      "readOnly": "Możesz czytać ten pokój. Pisanie wymaga uprawnienia do korzystania z projektu.",
+      "loadFailed": "Nie udało się wczytać dostępu do pokoju i próśb do agentów.",
+      "retry": "Spróbuj ponownie",
+      "queueTitle": "Prośby do agentów · {count, plural, =0 {brak aktywnych} one {1 aktywna} few {# aktywne} many {# aktywnych} other {# aktywnych}}",
+      "requests": "Prośby do agentów",
+      "requestedBy": "{name} poprosił(a) @{agent}",
+      "you": "Ty",
+      "teammate": "Osoba z zespołu",
+      "agent": "agent",
+      "viewRun": "Zobacz run",
+      "cancel": "Anuluj prośbę",
+      "cancelFailed": "Nie udało się anulować tej prośby.",
+      "status": {
+        "queued": "W kolejce",
+        "running": "W trakcie",
+        "awaiting_approval": "Oczekuje na zatwierdzenie",
+        "awaiting_answer": "Oczekuje na odpowiedź",
+        "completed": "Ukończono",
+        "failed": "Niepowodzenie",
+        "cancelled": "Anulowano",
+        "interrupted": "Przerwano"
+      }
+    },
     "loadEarlierMessages": "Wczytaj wcześniejsze wiadomości",
     "accessLevel": "Poziom dostępu",
     "accessRevoked": "Dostęp cofnięty",
@@ -6392,6 +6440,14 @@
       "chat-your-connections": {
         "title": "Twoje własne konta, tam gdzie agent ich używa",
         "body": "Agent powiązany z własnym kontem każdej osoby mówi do Notion czy Jiry jako Ty. Tu widać, które z jego usług potrzebują Twojego konta, i można je podłączyć bez wychodzenia z czatu."
+      },
+      "chat-team-room": {
+        "title": "Pokój twojego zespołu",
+        "body": "Ta rozmowa korzysta z uprawnień projektu. Sprawdź, kto jest obecny, i użyj Udostępnij, aby zobaczyć lub zmienić dostęp."
+      },
+      "chat-team-composer": {
+        "title": "Rozmawiaj z zespołem, a agenta pytaj w razie potrzeby",
+        "body": "Pisz do zespołu bez uruchamiania agenta. Aby otrzymać odpowiedź AI, wybierz agenta. Prośba trafi do wspólnej kolejki."
       },
       "chat-composer": {
         "title": "Zapytaj o cokolwiek",
