@@ -40,6 +40,7 @@ export const qk = {
     me: () => ["auth", "me"] as const,
   },
   health: () => ["health"] as const,
+  appVersion: (buildId: string | null) => ["app-version", buildId] as const,
   releases: {
     latest: () => ["releases", "latest"] as const,
     current: (version: string) => ["releases", "notes", version] as const,
