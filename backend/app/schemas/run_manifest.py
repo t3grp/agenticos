@@ -248,6 +248,7 @@ class ManifestEvalToolTuningRun(BaseSchema):
     cases: list[ManifestEvalToolTuningCase] = Field(default_factory=list)
     proposals: list[ManifestEvalToolTuningProposal] = Field(default_factory=list)
 
+
 class ManifestProofAttempt(BaseSchema):
     """One observed run of a proof scenario (#8).
 
