@@ -92,6 +92,13 @@ from app.services.virtual_tables.exceptions import (
 from app.services.virtual_tables.principals import principal_problems
 from app.services.virtual_tables.receipts import DeleteOutcome, WriteOutcome, run_once
 from app.services.virtual_tables.record_sources import source_for
+from app.services.virtual_tables.row_policy import (
+    may_edit_row,
+    may_view_row,
+    parse_policy,
+    view_expression,
+    visible_project_ids,
+)
 from app.services.virtual_tables.types import (
     COLUMN_TYPES,
     OPTION_TYPES,
@@ -559,6 +566,8 @@ class RecordOperations(Operations):
         )
         if record is None:
             raise NotFoundError(message="Record not found", details={"record_id": record_id})
+        if not await may_view_row(self.db, ctx, table, await self._columns(table), record.values):
+            raise NotFoundError(message="Record not found", details={"record_id": record_id})
         return await self._read_through(ctx, table, RecordRead.model_validate(record))
 
     async def get_record_by_external_id(
@@ -571,14 +580,24 @@ class RecordOperations(Operations):
         )
         if record is None:
             raise NotFoundError(message="Record not found", details={"external_id": external_id})
+        if not await may_view_row(self.db, ctx, table, await self._columns(table), record.values):
+            raise NotFoundError(message="Record not found", details={"external_id": external_id})
         return await self._read_through(ctx, table, RecordRead.model_validate(record))
 
     async def record_exists(self, ctx: AuthContext, table_id: UUID, external_id: str) -> bool:
-        """Whether a record with this external id exists, without reading it."""
+        """Whether a record with this external id exists, without reading it.
+
+        The answer is the caller's, not the table's: a row outside their
+        visibility does not exist for them.
+        """
         external_id = _external_id(external_id)
         table = await self._load_table(ctx, table_id, Perm.TABLES_VIEW)
         return await virtual_table_repo.record_exists(
-            self.db, external_id, table_id=table.id, organization_id=ctx.organization_id
+            self.db,
+            external_id,
+            table_id=table.id,
+            organization_id=ctx.organization_id,
+            extra=await view_expression(self.db, ctx, table, await self._columns(table)),
         )
 
     async def list_records(
@@ -612,6 +631,7 @@ class RecordOperations(Operations):
             sort=sort,
             skip=query.skip,
             limit=query.limit + 1,
+            extra=await view_expression(self.db, ctx, table, columns),
         )
         items = await read_through(
             self.db,
@@ -678,6 +698,12 @@ class RecordOperations(Operations):
         reached = reach(columns, column_ids)
         keys = sorted(str(column_id) for column_id in reached.columns)
         await deadline.arm(self.db)
+        table = await virtual_table_repo.get_table(
+            self.db, table_id=table_id, organization_id=ctx.organization_id
+        )
+        if table is None:
+            raise NotFoundError(message="Table not found", details={"table_id": table_id})
+        extra = await view_expression(self.db, ctx, table, columns)
         measured = await virtual_table_repo.list_record_sizes(
             self.db,
             table_id=table_id,
@@ -687,6 +713,7 @@ class RecordOperations(Operations):
             sort=order,
             limit=max_records + 1,
             keys=keys,
+            extra=extra,
         )
         tables: dict[UUID, LinkedTable | None] = {}
         if measured:
@@ -776,6 +803,7 @@ class RecordOperations(Operations):
             filters=_filters(columns, query.filters),
             search=_search(columns, query.search),
             cap=MAX_COUNT,
+            extra=await view_expression(self.db, ctx, table, columns),
         )
         return RecordCount(count=min(counted, MAX_COUNT), capped=counted > MAX_COUNT)
 
@@ -821,6 +849,9 @@ class RecordOperations(Operations):
                     break
                 failed.append(_failure(index, refused))
             except (InvalidRecordError, ArchivedColumnError, AlreadyExistsError) as refused:
+                failed.append(_failure(index, refused))
+            except NotFoundError as refused:
+                # A row the policy refuses: one failed entry, not a failed batch.
                 failed.append(_failure(index, refused))
             else:
                 if made:
@@ -876,6 +907,7 @@ class RecordOperations(Operations):
             chosen = [live[column_id] for column_id in query.columns]
         filters, sort = _clauses(columns, RecordQuery(filters=query.filters, sort=query.sort))
         search = _search(columns, query.search)
+        extra = await view_expression(self.db, ctx, table, columns)
         matching = await virtual_table_repo.count_records(
             self.db,
             table_id=table.id,
@@ -883,6 +915,7 @@ class RecordOperations(Operations):
             filters=filters,
             search=search,
             cap=MAX_COUNT,
+            extra=extra,
         )
         if matching > MAX_COUNT:
             raise ExportTooLargeError(
@@ -928,6 +961,7 @@ class RecordOperations(Operations):
                     max_records=MAX_COUNT,
                     batch_records=EXPORT_BATCH,
                     batch_bytes=EXPORT_MAX_BYTES,
+                    extra=extra,
                 )
             ) as batches:
                 async for rows in batches:
@@ -1202,6 +1236,10 @@ class RecordOperations(Operations):
         async def action() -> DeleteOutcome:
             self._ensure_live(table)
             record = await self._lock_record(ctx, table, record_id)
+            if not await may_edit_row(
+                self.db, ctx, table, await self._columns(table), record.values
+            ):
+                raise NotFoundError(message="Record not found", details={"record_id": record_id})
             if expected_revision is not None:
                 self._check_revision(record, expected_revision)
             snapshot = quotas.delete_snapshot(record.values)
@@ -1326,7 +1364,12 @@ class RecordOperations(Operations):
         self, ctx: AuthContext, columns: list[ColumnDef], submitted: dict[str, CellValue]
     ) -> None:
         """Every record a submitted link names exists in the table it links to, which the
-        writer can see - a link is not a way to learn which ids another table holds."""
+        writer can see - a link is not a way to learn which ids another table holds.
+
+        "Can see" is row-level here too: a linked row outside the writer's
+        visibility fails with the same message as a missing one, so the error
+        cannot be used as an oracle for which ids the linked table holds.
+        """
         problems: list[tuple[str, str]] = []
         for column in columns:
             ids = submitted.get(str(column.id))
@@ -1346,7 +1389,19 @@ class RecordOperations(Operations):
                 table_id=target.id,
                 organization_id=ctx.organization_id,
             )
-            missing = set(map(str, ids)) - {str(row.id) for row in found}
+            version = await virtual_table_repo.get_schema_version(
+                self.db, table_id=target.id, version=target.schema_version
+            )
+            target_columns = [ColumnDef.model_validate(item) for item in version.columns]
+            project_ids = await visible_project_ids(self.db, ctx, parse_policy(target.row_policy))
+            seen = {
+                str(row.id)
+                for row in found
+                if await may_view_row(
+                    self.db, ctx, target, target_columns, row.values, project_ids=project_ids
+                )
+            }
+            missing = set(map(str, ids)) - seen
             if missing:
                 problems.append(
                     (
@@ -1407,6 +1462,10 @@ class RecordOperations(Operations):
         await self._check_links(ctx, columns, values)
         await quotas.enforce_record_size(ctx, table, merged)
         await quotas.enforce_record_count(self.db, ctx, table)
+        # What is created must be visible to its creator: a row assigned to
+        # someone else is refused here, not created and then hidden.
+        if not await may_view_row(self.db, ctx, table, columns, merged):
+            raise NotFoundError(message="Record not found", details={"table_id": table.id})
         record = await virtual_table_repo.insert_record(
             self.db,
             organization_id=ctx.organization_id,
@@ -1485,10 +1544,18 @@ class RecordOperations(Operations):
 
         The revision is checked first, so a stale one is a conflict even when the values
         would have changed nothing. An update that changes nothing raises `_Unchanged`.
+
+        Both sides of the row policy are checked: the current row must be one
+        the caller may edit, and so must the row the update would leave behind -
+        without the second half a caller could move a row out of their own
+        visibility, or into someone else's. Both refusals are 404s, so an edit
+        refusal never confirms the row exists.
         """
+        columns = await self._columns(table)
+        if not await may_edit_row(self.db, ctx, table, columns, record.values):
+            raise NotFoundError(message="Record not found", details={"record_id": record.id})
         self._check_revision(record, expected_revision)
         before = dict(record.values)
-        columns = await self._columns(table)
         merged = await normalize_task_cells(
             self.db, ctx.organization_id, table.id, _merge(columns, values, before)
         )
@@ -1510,6 +1577,8 @@ class RecordOperations(Operations):
         if problems:
             raise InvalidRecordError([(f"values.{key}", message) for key, message in problems])
         await self._check_links(ctx, columns, values)
+        if not await may_edit_row(self.db, ctx, table, columns, merged):
+            raise NotFoundError(message="Record not found", details={"record_id": record.id})
         await quotas.enforce_record_size(ctx, table, merged)
         await virtual_table_repo.update_record(
             self.db,

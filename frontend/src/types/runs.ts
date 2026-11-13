@@ -315,6 +315,8 @@ export interface RunManifest {
   sol_loop_rounds?: ManifestSolLoopRound[];
   /** Each eval-driven tool-tuning run, with its score and draft proposals (#11). */
   eval_tool_tuning_runs?: ManifestEvalToolTuningRun[];
+  /** Each burst, with its merged outcome and every part's status (#10). */
+  burst_runs?: ManifestBurstRun[];
   /** Each proof scenario the run recorded, with its attempts (#8). */
   proof_scenarios?: ManifestProofScenario[];
   /** Whether the record was trimmed to fit its size ceiling. */
@@ -385,6 +387,21 @@ export interface ManifestEvalToolTuningRun {
   proposals: ManifestEvalToolTuningProposal[];
 }
 
+/** One subtask's outcome in a burst. */
+export interface ManifestBurstSubtask {
+  id: string;
+  title: string;
+  status: "completed" | "failed";
+  result: string;
+  reason: string | null;
+}
+
+/** One burst. */
+export interface ManifestBurstRun {
+  burst: number;
+  task: string;
+  merged: string;
+  results: ManifestBurstSubtask[];
 /** One observed run of a proof scenario. */
 export interface ManifestProofAttempt {
   scenario_id: string;

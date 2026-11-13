@@ -850,6 +850,16 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "recordingEvalToolTuning",
     displayNameKey: "evalToolTuning",
   },
+
+  // burst - one task split into parallel subtasks, merged into one outcome.
+  // The result is plain text - a JSON burst with the merge and each part's
+  // status - so the step renders generic, like any other read-only text tool.
+  run_burst: {
+    kind: "read",
+    render: "generic",
+    captionKey: "burstingSubtasks",
+    displayNameKey: "burstRun",
+  },
   create_agent: {
     kind: "delegate",
     render: "generic",

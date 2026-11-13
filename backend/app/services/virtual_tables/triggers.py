@@ -61,6 +61,7 @@ from app.schemas.virtual_table_trigger import (
 from app.services.access import TABLE, WORKFLOW, resolve_access
 from app.services.virtual_tables._base import Operations
 from app.services.virtual_tables.presentation import readable
+from app.services.virtual_tables.row_policy import may_view_row
 from app.services.virtual_tables.types import COLUMN_TYPES, CellProblem, validate_filter
 from app.services.workflow_authority import require_human_publisher
 from app.services.workflow_execution.exceptions import (
@@ -572,6 +573,12 @@ class TableTriggerConsumer:
             await record(AdmissionStatus.FAILED, AdmissionReason.PERMISSION_DENIED)
             return None
         ctx, workflow, version = fire
+        # The publisher's visibility is row-level too: a trigger must not hand
+        # a workflow run a record its publisher cannot see, and the run input
+        # would disclose it even though later node reads are filtered.
+        if not await may_view_row(self.db, ctx, table, list(columns.values()), values):
+            await record(AdmissionStatus.FILTERED, AdmissionReason.ROW_POLICY)
+            return None
         if causing is not None:
             # Counted under the chain's lock, held to the end of this transaction:
             # a second pass over another event of the chain waits here, then counts

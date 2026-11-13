@@ -259,6 +259,72 @@ class ColumnInput(_Request):
         return data
 
 
+class RowPolicy(_Schema):
+    """One table's row-level access policy, stored as JSONB on the table.
+
+    The assignee rule keeps a row visible to the members its Assignee column
+    names. View is wider than edit: a row is viewable when the caller is in the
+    view column, or belongs to a project the row links to (when the project
+    half is configured); it is editable only when the caller is in the edit
+    column. A row with an empty assignee is visible to nobody except the bypass
+    roles. When the project half cannot be resolved - no Projects table, or a
+    missing members column - view degrades to assignee-only, never wider.
+    """
+
+    rule: Literal["assignee", "none"] = Field(
+        default="assignee",
+        description="Which rule filters the table's rows; `none` clears the policy.",
+    )
+    view_column_id: UUID = Field(description="The user or multi_user column that gates viewing")
+    edit_column_id: UUID = Field(description="The user or multi_user column that gates editing")
+    view_project_link_column_id: UUID | None = Field(
+        default=None,
+        description="The link column of this table that names the row's project, "
+        "for the project half of viewing. All three project fields are set together.",
+    )
+    view_projects_table_id: UUID | None = Field(
+        default=None, description="The table of projects the link column points at"
+    )
+    view_project_members_column_id: UUID | None = Field(
+        default=None,
+        description="The user or multi_user column of the Projects table holding its members",
+    )
+
+
+class RowPolicyUpdate(_Request):
+    """Set or clear a table's row policy.
+
+    `{"rule": "none"}` clears it. An assignee policy names its view and edit
+    columns; the three project fields are set together or not at all.
+    """
+
+    rule: Literal["assignee", "none"]
+    view_column_id: UUID | None = None
+    edit_column_id: UUID | None = None
+    view_project_link_column_id: UUID | None = None
+    view_projects_table_id: UUID | None = None
+    view_project_members_column_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _check_columns(self) -> RowPolicyUpdate:
+        if self.rule == "assignee":
+            if self.view_column_id is None:
+                raise ValueError("An assignee policy names the column that gates viewing")
+            if self.edit_column_id is None:
+                raise ValueError("An assignee policy names the column that gates editing")
+        project = (
+            self.view_project_link_column_id,
+            self.view_projects_table_id,
+            self.view_project_members_column_id,
+        )
+        if any(item is not None for item in project) and any(item is None for item in project):
+            raise ValueError(
+                "The project half of viewing names a link column, a projects table "
+                "and a members column together"
+            )
+        return self
+
+
 class TableCreate(_Request):
     name: Label = Field(description="Unique among the organization's live tables")
     description: Description | None = None
@@ -303,6 +369,11 @@ class TableSummary(_Schema):
 
 class TableRead(TableSummary):
     columns: list[ColumnDef]
+    row_policy: RowPolicy | None = Field(
+        default=None,
+        description="The table's row-level access policy, or null when every row is "
+        "visible to anyone who may read the table.",
+    )
     can_restore: bool = Field(
         default=False,
         description="Whether the table is archived and this caller may restore it with "
