@@ -98,6 +98,7 @@ from app.services.oauth_exchange import OAuthExchangeService
 from app.services.conversation import ConversationService
 from app.services.coding_task_changes import CodingTaskChangeService
 from app.services.conversation_tasks import ConversationTaskService
+from app.services.room_submission import RoomSubmissionService
 from app.services.tasks import TaskService
 from app.services.visual import VisualService
 from app.services.local_service import LocalServiceService
@@ -180,6 +181,13 @@ def get_conversation_task_service(db: DBSession) -> ConversationTaskService:
 
 
 ConversationTaskSvc = Annotated[ConversationTaskService, Depends(get_conversation_task_service)]
+
+
+def get_room_submission_service(db: DBSession) -> RoomSubmissionService:
+    return RoomSubmissionService(db)
+
+
+RoomSubmissionSvc = Annotated[RoomSubmissionService, Depends(get_room_submission_service)]
 
 
 def get_coding_task_change_service(db: DBSession) -> CodingTaskChangeService:

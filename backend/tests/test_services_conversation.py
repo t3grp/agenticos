@@ -2685,6 +2685,93 @@ class TestTheThreadAModelIsGivenBack:
 
         assert history == []
 
+    async def test_a_room_request_uses_its_selected_history_instead_of_a_shared_summary(
+        self, monkeypatch
+    ):
+        conversation = MockConversation()
+        conversation.guardrail_revision = 7
+        conversation.summary_messages = ModelMessagesTypeAdapter.dump_python(
+            [ModelRequest(parts=[SystemPromptPart(content="Summary includes a later question.")])],
+            mode="json",
+        )
+        conversation.summary_ordinal = 99
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
+        )
+        window = AsyncMock(
+            return_value=[self._row("user", "First question"), self._row("assistant", "First answer")]
+        )
+        monkeypatch.setattr(conversation_repo, "get_room_history_messages", window)
+        recent = AsyncMock()
+        after = AsyncMock()
+        monkeypatch.setattr(conversation_repo, "get_recent_messages", recent)
+        monkeypatch.setattr(conversation_repo, "get_messages_after", after)
+        service = ConversationService(AsyncMock())
+        prompt_id = uuid4()
+
+        history = await service.model_history(
+            conversation.id, limit=25, room_request_message_id=prompt_id
+        )
+
+        assert [part.content for message in history for part in message.parts] == [
+            "First question",
+            "First answer",
+        ]
+        assert history.revision == 7
+        window.assert_awaited_once_with(
+            service.db, conversation.id, request_message_id=prompt_id, limit=25
+        )
+        recent.assert_not_awaited()
+        after.assert_not_awaited()
+
+    async def test_a_room_history_still_withholds_refused_content_and_capabilities(
+        self, monkeypatch, capability_loads_repo
+    ):
+        conversation = MockConversation()
+        refused = self._row("user", "REFUSED_SECRET")
+        refused.guardrail_refused = True
+        refused.attachment_context = "REFUSED_ATTACHMENT"
+        answer = self._row("assistant", "REFUSED_ANSWER")
+        answer.guardrail_refused = True
+        safe = self._row("assistant", "An earlier allowed answer")
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=conversation)
+        )
+        monkeypatch.setattr(
+            conversation_repo,
+            "get_room_history_messages",
+            AsyncMock(return_value=[refused, answer, safe]),
+        )
+
+        history = await ConversationService(AsyncMock()).model_history(
+            conversation.id, limit=25, room_request_message_id=uuid4()
+        )
+
+        assert [part.content for message in history for part in message.parts] == [
+            REFUSED_TURN,
+            "An earlier allowed answer",
+        ]
+        assert capability_loads_repo.await_args.args[1] == {safe.id}
+
+    async def test_a_room_history_requires_a_submission_in_the_same_conversation(self, monkeypatch):
+        monkeypatch.setattr(
+            conversation_repo, "get_conversation_by_id", AsyncMock(return_value=MockConversation())
+        )
+        monkeypatch.setattr(
+            conversation_repo, "get_room_history_messages", AsyncMock(return_value=None)
+        )
+
+        with pytest.raises(NotFoundError, match="Room message not found"):
+            await ConversationService(AsyncMock()).model_history(
+                uuid4(), limit=25, room_request_message_id=uuid4()
+            )
+
+    async def test_a_room_boundary_cannot_be_combined_with_a_retry_boundary(self):
+        with pytest.raises(BadRequestError, match="Choose one conversation history boundary"):
+            await ConversationService(AsyncMock()).model_history(
+                uuid4(), limit=25, room_request_message_id=uuid4(), before_message_id=uuid4()
+            )
+
     async def test_a_retry_reads_the_thread_as_it_stood_when_asked(self, monkeypatch):
         """A retry re-issues an earlier turn as the prompt, so the history must
         stop before it: the turn itself and the failed attempt after it are

@@ -22,6 +22,13 @@ from app.services.parked_runs import Continued, DecidedApproval, ParkedRunServic
 
 pytestmark = pytest.mark.anyio
 
+
+@pytest.fixture(autouse=True)
+def ordinary_runs_have_no_room_request():
+    with patch("app.repositories.room_submission.for_run", new=AsyncMock(return_value=None)):
+        yield
+
+
 _MODULE = "app.services.parked_runs"
 ORG = uuid.uuid4()
 USER = uuid.uuid4()

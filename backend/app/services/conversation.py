@@ -257,6 +257,7 @@ class ConversationService:
         limit: int,
         exclude_message_id: UUID | None = None,
         before_message_id: UUID | None = None,
+        room_request_message_id: UUID | None = None,
     ) -> ModelHistory:
         """The thread as the model should read it, summary included.
 
@@ -282,11 +283,37 @@ class ConversationService:
         as history. A summary taken at or after that turn covers it, so the
         summary half is dropped and the transcript half reads the window
         before it instead.
+
+        `room_request_message_id` reads earlier messages plus completed answers
+        to preceding queued requests, even when those answers landed after this
+        question. Later questions are excluded. A shared summary cannot describe
+        that filtered window, so room histories always rebuild the bounded
+        transcript and retain its refusal revision.
         """
+        if room_request_message_id is not None and before_message_id is not None:
+            raise BadRequestError(message="Choose one conversation history boundary")
         conversation = await conversation_repo.get_conversation_by_id(
             self.db, conversation_id, include_summary=True, fresh=True
         )
         revision = None if conversation is None else conversation.guardrail_revision
+        if room_request_message_id is not None:
+            rows = await conversation_repo.get_room_history_messages(
+                self.db,
+                conversation_id,
+                request_message_id=room_request_message_id,
+                limit=limit,
+            )
+            if rows is None:
+                raise NotFoundError(
+                    message="Room message not found",
+                    details={"message_id": room_request_message_id},
+                )
+            spoken = await self._spoken(rows, conversation)
+            history = build_message_history(_as_history(rows, exclude_message_id, spoken))
+            return ModelHistory(
+                await self._restore_capability_loads(history, rows, exclude_message_id),
+                revision=revision,
+            )
         summary = None if conversation is None else conversation.summary_messages
         before_ordinal: int | None = None
         if before_message_id is not None:

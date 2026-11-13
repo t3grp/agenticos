@@ -45,6 +45,7 @@ from app.db.models.chat_file import ChatFile
 from app.db.models.conversation import Conversation, Message, ToolCall
 from app.db.models.conversation_favourite import ConversationFavourite
 from app.db.models.conversation_last_read import ConversationLastRead
+from app.db.models.room_submission import RoomSubmission
 from app.db.models.user import User
 from app.repositories._search import contains_ci
 
@@ -1925,6 +1926,62 @@ async def get_message_by_id(db: AsyncSession, message_id: UUID) -> Message | Non
     return await db.get(Message, message_id)
 
 
+async def get_room_history_messages(
+    db: AsyncSession,
+    conversation_id: UUID,
+    *,
+    request_message_id: UUID,
+    limit: int,
+) -> list[Message] | None:
+    """A queued request's earlier messages and the answers to preceding requests.
+
+    A question can be saved while the previous agent is still answering. Its
+    history must include that completed answer, even though the answer's ordinal
+    is newer, without admitting questions submitted after this request. The
+    request ledger, rather than message adjacency, identifies those late answers.
+    None means the requested boundary is not a submission in this conversation.
+    """
+    boundary = (
+        await db.execute(
+            select(Message.ordinal, RoomSubmission.ordinal, RoomSubmission.organization_id)
+            .join(RoomSubmission, RoomSubmission.message_id == Message.id)
+            .where(
+                Message.id == request_message_id,
+                Message.conversation_id == conversation_id,
+                RoomSubmission.conversation_id == conversation_id,
+            )
+        )
+    ).one_or_none()
+    if boundary is None:
+        return None
+    message_ordinal, submission_ordinal, organization_id = boundary
+    preceding_runs = select(RoomSubmission.run_id).where(
+        RoomSubmission.organization_id == organization_id,
+        RoomSubmission.conversation_id == conversation_id,
+        RoomSubmission.ordinal < submission_ordinal,
+        RoomSubmission.run_id.is_not(None),
+        RoomSubmission.status.in_(("completed", "failed", "cancelled", "interrupted")),
+    )
+    result = await db.execute(
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            or_(
+                Message.ordinal < message_ordinal,
+                and_(Message.role == "assistant", Message.run_id.in_(preceding_runs)),
+            ),
+        )
+        .options(
+            selectinload(Message.tool_calls),
+            selectinload(Message.files).load_only(*_MESSAGE_FILE_COLUMNS, raiseload=True),
+        )
+        .order_by(Message.ordinal.desc())
+        .limit(limit)
+        .execution_options(populate_existing=True)
+    )
+    return list(reversed(result.scalars().all()))
+
+
 async def get_messages_by_conversation(
     db: AsyncSession,
     conversation_id: UUID,
@@ -2204,12 +2261,19 @@ async def set_summary(
     One row per conversation rather than a log of them: the newest summary is
     written over the last, because it was produced *from* it and the older one
     describes a thread that no longer exists.
+
+    A room request reads a filtered history, not a contiguous transcript prefix.
+    Its compaction cannot replace this shared cache or claim to cover later queued
+    questions. Check this in the update itself so a concurrent first room message
+    cannot slip between a service-level check and the cache write. Resumed runs
+    take the same path and retain the same fence.
     """
     updated = await db.scalar(
         sql_update(Conversation)
         .where(
             Conversation.id == db_conversation.id,
             Conversation.guardrail_revision == expected_revision,
+            ~exists().where(RoomSubmission.conversation_id == Conversation.id),
         )
         .values(summary_messages=messages, summary_ordinal=ordinal)
         .returning(Conversation.id)

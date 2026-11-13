@@ -42,7 +42,7 @@ async def test_a_background_return_defers_and_a_bounded_foreground_wait_reports_
     ):
         async with module.claim(uuid4(), background=True) as admitted:
             assert admitted is False
-        with pytest.raises(AlreadyExistsError, match="receiving a task result"):
+        with pytest.raises(AlreadyExistsError, match="agent request in progress"):
             async with module.claim(uuid4(), background=False):
                 pytest.fail("A busy topic cannot admit this turn")
 

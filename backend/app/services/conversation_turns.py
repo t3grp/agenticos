@@ -45,13 +45,25 @@ async def _renew(claim_id: UUID) -> None:
 
 
 @asynccontextmanager
-async def claim(conversation_id: UUID, *, background: bool) -> AsyncGenerator[bool]:
+async def claim(
+    conversation_id: UUID,
+    *,
+    background: bool,
+    room_request_id: UUID | None = None,
+    resume_run_id: UUID | None = None,
+) -> AsyncGenerator[bool]:
     """Yield admission; a background return defers instead of waiting for a worker slot."""
     claim_id: UUID | None = None
     with anyio.move_on_after(WAIT_SECONDS):
         while True:
             async with get_db_context() as db:
-                claim_id = await task_repo.claim_turn(db, conversation_id, background=background)
+                claim_id = await task_repo.claim_turn(
+                    db,
+                    conversation_id,
+                    background=background,
+                    room_request_id=room_request_id,
+                    resume_run_id=resume_run_id,
+                )
             if claim_id is not None or background:
                 break
             await anyio.sleep(0.25)
@@ -60,7 +72,7 @@ async def claim(conversation_id: UUID, *, background: bool) -> AsyncGenerator[bo
             yield False
             return
         raise AlreadyExistsError(
-            message="This conversation is receiving a task result. Try again shortly."
+            message="This conversation has an agent request in progress. Try again shortly."
         )
     try:
         lost = False

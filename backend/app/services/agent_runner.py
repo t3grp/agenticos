@@ -7114,6 +7114,26 @@ class AgentRunnerService:
                 details={"run_id": str(run_id)},
             )
         state = PausedRunState.model_validate(run.paused_state)
+        execution_ctx = ctx
+        if state.admitted_as.audience_room_key == f"room:project:{run.conversation_id}":
+            from app.services.room_submission import RoomSubmissionService
+
+            room_ctx = await RoomSubmissionService(self.db).resume_authority(
+                run_id, ctx.organization_id, required=True
+            )
+            assert room_ctx is not None, "required room authority supplies its requester"
+            execution_ctx = room_ctx
+            prior_check = check_model_request
+
+            async def check_room_authority(db: AsyncSession) -> None:
+                await RoomSubmissionService(db).resume_authority(
+                    run_id, ctx.organization_id, required=True
+                )
+                if prior_check is not None:
+                    await prior_check(db)
+
+            check_model_request = check_room_authority
+
         can_ask = state.admitted_as.can_ask_questions or (
             "can_ask_questions" not in state.admitted_as.model_fields_set
             and run.surface == RunSurface.WEB.value
@@ -7175,7 +7195,7 @@ class AgentRunnerService:
             # the approval releases the run, like a question in the same step.
             plan.results.calls[request] = secret_given.get(request, SECRET_DECLINED_RESULT)
 
-        agent, spec = await self._parked_spec(ctx, run)
+        agent, spec = await self._parked_spec(execution_ctx, run)
         # The continuation traces where the original did: the environment that
         # routed the run still owns its observability.
         spec = await self._with_environment_observability(
@@ -7208,7 +7228,7 @@ class AgentRunnerService:
         if state.output_schema is not None:
             spec = spec.model_copy(update={"output_schema": state.output_schema})
         prepared = await self._assemble(
-            ctx,
+            execution_ctx,
             agent=agent,
             spec=spec,
             existing_run=run,
@@ -7531,6 +7551,13 @@ class AgentRunnerService:
         if run.conversation_id is None:
             raise BadRequestError(
                 message="This run has no conversation to retry from",
+                details={"run_id": run_id},
+            )
+        from app.repositories import room_submission as room_repo
+
+        if await room_repo.for_run(self.db, run_id, organization_id=ctx.organization_id) is not None:
+            raise BadRequestError(
+                message="Request another answer from the project room to keep its queue and shared context",
                 details={"run_id": run_id},
             )
         _, turns, _ = await self.get_run_transcript(ctx, run_id, limit=100)
