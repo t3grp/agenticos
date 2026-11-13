@@ -47,16 +47,19 @@ export interface RunSort {
 /** The question a parked run waits on, and how long is left to answer it. */
 function WaitingQuestion({ run }: { run: AgentRun }) {
   const t = useTranslations("pages.runs");
-  if (run.status !== "awaiting_answer" || (run.waiting_questions?.length ?? 0) === 0) {
+  const questions = run.waiting_questions ?? [];
+  const secrets = run.waiting_secret_requests ?? [];
+  if (run.status !== "awaiting_answer" || (questions.length === 0 && secrets.length === 0)) {
     return null;
   }
   const remaining = timeUntil(run.waiting_expires_at);
+  const first = questions[0] ?? t("needsSecret", { name: secrets[0] });
   return (
     <span
       className="text-muted-foreground block max-w-72 truncate text-xs"
-      title={(run.waiting_questions ?? []).join(" ")}
+      title={[...questions, ...secrets.map((name) => t("needsSecret", { name }))].join(" ")}
     >
-      {(run.waiting_questions ?? [])[0]}
+      {first}
       {remaining !== null && (
         <span className="whitespace-nowrap">
           {" · "}

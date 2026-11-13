@@ -1,5 +1,5 @@
 ---
-source_sha: "7738d8d527e6"
+source_sha: "d90fe4bc29a0"
 ---
 
 # Katalog capability { #the-capability-catalog }
@@ -85,9 +85,11 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `coding_agent` | Coding agent | analiza | `run_coding_agent` | `sandbox:execute` | wymagany | przekazana |
 | `harness` | Harness | analiza | `harness_start`, `harness_prompt`, `harness_stop`, `harness_sessions` | `sandbox:execute` | wymagany | przekazana |
 | `monitor` | Obserwuj polecenie | analiza | `start_monitor`, `list_monitors`, `stop_monitor` | `sandbox:execute` | — | przekazana |
+| `council` | Rada | analiza | `run_council_review` | `agents:delegate` | — | przekazana |
 | `babysit_pr` | Babysit PR | analiza | `babysit_pr_check`, `babysit_pr_rate_limit`, `babysit_pr_stop` | — | — | przekazana |
 | `sol_loop` | Sol-loop | analiza | `run_sol_loop_review` | `agents:delegate` | — | przekazana |
 | `eval_tool_tuning` | Dostrajanie narzędzi na podstawie ewaluacji | analiza | `record_eval_tool_tuning` | — | — | bez zmian |
+| `proof_scenario` | Scenariusz dowodowy | analiza | `proof_scenario_record`, `proof_scenario_verdict` | — | — | przekazana |
 | `subagents` | Subagenci | rozumowanie | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | przekazana |
 | `background_tasks` | Tematy w tle | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | przekazywane |
 | `planning` | Planowanie | rozumowanie | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | bez zmian |
@@ -103,6 +105,7 @@ Przeglądarka jest kierowana do usługi przeglądarki wdrożenia
 | `channel_tools` | Informacje o kanale czatu | kanały | `get_channel_info`, `list_channel_members`, `search_channels`, `read_channel_history`, `send_channel_file` | — | — | niedostępna |
 | `phone_calls` | [Połączenia telefoniczne](../voice.md#telephone-calls) | channels | `get_phone_contact_policy`, `call_me`, `list_phone_transfer_contacts`, `transfer_phone_call`, `end_phone_call` | `endpoint_id` | — | — |
 | `ask_user` | Pytania do użytkownika | narzędzia | `ask_user_question` | — | — | na ekranie |
+| `secret_request` | Prośba o sekret | narzędzia | `request_secret` | — | — | na ekranie |
 | `drafts` | Wersje robocze | narzędzia | `write_draft` | — | — | niedostępna |
 | `follow_ups` | Następne kroki | narzędzia | `suggest_next_steps`, `propose_setup` | — | — | niedostępna |
 

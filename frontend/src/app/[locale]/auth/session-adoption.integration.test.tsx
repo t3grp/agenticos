@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import CallbackPage from "./callback/page";
+import CallbackPage, { createMfaChallengeStore } from "./callback/page";
 import MagicLinkPage from "./magic-link/page";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { apiClient } from "@/lib/api-client";
@@ -77,6 +77,15 @@ afterEach(() => {
 });
 
 describe("the OAuth callback", () => {
+  it("strips the OIDC challenge fragment synchronously when it reads it", () => {
+    window.history.replaceState({}, "", "/auth/callback#mfa_token=challenge-from-oidc");
+
+    const challenge = createMfaChallengeStore().getSnapshot();
+
+    expect(challenge?.mfa_token).toBe("challenge-from-oidc");
+    expect(window.location.hash).toBe("");
+  });
+
   it("shows the MFA step from an OIDC challenge without exchanging tokens", async () => {
     rememberReturnTo("/agents/a-1");
     window.history.replaceState({}, "", "/auth/callback#mfa_token=challenge-from-oidc");

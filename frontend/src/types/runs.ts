@@ -34,6 +34,8 @@ export interface AgentRun {
   continues_in_chat?: boolean;
   /** The run's unanswered `ask_user` questions, in the order asked; empty unless parked on an answer. */
   waiting_questions?: string[];
+  /** The names of the secrets the run's `request_secret` calls wait on (#13); empty unless parked on an answer. */
+  waiting_secret_requests?: string[];
   /** When the parked question expires unanswered; null unless parked on an answer. */
   waiting_expires_at?: string | null;
   agent_version_id: string | null;
@@ -313,6 +315,8 @@ export interface RunManifest {
   sol_loop_rounds?: ManifestSolLoopRound[];
   /** Each eval-driven tool-tuning run, with its score and draft proposals (#11). */
   eval_tool_tuning_runs?: ManifestEvalToolTuningRun[];
+  /** Each proof scenario the run recorded, with its attempts (#8). */
+  proof_scenarios?: ManifestProofScenario[];
   /** Whether the record was trimmed to fit its size ceiling. */
   truncated: boolean;
 }
@@ -379,6 +383,28 @@ export interface ManifestEvalToolTuningRun {
   dominant_failure: string | null;
   cases: ManifestEvalToolTuningCase[];
   proposals: ManifestEvalToolTuningProposal[];
+}
+
+/** One observed run of a proof scenario. */
+export interface ManifestProofAttempt {
+  scenario_id: string;
+  phase: "before_fix" | "after_fix";
+  status: "passed" | "failed" | "inconclusive";
+  evidence_kind: string;
+  command: string;
+  observed: string;
+  duration_ms: number;
+  observed_at: string | null;
+}
+
+/** One reproduction for a change, and every attempt made at it. */
+export interface ManifestProofScenario {
+  id: string;
+  name: string;
+  kind: "command" | "reproduction" | "ui";
+  command: string;
+  covers: string[];
+  attempts: ManifestProofAttempt[];
 }
 
 /** One correction a run reviewer sent while the run went. */
@@ -728,6 +754,19 @@ export interface WireQuestion {
 export interface ParkedQuestion {
   tool_call_id: string;
   questions: WireQuestion[];
+}
+
+/** A secret an agent asked its person for, which the run is waiting on (#13). */
+export interface ParkedSecretRequest {
+  id: string;
+  run_id: string;
+  tool_call_id: string;
+  secret_name: string;
+  kind: string;
+  what_for: string;
+  status: string;
+  fulfilled_secret_id?: string | null;
+  fulfilled_hint?: string | null;
 }
 
 /** A live chat's correlated acknowledgement for a parked question answer. */

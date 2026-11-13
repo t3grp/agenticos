@@ -1,22 +1,28 @@
 """Authentication routes."""
 
 import hashlib
+import json
 import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import (
     CurrentUser,
     DeploymentSettingsSvc,
     DevicePairingSvc,
+    DirectorySyncSvc,
     ImpersonationSvc,
     InvitationStagingSvc,
     MfaSvc,
+    OAuthExchangeSvc,
     RecentAuth,
+    Redis,
     SessionSvc,
     UserSvc,
     enforce_auth_limit,
@@ -61,6 +67,7 @@ from app.schemas.token import (
 from app.schemas.user import MeRead, UserCreate, UserRead
 from app.services import rate_limit
 from app.services.email.service import get_email_service
+from app.services.oauth_exchange import native_code_challenge
 from app.services.session import SessionService, refresh_expiry, successor_refresh_token
 
 logger = logging.getLogger(__name__)
@@ -125,6 +132,9 @@ async def verify_mfa(
     user_service: UserSvc,
     session_service: SessionSvc,
     mfa_service: MfaSvc,
+    redis: Redis,
+    directory_sync: DirectorySyncSvc,
+    exchange_service: OAuthExchangeSvc,
 ) -> Any:
     """Complete the second step of a sign-in: the challenge and the code for tokens.
 
@@ -168,8 +178,42 @@ async def verify_mfa(
         raise AuthenticationError(
             message="That code did not match - try the code your authenticator shows now"
         )
+    jti = payload.get("jti")
+    if not isinstance(jti, str) or not jti:
+        raise AuthenticationError(message="This sign-in step is invalid or has expired")
+    # Claim the token before consuming its optional OAuth context. This atomic
+    # marker also closes the race where two requests both pass the code check
+    # and only one wins GETDEL of an OAuth context.
+    if not await redis.set(f"auth:mfa:consumed:{jti}", "1", ttl=300, nx=True):
+        raise AuthenticationError(message="This sign-in step is invalid or has expired")
+    raw_context = await redis.getdel(f"auth:mfa:oauth:{jti}")
+    context = None
+    if raw_context is not None:
+        try:
+            context = json.loads(raw_context)
+        except (TypeError, ValueError) as exc:
+            raise AuthenticationError(
+                message="This sign-in step is invalid or has expired"
+            ) from exc
+        if not isinstance(context, dict):
+            raise AuthenticationError(message="This sign-in step is invalid or has expired")
+        groups = context.get("groups")
+        if groups is not None:
+            await directory_sync.apply(user.id, frozenset(groups), provider=context["provider"])
     await rate_limit.reset_mfa_failures(str(user.id))
     access_token, refresh_token = await _issue_tokens(user, session_service, request)
+    if context is not None:
+        started = context.get("client")
+        if isinstance(started, dict) and started.get("client") == "desktop":
+            code = await exchange_service.issue(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                code_challenge=native_code_challenge("desktop", started.get("nonce")),
+            )
+            params = urlencode({"code": code, "desktop_nonce": started.get("nonce") or ""})
+            return RedirectResponse(
+                url=f"{settings.DESKTOP_DEEP_LINK_SCHEME}://auth/callback?{params}"
+            )
     return_to = payload.get("rt")
     if return_to is not None:
         return MagicLinkToken(

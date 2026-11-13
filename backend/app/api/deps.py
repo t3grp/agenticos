@@ -970,6 +970,16 @@ def get_skill_service(db: DBSession) -> SkillService:
 
 SkillSvc = Annotated[SkillService, Depends(get_skill_service)]
 
+from app.services.auto_skill_learning import AutoSkillLearningService
+
+
+def get_auto_skill_learning_service(db: DBSession) -> AutoSkillLearningService:
+    """Create AutoSkillLearningService instance with database session."""
+    return AutoSkillLearningService(db)
+
+
+AutoSkillLearningSvc = Annotated[AutoSkillLearningService, Depends(get_auto_skill_learning_service)]
+
 from app.services.context import ContextService
 
 

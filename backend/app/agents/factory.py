@@ -65,6 +65,10 @@ from app.agents.capabilities.compaction import (
     build_gauge,
 )
 from app.agents.capabilities.conversation_search import CONVERSATION_SEARCH_CAPABILITY_ID
+from app.agents.capabilities.council import (
+    COUNCIL_MODELS_RESOURCE,
+    COUNCIL_RECORDER_RESOURCE,
+)
 from app.agents.capabilities.drafts._spec import draft_tool_names
 from app.agents.capabilities.eval_tool_tuning import (
     EVAL_TOOL_TUNING_RECORDER_RESOURCE,
@@ -82,6 +86,7 @@ from app.agents.capabilities.media import (
     ORGANIZATION_RESOURCE as MEDIA_ORGANIZATION_RESOURCE,
 )
 from app.agents.capabilities.memory_files import MEMORY_FILES_CAPABILITY_ID
+from app.agents.capabilities.proof_scenario import PROOF_SCENARIO_RECORDER_RESOURCE
 from app.agents.capabilities.skills._loader import SkillLoader
 from app.agents.capabilities.sol_loop import (
     SOL_LOOP_MODELS_RESOURCE,
@@ -270,6 +275,7 @@ def build_agent(
     resources: dict[str, Any] | None = None,
     secrets: Mapping[UUID, StorableSecret] | None = None,
     reviewer_models: Mapping[UUID, ModelRequestSpec] | None = None,
+    council_models: Mapping[UUID, ModelRequestSpec] | None = None,
     sol_loop_models: Mapping[UUID, ModelRequestSpec] | None = None,
     extra_toolsets: list[AbstractToolset[Any]] | None = None,
     extra_capabilities: Sequence[AbstractCapability[AgentDeps]] = (),
@@ -405,8 +411,9 @@ def build_agent(
     # Wrapped, so what the provider is handed is written down as it is handed
     # over. Reconstructing the prompt and the tool schemas from the spec
     # afterwards would be a second implementation of everything above this line.
-    # The run reviewer, code mode, sol-loop, `CacheWatch` and babysit-pr write
-    # onto it, and babysit-pr reads it through the resources below.
+    # Made before the capabilities, because run reviewers, council, code mode,
+    # sol-loop, proof scenarios, `CacheWatch` and babysit-pr write onto it.
+    # Babysit-pr also reads it through the resources below.
     recorder = RunRecorder()
     configured = build_capabilities(
         bindings,
@@ -437,6 +444,10 @@ def build_agent(
             # Which tools' arguments are what the person is shown, so the output
             # guardrails screen them the way they screen the text around them.
             ANSWER_TOOLS_RESOURCE: answer_tools(bindings),
+            # Which models the council's members review on, and where its rounds
+            # are recorded - resolved by the runner, read by the capability.
+            COUNCIL_MODELS_RESOURCE: council_models,
+            COUNCIL_RECORDER_RESOURCE: recorder,
             # Where a babysit-pr watch's events are recorded - the run's
             # recorder, read by the capability, resolved by the runner.
             BABYSIT_PR_RECORDER_RESOURCE: recorder,
@@ -447,6 +458,9 @@ def build_agent(
             # Where eval-driven tool-tuning runs are recorded - the run's
             # recorder, read by the capability.
             EVAL_TOOL_TUNING_RECORDER_RESOURCE: recorder,
+            # Where proof scenarios are recorded - resolved by the runner, read
+            # by the capability.
+            PROOF_SCENARIO_RECORDER_RESOURCE: recorder,
         },
         secrets=secrets,
     )
