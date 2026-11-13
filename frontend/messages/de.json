@@ -321,6 +321,11 @@
     "delegationModeLabel": "Wann er zurückgibt",
     "delegationModeSync": "Darauf warten",
     "delegationModeSyncDetail": "Der Eltern-Agent hält an, bis der Delegat antwortet. Der Standard, und das, was eine Delegation wie einen Funktionsaufruf wirken lässt.",
+    "councilMemberRow": "Mitglied {number}",
+    "councilMemberName": "Name",
+    "councilMemberProvider": "Anbieter",
+    "councilMemberModel": "Modellprofil",
+    "councilMembersProviderHint": "Wählen Sie für jedes Ratsmitglied einen anderen Anbieter.",
     "delegationOffButConfigured": "Delegation ist ausgeschaltet, nichts davon wird also erreicht. Die Delegaten unten bleiben im Spec und werden beim Veröffentlichen weiterhin geprüft – schalten Sie sie oben ein, oder entfernen Sie sie.",
     "delegationPolicyDetail": "Was jede Delegation dieses Agents begrenzt, Delegaten wie Spezialisten.",
     "delegationPolicyHeading": "Richtlinie",
@@ -11786,7 +11791,7 @@
     "council": {
       "members": {
         "title": "Ratsmitglieder",
-        "description": "Die Delegierten: je ein starkes Modell von drei verschiedenen Anbietern mit hohem Reasoning-Aufwand. Ein bis drei Mitglieder."
+        "description": "Die Delegierten: je ein starkes Modell von drei verschiedenen Anbietern mit hohem Reasoning-Aufwand. Genau drei Mitglieder."
       },
       "agreement_threshold": {
         "title": "Einigungsschwelle",

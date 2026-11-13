@@ -12,6 +12,10 @@ import type { CapabilityBindingSpec, CapabilityCatalogEntry } from "@/types/agen
 import type { Secret, SecretRequirement } from "@/types/secrets";
 import en from "../../../messages/en.json";
 
+vi.mock("./council-members-field", () => ({
+  CouncilMembersField: () => <div role="group" aria-label="Council member editor" />,
+}));
+
 /** The English catalog, so the suites below keep asserting the words on screen. */
 // The catalog, read the way the component reads it - some of these messages take a
 // name or a kind, and a stub that ignored them would assert against a message no
@@ -63,6 +67,21 @@ const CLOCK: CapabilityCatalogEntry = {
   config_schema: null,
   contracts: [],
   requires_secret: null,
+};
+
+const COUNCIL: CapabilityCatalogEntry = {
+  ...KNOWLEDGE,
+  id: "council",
+  name: "Council",
+  tools: [
+    { id: "run_council_review", name: "run_council_review", description: "Review the work." },
+  ],
+  config_schema: {
+    type: "object",
+    properties: {
+      members: { type: "array", title: "Council members" },
+    },
+  },
 };
 
 const SEND_EMAIL: CapabilityCatalogEntry = {
@@ -211,6 +230,15 @@ describe("CapabilitySettings", () => {
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ id: "knowledge", config: { default_top_k: 19 } }),
     );
+  });
+
+  it("shows the council member editor instead of a raw members text box", () => {
+    render(
+      <CapabilitySettings catalog={[COUNCIL]} selected={[binding("council")]} onChange={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("group", { name: "Council member editor" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Council members" })).not.toBeInTheDocument();
   });
 
   it("offers an approval choice for a read-only capability too", async () => {

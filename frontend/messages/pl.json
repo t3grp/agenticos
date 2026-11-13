@@ -8327,6 +8327,11 @@
     "delegationModeLabel": "Kiedy oddaje z powrotem",
     "delegationModeSync": "Poczekaj na niego",
     "delegationModeSyncDetail": "Rodzic zatrzymuje się, aż delegat odpowie. Ustawienie domyślne i to, co sprawia, że delegacja czyta się jak wywołanie funkcji.",
+    "councilMemberRow": "Członek {number}",
+    "councilMemberName": "Imię",
+    "councilMemberProvider": "Dostawca",
+    "councilMemberModel": "Profil modelu",
+    "councilMembersProviderHint": "Wybierz innego dostawcę dla każdego członka rady.",
     "delegationOffButConfigured": "Delegacja jest wyłączona, więc nic z tego nie zostaje osiągnięte. Delegaty poniżej pozostają w spec i nadal są sprawdzane przy publikacji - włącz ją powyżej albo je usuń.",
     "delegationPolicyDetail": "Co ogranicza każdą delegację, którą wykonuje ten agent, zarówno delegaty, jak i specjalistów.",
     "delegationPolicyHeading": "Polityka",
@@ -9264,7 +9269,7 @@
     "council": {
       "members": {
         "title": "Członkowie rady",
-        "description": "Delegaci: po jednym silnym modelu od trzech różnych dostawców, przy wysokim wysiłku rozumowania. Od jednego do trzech członków."
+        "description": "Delegaci: po jednym silnym modelu od trzech różnych dostawców, przy wysokim wysiłku rozumowania. Dokładnie trzech członków."
       },
       "agreement_threshold": {
         "title": "Próg zgodności",

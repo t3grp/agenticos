@@ -9,7 +9,7 @@ table the council skill puts in a PR description.
 
 This is Theo's tstack council skill as a capability, not a new review
 process invented here. The skill file at
-`backend/app/core/catalog/skills/council/SKILL.md` is the procedure; this
+`backend/app/core/catalog/skills/council-review/SKILL.md` is the procedure; this
 capability is how an agent runs it.
 
 ## Why a capability, and why one tool
