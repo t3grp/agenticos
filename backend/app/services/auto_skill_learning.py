@@ -42,9 +42,9 @@ undone by a new edit, not a restore, exactly as #32 documents for its own
 skill applies.
 
 No migration: learned skills are ordinary `skills` rows, and their provenance
-is the audit trail. Reads resolve the agent with `AGENTS_VIEW` and the skill
-with `SKILLS_EDIT`, the same split #32 uses — a refusal answers as "not
-found".
+is the audit trail. Agent access requires `AGENTS_VIEW`. Learning into an
+existing skill and creating a new learned skill both require `SKILLS_EDIT`; a
+skill refusal answers as "not found".
 """
 
 import hashlib
@@ -54,7 +54,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
-from app.core.exceptions import AlreadyExistsError, ConflictError
+from app.core.exceptions import AlreadyExistsError, ConflictError, NotFoundError
 from app.core.permissions import AuthContext, Perm
 from app.db.models.skill import Skill
 from app.repositories import skill as skill_repo
@@ -105,7 +105,8 @@ class AutoSkillLearningService:
         show. See the module docstring for the two cases and the refusals.
 
         Raises:
-            NotFoundError: The agent or the named skill is out of reach.
+            NotFoundError: The agent or named skill is out of reach, or the
+                caller cannot edit skills.
             ConflictError: The named skill changed since the proposal was
                 written — its content matches neither the approved text nor
                 the base the proposal was written against.
@@ -144,6 +145,8 @@ class AutoSkillLearningService:
         self, ctx: AuthContext, data: LearnSkillCreate, new_hash: str
     ) -> LearnedSkillRead:
         """The proposal is a new skill: create it, or recognise it as learned."""
+        if not ctx.has(Perm.SKILLS_EDIT):
+            raise NotFoundError(message="Skill not found", details={"org_id": ctx.organization_id})
         name = data.name or _derive_name(data)
         existing = await skill_repo.get_by_name(self.db, name, organization_id=ctx.organization_id)
         if existing is not None:

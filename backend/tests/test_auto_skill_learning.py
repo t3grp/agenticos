@@ -16,7 +16,7 @@ from uuid import UUID
 import pytest
 
 from app.core.exceptions import AlreadyExistsError, ConflictError, NotFoundError
-from app.core.permissions import AuthContext, OrgRoleName
+from app.core.permissions import AuthContext, OrgRoleName, Perm, role_has
 from app.db.models.skill import Skill
 from app.schemas.auto_skill_learning import LearnSkillCreate
 from app.services.auto_skill_learning import AutoSkillLearningService
@@ -81,15 +81,19 @@ class _Skills:
     def __init__(self, skills: list[Skill] | None = None) -> None:
         self.by_id: dict[UUID, Skill] = {skill.id: skill for skill in skills or []}
         self.created: list[Skill] = []
+        self.create_calls = 0
         self.updated: list[Skill] = []
 
     async def get(self, ctx: AuthContext, skill_id: UUID, **_kwargs: object) -> Skill:
         skill = self.by_id.get(skill_id)
         if skill is None:
             raise NotFoundError(message="Skill not found", details={"skill_id": str(skill_id)})
+        if _kwargs.get("perm") is Perm.SKILLS_EDIT and not ctx.has(Perm.SKILLS_EDIT):
+            raise NotFoundError(message="Skill not found", details={"skill_id": str(skill_id)})
         return skill
 
     async def create(self, ctx: AuthContext, **kwargs: object) -> Skill:
+        self.create_calls += 1
         skill = _row(
             str(kwargs["name"]),
             str(kwargs["content"]),
@@ -122,6 +126,41 @@ def _service(monkeypatch: pytest.MonkeyPatch) -> AutoSkillLearningService:
         AsyncMock(return_value=None),
     )
     return service
+
+
+async def test_a_viewer_cannot_create_or_probe_a_new_skill_name(
+    _service: AutoSkillLearningService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ctx = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.VIEWER)
+    assert role_has(OrgRoleName.VIEWER, Perm.AGENTS_VIEW)
+    assert not role_has(OrgRoleName.VIEWER, Perm.SKILLS_EDIT)
+    get_by_name = AsyncMock(return_value=None)
+    monkeypatch.setattr("app.services.auto_skill_learning.skill_repo.get_by_name", get_by_name)
+
+    with pytest.raises(NotFoundError):
+        await _service.learn(ctx, uuid.uuid4(), _proposal(name="refund-tracking"))
+
+    assert _service.skills.create_calls == 0  # type: ignore[attr-defined]
+    get_by_name.assert_not_awaited()
+    _service.audit.assert_not_awaited()  # type: ignore[attr-defined]
+
+
+async def test_a_viewer_cannot_learn_into_an_existing_skill(
+    _service: AutoSkillLearningService,
+) -> None:
+    skill = _row("refunds", BASE_TEXT)
+    _service.skills = _Skills([skill])  # type: ignore[attr-defined]
+    ctx = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.VIEWER)
+    assert not role_has(OrgRoleName.VIEWER, Perm.SKILLS_EDIT)
+
+    with pytest.raises(NotFoundError):
+        await _service.learn(
+            ctx, uuid.uuid4(), _proposal(skill_id=skill.id, base_content_sha256=_sha256(BASE_TEXT))
+        )
+
+    assert _service.skills.created == []  # type: ignore[attr-defined]
+    assert _service.skills.updated == []  # type: ignore[attr-defined]
+    _service.audit.assert_not_awaited()  # type: ignore[attr-defined]
 
 
 async def test_learning_a_new_skill_creates_it_in_the_learned_category(
