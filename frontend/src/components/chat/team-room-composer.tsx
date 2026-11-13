@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, Textarea } from "@/components/ui";
@@ -19,11 +20,13 @@ export function TeamRoomComposer({
   projectId,
   readOnly,
   onTyping,
+  actionsSlot,
 }: {
   conversationId: string | null;
   projectId: string;
   readOnly: boolean;
   onTyping: () => void;
+  actionsSlot?: ReactNode;
 }) {
   const t = useTranslations("chat.teamRoom");
   const tErrors = useTranslations("errors");
@@ -32,6 +35,7 @@ export function TeamRoomComposer({
   const draft = useRoomDraft(conversationId);
   const { project, isLoading: loadingProject } = useProject(projectId);
   const { agents } = useAgents();
+  const canPost = !readOnly && !requests.isError && requests.data?.can_post === true;
   if (conversationId === null) {
     return project?.can_use && !readOnly ? (
       <div className="py-3 text-center">
@@ -49,7 +53,7 @@ export function TeamRoomComposer({
         conversationId={conversationId}
         requests={requests.data?.items ?? []}
         agents={agents}
-        canPost={!readOnly && !requests.isError && requests.data?.can_post === true}
+        canPost={canPost}
       />
       {requests.isError ? (
         <div
@@ -65,10 +69,18 @@ export function TeamRoomComposer({
         <p className="text-muted-foreground p-3 text-center text-xs" role="status">
           {t("checking")}
         </p>
-      ) : readOnly || !requests.data.can_post ? (
+      ) : !canPost ? (
         <p className="text-muted-foreground p-3 text-center text-xs">{t("readOnly")}</p>
       ) : (
-        <TeamRoomForm draft={draft} agents={roomResponders(agents)} onTyping={onTyping} />
+        <TeamRoomForm
+          draft={draft}
+          agents={roomResponders(agents)}
+          onTyping={onTyping}
+          actionsSlot={actionsSlot}
+        />
+      )}
+      {!canPost && actionsSlot && (
+        <div className="hidden justify-end px-4 lg:flex">{actionsSlot}</div>
       )}
     </div>
   );
@@ -78,10 +90,12 @@ function TeamRoomForm({
   draft,
   agents,
   onTyping,
+  actionsSlot,
 }: {
   draft: ReturnType<typeof useRoomDraft>;
   agents: readonly Agent[];
   onTyping: () => void;
+  actionsSlot?: ReactNode;
 }) {
   const t = useTranslations("chat.teamRoom");
   const available = draft.agentId === null || agents.some((agent) => agent.id === draft.agentId);
@@ -133,10 +147,13 @@ function TeamRoomForm({
           onChange={draft.setAgentId}
           disabled={draft.locked}
         />
-        <Button type="submit" size="sm" disabled={!canSend}>
-          <Send className="size-3.5" aria-hidden />
-          {draft.sending ? t("posting") : draft.retrying ? t("retryPost") : t("post")}
-        </Button>
+        <div className="flex items-center gap-2">
+          {actionsSlot}
+          <Button type="submit" size="sm" disabled={!canSend}>
+            <Send className="size-3.5" aria-hidden />
+            {draft.sending ? t("posting") : draft.retrying ? t("retryPost") : t("post")}
+          </Button>
+        </div>
       </div>
       <p className="text-muted-foreground mt-2 text-xs">{t("responderHint")}</p>
     </form>

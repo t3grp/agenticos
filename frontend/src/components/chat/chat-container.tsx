@@ -1835,6 +1835,7 @@ function ChatUI({
                   conversationId={conversationId}
                   readOnly={roomReadOnly}
                   onTyping={onTyping}
+                  actionsSlot={<span ref={setFilesSlot} className="hidden lg:contents" />}
                 />
               ) : (viewOnly || accessState) && !onCall ? (
                 <ConversationAccessNotice state={accessState ?? "view"} onRetry={onRetryAccess} />

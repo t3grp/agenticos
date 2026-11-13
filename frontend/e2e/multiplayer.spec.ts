@@ -307,7 +307,28 @@ test.describe("multiplayer project rooms", () => {
     browser,
     apiFailures,
   }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.addInitScript(() => {
+      window.__AGENTICOS_SHELL__ = {
+        platform: "windows",
+        window: "main",
+        version: "0.2.0",
+        vibrancy: false,
+      };
+    });
     const roomId = await newRoom(page);
+    const workspace = await page.request.get(`/api/conversations/${roomId}/workspace`);
+    expect(workspace.ok(), `reading the room workspace: ${workspace.status()}`).toBe(true);
+    const files = page.getByRole("button", { name: /^Show the files/ });
+    await files.click();
+    const filePanel = page
+      .getByRole("complementary")
+      .filter({ has: page.getByRole("button", { name: "Close the file panel" }) });
+    await expect(filePanel).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message to the team" })).toBeInViewport();
+    await filePanel.getByRole("button", { name: "Close the file panel" }).click();
+    await expect(filePanel).toBeHidden();
+    await expect(files).toBeFocused();
     await shareProject(page);
     const peer = await colleaguePage(browser, apiFailures);
     try {

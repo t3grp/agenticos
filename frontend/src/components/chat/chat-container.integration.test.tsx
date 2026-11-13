@@ -9,6 +9,8 @@ import { messageOf } from "./composer-editor";
 import { ChatContainer } from "./chat-container";
 import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { apiClient } from "@/lib/api-client";
+import type { ConversationWorkspace } from "@/lib/conversation-workspace-api";
+import type { Project } from "@/types/projects";
 import { qk } from "@/lib/query-keys";
 import { initialCall } from "@/lib/voice/call-reducer";
 import {
@@ -298,6 +300,98 @@ beforeEach(() => {
   useConversationStore.getState().reset();
   useChatStore.getState().clearMessages();
   voiceCall.call = initialCall;
+});
+
+describe("the chat container - project room workspace", () => {
+  function savedProjectRoom(canPost: boolean): void {
+    const conversation = {
+      id: "c-room",
+      title: "Launch room",
+      user_id: SIGNED_IN.id,
+      project_id: "p-room",
+    };
+    const project: Project = {
+      id: "p-room",
+      name: "Launch",
+      description: null,
+      instructions: "",
+      default_agent_id: null,
+      default_agent_name: null,
+      owner_user_id: SIGNED_IN.id,
+      visibility: "private",
+      backend: "state",
+      runtime: null,
+      chat_count: 1,
+      last_active_at: null,
+      shared_groups: [],
+      can_use: canPost,
+      can_edit: canPost,
+      created_at: null,
+      updated_at: null,
+    };
+    const workspace: ConversationWorkspace = {
+      scope: "project",
+      backend: "state",
+      owner_label: "Launch",
+      total: 1,
+      bytes_total: 12,
+      bytes_limit: null,
+      truncated: false,
+      unreadable_reason: null,
+      items: [
+        {
+          path: "/report.md",
+          size: 12,
+          is_dir: false,
+          modified_at: null,
+          preview: null,
+          thumbnail: null,
+        },
+      ],
+    };
+    const base = get.getMockImplementation()!;
+    get.mockImplementation((url: string) => {
+      if (url.startsWith("/conversations?"))
+        return Promise.resolve({ items: [conversation], total: 1 });
+      if (url === "/projects/p-room") return Promise.resolve(project);
+      if (url === "/conversations/c-room/metadata") return Promise.resolve(conversation);
+      if (url === "/conversations/c-room/room-requests")
+        return Promise.resolve({ items: [], total: 0, can_post: canPost });
+      if (url === "/conversations/c-room/workspace") return Promise.resolve(workspace);
+      return base(url);
+    });
+    useConversationStore.getState().setCurrentConversationId(conversation.id);
+  }
+
+  it("keeps project-room files reachable without losing the room draft", async () => {
+    savedProjectRoom(true);
+    mount();
+    const composer = await screen.findByRole("textbox", { name: "Message to the team" });
+    await userEvent.type(composer, "An unsent room draft");
+    const files = await screen.findByRole("button", { name: /^Show the files/ });
+    await userEvent.click(files);
+    expect(await screen.findByText("report.md")).toBeVisible();
+    expect(composer).toHaveValue("An unsent room draft");
+
+    await userEvent.click(screen.getByRole("button", { name: "Close the file panel" }));
+    await waitFor(() => expect(screen.queryByText("report.md")).toBeNull());
+    expect(files).toHaveFocus();
+    expect(composer).toHaveValue("An unsent room draft");
+    expect(composer).toBeEnabled();
+  });
+
+  it("keeps project-room files reachable for a reader who cannot post", async () => {
+    savedProjectRoom(false);
+    mount();
+    await screen.findByText(
+      "You can read this room. Posting requires permission to use its project.",
+    );
+    expect(screen.queryByRole("textbox", { name: "Message to the team" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: /^Show the files/ }));
+    expect(await screen.findByText("report.md")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Close the file panel" }));
+    await waitFor(() => expect(screen.queryByText("report.md")).toBeNull());
+  });
 });
 
 describe("the chat container - answering a durable question", () => {
@@ -1948,7 +2042,6 @@ describe("opening a saved chat", () => {
   });
 });
 
-
 describe("the floating assistant's context submission boundary", () => {
   const page = (): AssistantPageContext => ({
     path: "/tables/orders",
@@ -1969,11 +2062,15 @@ describe("the floating assistant's context submission boundary", () => {
     await userEvent.type(editor, "Explain this page");
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
 
-    await waitFor(() => expect(socket.send).toHaveBeenCalledWith(expect.objectContaining({
-      message: "Explain this page",
-      agent_id: "agent-1",
-      page_context: current,
-    })));
+    await waitFor(() =>
+      expect(socket.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Explain this page",
+          agent_id: "agent-1",
+          page_context: current,
+        }),
+      ),
+    );
   });
 
   it("keeps the submitted page and agent while a draft save holds the question", async () => {
@@ -1988,7 +2085,9 @@ describe("the floating assistant's context submission boundary", () => {
           holdSending={holdSending}
           pageContext={() => current}
           emptyState={(onPick) => (
-            <button type="button" onClick={() => onPick("Explain this page")}>pick page</button>
+            <button type="button" onClick={() => onPick("Explain this page")}>
+              pick page
+            </button>
           )}
         />
       </QueryClientProvider>
@@ -2004,11 +2103,15 @@ describe("the floating assistant's context submission boundary", () => {
     expect(socket.send.mock.calls.filter(([frame]) => frame.message)).toHaveLength(0);
     act(() => useAgentSelectionStore.getState().select("agent-1"));
 
-    await waitFor(() => expect(socket.send).toHaveBeenCalledWith(expect.objectContaining({
-      message: "Explain this page",
-      agent_id: "agent-1",
-      page_context: original,
-    })));
+    await waitFor(() =>
+      expect(socket.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Explain this page",
+          agent_id: "agent-1",
+          page_context: original,
+        }),
+      ),
+    );
   });
 
   it("disables submission for an unavailable agent without secretly holding the question", async () => {
@@ -2020,7 +2123,9 @@ describe("the floating assistant's context submission boundary", () => {
           sendDisabled={sendDisabled}
           pageContext={page}
           emptyState={(onPick) => (
-            <button type="button" onClick={() => onPick("Do not defer this")}>pick page</button>
+            <button type="button" onClick={() => onPick("Do not defer this")}>
+              pick page
+            </button>
           )}
         />
       </QueryClientProvider>
