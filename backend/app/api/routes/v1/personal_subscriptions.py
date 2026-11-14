@@ -13,6 +13,7 @@ from app.schemas.claude_subscription import (
 )
 
 
+# routes-helper: FastAPI injects this response dependency on every subscription endpoint.
 def _private_response(response: Response) -> None:
     response.headers["Cache-Control"] = "no-store"
 

@@ -12,58 +12,14 @@ from app.core.exceptions import AuthorizationError, ExternalServiceError, NotFou
 from app.core.permissions import Perm
 from app.schemas.gdrive_folder import (
     GoogleDriveFolderPickerResponse,
-    GoogleDrivePickerItem,
 )
 from app.services.rag.drive_api import DriveClient
+from app.services.rag.google_drive_picker import list_folder_items, list_shared_drive_items
 from app.services.rag.remote_names import checked_drive_folder_id
 
 router = APIRouter(
     dependencies=[Depends(require(Perm.CONNECTIONS_VIEW))],
 )
-_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
-
-
-def _folders(
-    drive: DriveClient, *, parent: str, corpora: str, drive_id: str | None
-) -> list[GoogleDrivePickerItem]:
-    parent_id = checked_drive_folder_id(parent)
-    query = f"mimeType='{_FOLDER_MIME_TYPE}' and '{parent_id}' in parents and trashed=false"
-    folders: list[GoogleDrivePickerItem] = []
-    page_token = None
-    while True:
-        page = drive.list_page(
-            q=query,
-            fields="nextPageToken, files(id, name)",
-            page_size=100,
-            page_token=page_token,
-            corpora=corpora,
-            drive_id=drive_id,
-        )
-        folders.extend(
-            GoogleDrivePickerItem(id=checked_drive_folder_id(item.id), name=item.name)
-            for item in page.files
-        )
-        page_token = page.next_page_token
-        if not page_token:
-            return folders
-
-
-def _shared_drives(drive: DriveClient) -> list[GoogleDrivePickerItem]:
-    drives: list[GoogleDrivePickerItem] = []
-    page_token = None
-    while True:
-        page = drive.list_drives_page(
-            fields="nextPageToken, drives(id, name)",
-            page_size=100,
-            page_token=page_token,
-        )
-        drives.extend(
-            GoogleDrivePickerItem(id=checked_drive_folder_id(item.id), name=item.name)
-            for item in page.drives
-        )
-        page_token = page.next_page_token
-        if not page_token:
-            return drives
 
 
 @router.get(
@@ -96,13 +52,13 @@ async def list_google_drive_folders(
 
     def read() -> GoogleDriveFolderPickerResponse:
         with drive:
-            folders = _folders(
+            folders = list_folder_items(
                 drive,
                 parent=parent_id,
                 corpora=corpora,
                 drive_id=shared_drive_id,
             )
-            shared_drives = _shared_drives(drive) if parent == "root" else []
+            shared_drives = list_shared_drive_items(drive) if parent == "root" else []
         return GoogleDriveFolderPickerResponse(drives=shared_drives, folders=folders)
 
     try:

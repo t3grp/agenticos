@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.audit import record_audit
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError, NotFoundError
-from app.core.security import create_refresh_token, read_uuid_claim
+from app.core.security import create_access_token, create_refresh_token, read_uuid_claim
 from app.db.models.session import Session
 from app.repositories import push_subscription as push_repo
 from app.repositories import session_repo
@@ -484,3 +484,33 @@ class SessionService:
             ],
             total=total,
         )
+
+
+async def issue_sign_in_tokens(
+    service: SessionService,
+    *,
+    user_id: UUID,
+    credential_version: int,
+    ip_address: str | None,
+    user_agent: str | None,
+) -> tuple[str, str]:
+    """Create a session and return its access and refresh credentials.
+
+    The session row is created before the access token is minted, so the token
+    can name it as the session id, so signing out everywhere can revoke it.
+    """
+    refresh_token = create_refresh_token(
+        subject=str(user_id), credential_version=credential_version
+    )
+    session = await service.create_session(
+        user_id=user_id,
+        refresh_token=refresh_token,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+    access_token = create_access_token(
+        subject=str(user_id),
+        sid=str(session.id),
+        auth_time=int(datetime.now(UTC).timestamp()),
+    )
+    return access_token, refresh_token

@@ -1,5 +1,5 @@
 ---
-source_sha: "c7783da0b195"
+source_sha: "11bc663200ee"
 ---
 
 # Konsola { #the-console }
@@ -322,9 +322,20 @@ Na telefonie dymka nie ma - zasłaniałby stronę, o której mówi - a przycisk 
 zamiast niego kropkę. Akceptacje, o których już powiedział, zostają powiedziane do
 końca karty przeglądarki, nawet gdy link przeładuje konsolę.
 
-Okno to ten sam czat co w konsoli, a nie strona osadzona w stronie. Otwiera się
-na czterech kafelkach, więc pierwsza wiadomość to jedno kliknięcie, i ma własną
-historię rozmów. Na telefonie zajmuje cały ekran.
+Okno korzysta z czatu konsoli i uruchamia się z wybranym asystentem głównym.
+Selektor agentów w nagłówku pozwala wybrać opublikowanego agenta, którego możesz
+uruchamiać. Zmiana agenta zachowuje bieżącą rozmowę; nagłówek i historia rozmowy
+podążają za wyborem. Kafelki powitalne Architekta pojawiają się tylko przy
+wybranym asystencie głównym. Na telefonie okno zajmuje cały ekran.
+
+Każde nowe pytanie zawiera świeży, uporządkowany kontekst bieżącej strony konsoli,
+jeśli udostępnianie kontekstu strony jest włączone. Okno pokazuje, która strona
+zostanie udostępniona, i pozwala wyłączyć udostępnianie.
+
+Pytanie w kolejce lub ponowienie odrzuconego zgłoszenia zachowuje kontekst strony
+i agenta wybrane w chwili wysłania. Nowe pytanie lub ponownie wygenerowana
+odpowiedź używa bieżącej strony i bieżącego agenta. Zmiana konta lub organizacji
+resetuje rozmowę w oknie, wybór agenta i ustawienie kontekstu strony.
 
 Gdy wskazuje stronę, link otwiera się w konsoli za oknem i podświetla kontrolkę,
 o którą chodzi — przycisk tworzący agenta, zakładkę z akceptacjami. Aparat w

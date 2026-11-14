@@ -1,5 +1,5 @@
 ---
-source_sha: "0f3dca8ab414"
+source_sha: "7fdd043a03a1"
 ---
 
 # Konfiguracja { #configuration }

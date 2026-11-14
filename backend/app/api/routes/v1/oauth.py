@@ -26,6 +26,19 @@ from app.api.deps import (
     UserSvc,
 )
 from app.api.routes.v1._oauth_claims import claims_for
+from app.api.routes.v1._oauth_session import (
+    CLIENT_SESSION_KEY as _CLIENT_KEY,
+)
+from app.api.routes.v1._oauth_session import (
+    DESKTOP_CLIENT as _DESKTOP,
+)
+from app.api.routes.v1._oauth_session import (
+    MAX_PENDING as _MAX_PENDING,
+)
+from app.api.routes.v1._oauth_session import (
+    started_client,
+    take_started_client,
+)
 from app.core.config import settings
 from app.core.exceptions import AppException, AuthenticationError
 from app.core.oauth import (
@@ -59,17 +72,11 @@ router = APIRouter()
 #: start erased the first, or the first callback consumed it. Either way one
 #: result went to the wrong place despite both attempts holding a valid, separate
 #: state. The state is what tells them apart, so the state is the key (#1532).
-_CLIENT_KEY = "oauth_clients"
-_DESKTOP = "desktop"
-
 #: How many pending attempts one session may hold markers for.
 #:
 #: A browser that starts sign-ins and abandons them would otherwise grow the
 #: session cookie without bound; oldest goes first, which for an abandoned flow
 #: is the right one to lose.
-_MAX_PENDING = 4
-
-
 # routes-helper: session bookkeeping over this module's own keys, which are
 # private to these handlers. A service would have to be handed the request to
 # read them, which is the coupling the rule exists to prevent.
@@ -108,22 +115,11 @@ def _return_url(request: Request, code: str) -> str:
     it decides nothing here; it is what lets the shell refuse a deep link it did
     not ask for, since any local process can invoke a custom scheme.
     """
-    started = _take_started_client(request)
+    started = take_started_client(request)
     if isinstance(started, dict) and started.get("client") == _DESKTOP:
         params = urlencode({"code": code, "desktop_nonce": started.get("nonce") or ""})
         return f"{settings.DESKTOP_DEEP_LINK_SCHEME}://auth/callback?{params}"
     return f"{settings.FRONTEND_URL.rstrip('/')}/auth/callback?{urlencode({'code': code})}"
-
-
-def _take_started_client(request: Request) -> dict[str, str] | None:
-    """Consume this OAuth state's client handoff marker, if it had one."""
-    pending = dict(request.session.get(_CLIENT_KEY) or {})
-    started = pending.pop(request.query_params.get("state") or "", None)
-    if pending:
-        request.session[_CLIENT_KEY] = pending
-    else:
-        request.session.pop(_CLIENT_KEY, None)
-    return started if isinstance(started, dict) else None
 
 
 #: Where an invitation token waits while the caller is away at the provider.
@@ -247,7 +243,7 @@ async def provider_callback(
             # session creation, or token exchange. The challenge stays in the
             # URL fragment, which the browser can read but never sends in an
             # HTTP request.
-            started = _take_started_client(request)
+            started = take_started_client(request)
             challenge_id = secrets.token_urlsafe(32)
             mfa_token = create_mfa_token(
                 subject=str(user.id), credential_version=user.credential_version, jti=challenge_id
@@ -283,9 +279,7 @@ async def provider_callback(
         # A single-use code, not the tokens: a token in the redirect URL reaches
         # the address bar, the server access log, and the `Referer` of the next
         # same-origin request, and the refresh token is good for a week (#14).
-        started = (request.session.get(_CLIENT_KEY) or {}).get(
-            request.query_params.get("state") or "", {}
-        )
+        started = started_client(request) or {}
         code = await exchange_service.issue(
             access_token=access_token,
             refresh_token=refresh_token,

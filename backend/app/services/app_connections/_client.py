@@ -318,7 +318,7 @@ class ComposioClient:
     ) -> ComposioAccount:
         """Resolve the exact saved grant through an owner-scoped provider query.
 
-        Composio deprecated the response's ``user_id`` field. The server-side
+        Composio deprecated the response's `user_id` field. The server-side
         user filter therefore carries the owner check even when that field is
         omitted; if present, it must also match. Never query an account by id
         alone and infer its owner from a browser callback.

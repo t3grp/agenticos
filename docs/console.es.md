@@ -1,5 +1,5 @@
 ---
-source_sha: "c7783da0b195"
+source_sha: "11bc663200ee"
 ---
 
 # La consola { #the-console }
@@ -332,9 +332,22 @@ En un teléfono no hay bocadillo - taparía la página de la que habla - y el bo
 lleva el punto en su lugar. Las aprobaciones que ya mencionó siguen mencionadas
 durante el resto de la pestaña, aunque un enlace recargue la consola.
 
-Su ventana es el propio chat de la consola, no una página dentro de la página, y
-se abre con cuatro mosaicos, para que el primer mensaje sea un clic; guarda su
-propio historial de conversaciones. En un teléfono ocupa toda la pantalla.
+La ventana usa el chat de la consola y empieza con el asistente principal
+seleccionado. El selector de agentes de la cabecera permite elegir un agent
+publicado que tengas permiso para ejecutar. Cambiar de agent conserva la
+conversación actual; la cabecera y el historial siguen la selección. Las tarjetas
+de bienvenida del Architect aparecen solo cuando está seleccionado el asistente
+principal. En un teléfono, la ventana ocupa toda la pantalla.
+
+Cada pregunta nueva incluye contexto estructurado y actualizado sobre la página
+actual de la consola cuando el contexto de página está activado. La ventana
+muestra qué página se compartirá y permite desactivar esa opción.
+
+Una pregunta en cola o un reintento de un envío rechazado conserva el contexto de
+la página y el agent seleccionados al enviarla. Una pregunta nueva o una respuesta
+regenerada usa la página y el agent actuales. Cambiar de cuenta u organización
+restablece la conversación de la ventana, la selección del agent y el ajuste de
+contexto de página.
 
 Cuando nombra una página, el enlace la abre en la consola detrás de la ventana y
 señala el control al que se refiere — el botón que crea un agent, la pestaña de

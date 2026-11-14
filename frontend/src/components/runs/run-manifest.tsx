@@ -110,7 +110,11 @@ export function RunManifest({ runId }: { runId: string }) {
         </Section>
       )}
 
-      <Section title={t("toolsSent", { count: manifest.tools.length })}>
+      <Section
+        title={t("toolsSent", {
+          count: manifest.tools.filter((tool) => tool.kind === "function").length,
+        })}
+      >
         {manifest.tools.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("noToolsSent")}</p>
         ) : (
@@ -355,8 +359,7 @@ export function RunManifest({ runId }: { runId: string }) {
               const normalizeCommand = (command: string) => command.trim().replace(/\s+/g, " ");
               const proven = beforeFailed.some((before) =>
                 afterPassed.some(
-                  (after) =>
-                    normalizeCommand(before.command) === normalizeCommand(after.command),
+                  (after) => normalizeCommand(before.command) === normalizeCommand(after.command),
                 ),
               );
               return (

@@ -145,7 +145,7 @@ class BaseSyncConnector(ABC):
         file: RemoteFile,
         dest_dir: Path,
         config: ConnectorConfig | None = None,
-        credential: StorableSecret | None = None,
+        credential: Any | None = None,
     ) -> Path:
         """Download one file into `dest_dir` and answer the local path it landed at.
 

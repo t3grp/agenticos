@@ -12,9 +12,9 @@ from decimal import Decimal
 
 from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelResponse, ToolCallPart
 
-from app.api.routes.v1.runs import waiting_update
 from app.core.config import settings
 from app.db.models.agent_run import AgentRun, RunStatus, RunSurface
+from app.services.run_waiting import waiting_update
 
 
 def _row(**overrides: object) -> AgentRun:

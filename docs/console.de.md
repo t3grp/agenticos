@@ -1,5 +1,5 @@
 ---
-source_sha: "c7783da0b195"
+source_sha: "11bc663200ee"
 ---
 
 # Die Konsole { #the-console }
@@ -346,9 +346,22 @@ Auf einem Smartphone gibt es keine Sprechblase - sie würde die Seite verdecken,
 Freigaben, die sie schon genannt hat, bleiben für den Rest des Browser-Tabs
 genannt, auch wenn ein Link die Konsole neu lädt.
 
-Sein Fenster ist der Chat der Konsole selbst, keine Seite in der Seite, und öffnet
-sich mit vier Kacheln, sodass die erste Nachricht ein Klick ist; es führt einen
-eigenen Verlauf. Auf dem Telefon füllt es den Bildschirm.
+Das Fenster nutzt den Chat der Konsole und startet mit dem Hauptassistenten.
+Über die Agentenauswahl im Header wählen Sie einen veröffentlichten Agent, den
+Sie ausführen dürfen. Beim Wechsel bleibt das aktuelle Gespräch erhalten;
+Header und Gesprächsverlauf folgen der Auswahl. Die Begrüßungskacheln des
+Architect erscheinen nur beim Hauptassistenten. Auf einem Smartphone füllt das
+Fenster den Bildschirm.
+
+Jede neue Frage enthält bei aktiviertem Seitenkontext frische, strukturierte
+Informationen zur aktuellen Konsolenseite. Das Fenster zeigt, welche Seite
+geteilt wird, und lässt Sie die Freigabe ausschalten.
+
+Eine Frage in der Warteschlange oder ein erneuter Versuch nach einer abgelehnten
+Eingabe behält den Seitenkontext und Agent, die beim Absenden ausgewählt waren.
+Eine neue Frage oder eine neu erzeugte Antwort verwendet die aktuelle Seite und
+den aktuellen Agent. Ein Wechsel des Kontos oder der Organisation setzt das
+Gespräch im Fenster, die Agentenauswahl und die Einstellung zum Seitenkontext zurück.
 
 Nennt er eine Seite, öffnet der Link sie in der Konsole hinter dem Fenster und
 zeigt auf das gemeinte Bedienelement — die Schaltfläche, die einen Agent anlegt,

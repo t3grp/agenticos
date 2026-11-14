@@ -1,5 +1,5 @@
 ---
-source_sha: "20738f21b704"
+source_sha: "ece37e1f75ea"
 ---
 
 # API HTTP { #the-http-api }
@@ -46,7 +46,9 @@ członka, zawężone dwukrotnie:
 
 Klucz jest pokazywany **raz**, w odpowiedzi, która go tworzy. Przechowywany jest
 wyłącznie jego SHA-256 i nigdy nie trafia do linii logu, wpisu audytu ani treści
-błędu. Listy pokazują jego prefiks (`aos_1a2b3c4d`) — i tak samo wpis audytu
+błędu.
+
+Listy pokazują jego prefiks (`aos_1a2b3c4d`) — i tak samo wpis audytu
 nazywa klucz, który zadziałał: każdy wpis zapisany w trakcie żądania
 uwierzytelnionego kluczem niesie w szczegółach `via_api_key`. Klucz domyślnie
 wygasa po 90 dniach; można wybrać wcześniejszą datę, ale nie późniejszą niż za
@@ -163,7 +165,9 @@ wspólnym ekranie nie może pozbawić ochrony kolejnego logowania.
 Logowanie hasłem, przez katalog lub linkiem magic-link dla konta, które je
 ma włączone, zatrzymuje się na wyzwaniu zamiast sesji: odpowiedź zawiera
 `mfa_required`, `mfa_token` i `expires_in` (pięć minut), a ciasteczka nie są
-ustawiane. Klient kończy je w `POST /api/v1/auth/mfa/verify` tokenem i kodem,
+ustawiane.
+
+Klient kończy je w `POST /api/v1/auth/mfa/verify` tokenem i kodem,
 a odpowiedzią jest para tokenów - plus miejsce docelowe linku magic-link, gdy
 wyzwanie pochodzi od niego. Token wyzwania dowodzi kroku hasła i niczego
 więcej: nie może wywoływać API jako sesja, a zmiana hasła od jego wystawienia
