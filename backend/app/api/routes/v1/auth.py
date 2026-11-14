@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import (
+    CurrentSessionId,
     CurrentUser,
     DeploymentSettingsSvc,
     DevicePairingSvc,
@@ -493,11 +494,23 @@ async def change_password(
 
 
 @router.get("/me", response_model=MeRead)
-async def get_current_user_info(current_user: CurrentUser, impersonation: ImpersonationSvc) -> Any:
+async def get_current_user_info(
+    current_user: CurrentUser,
+    impersonation: ImpersonationSvc,
+    sessions: SessionSvc,
+    session_id: CurrentSessionId,
+) -> Any:
     """The account this request acts as - and, when an administrator is acting as
     it, who and until when, which is what the console's banner is drawn from."""
     me = MeRead.model_validate(current_user)
-    return me.model_copy(update={"impersonation": await impersonation.describe()})
+    return me.model_copy(
+        update={
+            "impersonation": await impersonation.describe(),
+            "email_verified": await sessions.has_mailbox_proof(
+                current_user.id, current_user.email, session_id
+            ),
+        }
+    )
 
 
 @router.delete("/impersonation", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
@@ -630,7 +643,21 @@ async def verify_magic_link(
             ),
             return_to=return_to,
         )
-    access_token, refresh_token = await _issue_tokens(user, session_service, request)
+    proof = verify_special_token(body.token, expected_type="magic_link")
+    proved_email = user.email if proof is not None and proof.get("email") == user.email else None
+    refresh_token = create_refresh_token(
+        subject=str(user.id), credential_version=user.credential_version
+    )
+    session = await session_service.create_session(
+        user_id=user.id,
+        refresh_token=refresh_token,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("User-Agent"),
+        proved_email=proved_email,
+    )
+    access_token = create_access_token(
+        subject=str(user.id), sid=str(session.id), auth_time=int(datetime.now(UTC).timestamp())
+    )
     return MagicLinkToken(
         access_token=access_token, refresh_token=refresh_token, return_to=return_to
     )
