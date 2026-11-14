@@ -308,7 +308,12 @@ from app.repositories import (
 )
 from app.repositories.agent_run import AgentSpendRow, RunFilters
 from app.repositories.voice_call import VoiceChain
-from app.schemas.agent import AgentRunResult, ParkedCall, ParkedQuestion, ParkedSecretRequest
+from app.schemas.agent import (
+    AgentRunResult as AgentRunResponse,
+    ParkedCall,
+    ParkedQuestion,
+    ParkedSecretRequest,
+)
 from app.schemas.user import WorkingHours
 from app.services import change_feed
 from app.services.agent_registry import (
@@ -7468,7 +7473,7 @@ class AgentRunnerService:
             )
         return result
 
-    async def retry_run(self, ctx: AuthContext, run_id: UUID) -> AgentRunResult:
+    async def retry_run(self, ctx: AuthContext, run_id: UUID) -> AgentRunResponse:
         """Re-run a finished run's own request as a new run linked to it.
 
         The original row is never mutated or re-executed: the new run is a
@@ -7576,7 +7581,7 @@ class AgentRunnerService:
             target_id=str(new_run.id),
             details={"retried_from": str(run.id), "previous_status": run.status},
         )
-        return AgentRunResult(
+        return AgentRunResponse(
             run_id=new_run.id,
             conversation_id=new_run.conversation_id,
             output=output,

@@ -13,7 +13,7 @@ guessed at.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -84,7 +84,7 @@ async def test_retry_row_stays_top_level_and_keeps_its_origin():
         conversation_id=uuid.uuid4(),
         surface="web",
         model_label=None,
-        started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        started_at=datetime(2026, 1, 1, tzinfo=UTC),
         retry_of_run_id=original_id,
     )
 
@@ -105,20 +105,24 @@ class TestRetryRefusals:
     async def test_a_run_in_another_tenant_reads_as_absent(self):
         service = AgentRunnerService(MagicMock())
 
-        with patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=None)):
-            with pytest.raises(NotFoundError, match="Run not found"):
-                await service.retry_run(_ctx(), uuid.uuid4())
+        with (
+            patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=None)),
+            pytest.raises(NotFoundError, match="Run not found"),
+        ):
+            await service.retry_run(_ctx(), uuid.uuid4())
 
     async def test_somebody_elses_run_is_not_theirs_to_retry(self):
         service = AgentRunnerService(MagicMock())
         original = _run()
         ctx = _ctx(user_id=uuid.uuid4())
 
-        with patch(
-            f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+        with (
+            patch(
+                f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+            ),
+            pytest.raises(AuthorizationError, match="who started this run"),
         ):
-            with pytest.raises(AuthorizationError, match="who started this run"):
-                await service.retry_run(ctx, original.id)
+            await service.retry_run(ctx, original.id)
 
     @pytest.mark.parametrize(
         "status",
@@ -133,22 +137,26 @@ class TestRetryRefusals:
         original = _run(status=status.value)
         ctx = _ctx(user_id=original.user_id)
 
-        with patch(
-            f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+        with (
+            patch(
+                f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+            ),
+            pytest.raises(BadRequestError, match="has not finished"),
         ):
-            with pytest.raises(BadRequestError, match="has not finished"):
-                await service.retry_run(ctx, original.id)
+            await service.retry_run(ctx, original.id)
 
     async def test_a_run_with_no_conversation_has_nothing_to_retry_from(self):
         service = AgentRunnerService(MagicMock())
         original = _run(conversation_id=None)
         ctx = _ctx(user_id=original.user_id)
 
-        with patch(
-            f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+        with (
+            patch(
+                f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)
+            ),
+            pytest.raises(BadRequestError, match="no conversation"),
         ):
-            with pytest.raises(BadRequestError, match="no conversation"):
-                await service.retry_run(ctx, original.id)
+            await service.retry_run(ctx, original.id)
 
     async def test_a_run_with_no_user_turn_has_no_request_to_reissue(self):
         """A delegation or a workflow step: the transcript holds what the
@@ -170,9 +178,9 @@ class TestRetryRefusals:
                     )
                 ),
             ),
+            pytest.raises(BadRequestError, match="no user turn"),
         ):
-            with pytest.raises(BadRequestError, match="no user turn"):
-                await service.retry_run(ctx, original.id)
+            await service.retry_run(ctx, original.id)
 
 
 class TestRetryRunsTheSameRequest:
@@ -282,7 +290,7 @@ class TestRetryRunsTheSameRequest:
         total = await sum_cost_since(
             db,
             organization_id=organization_id,
-            since=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            since=datetime(2026, 1, 1, tzinfo=UTC),
         )
 
         statement = db.scalar.await_args.args[0]
