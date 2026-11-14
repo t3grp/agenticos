@@ -500,7 +500,7 @@ async def test_hidden_destination_payload_size_does_not_change_bound_page_trunca
             table_id=source.id,
             columns=bound.columns,
             filters=[],
-            sort=None,
+            sort=bound.config.sort,
             column_ids=named,
             shape=shaper(bound.columns, named),
             max_records=100,

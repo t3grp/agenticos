@@ -233,7 +233,7 @@ def _backfill(connection: sa.Connection) -> None:
     evidence = sa.Table("virtual_table_link_evidence", metadata, autoload_with=connection)
     records = sa.Table("virtual_table_records", metadata, autoload_with=connection)
     table_orgs = dict(
-        connection.execute(sa.text("SELECT id, organization_id FROM virtual_tables")).tuples()
+        connection.execute(sa.text("SELECT id, organization_id FROM virtual_tables")).all()
     )
     schemas = connection.execute(
         sa.text(
