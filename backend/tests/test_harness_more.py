@@ -36,7 +36,7 @@ from app.agents.capabilities.harness._sessions import (
     session_path,
 )
 from app.agents.subagent_events import SubagentStarted
-from tests.test_harness_capability import _Shell, _call, _ctx, _lines
+from tests.test_harness_capability import _call, _ctx, _lines, _Shell
 from tests.workspaces import document_workspace
 
 pytestmark = pytest.mark.anyio
