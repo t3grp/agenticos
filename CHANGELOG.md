@@ -105,6 +105,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 - Starting a team room waits for the signed-in account and explicit organization selection, so initial organization loading cannot discard a successfully created room before it opens. Responses from an account or organization the person has left remain ignored.
 - Return HTTP 403 when a room member tries to answer a question addressed to someone else, preserving the original requester check during conversation admission.
+- Forward avatar requests using a fresh URL-backed request instead of cloning Next.js's proxied request object, which could throw while reading its private state in production.
 - Preserve existing personal API and Claude subscription connections when
   deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
   the personal-model, Google Drive OAuth, and Composio migration branches without
