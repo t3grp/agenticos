@@ -14,7 +14,7 @@ import pytest
 from PIL import Image
 from pydantic import SecretStr
 from pydantic_ai import Agent
-from pydantic_ai.capabilities import Thinking
+from pydantic_ai.capabilities import Instrumentation, Thinking
 from pydantic_ai.tools import ToolReturn
 
 from app.agents.claude_subscription import ClaudeSubscriptionModelClient
@@ -107,8 +107,7 @@ async def test_computer_screenshot_and_thinking_cross_agent_http_and_native_stdi
     result = await Agent(
         model,
         tools=[computer_screenshot],
-        capabilities=[Thinking(effort="medium")],
-        instrument=True,
+        capabilities=[Instrumentation(), Thinking(effort="medium")],
     ).run("Inspect the desktop")
     assert result.output == "I see the test desktop"
     assert len(requests) == len(native_calls) == 2
