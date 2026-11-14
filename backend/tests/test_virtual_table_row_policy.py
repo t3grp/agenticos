@@ -543,6 +543,31 @@ def test_matching_ands_the_policy_with_the_tenant_and_the_callers_filters():
     assert " AND " in compiled
 
 
+@pytest.mark.security
+async def test_matching_record_ids_keep_the_tenant_table_filter_and_policy_predicate() -> None:
+    clause = FilterClause(column_id=TEXT_COL.id, kind=SqlKind.TEXT, op="eq", value="visible")
+    policy = policy_expression(
+        FilterClause(column_id=ASSIGNEE, kind=SqlKind.TEXT, op="eq", value=str(MEMBER))
+    )
+    returned = Mock(all=Mock(return_value=[(PROJECT_A,), (PROJECT_B,)]))
+    db = Mock(execute=AsyncMock(return_value=returned))
+    ids = await virtual_table_repo.list_record_ids(
+        db, table_id=TABLE_ID, organization_id=ORG, filters=[clause], extra=policy
+    )
+    assert ids == [PROJECT_A, PROJECT_B]
+    assert db.execute.await_args is not None
+    statement = db.execute.await_args.args[0].compile(dialect=postgresql.dialect())
+    sql = str(statement)
+    assert "SELECT virtual_table_records.id" in sql
+    assert "virtual_table_records.table_id" in sql
+    assert "virtual_table_records.organization_id" in sql
+    assert " AND " in sql
+    assert TABLE_ID in statement.params.values()
+    assert ORG in statement.params.values()
+    assert "visible" in statement.params.values()
+    assert str(MEMBER) in statement.params.values()
+
+
 # -- the service, with the database stubbed out -------------------------------
 #
 # The pattern of `test_virtual_table_upsert_race.py`: the service under test,
