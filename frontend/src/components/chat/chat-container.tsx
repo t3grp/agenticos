@@ -1597,7 +1597,7 @@ function ChatUI({
             ref={scrollContainerRef}
             data-chat-scroller
             className={cn(
-              "scrollbar-thin min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain",
+              "min-h-0 min-w-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain",
               showWorkspaceHome && "flex-none overflow-visible pb-0!",
             )}
             style={{
