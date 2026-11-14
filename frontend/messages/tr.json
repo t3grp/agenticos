@@ -170,7 +170,6 @@
       "approval" : "Onay",
       "approvalAlways" : "Her zaman sor",
       "approvalAskFirst" : "Önce sor",
-      "approvalFollow" : "Capability ayarını izle",
       "approvalForGroup" : "{group} için onay",
       "approvalForTool" : "{tool} için önce sor",
       "approvalHintDefaultReadOnly" : "Bu capability yalnızca okuma yaptığı için onaysız çalışır.",
@@ -3721,7 +3720,6 @@
          "working" : "Çalışıyor…",
          "workingFor" : "{duration} boyunca çalıştı…"
       },
-      "streamError" : "❌ Hata: {message}",
       "suggestions" : {
          "agentAsk" : "Her seferinde sormak zorunda kalmamak için şöyle bir Agent oluştur: {request}",
          "label" : "Size öneriler",
@@ -4658,13 +4656,11 @@
       "startChecklist" : {
          "agentAsk" : "İlk agentımı oluşturmama yardım et. Ne yapmasını istediğimi sor.",
          "dismiss" : "Kontrol listesini gizle",
-         "doneHeading" : "Tamamlandı",
          "hints" : {
             "agent" : "Architect sizinle birlikte agent oluşturur.",
             "channel" : "Slack, Teams, Telegram, Mattermost veya Discord.",
             "chat" : "AgenticOS’a işinizle ilgili istediğinizi sorun.",
             "connection" : "Kendi hesabınızla e-postanızı, takviminizi veya dosyalarınızı bağlayın.",
-            "departments" : "Gruplar, kimin hangi agentı görebileceğini belirler.",
             "knowledge" : "Agentın yanıt verirken yararlanacağı belgeler.",
             "profile" : "Yanıtların size uyması için rolünüz ve yaptığınız işler.",
             "publish" : "Kullanıcılar onu sohbette ve kanallarda kullanabilsin.",
@@ -4674,7 +4670,6 @@
          "left" : "{count, plural, =1 {1 adım kaldı} other {# adım kaldı}}",
          "next" : "Sonraki adım",
          "progress" : "{total} adımdan {done} tanesi tamamlandı",
-         "ratio" : "{done}/{total}",
          "showAll" : "Tüm adımları göster ({count})",
          "showLess" : "Daha az adım göster",
          "start" : "Başla",
@@ -4683,7 +4678,6 @@
             "channel" : "Agentı ekibinizin sohbet ettiği yere ekleyin",
             "chat" : "Konuşma başlatın",
             "connection" : "Bir hizmet bağlayın",
-            "departments" : "Bölümlerinizi ekleyin",
             "knowledge" : "Bilgi tabanı ekle",
             "profile" : "Agentlara kendinizden bahsedin",
             "publish" : "Yayımla",
@@ -5527,7 +5521,6 @@
          "configure" : "Yapılandır",
          "connect" : "Bağlan",
          "description" : "Bu bilgisayarda ve bu server'daki hesabınız için hazır olanlar. Yalnızca kullanmak istediklerinizi etkinleştirin.",
-         "desktopOnly" : "Kurulumu denetlemek için desktop app'i açın.",
          "done" : "Devam et",
          "enable" : "Ayarla",
          "finishFailed" : "Bu bağlantı tamamlanamadı. Lütfen yeniden deneyin.",
@@ -6198,7 +6191,6 @@
       "acceptSuccess" : "Kuruluşa katıldınız!",
       "description" : "Bir kuruluşa katılmanız için davet edildiniz.",
       "failedTitle" : "Davet kabul edilemedi",
-      "goDashboard" : "Kontrol paneline git",
       "received" : {
          "description" : "Hesabının e-posta adresi bu çalışma alanlarına davet edildi. Katılmak istediğini seç.",
          "failed" : "Davet kabul edilemedi. Süresi dolmuş veya geri çekilmiş olabilir. Yeniden dene.",
@@ -8651,7 +8643,6 @@
          "noSkillsAttached" : "Bağlı skill yok",
          "nobodyHasSharedAgent" : "Henüz kimse sizinle agent paylaşmadı.",
          "nothingMatches" : "Eşleşme yok",
-         "openAvailability" : "Kullanılabilirliği aç",
          "openChat" : "Sohbette aç",
          "openWorkflow" : "Workflowu aç",
          "organizationDefault" : "Kuruluş varsayılanı",
@@ -8954,8 +8945,6 @@
          "acceptInvitation" : "Daveti kabul et",
          "clickBelowAcceptInvitation" : "Daveti kabul edip ekibe katılmak için aşağıya tıklayın.",
          "failedAcceptInvitation" : "Davet kabul edilemedi",
-         "goDashboard" : "Kontrol paneline git",
-         "invitationMayHaveExpired" : "Davetin süresi dolmuş veya daha önce kullanılmış olabilir.",
          "joining" : "Katılınıyor…",
          "redirectingYourOrganizations" : "Kuruluşlarınıza yönlendiriliyorsunuz…",
          "teamInvitation" : "Ekip daveti",
@@ -9071,7 +9060,6 @@
       },
       "mcp-servers" : {
          "catalogCompiledIntoBackend" : "Katalog backend içine derlenmiştir ve henüz kimse kendi sunucusunu eklememiştir. Listenin boş olması, bu dağıtımda sunucu bulunmadığı anlamına gelir.",
-         "externalToolsYourAgents" : "Agentlarınızın kullanabileceği araçlar: Notion, GitHub, CRM sisteminiz. Kuruluşun tamamı için veya yalnızca kendiniz için birini bağlayın.",
          "mcpServers" : "MCP sunucuları",
          "noServersConnect" : "Bağlanılacak sunucu yok"
       },
@@ -9169,7 +9157,6 @@
          "tabProactivity" : "Proaktiflik",
          "tabProfile" : "Çalışma alanı",
          "uploadFailed" : "Yükleme başarısız",
-         "uploadFailed2" : "Yükleme başarısız",
          "usedOfMax" : "{max} üzerinden {used} kullanıldı",
          "usersRoles" : "Kullanıcılar ve Roller",
          "waitingOnResponse" : "{count, plural, =1 {1 yanıt bekleniyor} other {# yanıt bekleniyor}}",
@@ -9572,7 +9559,6 @@
          },
          "allConversationsKnowledgeBase" : "Tüm konuşmalar, bilgi tabanı içerikleri, API anahtarları ve kişisel veriler kalıcı olarak silinir. Etkin abonelikler iptal edilir.",
          "alwaysSent" : "Her zaman gönderilir",
-         "avatar" : "Avatar",
          "avatarColour" : "Yedek renk",
          "avatarColourHint" : "Fotoğraf yükleyene kadar avatarınız olarak gösterilir.",
          "avatarTooLargeMaximum2" : "Avatar çok büyük. En fazla 2 MB olabilir.",
@@ -9738,7 +9724,6 @@
          "revokesEveryActiveSession" : "Bu işlem tüm etkin oturumları iptal eder ve bu cihazdaki oturumunuzu da kapatır.",
          "saveChanges" : "Değişiklikleri kaydet",
          "saving2" : "Kaydediliyor…",
-         "saving3" : "Kaydediliyor…",
          "selfDeleteNotEnabled" : "Kendi hesabınızı silme özelliği etkin değil. Destek ekibiyle iletişime geçin.",
          "selfHostedDeploymentThere" : "Bu dağıtım kendi sunucunuzda barındırılıyor. Bülten veya abone listesi yok.",
          "sentInvitation" : "Kuruluş daveti",
@@ -9761,7 +9746,6 @@
          "updatePassword" : "Parolayı güncelle",
          "uploadAvatar3" : "Avatar yükle",
          "uploadAvatar4" : "Avatar yükle",
-         "uploadFailed4" : "Yükleme başarısız",
          "uploading3" : "Yükleniyor…",
          "useStrongUniquePassword" : "Güçlü ve benzersiz bir parola kullanın: en az 8 karakter, büyük-küçük harf ve rakam içersin.",
          "visibleTeammatesSharedOrganizations" : "Paylaşılan kuruluşlardaki ekip arkadaşlarınız görebilir.",
@@ -9787,7 +9771,6 @@
          "title" : "Tarayıcı oturumları"
       },
       "skills" : {
-         "agentsBoundSkillWill" : "Bu skill’e bağlanan agentlar, bir sonraki runlarından itibaren skillsiz çalışır. Bu işlem geri alınamaz.",
          "allCategories" : "Tüm kategoriler",
          "askAdministratorAccessSkills" : "Skill erişimi için yöneticiden izin isteyin.",
          "categoryCount" : "{count, plural, =1 {1 kategori} other {# kategori}}",
@@ -9971,22 +9954,17 @@
       "vault" : {
          "accessTo" : "{name} erişimi",
          "addKey" : "Anahtar ekle",
-         "addKey2" : "Anahtar ekle",
-         "addOneBecomesSelectable" : "Bir anahtar ekleyin; Builder içindeki model providerı veya capability içindeki arama hizmeti gibi, gerektiği yerlerde seçilebilir olsun.",
          "connectAccount" : "Hesap bağla",
          "connectedAccounts" : {
             "reconnectNamed" : "{email} hesabını yeniden bağla"
          },
          "emptyDetail" : "Ajanlarınızla kullanmak için bir anahtar ekleyin veya hesap bağlayın.",
          "emptyTitle" : "Henüz kimlik bilgisi yok",
-         "keys" : "Anahtarlar",
-         "noKeysYet" : "Henüz anahtar yok",
          "organizationAccount" : "Kuruluş hesabı",
          "pageDescription" : "Bu kuruluşun sakladığı tüm anahtarlar. Şifrelenir, kuruluşa bağlanır ve yeniden okunamaz; anahtar gösterilmek yerine değiştirilebilir.",
          "personalAccount" : "Hesabınız",
          "storedCount" : "{count, plural, =1 {1 anahtar saklandı} other {# anahtar saklandı}}",
          "vault" : "Vault",
-         "vault2" : "Vault",
          "whoCanBindKey" : "Bu anahtarı hangi kullanıcıların agenta bağlayıp yenileyebileceği veya silebileceği. Kimsenin erişemediği bir anahtarla hiçbir capability yapılandırılamaz."
       },
       "workflows" : {
@@ -11215,7 +11193,6 @@
       "delete2" : "Sil",
       "disableAnyYouDon" : "Palet içinde görmek istemediğiniz komutları devre dışı bırakın.",
       "edit" : "Düzenle",
-      "edit2" : "Düzenle",
       "enabled" : "Etkin",
       "failedDelete3" : "Silinemedi",
       "failedSaveCommand" : "Komut kaydedilemedi",

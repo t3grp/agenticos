@@ -300,6 +300,7 @@ class TestTheDownRatedMarkerReachesTheRow:
             cost_is_partial=False,
             is_test=False,
             modality="text",
+            fallback_used=False,
         )
         web = AgentRun(
             id=uuid4(),
@@ -316,6 +317,7 @@ class TestTheDownRatedMarkerReachesTheRow:
             cost_is_partial=False,
             is_test=False,
             modality="text",
+            fallback_used=False,
         )
         link = EvalCaseLinkRead(
             eval_run_id=uuid4(),
@@ -419,6 +421,7 @@ class TestTheDetailReadCarriesItsNeighbours:
             cost_is_partial=False,
             is_test=False,
             modality="text",
+            fallback_used=False,
         )
         link = EvalCaseLinkRead(
             eval_run_id=uuid4(),

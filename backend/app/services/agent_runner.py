@@ -4032,6 +4032,7 @@ class AgentRunnerService:
             spec = spec.model_copy(update={"output_schema": output_schema})
         if instructions_override is not None:
             spec = spec.model_copy(update={"instructions": instructions_override})
+            version_id = None
             test_spec = spec.model_dump(mode="json")
         if skill_content_overrides and not (test or draft):
             raise BadRequestError("Skill content overrides are only allowed on test runs")

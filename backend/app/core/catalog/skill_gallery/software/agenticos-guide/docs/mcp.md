@@ -6,7 +6,7 @@ platform's answer to "you cannot write a connector for everything".
 An organization points at a server, its tools appear in the Builder, and no code
 changes on our side.
 
-Everything in the [capability catalog](reference/capabilities.md) is code we wrote
+Everything in the [capability catalog](https://vstorm-co.github.io/agenticos/reference/capabilities/) is code we wrote
 and hold to 100% coverage. MCP connections reach tools through a server URL or a
 managed app connection.
 

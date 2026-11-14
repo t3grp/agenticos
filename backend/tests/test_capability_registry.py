@@ -602,10 +602,22 @@ class TestReadOnlyDeclarations:
 
     WRITES = frozenset(
         {
+            ("babysit_pr", "babysit_pr_stop"),
             ("background_tasks", "list_background_tasks"),
             ("background_tasks", "start_background_task"),
             ("background_tasks", "stop_background_task"),
             ("drafts", "write_draft"),
+            ("proof_scenario", "proof_scenario_record"),
+            ("agent_messages", "agent_send_message"),
+            ("agent_messages", "agent_react"),
+            ("eval_tool_tuning", "record_eval_tool_tuning"),
+            ("harness", "harness_start"),
+            ("harness", "harness_prompt"),
+            ("harness", "harness_stop"),
+            ("council", "run_council_review"),
+            ("sol_loop", "run_sol_loop_review"),
+            ("burst", "run_burst"),
+            ("secret_request", "request_secret"),
             ("memory_files", "correct_memory"),
             ("memory_files", "recall"),
             ("memory_files", "remember"),

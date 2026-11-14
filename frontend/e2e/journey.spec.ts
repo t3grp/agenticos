@@ -451,11 +451,11 @@ test("an agent goes from a stored key to a run with a cost", async ({ page, brow
   expect(savedCase["counter_example"]).toBeNull();
   expect(savedCase["history"]).toEqual([]);
 
-  // 9. A project hands its default agent to chat and keeps the conversation.
+  // 9. A project chat is a shared room; choose this agent as its responder.
   await page.goto("/projects");
   await page.getByRole("button", { name: "New project", exact: true }).first().click();
   const projectDialog = page.getByRole("dialog");
-  const projectName = `Journey project ${stamp}`;
+  const projectName = "Journey project " + stamp;
   await projectDialog.getByRole("textbox", { name: "Name", exact: true }).fill(projectName);
   await projectDialog.getByLabel("Default agent", { exact: true }).click();
   await page.getByRole("option", { name: agentName, exact: true }).click();
@@ -469,25 +469,57 @@ test("an agent goes from a stored key to a run with a cost", async ({ page, brow
   const projectId = new URL(page.url()).pathname.split("/").pop();
   if (!projectId) throw new Error("Created project has no identity");
   await page.getByRole("main").getByRole("link", { name: "New chat", exact: true }).click();
-  await expect(page.getByRole("button", { name: /^Agent:/ })).toContainText(agentName);
-  await expect(page.getByText("Live", { exact: true })).toBeVisible();
-  const projectQuestion = `Project question ${stamp}`;
-  await composer.fill(projectQuestion);
-  await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.getByRole("main").getByText(answerToken, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "A shared conversation for your team" }),
+  ).toBeVisible();
+  const creatingRoom = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/conversations" &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "New team room", exact: true }).click();
+  const roomResponse = await creatingRoom;
+  expect(roomResponse.ok(), "creating the project room answered " + roomResponse.status()).toBe(
+    true,
+  );
+  const room = (await roomResponse.json()) as { id: string; project_id: string };
+  expect(room.project_id).toBe(projectId);
+  await expect(page).toHaveURL("/chat?id=" + room.id);
+  await expect(page.getByRole("textbox", { name: "Message to the team" })).toBeEnabled();
+  await page.getByRole("combobox", { name: "Who should answer" }).click();
+  await page.getByRole("option", { name: "Ask @" + agentName, exact: true }).click();
+  const projectQuestion = "Project question " + stamp;
+  const postedMessage = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/conversations/" + room.id + "/room-messages" &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("textbox", { name: "Message to the team" }).fill(projectQuestion);
+  await page.getByRole("button", { name: "Post message", exact: true }).click();
+  const posted = await postedMessage;
+  expect(posted.ok(), "posting to the project room answered " + posted.status()).toBe(true);
+  const result = (await posted.json()) as { request: { id: string; agent_id: string } | null };
+  expect(result.request?.agent_id).toBe(agentId);
+  await expect(page.getByRole("main").getByText(answerToken, { exact: true })).toBeVisible({
+    timeout: 120_000,
+  });
   await page.reload();
-  await expect(page.getByRole("main").getByText(answerToken, { exact: true })).toBeVisible();
-  await page.goto(`/projects/${projectId}?tab=chats`);
+  await expect(page.getByRole("main").getByText(answerToken, { exact: true })).toBeVisible({
+    timeout: 120_000,
+  });
+  await page.goto("/projects/" + projectId + "?tab=chats");
   await nowMatching(
     page.request,
-    `/api/projects/${projectId}/chats`,
-    (chat) => String(chat["title"]).includes(projectQuestion),
-    "the conversation saved in its project",
+    "/api/projects/" + projectId + "/chats",
+    (chat) => String(chat["id"]) === room.id,
+    "the team room saved in its project",
   );
-  const projectChat = page.getByRole("row").filter({ hasText: projectQuestion });
+  const projectChat = page.locator('a[href="/chat?id=' + room.id + '"]');
   await expect(projectChat).toBeVisible();
   await projectChat.click();
-  await expect(page.getByRole("main").getByText(answerToken, { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText(answerToken, { exact: true })).toBeVisible({
+    timeout: 120_000,
+  });
 
   // 10. cleaning up
   // This is the one spec that creates a whole agent, and it runs on every push -
@@ -506,6 +538,7 @@ test("an agent goes from a stored key to a run with a cost", async ({ page, brow
   // 7 needs no line of its own: `agent_embeds.agent_id` is `ON DELETE CASCADE`,
   // and the visitor row cascades from the embed.
   for (const path of [
+    `/api/conversations/${room.id}`,
     `/api/projects/${projectId}`,
     `/api/datasets/${datasetId}`,
     `/api/agents/${agentId}`,

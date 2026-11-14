@@ -226,7 +226,6 @@
       "approval" : "Approval",
       "approvalAlways" : "Always ask",
       "approvalAskFirst" : "Ask first",
-      "approvalFollow" : "Follow the capability",
       "approvalForGroup" : "Approval for {group}",
       "approvalForTool" : "Ask first before {tool}",
       "approvalHintDefaultReadOnly" : "Runs without approval, because this capability only reads.",
@@ -1021,7 +1020,6 @@
       "traceContentHint" : "\"None\" keeps timing, tokens, cost and tool names but sends no message text or tool arguments - for a project over health, legal or HR data.",
       "traceContentNone" : "None - timing and cost only",
       "tracing" : "Tracing",
-      "unavailableDescription" : "Check the selected organization. This agent may belong to another organization, have been removed, or no longer be shared with you.",
       "unavailableTitle" : "Agent unavailable",
       "unchangedLines" : "{count, plural, =1 {1 unchanged line} other {# unchanged lines}}",
       "unknownAuthor" : "unknown author",
@@ -2821,7 +2819,7 @@
          },
          "connection_id" : {
             "title" : "Sandbox connection",
-            "description" : "Which registered sandbox connection to run on; empty takes the organization's default. An id, never an address or a token - a spec is exported to a client's git repository, so the only thing it may carry is a reference. The connection decides whether that is a container on a host you run or a sandbox in Daytona's cloud."
+            "description" : "Which registered sandbox connection to run on; empty takes the organization's default. An id, never an address or a token - a spec is exported to a client's git repository, so the only thing it may carry is a reference. The connection decides whether that is a container on a host you run or a sandbox on a cloud provider or OpenSandbox server."
          },
          "session_scope" : {
             "title" : "Who shares the workspace",
@@ -2829,7 +2827,7 @@
          },
          "runtime" : {
             "title" : "Runtime",
-            "description" : "Which environment a container-backed workspace runs, named from the list the connection's service allows. Empty takes the connection's default. An alias, never an image."
+            "description" : "Optional provider-specific runtime override, up to 64 characters: a sandboxd alias, E2B template, Daytona snapshot or OpenSandbox image. Empty uses the connection's default; configure longer OpenSandbox image references on the connection."
          },
          "include_execute" : {
             "title" : "Allow shell commands",
@@ -4393,7 +4391,6 @@
          "working" : "Working…",
          "workingFor" : "Working for {duration}…"
       },
-      "streamError" : "❌ Error: {message}",
       "suggestions" : {
          "acknowledged" : "Acknowledged",
          "agentAsk" : "Build me an agent that does this, so I do not have to ask each time: {request}",
@@ -5436,13 +5433,11 @@
       "startChecklist" : {
          "agentAsk" : "Help me build my first agent. Ask me what I want it to do.",
          "dismiss" : "Hide the checklist",
-         "doneHeading" : "Already done",
          "hints" : {
             "agent" : "The Architect builds one with you.",
             "channel" : "Slack, Teams, Telegram, Mattermost or Discord.",
             "chat" : "Ask AgenticOS anything about your work.",
             "connection" : "Your mail, calendar or files, with your own account.",
-            "departments" : "Groups decide who sees which agent.",
             "knowledge" : "The documents it answers from.",
             "profile" : "Your role and work, so answers fit you.",
             "publish" : "So people can use it in chat and in channels.",
@@ -5452,7 +5447,6 @@
          "left" : "{count, plural, =1 {1 step left} other {# steps left}}",
          "next" : "Next step",
          "progress" : "{done} of {total} done",
-         "ratio" : "{done}/{total}",
          "showAll" : "Show all steps ({count})",
          "showLess" : "Show fewer steps",
          "start" : "Start",
@@ -5461,7 +5455,6 @@
             "channel" : "Put an agent where your team chats",
             "chat" : "Start a conversation",
             "connection" : "Connect a service",
-            "departments" : "Add your departments",
             "knowledge" : "Give it a knowledge base",
             "profile" : "Tell agents about you",
             "publish" : "Publish it",
@@ -7054,7 +7047,6 @@
          "configure" : "Configure",
          "connect" : "Connect",
          "description" : "What is ready on this computer and for your account on this server. Enable only what you want to use.",
-         "desktopOnly" : "Open the desktop app to check its setup.",
          "done" : "Continue",
          "enable" : "Set up",
          "finishFailed" : "Could not finish this connection. Please retry.",
@@ -9038,7 +9030,6 @@
       "acceptSuccess" : "Joined organization!",
       "description" : "You've been invited to join an organization.",
       "failedTitle" : "Failed to accept invitation",
-      "goDashboard" : "Go to dashboard",
       "received" : {
          "description" : "You have been invited to these workspaces using your account’s email. Choose where you want to join.",
          "failed" : "Could not accept this invitation. It may have expired or been withdrawn. Try again.",
@@ -12223,7 +12214,6 @@
          "noSkillsAttached" : "No skills attached",
          "nobodyHasSharedAgent" : "Nobody has shared an agent with you yet.",
          "nothingMatches" : "Nothing matches",
-         "openAvailability" : "Open Availability",
          "openChat" : "Open in chat",
          "openWorkflow" : "Open the workflow",
          "organizationDefault" : "Organization default",
@@ -12547,8 +12537,6 @@
          "acceptInvitation" : "Accept invitation",
          "clickBelowAcceptInvitation" : "Click below to accept this invitation and join the team.",
          "failedAcceptInvitation" : "Failed to accept invitation",
-         "goDashboard" : "Go to dashboard",
-         "invitationMayHaveExpired" : "The invitation may have expired or already been used.",
          "joining" : "Joining...",
          "redirectingYourOrganizations" : "Redirecting to your organizations...",
          "teamInvitation" : "Team invitation",
@@ -12664,7 +12652,6 @@
       },
       "mcp-servers" : {
          "catalogCompiledIntoBackend" : "The catalog is compiled into the backend, and nobody has added a server of their own. An empty list here means this deployment ships none.",
-         "externalToolsYourAgents" : "Tools your agents can use - Notion, GitHub, your CRM. Connect one for the whole organization, or just for yourself.",
          "mcpServers" : "MCP servers",
          "noServersConnect" : "No servers to connect"
       },
@@ -12849,7 +12836,6 @@
          "tabProactivity" : "Proactivity",
          "tabProfile" : "Workspace",
          "uploadFailed" : "Upload failed",
-         "uploadFailed2" : "Upload failed",
          "usedOfMax" : "{used} of {max} used",
          "usersRoles" : "Users & Roles",
          "waitingOnResponse" : "{count, plural, =1 {1 waiting on a response} other {# waiting on a response}}",
@@ -13319,7 +13305,6 @@
          },
          "allConversationsKnowledgeBase" : "All conversations, knowledge base contents, API keys, and personal data will be permanently deleted. Active subscriptions will be canceled.",
          "alwaysSent" : "Always sent",
-         "avatar" : "Avatar",
          "avatarColour" : "Fallback colour",
          "avatarColourHint" : "Shown as your avatar until you upload a picture.",
          "avatarTooLargeMaximum2" : "Avatar too large. Maximum 2MB.",
@@ -13503,7 +13488,6 @@
          "revokesEveryActiveSession" : "This revokes every active session and signs you out of this device too.",
          "saveChanges" : "Save changes",
          "saving2" : "Saving…",
-         "saving3" : "Saving…",
          "selfDeleteNotEnabled" : "Self-delete not enabled. Contact support.",
          "selfHostedDeploymentThere" : "This is a self-hosted deployment. There is no newsletter and no subscriber list.",
          "sentInvitation" : "Organization invitation",
@@ -13530,7 +13514,6 @@
          "updatePassword" : "Update password",
          "uploadAvatar3" : "Upload avatar",
          "uploadAvatar4" : "Upload avatar",
-         "uploadFailed4" : "Upload failed",
          "uploading3" : "Uploading…",
          "useStrongUniquePassword" : "Use a strong, unique password - 8+ characters, mixed case, numbers.",
          "visibleTeammatesSharedOrganizations" : "Visible to teammates in shared organizations.",
@@ -13556,7 +13539,6 @@
          "title" : "Browser sign-ins"
       },
       "skills" : {
-         "agentsBoundSkillWill" : "Agents bound to this skill will run without it from their next run. This cannot be undone.",
          "allCategories" : "All categories",
          "askAdministratorAccessSkills" : "Ask an administrator for access to skills.",
          "categoryCount" : "{count, plural, =1 {1 category} other {# categories}}",
@@ -13741,8 +13723,6 @@
       "vault" : {
          "accessTo" : "Access to {name}",
          "addKey" : "Add key",
-         "addKey2" : "Add key",
-         "addOneBecomesSelectable" : "Add one and it becomes selectable wherever it is needed - a model provider in the Builder, a search service in a capability.",
          "connectAccount" : "Connect account",
          "connectedAccounts" : {
             "connect" : "Connect Google account",
@@ -13753,9 +13733,7 @@
             "disconnectTitle" : "Disconnect {email}?",
             "needsReconnect" : "Its sign-in stopped working. Connect it again.",
             "noneYet" : "No accounts connected yet",
-            "organizationDetail" : "An agent's virtual terminal can read one of these for everybody who talks to it.",
             "organizationTitle" : "The organization's connected accounts",
-            "personalDetail" : "An agent whose virtual terminal reads each person's own accounts mounts these when you talk to it.",
             "personalTitle" : "Your connected accounts",
             "reconnect" : "Reconnect",
             "reconnectNamed" : "Reconnect {email}",
@@ -13763,14 +13741,11 @@
          },
          "emptyDetail" : "Add a key or connect an account to use it with your agents.",
          "emptyTitle" : "No credentials yet",
-         "keys" : "Keys",
-         "noKeysYet" : "No keys yet",
          "organizationAccount" : "Organization account",
          "pageDescription" : "Every key this organization has stored. Encrypted, bound to this organization, and never readable again - a key can be replaced, not revealed.",
          "personalAccount" : "Your account",
          "storedCount" : "{count, plural, =1 {1 key stored} other {# keys stored}}",
          "vault" : "Vault",
-         "vault2" : "Vault",
          "whoCanBindKey" : "Who can bind this key to an agent, and who can rotate or delete it. A key nobody can reach is a capability nobody can configure."
       },
       "workflows" : {
@@ -15258,7 +15233,6 @@
       "delete2" : "Delete",
       "disableAnyYouDon" : "Disable any you don't want to see in the palette.",
       "edit" : "Edit",
-      "edit2" : "Edit",
       "enabled" : "Enabled",
       "failedDelete3" : "Failed to delete",
       "failedSaveCommand" : "Failed to save command",

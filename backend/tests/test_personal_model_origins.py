@@ -29,7 +29,12 @@ from app.db.models.credential import ModelProfile
 from app.db.models.organization import Organization, OrganizationMember
 from app.db.models.user import User
 from app.services.agent_chat import ChatAgentRunner
-from app.services.agent_runner import AgentRunnerService, _Delegation, _RunBudget
+from app.services.agent_runner import (
+    AgentRunnerService,
+    _Delegation,
+    _RunBudget,
+    _TestConnections,
+)
 from app.services.mcp_connection import ResolvedMcpToolsets
 from app.services.workflow_execution import context as workflow_context
 
@@ -176,7 +181,7 @@ async def test_origin_is_checked_before_the_first_model_resolution(
     ):
         await service._assemble(
             ctx,
-            agent=MagicMock(id=uuid4()),
+            agent=MagicMock(id=uuid4(), kind="agent", system_key=None),
             spec=spec,
             existing_run=MagicMock(id=uuid4()) if resumed else None,
             surface=RunSurface.WORKFLOW if workflow else RunSurface.WEB,
@@ -249,7 +254,11 @@ async def test_a_parked_nested_workflow_keeps_its_origin_without_a_live_dispatch
             ),
         ),
         patch.object(
-            service, "_parked_spec", new=AsyncMock(return_value=(MagicMock(id=uuid4()), spec))
+            service,
+            "_parked_spec",
+            new=AsyncMock(
+                return_value=(MagicMock(id=uuid4(), kind="agent", system_key=None), spec)
+            ),
         ),
         patch.object(service, "_with_environment_observability", new=AsyncMock(return_value=spec)),
         patch(f"{RUNNER}.restore_directory", new=AsyncMock(return_value=None)),
@@ -289,6 +298,8 @@ def _delegation(owner: AuthContext) -> _Delegation:
         attribution={},
         runtimes=[],
         stash=DelegationStash(),
+        test_connections=_TestConnections(),
+        isolation=None,
     )
 
 
