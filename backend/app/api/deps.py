@@ -69,7 +69,7 @@ transactions that can half-commit.
 from uuid import UUID
 
 from app.db.session import get_db_context
-from fastapi import Request
+from fastapi import Request, Response
 
 from app.clients.redis import RedisClient
 
@@ -106,6 +106,22 @@ from app.services.ml import MLService
 from app.services.sandbox_connection import SandboxConnectionService
 from app.services.sandbox_workspace import SandboxWorkspaceService
 from app.services.conversation_share import ConversationShareService
+
+
+def take_started_oauth_client(request: Request, *, session_key: str) -> dict[str, str] | None:
+    """Consume this OAuth state's client handoff marker, if it had one."""
+    pending = dict(request.session.get(session_key) or {})
+    started = pending.pop(request.query_params.get("state") or "", None)
+    if pending:
+        request.session[session_key] = pending
+    else:
+        request.session.pop(session_key, None)
+    return started if isinstance(started, dict) else None
+
+
+def no_store_response(response: Response) -> None:
+    """Keep a private response out of browser and intermediary caches."""
+    response.headers["Cache-Control"] = "no-store"
 
 
 def get_user_service(db: DBSession) -> UserService:

@@ -1,7 +1,7 @@
 """Tests for the MFA routes: the second step at sign-in, and enrolment.
 
-The services are mocked, as in `test_auth.py`; what is exercised here is
-the route's own decisions - when a sign-in stops at a challenge, what a
+The factor and persistence boundaries are mocked; token issuance stays real.
+These tests exercise when a sign-in stops at a challenge, what a
 challenge token may and may not become, and that enrolment answers with
 its secrets once and never again.
 """
@@ -33,6 +33,7 @@ from app.core.security import (
     verify_special_token,
 )
 from app.main import app
+from app.services.session import SessionService
 
 pytestmark = pytest.mark.anyio
 
@@ -66,8 +67,8 @@ def mock_user_service(mock_user: MockUser) -> MagicMock:
 
 
 @pytest.fixture
-def mock_session_service() -> MagicMock:
-    service = MagicMock()
+def mock_session_service() -> SessionService:
+    service = SessionService(MagicMock())
     service.create_session = AsyncMock(
         return_value=SimpleNamespace(id=uuid4(), created_at=datetime.now(UTC))
     )
@@ -95,7 +96,7 @@ def mock_mfa_service() -> MagicMock:
 async def client(
     mock_user: MockUser,
     mock_user_service: MagicMock,
-    mock_session_service: MagicMock,
+    mock_session_service: SessionService,
     mock_mfa_service: MagicMock,
     mock_redis: MagicMock,
     mock_db_session,
