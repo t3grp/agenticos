@@ -177,6 +177,12 @@ async def test_backfill_keeps_ids_revisions_order_archived_fields_and_every_reje
 
 async def test_invalid_cross_organization_definition_aborts_cutover_without_rewriting_rows(db):
     _service, _ctx, org, _owner, source, _target, _targets = await _setup(db)
+    foreign_owner = await make_user(db)
+    foreign_org = await make_org(db, owner=foreign_owner)
+    foreign_table = await _service.create_table(
+        ctx_for(foreign_owner, foreign_org),
+        TableCreate(name="Foreign definition", columns=[column("Name", "text")]),
+    )
     schema = await db.scalar(
         select(VirtualTableSchemaVersion).where(
             VirtualTableSchemaVersion.table_id == source.id,
@@ -184,7 +190,7 @@ async def test_invalid_cross_organization_definition_aborts_cutover_without_rewr
         )
     )
     schema.columns = [
-        {**item, "link_table_id": str(uuid4())} if item["type"] == "link" else item
+        {**item, "link_table_id": str(foreign_table.id)} if item["type"] == "link" else item
         for item in schema.columns
     ]
     await db.flush()

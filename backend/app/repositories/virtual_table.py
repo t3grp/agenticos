@@ -801,7 +801,7 @@ def policy_expression(
     if assignee is not None:
         parts.append(_predicate(assignee))
     if link_column_id is not None and project_ids:
-        parts.append(_cell(link_column_id).has_any(array([str(item) for item in project_ids])))
+        parts.append(relation_repo.contains_targets(link_column_id, project_ids))
     if not parts:
         return None
     return parts[0] if len(parts) == 1 else or_(*parts)

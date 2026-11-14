@@ -7,7 +7,7 @@ unresolvable values are retained separately rather than becoming invalid edges.
 """
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 from uuid import UUID
@@ -239,16 +239,18 @@ async def sync_record(db: AsyncSession, *, record: VirtualTableRecord) -> None:
     await db.flush()
 
 
-def contains_target(column_id: UUID, target_id: UUID) -> ColumnElement[bool]:
+def contains_targets(column_id: UUID, target_ids: Collection[UUID]) -> ColumnElement[bool]:
     """A correlated link predicate; the surrounding record query owns authorization."""
     return exists(
-        select(VirtualTableRecordLink.target_record_id).where(
+        select(VirtualTableRecordLink.target_record_id)
+        .where(
             VirtualTableRecordLink.organization_id == VirtualTableRecord.organization_id,
             VirtualTableRecordLink.source_table_id == VirtualTableRecord.table_id,
             VirtualTableRecordLink.source_record_id == VirtualTableRecord.id,
             VirtualTableRecordLink.column_id == column_id,
-            VirtualTableRecordLink.target_record_id == target_id,
+            VirtualTableRecordLink.target_record_id.in_(target_ids),
         )
+        .correlate(VirtualTableRecord.__table__)
     )
 
 

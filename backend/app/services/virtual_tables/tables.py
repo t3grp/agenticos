@@ -146,12 +146,18 @@ class TableOperations(Operations):
             )
             return self._read(table, columns, can_edit=await self._can_edit(ctx, table))
 
+        payload = data.model_dump(mode="json")
+        # This optional field did not exist in older receipt fingerprints. Its
+        # absent/null form preserves the old request; an explicit limit is new.
+        for column in payload["columns"]:
+            if column.get("link_limit") is None:
+                column.pop("link_limit", None)
         created, _replayed = await run_once(
             self.db,
             ctx,
             operation="table.create",
             operation_key=_checked_key(operation_key),
-            payload=data.model_dump(mode="json"),
+            payload=payload,
             outcome_type=TableRead,
             action=action,
         )

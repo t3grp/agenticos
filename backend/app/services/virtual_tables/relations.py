@@ -42,7 +42,7 @@ class RelationOperations(Operations):
             )
         columns = await self._columns(source)
         visible = await view_expression(self.db, ctx, source, columns)
-        linked = relation_repo.contains_target(query.column_id, record_id)
+        linked = relation_repo.contains_targets(query.column_id, [record_id])
         rows = await virtual_table_repo.list_records(
             self.db,
             organization_id=ctx.organization_id,

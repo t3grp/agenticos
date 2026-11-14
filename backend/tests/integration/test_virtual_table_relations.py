@@ -19,13 +19,20 @@ from app.repositories import virtual_table_repo
 from app.schemas.virtual_table import (
     ColumnInput,
     RecordCreate,
+    RecordQuery,
     RecordUpdate,
+    RowPolicyUpdate,
     SchemaUpdate,
     TableCreate,
 )
 from app.schemas.virtual_table_relation import BacklinkQuery
 from app.services.virtual_tables import ReadDeadline, VirtualTableService
-from app.services.virtual_tables.exceptions import InvalidRecordError, InvalidSchemaError
+from app.services.virtual_tables.exceptions import (
+    IdempotencyKeyReuseError,
+    InvalidRecordError,
+    InvalidSchemaError,
+)
+from app.services.virtual_tables.receipts import payload_hash
 from tests.integration.virtual_table_support import (
     bound_view,
     cid,
@@ -555,3 +562,111 @@ async def test_narrowing_counts_active_edges_and_preserves_quarantined_original_
         before = await virtual_table_repo.storage_bytes(db, organization_id=org.id)
         await db.execute(delete(model).where(model.organization_id == org.id))
         assert await virtual_table_repo.storage_bytes(db, organization_id=org.id) < before
+
+
+@pytest.mark.security
+async def test_quarantined_project_cell_grants_no_single_list_or_backlink_read(db):
+    service, ctx, org, owner, source, target, targets = await _setup(db)
+    member = await make_user(db)
+    db.add(OrganizationMember(organization_id=org.id, user_id=member.id, role="member"))
+    await db.flush()
+    viewer = ctx_for(member, org, "member")
+    await service.update_record(
+        ctx,
+        target.id,
+        targets[0],
+        RecordUpdate(
+            expected_revision=1,
+            values={cid(target, "Assignee"): str(member.id)},
+        ),
+    )
+    key = cid(source, "Customers")
+    valid = await service.create_record(
+        ctx,
+        source.id,
+        RecordCreate(
+            values={
+                cid(source, "Assignee"): str(owner.id),
+                key: [str(targets[0])],
+            }
+        ),
+    )
+    held = VirtualTableRecord(
+        organization_id=org.id,
+        table_id=source.id,
+        schema_version=source.schema_version,
+        revision=1,
+        values={cid(source, "Assignee"): str(owner.id), key: [str(targets[0])] * 101},
+    )
+    db.add(held)
+    await db.flush()
+    await relation_repo.sync_record(db, record=held)
+    await service.set_row_policy(
+        ctx,
+        source.id,
+        RowPolicyUpdate(
+            rule="assignee",
+            view_column_id=UUID(cid(source, "Assignee")),
+            edit_column_id=UUID(cid(source, "Assignee")),
+            view_project_link_column_id=UUID(key),
+            view_projects_table_id=target.id,
+            view_project_members_column_id=UUID(cid(target, "Assignee")),
+        ),
+    )
+    with pytest.raises(NotFoundError):
+        await service.get_record(viewer, source.id, held.id)
+    listed = await service.list_records(viewer, source.id, RecordQuery())
+    backlinks = await service.list_backlinks(
+        viewer,
+        target.id,
+        targets[0],
+        BacklinkQuery(
+            source_table_id=source.id,
+            column_id=UUID(key),
+        ),
+    )
+    assert [item.id for item in listed.items] == [valid.record.id]
+    assert [item.id for item in backlinks.items] == [valid.record.id]
+
+
+async def test_absent_link_limit_replays_a_table_receipt_written_before_the_field_existed(db):
+    service, ctx, org, _owner, _source, target, _targets = await _setup(db)
+    body = TableCreate(
+        name="Legacy request",
+        columns=[
+            column("Name", "text"),
+            column("Customer", "link", link_table_id=target.id),
+        ],
+    )
+    first = await service.create_table(ctx, body, operation_key="before-link-limit")
+    receipt = await virtual_table_repo.read_receipt(
+        db,
+        organization_id=org.id,
+        principal_id=ctx.subject_id,
+        operation="table.create",
+        operation_key="before-link-limit",
+    )
+    legacy = body.model_dump(mode="json")
+    for field in legacy["columns"]:
+        field.pop("link_limit")
+    receipt.payload_hash = payload_hash(legacy)
+    receipt.outcome = {
+        **receipt.outcome,
+        "columns": [
+            {key: value for key, value in field.items() if key != "link_limit"}
+            for field in receipt.outcome["columns"]
+        ],
+    }
+    await db.flush()
+    retry = await service.create_table(ctx, body, operation_key="before-link-limit")
+    assert retry.id == first.id
+    changed = body.model_copy(
+        update={
+            "columns": [
+                body.columns[0],
+                body.columns[1].model_copy(update={"link_limit": 1}),
+            ]
+        }
+    )
+    with pytest.raises(IdempotencyKeyReuseError):
+        await service.create_table(ctx, changed, operation_key="before-link-limit")
