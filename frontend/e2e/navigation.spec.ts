@@ -127,9 +127,9 @@ test.describe("Dashboard navigation", () => {
    * someone bookmarked has no way of knowing which rename it predates.
    */
   const MOVED_ROUTES: readonly (readonly [string, string])[] = [
-    ["/settings/providers", "/vault"],
-    ["/providers", "/vault"],
-    ["/settings/mcp-servers", "/mcp-servers"],
+    ["/settings/providers", "/connectors/vault"],
+    ["/providers", "/connectors/vault"],
+    ["/settings/mcp-servers", "/connectors"],
     // Apps were artifacts until #2071.
     ["/artifacts", "/apps"],
   ];

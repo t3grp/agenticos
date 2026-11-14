@@ -7,7 +7,7 @@ import { AUTH_STATE, SEEDED_ORG_MCP_NAME, expectNoRenderedSecret, pageHeading } 
 test.use({ storageState: AUTH_STATE });
 
 /**
- * MCP servers — the one page.
+ * MCP servers — one catalog in the Connections page's MCP tab.
  *
  * The catalog and a person's own connections used to be two destinations
  * presented as peers, which is what made the difference between them
@@ -23,6 +23,16 @@ test.use({ storageState: AUTH_STATE });
 /** Servers every deployment ships. */
 const CATALOG = ["GitHub", "PostgreSQL", "Notion", "Sentry"];
 
+/** Legacy links reach Connections; its MCP tab holds the server catalog. */
+async function openMcpServers(page: Page, path = "/mcp-servers") {
+  await page.goto(path);
+  await expect(page).toHaveURL(/\/connectors$/);
+  await expect(pageHeading(page, "Connections")).toBeVisible();
+  const tab = page.getByRole("tab", { name: "MCP servers", exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+}
+
 /**
  * Bring the seeded custom server into view.
  *
@@ -32,8 +42,7 @@ const CATALOG = ["GitHub", "PostgreSQL", "Notion", "Sentry"];
  * is the only step these assertions were missing.
  */
 async function findSeededServer(page: Page) {
-  await page.goto("/mcp-servers");
-  await expect(pageHeading(page, "MCP servers")).toBeVisible();
+  await openMcpServers(page);
   await page.getByRole("textbox", { name: "Search servers…" }).fill(SEEDED_ORG_MCP_NAME);
   const card = page.getByRole("group", { name: SEEDED_ORG_MCP_NAME });
   await expect(card).toBeVisible();
@@ -42,8 +51,7 @@ async function findSeededServer(page: Page) {
 
 test.describe("MCP servers", () => {
   test("lists every server the deployment curates, with what each needs", async ({ page }) => {
-    await page.goto("/mcp-servers");
-    await expect(pageHeading(page, "MCP servers")).toBeVisible();
+    await openMcpServers(page);
 
     for (const server of CATALOG) {
       await page.getByRole("textbox", { name: "Search servers…" }).fill(server);
@@ -87,8 +95,7 @@ test.describe("MCP servers", () => {
     // rendered one generic icon on every row, which in a grid is the same as no
     // icons at all. Asserted as "two cards draw different glyphs" rather than on
     // a class or a file name — identical marks are the bug, whatever draws them.
-    await page.goto("/mcp-servers");
-    await expect(pageHeading(page, "MCP servers")).toBeVisible();
+    await openMcpServers(page);
 
     // A baked full-colour logo where the catalog has one, a brand glyph where
     // it does not: either way the mark is the first image on the card.
@@ -114,8 +121,7 @@ test.describe("MCP servers", () => {
   });
 
   test("connects from the row rather than sending you to a second page", async ({ page }) => {
-    await page.goto("/mcp-servers");
-    await expect(pageHeading(page, "MCP servers")).toBeVisible();
+    await openMcpServers(page);
 
     // Asserted against a catalog that is on screen. Absence on a page that
     // failed to load is not a finding, it is an accident.
@@ -129,9 +135,8 @@ test.describe("MCP servers", () => {
 
   test("the old settings route still lands somewhere", async ({ page }) => {
     // Bookmarks and in-flight links outlive a navigation change.
-    await page.goto("/settings/integrations");
-    await expect(page).toHaveURL(/\/mcp-servers$/);
-    await expect(pageHeading(page, "MCP servers")).toBeVisible();
+    await openMcpServers(page, "/settings/integrations");
+    await expect(page.getByRole("group", { name: "GitHub", exact: true })).toBeVisible();
   });
 
   test("no credential reaches the page", async ({ page }) => {
