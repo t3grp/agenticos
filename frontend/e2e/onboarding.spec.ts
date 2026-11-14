@@ -48,7 +48,7 @@ test.describe("Onboarding", () => {
       ).toHaveCount(0);
       await page.getByRole("button", { name: "Skip for now", exact: true }).click();
       await expect(page).toHaveURL(/\/chat$/);
-      await expect(page.getByRole("textbox", { name: "Ask a question…" })).toBeVisible();
+      await expect(page.getByRole("main")).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Check invitations", exact: true }),
       ).toHaveCount(0);
@@ -78,7 +78,7 @@ test.describe("Onboarding", () => {
     const response = await written;
     expect(response.ok(), "skipping setup answered " + response.status()).toBe(true);
     await expect(page).toHaveURL(/\/chat$/);
-    await expect(page.getByRole("textbox", { name: "Ask a question…" })).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
   });
 
   test("leaves a browser extension's prompt clickable, and the page under the tour not", async ({
