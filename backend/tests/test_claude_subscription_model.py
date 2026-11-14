@@ -10,7 +10,7 @@ import pytest
 from PIL import Image
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.capabilities import Thinking
+from pydantic_ai.capabilities import Instrumentation, Thinking
 from pydantic_ai.exceptions import UnexpectedModelBehavior, UserError
 from pydantic_ai.messages import (
     BinaryContent,
@@ -418,15 +418,15 @@ async def test_user_timeout_cancels_the_private_inference_request():
 @pytest.mark.parametrize("source", ["capability", "model_settings"])
 async def test_real_instrumented_agent_preserves_effective_thinking(thinking, source):
     model, runtime = _model(_reply("Ready"))
-    capabilities = (
-        [Thinking(effort=thinking)] if source == "capability" and thinking is not None else []
-    )
+    capabilities = [Instrumentation()]
+    if source == "capability" and thinking is not None:
+        capabilities.append(Thinking(effort=thinking))
     model_settings = (
         {"thinking": thinking} if source == "model_settings" and thinking is not None else None
     )
-    result = await Agent(
-        model, capabilities=capabilities, model_settings=model_settings, instrument=True
-    ).run("Hello")
+    result = await Agent(model, capabilities=capabilities, model_settings=model_settings).run(
+        "Hello"
+    )
     assert result.output == "Ready"
     assert model.profile.get("supports_thinking") is True
     assert runtime.infer.await_args.kwargs["thinking"] == thinking
