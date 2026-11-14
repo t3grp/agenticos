@@ -21,7 +21,7 @@ import json
 import re
 from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequence
 from contextlib import aclosing
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 from uuid import UUID
 
@@ -43,8 +43,8 @@ from app.core.field_errors import field_problems
 from app.core.permissions import AuthContext, Perm
 from app.db.locks import LockScope, try_hold_name
 from app.db.models.virtual_table import VirtualTable, VirtualTableRecord
+from app.repositories import resource_grant_repo, virtual_table_repo
 from app.repositories import virtual_table_relation as relation_repo
-from app.repositories import virtual_table_repo
 from app.repositories import virtual_table_trigger as trigger_repo
 from app.repositories.virtual_table import FilterClause, RecordCells, SearchClause, SortClause
 from app.schemas.virtual_table import (
@@ -62,6 +62,7 @@ from app.schemas.virtual_table import (
     RecordCreate,
     RecordExportQuery,
     RecordFilter,
+    RecordLinkChange,
     RecordList,
     RecordQuery,
     RecordRead,
@@ -81,18 +82,25 @@ from app.services.virtual_tables.computed import (
     reach,
     read_through,
     record_snapshot,
+    visible_link_ids,
 )
-from app.services.virtual_tables.deadline import ReadDeadline
+from app.services.virtual_tables.deadline import ReadDeadline, arm_if_set
 from app.services.virtual_tables.exceptions import (
     ArchivedColumnError,
     InvalidQueryError,
     InvalidRecordError,
+    InvalidRowPolicyError,
     QuotaExceededError,
     RevisionConflictError,
     RevisionRequiredError,
 )
 from app.services.virtual_tables.principals import principal_problems
 from app.services.virtual_tables.receipts import DeleteOutcome, WriteOutcome, run_once
+from app.services.virtual_tables.record_access import (
+    can_write_record,
+    require_access_fields,
+    with_record_access,
+)
 from app.services.virtual_tables.record_sources import source_for
 from app.services.virtual_tables.row_policy import (
     may_edit_row,
@@ -103,6 +111,7 @@ from app.services.virtual_tables.row_policy import (
 )
 from app.services.virtual_tables.types import (
     COLUMN_TYPES,
+    MAX_LINKS,
     OPTION_TYPES,
     SEARCHED_TYPES,
     CellProblem,
@@ -214,6 +223,39 @@ def _merge(
     if problems:
         raise InvalidRecordError(problems)
     return merged
+
+
+def _link_delta_values(
+    columns: list[ColumnDef],
+    stored: dict[str, CellValue],
+    changes: dict[UUID, RecordLinkChange],
+) -> dict[str, CellValue]:
+    """Apply explicit link intent to the locked values, retaining every unnamed target."""
+    by_id = {column.id: column for column in columns}
+    values: dict[str, CellValue] = {}
+    for column_id, change in changes.items():
+        key = str(column_id)
+        field = f"link_changes.{key}"
+        column = by_id.get(column_id)
+        if column is None:
+            raise InvalidRecordError([(field, "That is not a column of this table")])
+        if column.archived:
+            raise ArchivedColumnError(key)
+        if column.type != "link":
+            raise InvalidRecordError([(field, "Only link columns accept link changes")])
+        current = stored.get(key)
+        if current is None:
+            current = []
+        if not isinstance(current, list):
+            raise InvalidRecordError([(field, "The stored link is not a list of record ids")])
+        removed = {str(target) for target in change.remove}
+        linked = [target for target in current if target not in removed]
+        linked.extend(str(target) for target in change.add if str(target) not in linked)
+        if len(linked) > MAX_LINKS:
+            raise InvalidRecordError([(field, f"A cell links at most {MAX_LINKS} records")])
+        if linked != current:
+            values[key] = linked
+    return values
 
 
 def _changed_cells(
@@ -357,8 +399,10 @@ def _csv_line(cells: list[str]) -> str:
 
 def _export_cell(column: ColumnDef, record: RecordRead) -> str:
     """One cell of an export: a link by the names of its records, anything else as read."""
-    if column.type == "link" and str(column.id) in record.links:
-        return _neutralized("; ".join(linked.label for linked in record.links[str(column.id)]))
+    if column.type == "link":
+        return _neutralized(
+            "; ".join(linked.label for linked in record.links.get(str(column.id), []))
+        )
     return _cell_text(column, record.values.get(str(column.id)))
 
 
@@ -577,7 +621,9 @@ class RecordOperations(Operations):
         )
         if record is None:
             raise NotFoundError(message="Record not found", details={"record_id": record_id})
-        if not await may_view_row(self.db, ctx, table, await self._columns(table), record.values):
+        if not await may_view_row(
+            self.db, ctx, table, await self._columns(table), record.values, record_id=record.id
+        ):
             raise NotFoundError(message="Record not found", details={"record_id": record_id})
         return await self._read_through(ctx, table, record)
 
@@ -591,7 +637,9 @@ class RecordOperations(Operations):
         )
         if record is None:
             raise NotFoundError(message="Record not found", details={"external_id": external_id})
-        if not await may_view_row(self.db, ctx, table, await self._columns(table), record.values):
+        if not await may_view_row(
+            self.db, ctx, table, await self._columns(table), record.values, record_id=record.id
+        ):
             raise NotFoundError(message="Record not found", details={"external_id": external_id})
         return await self._read_through(ctx, table, record)
 
@@ -611,6 +659,62 @@ class RecordOperations(Operations):
             extra=await view_expression(self.db, ctx, table, await self._columns(table)),
         )
 
+    async def _authorized_filters(
+        self,
+        ctx: AuthContext,
+        columns: list[ColumnDef],
+        clauses: list[FilterClause],
+        *,
+        deadline: ReadDeadline | None = None,
+    ) -> list[FilterClause]:
+        """Link filters use the same visible destinations as returned cells.
+
+        Resolve each target once per query, in the current transaction. A hidden
+        or invalid target policy is indistinguishable from an empty link cell.
+        """
+        by_id = {column.id: column for column in columns}
+        targets = {}
+        authorized = []
+        for clause in clauses:
+            column = by_id[clause.column_id]
+            if column.type != "link" or column.link_table_id is None:
+                authorized.append(clause)
+                continue
+            target_id = column.link_table_id
+            if target_id not in targets:
+                await arm_if_set(self.db, deadline)
+                table = await virtual_table_repo.get_table(
+                    self.db, target_id, organization_id=ctx.organization_id
+                )
+                await arm_if_set(self.db, deadline)
+                allowed = table is not None and await resolve_access(
+                    self.db, ctx, table, Perm.TABLES_VIEW, resource_type=TABLE
+                )
+                policy = None
+                if allowed and table is not None:
+                    try:
+                        await arm_if_set(self.db, deadline)
+                        policy = await view_expression(
+                            self.db, ctx, table, await self._columns(table), deadline=deadline
+                        )
+                    except InvalidRowPolicyError:
+                        allowed = False
+                targets[target_id] = (allowed, policy)
+            allowed, policy = targets[target_id]
+            authorized.append(
+                replace(
+                    clause,
+                    expression=virtual_table_repo.linked_filter_expression(
+                        clause,
+                        organization_id=ctx.organization_id,
+                        target_table_id=target_id,
+                        readable=allowed and not column.archived,
+                        target_policy=policy,
+                    ),
+                )
+            )
+        return authorized
+
     async def list_records(
         self, ctx: AuthContext, table_id: UUID, query: RecordQuery | None = None
     ) -> RecordList:
@@ -628,6 +732,7 @@ class RecordOperations(Operations):
         table = await self._load_table(ctx, table_id, Perm.TABLES_VIEW)
         columns = await self._columns(table)
         filters, sort = _clauses(columns, query)
+        filters = await self._authorized_filters(ctx, columns, filters)
         selected = None if query.columns is None else {str(item) for item in query.columns}
         if selected is not None:
             live = {str(column.id) for column in columns if not column.archived}
@@ -650,6 +755,7 @@ class RecordOperations(Operations):
             columns,
             rows[: query.limit],
         )
+        items = await with_record_access(self.db, ctx, table, columns, items)
         if selected is not None:
             # Compute before projecting: a selected formula can depend on an omitted cell.
             items = [
@@ -706,6 +812,7 @@ class RecordOperations(Operations):
         """
         query = RecordQuery(filters=filters, sort=sort)
         clauses, order = _clauses(columns, query)
+        clauses = await self._authorized_filters(ctx, columns, clauses, deadline=deadline)
         reached = reach(columns, column_ids)
         keys = sorted(str(column_id) for column_id in reached.columns)
         await deadline.arm(self.db)
@@ -812,7 +919,7 @@ class RecordOperations(Operations):
             self.db,
             table_id=table.id,
             organization_id=ctx.organization_id,
-            filters=_filters(columns, query.filters),
+            filters=await self._authorized_filters(ctx, columns, _filters(columns, query.filters)),
             search=_search(columns, query.search),
             cap=MAX_COUNT,
             extra=await view_expression(self.db, ctx, table, columns),
@@ -918,6 +1025,7 @@ class RecordOperations(Operations):
                 raise InvalidQueryError("columns", "Export only the table's live columns")
             chosen = [live[column_id] for column_id in query.columns]
         filters, sort = _clauses(columns, RecordQuery(filters=query.filters, sort=query.sort))
+        filters = await self._authorized_filters(ctx, columns, filters)
         search = _search(columns, query.search)
         extra = await view_expression(self.db, ctx, table, columns)
         matching = await virtual_table_repo.count_records(
@@ -1059,7 +1167,13 @@ class RecordOperations(Operations):
             NotFoundError: There is no such record.
         """
         return await self._update(
-            ctx, table_id, record_id, data.values, data.expected_revision, operation_key
+            ctx,
+            table_id,
+            record_id,
+            data.values,
+            data.expected_revision,
+            operation_key,
+            link_changes=data.link_changes,
         )
 
     async def update_record_cells(
@@ -1092,20 +1206,29 @@ class RecordOperations(Operations):
         values: dict[str, CellValue],
         expected_revision: int | None,
         operation_key: str | None,
+        *,
+        link_changes: dict[UUID, RecordLinkChange] | None = None,
     ) -> RecordWrite:
         operation_key = _operation_key(operation_key)
-        table = await self._load_table(ctx, table_id, Perm.TABLES_EDIT, share=True)
+        table = await self._load_table(
+            ctx, table_id, Perm.TABLES_EDIT, share=True, alternative_perm=Perm.TABLES_VIEW
+        )
 
         async def action() -> WriteOutcome:
             self._ensure_live(table)
             record = await self._lock_record(ctx, table, record_id)
             revision = record.revision if expected_revision is None else expected_revision
-            await self._apply(ctx, table, record, values, revision)
+            await self._apply(ctx, table, record, values, revision, link_changes=link_changes)
             return await self._outcome(record, created=False)
 
         request: dict[str, Any] = {"table_id": table.id, "record_id": record_id, "values": values}
         if expected_revision is not None:
             request["expected_revision"] = expected_revision
+        if link_changes:
+            request["link_changes"] = {
+                str(column_id): change.model_dump(mode="json")
+                for column_id, change in link_changes.items()
+            }
         return await self._write(ctx, table, "record.update", operation_key, request, action)
 
     async def upsert_record(
@@ -1179,7 +1302,9 @@ class RecordOperations(Operations):
     ) -> RecordWrite:
         external_id = _external_id(external_id)
         operation_key = _operation_key(operation_key)
-        table = await self._load_table(ctx, table_id, Perm.TABLES_EDIT, share=True)
+        table = await self._load_table(
+            ctx, table_id, Perm.TABLES_EDIT, share=True, alternative_perm=Perm.TABLES_VIEW
+        )
 
         async def action() -> WriteOutcome:
             self._ensure_live(table)
@@ -1200,6 +1325,10 @@ class RecordOperations(Operations):
                 existing = await self._lookup(ctx, table, external_id)
                 if existing is None:
                     raise ConcurrentChangeError()
+            if not await can_write_record(
+                self.db, ctx, table, existing.id, await self._columns(table), existing.values
+            ):
+                raise NotFoundError(message="Record not found", details={"record_id": existing.id})
             revision = existing.revision if at_current_revision else expected_revision
             if revision is None:
                 raise RevisionRequiredError(
@@ -1242,6 +1371,7 @@ class RecordOperations(Operations):
         """
         operation_key = _operation_key(operation_key)
         table = await self._load_table(ctx, table_id, Perm.TABLES_EDIT, share=True)
+        parse_policy(table.row_policy)
 
         async def action() -> DeleteOutcome:
             self._ensure_live(table)
@@ -1270,6 +1400,12 @@ class RecordOperations(Operations):
             from app.services.task_execution import TaskExecution
 
             await TaskExecution(self.db).deleted(ctx, record)
+            await resource_grant_repo.delete_for_resource(
+                self.db,
+                organization_id=ctx.organization_id,
+                resource_type="table_record",
+                resource_id=record.id,
+            )
             await virtual_table_repo.delete_record(self.db, record)
             return DeleteOutcome(record_id=record_id)
 
@@ -1296,6 +1432,8 @@ class RecordOperations(Operations):
         payload: dict[str, Any],
         action: Callable[[], Awaitable[WriteOutcome]],
     ) -> RecordWrite:
+        # A receipt skips its action; invalid policies must still deny the retry.
+        parse_policy(table.row_policy)
         try:
             async with self.db.begin_nested():
                 await quotas.lock_storage(self.db, ctx)
@@ -1318,6 +1456,26 @@ class RecordOperations(Operations):
             )
         # Worked out after the receipt, never stored in it: a replay shows what the
         # linked records say now, as any other read would.
+        if replayed:
+            current = await virtual_table_repo.get_record(
+                self.db,
+                outcome.record.id,
+                table_id=table.id,
+                organization_id=ctx.organization_id,
+            )
+            columns = await self._columns(table)
+            if (
+                current is None
+                or not await can_write_record(
+                    self.db, ctx, table, current.id, columns, current.values
+                )
+                or not await can_write_record(
+                    self.db, ctx, table, current.id, columns, outcome.record.values
+                )
+            ):
+                raise NotFoundError(
+                    message="Record not found", details={"record_id": outcome.record.id}
+                )
         return RecordWrite(
             record=await self._read_through(ctx, table, outcome.record),
             created=outcome.created,
@@ -1368,10 +1526,60 @@ class RecordOperations(Operations):
         self, ctx: AuthContext, table: VirtualTable, record: RecordRead | VirtualTableRecord
     ) -> RecordRead:
         """One record with its links named and its lookups and rollups worked out."""
-        return (await read_through(self.db, ctx, await self._columns(table), [record]))[0]
+        columns = await self._columns(table)
+        records = await read_through(self.db, ctx, columns, [record])
+        return (await with_record_access(self.db, ctx, table, columns, records))[0]
+
+    async def _preserve_unreadable_links(
+        self,
+        ctx: AuthContext,
+        columns: list[ColumnDef],
+        submitted: dict[str, CellValue],
+        before: dict[str, CellValue],
+        merged: dict[str, CellValue],
+    ) -> None:
+        """Keep omitted hidden links when a legacy client replaces its visible list.
+
+        Only omitted existing destinations need checking. Explicit new IDs are
+        validated separately; an internal preserved edge is never submitted on
+        the caller's behalf.
+        """
+        for column in columns:
+            key = str(column.id)
+            old = before.get(key)
+            if (
+                column.type != "link"
+                or column.link_table_id is None
+                or key not in submitted
+                or not isinstance(old, list)
+                or not old
+            ):
+                continue
+            proposed = merged.get(key)
+            current = list(proposed) if isinstance(proposed, list) else []
+            removed = {str(item) for item in old} - {str(item) for item in current}
+            if not removed:
+                continue
+            readable = await visible_link_ids(self.db, ctx, column.link_table_id, removed)
+            hidden = removed - readable
+            if hidden:
+                preserved = current.copy()
+                for position, item in enumerate(old):
+                    if str(item) in hidden:
+                        preserved.insert(min(position, len(preserved)), str(item))
+                try:
+                    merged[key] = validate_cell(column, preserved)
+                except CellProblem as problem:
+                    raise InvalidRecordError([(f"values.{key}", str(problem))]) from None
 
     async def _check_links(
-        self, ctx: AuthContext, columns: list[ColumnDef], submitted: dict[str, CellValue]
+        self,
+        ctx: AuthContext,
+        columns: list[ColumnDef],
+        submitted: dict[str, CellValue],
+        *,
+        field_prefix: str = "values",
+        stored: Mapping[str, CellValue] | None = None,
     ) -> None:
         """Every record a submitted link names exists in the table it links to, which the
         writer can see - a link is not a way to learn which ids another table holds.
@@ -1385,13 +1593,21 @@ class RecordOperations(Operations):
             ids = submitted.get(str(column.id))
             if column.type != "link" or column.link_table_id is None or not isinstance(ids, list):
                 continue
+            if stored is not None:
+                previous = stored.get(str(column.id))
+                existing = {str(item) for item in previous} if isinstance(previous, list) else set()
+                ids = [item for item in ids if str(item) not in existing]
+                if not ids:
+                    continue
             target = await virtual_table_repo.get_table(
                 self.db, column.link_table_id, organization_id=ctx.organization_id
             )
             if target is None or not await resolve_access(
                 self.db, ctx, target, Perm.TABLES_VIEW, resource_type=TABLE
             ):
-                problems.append((f"values.{column.id}", "The linked table cannot be reached"))
+                problems.append(
+                    (f"{field_prefix}.{column.id}", "The linked table cannot be reached")
+                )
                 continue
             found = await virtual_table_repo.get_records_by_ids(
                 self.db,
@@ -1408,14 +1624,20 @@ class RecordOperations(Operations):
                 str(row.id)
                 for row in found
                 if await may_view_row(
-                    self.db, ctx, target, target_columns, row.values, project_ids=project_ids
+                    self.db,
+                    ctx,
+                    target,
+                    target_columns,
+                    row.values,
+                    project_ids=project_ids,
+                    record_id=row.id,
                 )
             }
             missing = set(map(str, ids)) - seen
             if missing:
                 problems.append(
                     (
-                        f"values.{column.id}",
+                        f"{field_prefix}.{column.id}",
                         f"No record {sorted(missing)[0]} in the linked table",
                     )
                 )
@@ -1472,6 +1694,8 @@ class RecordOperations(Operations):
         values: dict[str, CellValue],
     ) -> VirtualTableRecord | None:
         """Insert a record with its history and created event, or `None` if the id is taken."""
+        if not await resolve_access(self.db, ctx, table, Perm.TABLES_EDIT, resource_type=TABLE):
+            raise NotFoundError(message="Table not found", details={"table_id": table.id})
         columns = await self._columns(table)
         merged = await normalize_task_cells(
             self.db, ctx.organization_id, table.id, _merge(columns, values, None)
@@ -1568,6 +1792,8 @@ class RecordOperations(Operations):
         record: VirtualTableRecord,
         values: dict[str, CellValue],
         expected_revision: int,
+        *,
+        link_changes: dict[UUID, RecordLinkChange] | None = None,
     ) -> None:
         """Update a locked record and write its history row.
 
@@ -1584,13 +1810,28 @@ class RecordOperations(Operations):
         baseline = await relation_repo.write_values(
             self.db, record=record, column_ids=[item.id for item in columns if item.type == "link"]
         )
-        if not await may_edit_row(self.db, ctx, table, columns, baseline):
+        if not await can_write_record(self.db, ctx, table, record.id, columns, baseline):
             raise NotFoundError(message="Record not found", details={"record_id": record.id})
         self._check_revision(record, expected_revision)
         before = dict(record.values)
-        merged = await normalize_task_cells(
-            self.db, ctx.organization_id, table.id, _merge(columns, values, baseline)
-        )
+        merged = _merge(columns, values, baseline)
+        if link_changes:
+            merged = _merge(columns, _link_delta_values(columns, baseline, link_changes), merged)
+            # Validate only the explicitly named targets, including removals and no-ops.
+            # Internally retained links may be invisible to this writer.
+            await self._check_links(
+                ctx,
+                columns,
+                {
+                    str(column_id): [str(target) for target in [*change.add, *change.remove]]
+                    for column_id, change in link_changes.items()
+                    if change.add or change.remove
+                },
+                field_prefix="link_changes",
+            )
+        merged = await normalize_task_cells(self.db, ctx.organization_id, table.id, merged)
+        await self._preserve_unreadable_links(ctx, columns, values, baseline, merged)
+        await require_access_fields(self.db, ctx, table, columns, baseline, merged)
         if merged == baseline:
             # Nothing to record. Bumping the revision and keeping a full before-and-after
             # snapshot, and a receipt holding a whole copy, for a request that changed
@@ -1608,8 +1849,8 @@ class RecordOperations(Operations):
         )
         if problems:
             raise InvalidRecordError([(f"values.{key}", message) for key, message in problems])
-        await self._check_links(ctx, columns, values)
-        if not await may_edit_row(self.db, ctx, table, columns, merged):
+        await self._check_links(ctx, columns, values, stored=baseline)
+        if not await can_write_record(self.db, ctx, table, record.id, columns, merged):
             raise NotFoundError(message="Record not found", details={"record_id": record.id})
         await quotas.enforce_record_size(ctx, table, merged)
         await virtual_table_repo.update_record(

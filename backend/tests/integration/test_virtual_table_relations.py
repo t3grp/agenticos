@@ -19,6 +19,7 @@ from app.repositories import virtual_table_repo
 from app.schemas.virtual_table import (
     ColumnInput,
     RecordCreate,
+    RecordFilter,
     RecordQuery,
     RecordUpdate,
     RowPolicyUpdate,
@@ -627,6 +628,48 @@ async def test_quarantined_project_cell_grants_no_single_list_or_backlink_read(d
     )
     assert [item.id for item in listed.items] == [valid.record.id]
     assert [item.id for item in backlinks.items] == [valid.record.id]
+
+    # An owner still filters the canonical representation: held legacy values
+    # cannot make a contains filter match or make an empty link appear populated.
+    for op, value, expected in [
+        ("contains", str(targets[0]), [valid.record.id]),
+        ("is_null", True, [held.id]),
+    ]:
+        filtered = await service.list_records(
+            ctx,
+            source.id,
+            RecordQuery(filters=[RecordFilter(column_id=UUID(key), op=op, value=value)]),
+        )
+        assert [item.id for item in filtered.items] == expected
+
+    # The linked destination policy itself uses an edge EXISTS. Its source row
+    # must be adapted to the destination alias, even though the outer link filter
+    # is also a canonical edge query.
+    container = await service.create_table(
+        ctx,
+        TableCreate(
+            name="Order bundle",
+            visibility="org",
+            columns=[column("Orders", "link", link_table_id=source.id)],
+        ),
+    )
+    order_key = cid(container, "Orders")
+    bundle = await service.create_record(
+        ctx,
+        container.id,
+        RecordCreate(values={order_key: [str(valid.record.id), str(held.id)]}),
+    )
+    for record_id, expected in [(valid.record.id, [bundle.record.id]), (held.id, [])]:
+        filtered = await service.list_records(
+            viewer,
+            container.id,
+            RecordQuery(
+                filters=[
+                    RecordFilter(column_id=UUID(order_key), op="contains", value=str(record_id))
+                ]
+            ),
+        )
+        assert [item.id for item in filtered.items] == expected
 
 
 async def test_absent_link_limit_replays_a_table_receipt_written_before_the_field_existed(db):

@@ -13,6 +13,7 @@ from app.schemas.virtual_table import RecordList
 from app.schemas.virtual_table_relation import BacklinkQuery
 from app.services.virtual_tables._base import Operations
 from app.services.virtual_tables.computed import read_through
+from app.services.virtual_tables.record_access import with_record_access
 from app.services.virtual_tables.records import RecordOperations
 from app.services.virtual_tables.row_policy import view_expression
 
@@ -54,6 +55,7 @@ class RelationOperations(Operations):
             extra=linked if visible is None else and_(linked, visible),
         )
         items = await read_through(self.db, ctx, columns, rows[: query.limit])
+        items = await with_record_access(self.db, ctx, source, columns, items)
         return RecordList(
             items=items, skip=query.skip, limit=query.limit, has_more=len(rows) > query.limit
         )

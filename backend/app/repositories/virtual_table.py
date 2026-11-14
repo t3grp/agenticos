@@ -53,6 +53,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB, array
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.util import ClauseAdapter
 
 from app.db.base import Base
 from app.db.models.resource_grant import Visibility
@@ -72,6 +73,7 @@ from app.db.models.virtual_table_relation import (
 )
 from app.repositories import virtual_table_relation as relation_repo
 from app.repositories._search import contains_ci
+from app.repositories.resource_grant import readable_record_ids
 from app.schemas.virtual_table import CellValue, FilterOp, FilterValue, SortDirection
 
 
@@ -164,6 +166,8 @@ class FilterClause:
     kind: SqlKind
     op: FilterOp
     value: FilterValue
+    expression: ColumnElement[bool] | None = None
+    """A service-authorized link predicate; never accepted from the public query document."""
 
 
 @dataclass(frozen=True)
@@ -410,7 +414,11 @@ async def count_records_up_to(
 
 
 async def record_counts(
-    db: AsyncSession, *, organization_id: UUID, table_ids: Sequence[UUID]
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    table_ids: Sequence[UUID],
+    extra_by_table: dict[UUID, ColumnElement[bool] | bool] | None = None,
 ) -> dict[UUID, int]:
     """How many records each table holds, for a page of tables in one grouped query.
 
@@ -418,11 +426,29 @@ async def record_counts(
     """
     if not table_ids:
         return {}
+    visibility = extra_by_table or {}
+    restrictions = (
+        [
+            or_(
+                VirtualTableRecord.table_id.not_in(list(visibility)),
+                *(
+                    and_(
+                        VirtualTableRecord.table_id == table_id,
+                        literal(extra) if isinstance(extra, bool) else extra,
+                    )
+                    for table_id, extra in visibility.items()
+                ),
+            )
+        ]
+        if visibility
+        else []
+    )
     rows = await db.execute(
         select(VirtualTableRecord.table_id, func.count(VirtualTableRecord.id))
         .where(
             VirtualTableRecord.organization_id == organization_id,
             VirtualTableRecord.table_id.in_(table_ids),
+            *restrictions,
         )
         .group_by(VirtualTableRecord.table_id)
     )
@@ -716,7 +742,58 @@ def _operand(kind: SqlKind, value: object) -> object:
             return value
 
 
+def linked_filter_expression(
+    clause: FilterClause,
+    *,
+    organization_id: UUID,
+    target_table_id: UUID,
+    readable: bool,
+    target_policy: ColumnElement[bool] | None = None,
+) -> ColumnElement[bool]:
+    """Match only destinations the caller can read, including for emptiness checks.
+
+    The target alias also supports a link back to the source table. Adapt the
+    target's row policy rather than applying it to the outer source record.
+    """
+    if not readable:
+        visible = false()
+    else:
+        target = VirtualTableRecord.__table__.alias()
+        edge = VirtualTableRecordLink.__table__.alias()
+        conditions = [
+            target.c.organization_id == organization_id,
+            target.c.table_id == target_table_id,
+            edge.c.organization_id == VirtualTableRecord.organization_id,
+            edge.c.source_table_id == VirtualTableRecord.table_id,
+            edge.c.source_record_id == VirtualTableRecord.id,
+            edge.c.column_id == clause.column_id,
+        ]
+        if clause.op == "contains":
+            conditions.append(target.c.id == UUID(str(clause.value)))
+        if target_policy is not None:
+            conditions.append(ClauseAdapter(target).traverse(target_policy))
+        visible = (
+            select(1)
+            .select_from(
+                target.join(
+                    edge,
+                    and_(
+                        edge.c.organization_id == target.c.organization_id,
+                        edge.c.target_table_id == target.c.table_id,
+                        edge.c.target_record_id == target.c.id,
+                    ),
+                )
+            )
+            .where(*conditions)
+            .correlate(VirtualTableRecord.__table__)
+            .exists()
+        )
+    return ~visible if clause.op == "is_null" and clause.value else visible
+
+
 def _predicate(clause: FilterClause) -> ColumnElement[bool]:
+    if clause.expression is not None:
+        return clause.expression
     column_id = clause.column_id
     if clause.op == "is_null":
         present = VirtualTableRecord.values.has_key(str(column_id))
@@ -786,6 +863,7 @@ def _matching(
 def policy_expression(
     assignee: FilterClause | None,
     *,
+    writer: FilterClause | None = None,
     link_column_id: UUID | None = None,
     project_ids: Collection[UUID] = (),
 ) -> ColumnElement[bool] | None:
@@ -800,11 +878,36 @@ def policy_expression(
     parts: list[ColumnElement[bool]] = []
     if assignee is not None:
         parts.append(_predicate(assignee))
+    if writer is not None:
+        parts.append(_predicate(writer))
     if link_column_id is not None and project_ids:
         parts.append(relation_repo.contains_targets(link_column_id, project_ids))
     if not parts:
         return None
     return parts[0] if len(parts) == 1 else or_(*parts)
+
+
+def record_grant_expression(*, organization_id: UUID, subject_user_id: UUID) -> ColumnElement[bool]:
+    """The same live row grants used by single reads, without loading an ID list."""
+    return VirtualTableRecord.id.in_(
+        readable_record_ids(organization_id=organization_id, subject_user_id=subject_user_id)
+    )
+
+
+async def referenced_access_columns(
+    db: AsyncSession, *, organization_id: UUID, table_id: UUID
+) -> set[str]:
+    """Membership fields of this table that another table uses to grant access."""
+    result = await db.execute(
+        select(VirtualTable.row_policy["view_project_members_column_id"].as_string())
+        .where(
+            VirtualTable.organization_id == organization_id,
+            VirtualTable.row_policy["view_projects_table_id"].as_string() == str(table_id),
+            VirtualTable.row_policy["rule"].as_string() == "assignee",
+        )
+        .distinct()
+    )
+    return {column_id for column_id in result.scalars() if column_id is not None}
 
 
 async def list_record_ids(
