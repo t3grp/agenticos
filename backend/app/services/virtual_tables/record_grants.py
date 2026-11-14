@@ -112,7 +112,7 @@ class RecordAccessOperations(Operations):
                 raise BadRequestError(
                     message="Cannot share with someone outside this organization", details={}
                 )
-            await resource_grant_repo.upsert(
+            grant = await resource_grant_repo.upsert(
                 self.db,
                 organization_id=ctx.organization_id,
                 subject_user_id=data.subject_user_id,
@@ -133,7 +133,7 @@ class RecordAccessOperations(Operations):
                 raise BadRequestError(
                     message="Cannot share with a group outside this organization", details={}
                 )
-            await resource_grant_repo.upsert_for_group(
+            grant = await resource_grant_repo.upsert_for_group(
                 self.db,
                 organization_id=ctx.organization_id,
                 subject_group_id=data.subject_group_id,
@@ -155,7 +155,7 @@ class RecordAccessOperations(Operations):
                 "level": data.level,
                 "subject_user_id": str(data.subject_user_id) if data.subject_user_id else None,
                 "subject_group_id": str(data.subject_group_id) if data.subject_group_id else None,
-                "expires_at": expires_at.isoformat() if expires_at else None,
+                "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
             },
         )
         return await self._access_read(ctx, table_id, record_id)

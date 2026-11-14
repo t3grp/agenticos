@@ -735,6 +735,12 @@ use these answers. Record lists, catalog counts, exports and linked labels use t
 read rule. An idempotent write replay checks current authority again, so a saved receipt
 cannot retain a revoked Write permission.
 
+Workflow triggers recheck the publisher's current Read permission on the source row.
+Their filters and run inputs use only readable linked records, including both the
+current and previous values. An update that changes only hidden links does not start
+a workflow. Invalid destination policies expose no linked IDs; an invalid source
+policy filters the event. The original stored event and history remain unchanged.
+
 ## Errors { #errors }
 
 Every refusal answers `{"error": {"code", "message", "details"}}`, and the `code` is

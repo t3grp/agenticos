@@ -112,7 +112,7 @@ export function TableRowAccess({ table }: { table: TableRead }) {
             {t("saveRules")}
           </Button>
         </form>
-      ) : (
+      ) : table.row_policy_valid !== false ? (
         <p className="text-sm">
           {t(
             current?.rule === "grants"
@@ -122,7 +122,7 @@ export function TableRowAccess({ table }: { table: TableRead }) {
                 : "modeAll",
           )}
         </p>
-      )}
+      ) : null}
     </section>
   );
 }

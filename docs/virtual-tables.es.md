@@ -1,5 +1,5 @@
 ---
-source_sha: "5155e82df80b"
+source_sha: "ea199724b6c8"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -776,6 +776,13 @@ del proyecto usados por otra tabla. Las celdas, el panel de registro y los movim
 kanban usan estas respuestas. Las listas, contadores del catálogo, exportaciones y etiquetas
 enlazadas aplican la misma regla de lectura. Repetir una escritura idempotente comprueba
 los derechos actuales para que un recibo guardado no conserve un permiso Write revocado.
+
+Los triggers de workflow vuelven a comprobar el permiso Read actual de quien publicó
+el workflow sobre la fila de origen. Sus filtros y entradas incluyen solo registros
+enlazados que esa persona puede leer, tanto en los valores actuales como en los
+anteriores. Una actualización que solo cambia enlaces ocultos no inicia un workflow.
+Una política de destino inválida no revela IDs enlazados; una política de origen
+inválida filtra el evento. El evento y el historial guardados permanecen intactos.
 
 ## Errores { #errors }
 

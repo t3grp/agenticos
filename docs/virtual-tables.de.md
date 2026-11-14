@@ -1,5 +1,5 @@
 ---
-source_sha: "5155e82df80b"
+source_sha: "ea199724b6c8"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -823,6 +823,13 @@ die eine andere Tabelle verwendet. Rasterzellen, Datensatzpanel und Kanban-Versc
 verwenden diese Antworten. Datensatzlisten, Katalogzähler, Exporte und verknüpfte Beschriftungen
 verwenden dieselbe Leseregel. Die Wiederholung eines idempotenten Schreibzugriffs prüft
 die aktuellen Rechte erneut, damit ein gespeicherter Beleg kein entzogenes Schreibrecht bewahrt.
+
+Workflow-Trigger prüfen das aktuelle Leserecht der veröffentlichenden Person für die
+Quellzeile erneut. Filter und Eingaben des Laufs enthalten nur lesbare verknüpfte
+Datensätze, sowohl in den aktuellen als auch in den vorherigen Werten. Eine Änderung
+ausschließlich verborgener Verknüpfungen startet keinen Workflow. Eine ungültige
+Zielrichtlinie zeigt keine verknüpften IDs; eine ungültige Quellrichtlinie filtert das
+Ereignis heraus. Gespeichertes Ereignis und Verlauf bleiben unverändert.
 
 ## Fehler { #errors }
 

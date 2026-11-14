@@ -1,5 +1,5 @@
 ---
-source_sha: "5155e82df80b"
+source_sha: "ea199724b6c8"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -770,6 +770,13 @@ członkostwa projektu używane przez inną tabelę. Korzystają z nich komórki 
 panel rekordu i przesunięcia kanban. Listy rekordów, liczniki katalogu, eksport i etykiety
 powiązań stosują tę samą regułę odczytu. Ponowienie zapisu idempotentnego sprawdza
 aktualne prawa, więc zapisane potwierdzenie nie zachowuje odebranego zapisu.
+
+Wyzwalacze workflow ponownie sprawdzają aktualne prawo odczytu publikującego do wiersza
+źródłowego. Filtry i dane wejściowe uruchomienia obejmują wyłącznie dostępne powiązane
+rekordy, zarówno w wartościach bieżących, jak i poprzednich. Zmiana samych ukrytych
+powiązań nie uruchamia workflow. Nieprawidłowa polityka tabeli docelowej nie ujawnia
+identyfikatorów; nieprawidłowa polityka źródła odfiltrowuje zdarzenie. Zapisane
+zdarzenie i historia pozostają bez zmian.
 
 ## Błędy { #errors }
 
