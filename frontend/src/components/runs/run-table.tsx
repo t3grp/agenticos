@@ -55,7 +55,6 @@ function WaitingQuestion({ run }: { run: AgentRun }) {
   const firstSecret = secrets[0];
   const first =
     questions[0] ?? (firstSecret === undefined ? null : t("needsSecret", { name: firstSecret }));
-  if (first === null) return null;
   const remaining = timeUntil(run.waiting_expires_at);
   return (
     <span

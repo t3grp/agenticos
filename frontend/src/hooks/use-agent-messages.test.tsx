@@ -199,7 +199,7 @@ describe("agent-message reads", () => {
       const refusal = new ApiError(403, "You may not run this agent.");
       vi.mocked(apiClient.get).mockRejectedValueOnce(refusal);
       const { wrapper } = setup();
-      const { result } = renderHook(useRead, { wrapper });
+      const { result } = renderHook(() => useRead(), { wrapper });
 
       await waitFor(() => expect(result.current.error).toBe(refusal.message));
       expect(result.current.isLoading).toBe(false);

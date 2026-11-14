@@ -422,6 +422,7 @@ class TestSecretRequests:
         p.runner.resume.assert_not_awaited()
         assert p.spawned == []
 
+    @pytest.mark.security
     async def test_a_remaining_secret_keeps_the_refreshed_run_parked_without_an_agent_step(
         self,
     ) -> None:
@@ -448,6 +449,7 @@ class TestSecretRequests:
         p.runner.answer.assert_not_awaited()
         assert p.spawned == []
 
+    @pytest.mark.security
     @pytest.mark.parametrize("surface", ["web", "slack"])
     async def test_the_last_secret_returns_its_segment_and_retains_the_channel_handback(
         self, surface: str
@@ -482,6 +484,7 @@ class TestSecretRequests:
             p.settle_open.assert_not_awaited()
         assert p.spawned == []
 
+    @pytest.mark.security
     async def test_declining_a_secret_returns_the_recorded_decision_without_resuming(self) -> None:
         request_id = uuid.uuid4()
         with _Patched(_run("web")) as p:

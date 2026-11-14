@@ -284,6 +284,7 @@ async def test_unexpected_storage_errors_propagate_after_the_transaction_closes(
     assert boundary.events == ["opened", "closed"]
 
 
+@pytest.mark.security
 def test_instructions_explain_storage_visibility_and_secret_boundaries(
     boundary: ToolBoundary,
 ) -> None:

@@ -50,7 +50,7 @@ async def client(mock_redis: MagicMock, mock_db_session) -> AsyncGenerator[Async
     service.issue_magic_link_token = AsyncMock(return_value=None)
     service.consume_magic_link_token = AsyncMock(return_value=(_User(), None))
     sessions = MagicMock()
-    sessions.create_session = AsyncMock()
+    sessions.issue_tokens = AsyncMock(return_value=("access-token", "refresh-token"))
     app.dependency_overrides[get_user_service] = lambda: service
     app.dependency_overrides[get_session_service] = lambda: sessions
     app.dependency_overrides[get_redis] = lambda: mock_redis
