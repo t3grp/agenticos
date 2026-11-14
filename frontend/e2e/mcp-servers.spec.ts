@@ -23,6 +23,17 @@ test.use({ storageState: AUTH_STATE });
 /** Servers every deployment ships. */
 const CATALOG = ["GitHub", "PostgreSQL", "Notion", "Sentry"];
 
+/**
+ * A public-registry entry may use the same name as a curated server. The
+ * Registry badge marks an entry the deployment has not reviewed; these
+ * assertions are about the curated catalog that every deployment ships.
+ */
+function curatedServer(page: Page, name: string) {
+  return page
+    .getByRole("group", { name, exact: true })
+    .filter({ hasNot: page.getByText("Registry", { exact: true }) });
+}
+
 /** Legacy links reach Connections; its MCP tab holds the server catalog. */
 async function openMcpServers(page: Page, path = "/mcp-servers") {
   await page.goto(path);
@@ -55,7 +66,8 @@ test.describe("MCP servers", () => {
 
     for (const server of CATALOG) {
       await page.getByRole("textbox", { name: "Search servers…" }).fill(server);
-      const card = page.getByRole("group", { name: server, exact: true });
+      const card = curatedServer(page, server);
+      await expect(card, `${server} should have one curated catalog entry`).toHaveCount(1);
       await expect(card, `${server} should be in the catalog`).toBeVisible();
       // Every card has the same foot whatever its state: where it stands, and
       // the verb that connects it. The category, the address and the auth it
@@ -99,8 +111,7 @@ test.describe("MCP servers", () => {
 
     // A baked full-colour logo where the catalog has one, a brand glyph where
     // it does not: either way the mark is the first image on the card.
-    const mark = (server: string) =>
-      page.getByRole("group", { name: server }).locator("img, svg").first();
+    const mark = (server: string) => curatedServer(page, server).locator("img, svg").first();
 
     await expect(mark("GitHub")).toBeAttached();
     await expect(mark("Sentry")).toBeAttached();
@@ -125,9 +136,9 @@ test.describe("MCP servers", () => {
 
     // Asserted against a catalog that is on screen. Absence on a page that
     // failed to load is not a finding, it is an accident.
-    const github = page.getByRole("group", { name: "GitHub" });
+    const github = curatedServer(page, "GitHub");
     await expect(github).toBeVisible();
-    await expect(github.getByRole("button", { name: "Connect" }).first()).toBeVisible();
+    await expect(github.getByRole("button", { name: "Connect", exact: true })).toBeVisible();
 
     // And nothing links out to the page this one replaced.
     await expect(page.getByRole("link", { name: /Settings . Integrations/ })).toHaveCount(0);
@@ -136,7 +147,7 @@ test.describe("MCP servers", () => {
   test("the old settings route still lands somewhere", async ({ page }) => {
     // Bookmarks and in-flight links outlive a navigation change.
     await openMcpServers(page, "/settings/integrations");
-    await expect(page.getByRole("group", { name: "GitHub", exact: true })).toBeVisible();
+    await expect(curatedServer(page, "GitHub")).toBeVisible();
   });
 
   test("no credential reaches the page", async ({ page }) => {
