@@ -574,10 +574,23 @@ send or paste elsewhere - an e-mail, a reply, a post - as a card in its answer. 
 part has its own copy icon, which copies plain text; several variants of one draft
 are tabs in the same card. A message's own **Copy** includes its drafts.
 
+**Browser, Computer and Files.** The controls on the right of each chat open a
+Browser, Computer or Files panel. Browser and Computer can be opened before the
+agent has used them; opening an empty panel starts no run or hosted session.
+Enter the website address in Browser before starting it. If
+the selected agent has the corresponding hosted capability and you may run it,
+an explicit start action asks it to open the browser or take a desktop screenshot.
+Otherwise the panel explains what is unavailable. The agent's published settings
+and access controls still apply.
+
+Browser and Computer views stay separate. Panels start closed; closing one keeps
+it closed as new tool results arrive. On narrow screens the selected panel fills
+the screen. After a run, a completed image is labelled **Last view**; it is not a
+live desktop. Request a new screenshot to update a Computer view.
+
 **Watching a browse.** The [web browser](reference/capabilities.md#browser-automation)
-opens automatically in a full-height side panel while the transcript scrolls.
-On narrow screens it opens full screen. Closing the panel leaves a compact link
-in the conversation to reopen it. Visited-page cards show the site icon, domain
+appears in its own panel beside the transcript. Visited-page cards reopen the
+Browser panel and show the site icon, domain
 and page title, including when the conversation is reopened. Each answer keeps
 one card per browser tab; clicks, rereads and going back update that card.
 The panel's tab strip switches between pages. After the run, the last image remains. **Resume session** asks the

@@ -1,5 +1,5 @@
 ---
-source_sha: "c7783da0b195"
+source_sha: "965793cc1a4b"
 ---
 
 # Die Konsole { #the-console }
@@ -346,9 +346,22 @@ Auf einem Smartphone gibt es keine Sprechblase - sie würde die Seite verdecken,
 Freigaben, die sie schon genannt hat, bleiben für den Rest des Browser-Tabs
 genannt, auch wenn ein Link die Konsole neu lädt.
 
-Sein Fenster ist der Chat der Konsole selbst, keine Seite in der Seite, und öffnet
-sich mit vier Kacheln, sodass die erste Nachricht ein Klick ist; es führt einen
-eigenen Verlauf. Auf dem Telefon füllt es den Bildschirm.
+Sein Fenster verwendet den Chat der Konsole und startet mit dem Hauptassistenten.
+Über die Agent-Auswahl in der Kopfzeile wählen Sie einen veröffentlichten Agent,
+den Sie ausführen dürfen. Ein Wechsel des Agents behält die aktuelle Unterhaltung;
+Kopfzeile und Verlauf folgen der Auswahl. Die Begrüßungskacheln des Architect
+erscheinen nur, wenn der Hauptassistent ausgewählt ist. Auf dem Telefon füllt das
+Fenster den Bildschirm.
+
+Jede neue Frage enthält frischen strukturierten Kontext zur aktuellen Konsolenseite,
+solange der Seitenkontext aktiviert ist. Das Fenster zeigt, welche Seite geteilt
+wird, und lässt Sie die Freigabe ausschalten.
+
+Eine Frage in der Warteschlange oder das Wiederholen einer abgelehnten Übermittlung
+behält den beim Absenden gewählten Seitenkontext und Agent. Eine neue Frage oder
+neu erzeugte Antwort verwendet die aktuelle Seite und den aktuellen Agent. Ein
+Wechsel des Kontos oder der Organisation setzt Unterhaltung, Agent-Auswahl und
+Seitenkontext-Einstellung des Fensters zurück.
 
 Nennt er eine Seite, öffnet der Link sie in der Konsole hinter dem Fenster und
 zeigt auf das gemeinte Bedienelement — die Schaltfläche, die einen Agent anlegt,
@@ -356,7 +369,7 @@ den Reiter mit den Freigaben. Die Kamera in seiner Kopfzeile zeigt ihm die Seite
 auf der Sie sind: Der Browser fragt, welchen Tab Sie teilen, und ein Bild hängt
 an Ihrer nächsten Nachricht.
 
-Längere Aufgaben plant er als Checkliste, die Sie
+Der Architect plant längere Aufgaben als Checkliste, die Sie
 verfolgen können, er merkt sich Notizen über Sie zwischen Unterhaltungen, sagt
 Ihnen, was Ihre Agents kosten, und löscht nur einen versehentlich angelegten
 Agent-Entwurf und eine Routine, deren Entfernen Sie verlangen. Neben Freigaben und einer leeren
@@ -632,11 +645,26 @@ als Karte in seiner Antwort. Jeder Teil hat ein eigenes Kopiersymbol, das reinen
 kopiert; mehrere Varianten eines Entwurfs sind Tabs in derselben Karte. Das eigene
 **Kopieren** einer Nachricht enthält auch ihre Entwürfe.
 
+**Browser, Computer und Dateien (Files).** Die Schaltflächen rechts in jedem Chat
+öffnen das Panel Browser, Computer oder Dateien. Browser und Computer lassen sich
+bereits öffnen, bevor der Agent sie verwendet hat. Das Öffnen eines leeren Panels
+startet weder einen Run noch eine gehostete Sitzung. Geben Sie im Browser-Panel
+zuerst die Website-Adresse ein. Hat der ausgewählte Agent die
+entsprechende gehostete Capability und dürfen Sie ihn ausführen, bittet eine
+ausdrückliche Startaktion ihn, den Browser zu öffnen oder ein Desktop-Bild
+aufzunehmen. Andernfalls erklärt das Panel, was nicht verfügbar ist. Die
+veröffentlichten Einstellungen und Zugriffskontrollen des Agents gelten weiterhin.
+
+Browser- und Computer-Ansichten bleiben getrennt. Panels sind zunächst geschlossen;
+ein geschlossenes Panel bleibt auch bei neuen Werkzeugergebnissen geschlossen. Auf
+schmalen Bildschirmen füllt das ausgewählte Panel den Bildschirm. Nach einem Run
+kennzeichnet **Letzte Ansicht (Last view)** das abgeschlossene Bild; es ist kein
+Live-Desktop. Fordern Sie ein neues Bildschirmfoto an, um eine Computer-Ansicht zu
+aktualisieren.
+
 **Einem Durchlauf zusehen.** Der [Webbrowser](reference/capabilities.md#browser-automation)
-öffnet sich automatisch in einem Panel in voller Höhe neben dem Gespräch.
-Auf schmalen Bildschirmen nutzt er das Vollbild. Nach dem Schließen bleibt
-ein kompakter Link im Gespräch, um das Panel erneut zu öffnen. Karten besuchter
-Seiten zeigen das Website-Symbol, die Domain und den Seitentitel, auch nach dem
+erscheint in seinem eigenen Panel neben dem Gespräch. Karten besuchter Seiten
+öffnen das Browser-Panel erneut und zeigen das Website-Symbol, die Domain und den Seitentitel, auch nach dem
 erneuten Öffnen des Gesprächs. Jede Antwort behält eine Karte pro Browser-Tab;
 Klicks, erneutes Lesen und Zurückgehen aktualisieren diese Karte.
 Die Tableiste im Panel wechselt zwischen den Seiten. Nach dem Lauf bleibt das letzte Bild. **Sitzung fortsetzen** bittet den

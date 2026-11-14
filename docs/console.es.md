@@ -1,5 +1,5 @@
 ---
-source_sha: "c7783da0b195"
+source_sha: "965793cc1a4b"
 ---
 
 # La consola { #the-console }
@@ -332,9 +332,21 @@ En un teléfono no hay bocadillo - taparía la página de la que habla - y el bo
 lleva el punto en su lugar. Las aprobaciones que ya mencionó siguen mencionadas
 durante el resto de la pestaña, aunque un enlace recargue la consola.
 
-Su ventana es el propio chat de la consola, no una página dentro de la página, y
-se abre con cuatro mosaicos, para que el primer mensaje sea un clic; guarda su
-propio historial de conversaciones. En un teléfono ocupa toda la pantalla.
+Su ventana usa el chat de la consola y empieza con el asistente principal
+seleccionado. Usa el selector del encabezado para elegir un agent publicado que
+puedas ejecutar. Cambiar de agent conserva la conversación actual; el encabezado
+y el historial siguen la selección. Los mosaicos de bienvenida de Architect solo
+aparecen cuando está seleccionado el asistente principal. En un teléfono, la
+ventana ocupa toda la pantalla.
+
+Cada pregunta nueva incluye contexto estructurado actualizado sobre la página
+actual de la consola mientras el contexto de página esté activado. La ventana
+muestra qué página se compartirá y permite desactivar el uso compartido.
+
+Una pregunta en cola o el reintento de un envío rechazado conserva el contexto de
+página y el agent elegidos al enviarla. Una pregunta nueva o una respuesta regenerada
+usa la página y el agent actuales. Cambiar de cuenta u organización restablece la
+conversación de la ventana, la selección del agent y la opción de contexto de página.
 
 Cuando nombra una página, el enlace la abre en la consola detrás de la ventana y
 señala el control al que se refiere — el botón que crea un agent, la pestaña de
@@ -342,7 +354,7 @@ aprobaciones. La cámara de su cabecera le muestra la página en la que estás: 
 navegador pregunta qué pestaña compartir y una imagen se adjunta a tu próximo
 mensaje.
 
-Planifica los trabajos largos como una lista que puedes seguir, guarda
+Architect planifica los trabajos largos como una lista que puedes seguir, guarda
 notas sobre ti entre conversaciones, te dice cuánto cuestan tus agents y solo
 borra un borrador de agent que creó por error y una rutina que le pidas quitar.
 Además de las
@@ -601,11 +613,25 @@ publicación - como una tarjeta en su respuesta. Cada parte tiene su propio icon
 copiar, que copia texto plano; varias variantes de un borrador son pestañas en la
 misma tarjeta. El **Copiar** propio de un mensaje incluye también sus borradores.
 
+**Navegador (Browser), Equipo (Computer) y Archivos (Files).** Los controles a la
+derecha de cada chat abren un panel de navegador, equipo o archivos. Puedes abrir
+los paneles de navegador y equipo antes de que el agent los use. Abrir un panel
+vacío no inicia ningún run ni sesión alojada. Introduce la dirección de la página
+en el panel Navegador antes de iniciarlo. Si el agent seleccionado tiene la
+capability alojada correspondiente y puedes ejecutarlo, una acción explícita de
+inicio le pide que abra el navegador o capture el escritorio. De lo contrario,
+el panel explica qué no está disponible. Siguen vigentes la configuración
+publicada y los controles de acceso del agent.
+
+Las vistas de navegador y equipo permanecen separadas. Los paneles empiezan
+cerrados; al cerrar uno, permanece cerrado cuando llegan nuevos resultados de
+herramientas. En pantallas estrechas, el panel seleccionado ocupa toda la pantalla.
+Tras un run, la imagen terminada lleva la etiqueta **Última vista (Last view)**;
+no es un escritorio en directo. Pide otra captura para actualizar la vista del equipo.
+
 **Ver un recorrido.** El [navegador web](reference/capabilities.md#browser-automation)
-se abre automáticamente en un panel lateral a toda altura junto al chat.
-En pantallas estrechas ocupa toda la pantalla. Al cerrar el panel queda
-un enlace compacto en la conversación para volver a abrirlo. Las tarjetas de
-páginas visitadas muestran el icono del sitio, el dominio y el título, también
+aparece en su propio panel junto al chat. Las tarjetas de páginas visitadas
+vuelven a abrir el panel del navegador y muestran el icono del sitio, el dominio y el título, también
 al volver a abrir la conversación. Cada respuesta conserva una tarjeta por pestaña
 del navegador; los clics, las nuevas lecturas y volver atrás actualizan esa tarjeta.
 La barra de pestañas del panel cambia de página. Al terminar queda la última imagen. **Reanudar sesión** pide al

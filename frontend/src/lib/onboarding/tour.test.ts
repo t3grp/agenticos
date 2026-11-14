@@ -254,6 +254,7 @@ describe("stepsForPage", () => {
       "chat-start",
       "chat-agent-picker",
       "chat-composer",
+      "chat-workspace",
       "chat-local-skills",
       "chat-coding-accounts",
       "chat-local-coding",

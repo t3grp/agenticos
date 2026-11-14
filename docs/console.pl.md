@@ -1,5 +1,5 @@
 ---
-source_sha: "c7783da0b195"
+source_sha: "965793cc1a4b"
 ---
 
 # Konsola { #the-console }
@@ -322,9 +322,20 @@ Na telefonie dymka nie ma - zasłaniałby stronę, o której mówi - a przycisk 
 zamiast niego kropkę. Akceptacje, o których już powiedział, zostają powiedziane do
 końca karty przeglądarki, nawet gdy link przeładuje konsolę.
 
-Okno to ten sam czat co w konsoli, a nie strona osadzona w stronie. Otwiera się
-na czterech kafelkach, więc pierwsza wiadomość to jedno kliknięcie, i ma własną
-historię rozmów. Na telefonie zajmuje cały ekran.
+Okno używa chatu konsoli i zaczyna z wybranym głównym asystentem. Wybierak agenta
+w nagłówku pozwala wybrać opublikowanego agenta, którego możesz uruchomić. Zmiana
+agenta zachowuje bieżącą rozmowę; nagłówek i historia podążają za wyborem. Kafelki
+powitalne Architecta pojawiają się tylko po wybraniu głównego asystenta. Na telefonie
+okno zajmuje cały ekran.
+
+Każde nowe pytanie zawiera świeży, uporządkowany kontekst bieżącej strony konsoli,
+gdy kontekst strony jest włączony. Okno pokazuje, która strona zostanie udostępniona,
+i pozwala wyłączyć udostępnianie.
+
+Pytanie w kolejce lub ponowienie odrzuconego wysłania zachowuje kontekst strony i
+agenta wybranych w chwili wysłania. Nowe pytanie lub ponownie wygenerowana odpowiedź
+korzysta z bieżącej strony i bieżącego agenta. Zmiana konta lub organizacji resetuje
+rozmowę okna, wybór agenta i ustawienie kontekstu strony.
 
 Gdy wskazuje stronę, link otwiera się w konsoli za oknem i podświetla kontrolkę,
 o którą chodzi — przycisk tworzący agenta, zakładkę z akceptacjami. Aparat w
@@ -332,7 +343,7 @@ nagłówku okna pokazuje mu stronę, na której jesteś: przeglądarka pyta, kt�
 kartę udostępnić, a jedno zdjęcie trafia jako załącznik do twojej następnej
 wiadomości.
 
-Dłuższe zadania planuje jako listę kroków, którą widać na bieżąco,
+Architect planuje dłuższe zadania jako listę kroków, którą widać na bieżąco,
 zapamiętuje notatki o tobie między rozmowami, powie, ile kosztują twoi agenci, i
 usuwa tylko draft agenta, który utworzył przez pomyłkę, oraz rutynę, o której
 usunięcie poprosisz. Oprócz
@@ -583,10 +594,25 @@ jako kartę w swojej odpowiedzi. Każda część ma własną ikonę kopiowania, 
 kopiuje zwykły tekst; kilka wariantów jednej wersji roboczej to zakładki w jednej
 karcie. Własne **Kopiuj** wiadomości obejmuje też jej wersje robocze.
 
+**Przeglądarka (Browser), Komputer (Computer) i Pliki (Files).** Przyciski po prawej
+stronie każdego chatu otwierają panel przeglądarki, komputera lub plików. Panele
+przeglądarki i komputera można otworzyć, zanim agent ich użyje. Otwarcie pustego
+panelu nie uruchamia runu ani hostowanej sesji. Przed uruchomieniem przeglądarki
+wpisz adres strony. Jeśli wybrany agent ma odpowiednią
+hostowaną capability i możesz go uruchomić, osobna akcja rozpoczęcia prosi go o
+otwarcie przeglądarki lub wykonanie zrzutu pulpitu. W przeciwnym razie panel
+wyjaśnia, co jest niedostępne. Opublikowane ustawienia agenta i kontrola dostępu
+nadal obowiązują.
+
+Widoki przeglądarki i komputera pozostają oddzielne. Panele są początkowo zamknięte;
+zamknięty panel pozostaje zamknięty także po nadejściu nowych wyników narzędzi. Na
+wąskich ekranach wybrany panel zajmuje cały ekran. Po zakończeniu runu obraz ma
+oznaczenie **Ostatni widok (Last view)**; nie jest to pulpit na żywo. Poproś o nowy
+zrzut ekranu, aby odświeżyć widok komputera.
+
 **Oglądanie przeglądania.** [Przeglądarka](reference/capabilities.md#browser-automation)
-otwiera się automatycznie w pełnym panelu obok przewijanej rozmowy.
-Na wąskim ekranie zajmuje cały widok. Po zamknięciu panelu zostaje w rozmowie
-mały przycisk do ponownego otwarcia. Karty odwiedzonych stron pokazują ikonę,
+pojawia się we własnym panelu obok rozmowy. Karty odwiedzonych stron otwierają
+ponownie panel przeglądarki i pokazują ikonę,
 domenę i tytuł, także po ponownym otwarciu rozmowy. Każda odpowiedź ma jeden
 kafelek na kartę przeglądarki; kliknięcia, ponowne odczyty i powroty aktualizują ten kafelek. Pasek kart w panelu
 przełącza strony. Po zakończeniu

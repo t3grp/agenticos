@@ -212,6 +212,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   { id: "chat-start", page: ROUTES.CHAT, target: "chat-start", inTour: true },
   { id: "chat-agent-picker", page: ROUTES.CHAT, target: "chat-agent-picker", inTour: true },
   { id: "chat-composer", page: ROUTES.CHAT, target: "chat-composer" },
+  { id: "chat-workspace", page: ROUTES.CHAT, target: "chat-workspace" },
   {
     id: "chat-local-skills",
     page: ROUTES.CHAT,
