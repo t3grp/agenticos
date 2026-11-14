@@ -1,5 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +17,7 @@ import { apiClient } from "@/lib/api-client";
 import { announceChange } from "@/lib/live-updates";
 import { qk } from "@/lib/query-keys";
 import { useBrowserPanelStore } from "@/stores/browser-panel-store";
+import { useChatAgentSettings } from "@/hooks/use-chat-agent-settings";
 import type { AgentDetail, AgentSpec } from "@/types/agents";
 
 vi.mock("@/lib/api-client", async () => ({
@@ -128,7 +137,64 @@ function mount(overrides: Partial<React.ComponentProps<typeof ChatAgentSettingsP
   };
 }
 
+function mountEditor(readOnly = false) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return renderHook(() => useChatAgentSettings("agent-a", readOnly), {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+}
+
 describe("agent settings beside the chat", () => {
+  it("refuses changes and save requests when the editor is read-only", async () => {
+    const { result } = mountEditor(true);
+    await waitFor(() => expect(result.current.spec?.name).toBe("agent-a"));
+    act(() => result.current.update({ name: "Refused edit" }));
+    await expect(result.current.save()).resolves.toBe(false);
+    expect(result.current.spec?.name).toBe("agent-a");
+    expect(apiClient.put).not.toHaveBeenCalled();
+  });
+
+  it("preserves the submitted draft when late controls try to edit or discard during a save", async () => {
+    let finish!: (value: AgentDetail) => void;
+    vi.mocked(apiClient.put).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { result } = mountEditor();
+    await waitFor(() => expect(result.current.spec?.name).toBe("agent-a"));
+    act(() => result.current.update({ name: "Submitted draft" }));
+    let saving!: Promise<boolean>;
+    act(() => {
+      saving = result.current.save();
+    });
+    await waitFor(() => expect(result.current.saveDraft.isPending).toBe(true));
+    act(() => {
+      result.current.update({ name: "Late edit" });
+      result.current.reset();
+    });
+    expect(result.current.spec?.name).toBe("Submitted draft");
+    expect(apiClient.put).toHaveBeenCalledExactlyOnceWith("/agents/agent-a/draft", {
+      spec: expect.objectContaining({ name: "Submitted draft" }),
+    });
+    await act(async () => {
+      records["agent-a"] = {
+        ...records["agent-a"]!,
+        name: "Submitted draft",
+        draft_spec: result.current.spec!,
+      };
+      finish(records["agent-a"]!);
+      expect(await saving).toBe(true);
+    });
+    await waitFor(() => expect(result.current.dirty).toBe(false));
+    expect(result.current.spec?.name).toBe("Submitted draft");
+  });
+
   it("loads only when opened and opens settings from the workspace rail without running a tool", async () => {
     mount({ open: false });
     expect(apiClient.get).not.toHaveBeenCalled();
