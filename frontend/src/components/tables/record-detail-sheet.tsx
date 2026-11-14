@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { DocumentProperties } from "./document-properties";
 
 import { ColumnTypeIcon } from "./column-type-icon";
+import { canDeleteRecord, canWriteCell } from "@/lib/table-record-access";
+import { RecordAccessDialog } from "./record-access-dialog";
 
 /**
  * The one editing surface every view type shares: a full-row form, one
@@ -62,6 +64,7 @@ export function RecordDetailSheet({
   const t = useTranslations("tables.sheet");
   const tCells = useTranslations("tables.cells");
   const tErrors = useTranslations("errors");
+  const tAccess = useTranslations("tables.access");
   const locale = useLocale();
   const boolLabel = (value: boolean) => (value ? tCells("true") : tCells("false"));
   const { commit, fetchRecord } = useRecordMutation(tableId);
@@ -96,6 +99,7 @@ export function RecordDetailSheet({
     value: CellValue,
     linkChange?: RecordLinkChange,
   ) {
+    if (!canWriteCell(targetRecord, columnId, canEdit)) return;
     const previous =
       useTableViewStore.getState().conflicts[targetRecord.id]?.[columnId]?.pendingLinkChanges?.[
         columnId
@@ -186,6 +190,7 @@ export function RecordDetailSheet({
    * revision on screen, so a record someone changed meanwhile is kept.
    */
   function deleteRecord(targetRecord: RecordRead) {
+    if (!canDeleteRecord(targetRecord, canEdit)) return;
     setConfirmingDelete(false);
     deleteLater([targetRecord]);
     onOpenChange(false);
@@ -216,6 +221,16 @@ export function RecordDetailSheet({
             />
           </div>
         </SheetHeader>
+        {record && (
+          <div className="flex items-center gap-3 border-b px-5 py-3">
+            {record.access && (
+              <span className="text-muted-foreground text-xs">{tAccess(record.access)}</span>
+            )}
+            {record.can_manage_access && (
+              <RecordAccessDialog tableId={tableId} recordId={record.id} />
+            )}
+          </div>
+        )}
         {record && (
           <div
             className={cn(
@@ -256,7 +271,7 @@ export function RecordDetailSheet({
                       fillEditor={expanded && column.type === "rich_text"}
                       value={value}
                       links={record.links?.[column.id]}
-                      disabled={!canEdit}
+                      disabled={!canWriteCell(record, column.id, canEdit)}
                       onChange={(next, linkChange) =>
                         commitField(record, column.id, next, linkChange)
                       }
@@ -273,6 +288,7 @@ export function RecordDetailSheet({
                             variant="link"
                             size="sm"
                             className="h-auto p-0 text-xs"
+                            disabled={!canWriteCell(record, column.id, canEdit)}
                             onClick={() => {
                               const pending = conflict.pendingValues[column.id] as CellValue;
                               void reloadAndReapply(
@@ -304,7 +320,7 @@ export function RecordDetailSheet({
             {documentIndex < 0 && <DocumentProperties metadata={record} />}
           </div>
         )}
-        {record && canEdit && (
+        {record && canDeleteRecord(record, canEdit) && (
           <div className="border-border mt-auto border-t px-4 py-3">
             <Button
               variant="ghost"

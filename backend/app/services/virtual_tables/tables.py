@@ -7,10 +7,12 @@ from uuid import UUID, uuid4
 
 from pydantic import TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy import ColumnElement
 
 from app.core.audit import record_audit
 from app.core.exceptions import (
     AlreadyExistsError,
+    AppException,
     AuthorizationError,
     BadRequestError,
     NotFoundError,
@@ -54,7 +56,7 @@ from app.services.virtual_tables.exceptions import (
 from app.services.virtual_tables.principals import principal_problems
 from app.services.virtual_tables.quotas import enforce_table_count
 from app.services.virtual_tables.receipts import run_once
-from app.services.virtual_tables.row_policy import parse_policy
+from app.services.virtual_tables.row_policy import parse_policy, view_expression
 from app.services.virtual_tables.schema import SchemaDiff, build_columns, diff
 from app.services.virtual_tables.types import COMPUTED_TYPES, READ_THROUGH_LINK, CellProblem
 
@@ -190,11 +192,33 @@ class TableOperations(Operations):
         # queries for a caller whose role alone does not already reach
         # `TABLES_EDIT` on every one of them.
         editable = await accessible_ids(self.db, ctx, items, Perm.TABLES_EDIT, resource_type=TABLE)
-        # What each holds, the same way: a query for the page, not one per card.
-        records = await virtual_table_repo.record_counts(
-            self.db, organization_id=ctx.organization_id, table_ids=[item.id for item in items]
-        )
         columns = await virtual_table_repo.current_columns(self.db, tables=items)
+        visibility: dict[UUID, ColumnElement[bool] | bool] = {}
+        for item in items:
+            if item.row_policy is None:
+                continue
+            try:
+                extra = await view_expression(
+                    self.db,
+                    ctx,
+                    item,
+                    [ColumnDef.model_validate(column) for column in columns.get(item.id, [])],
+                )
+            except AppException as invalid:
+                if invalid.code != "ROW_POLICY_INVALID":
+                    raise
+                # Keep table metadata repairable without disclosing its restricted total.
+                visibility[item.id] = False
+            else:
+                if extra is not None:
+                    visibility[item.id] = extra
+        # Count the page in one query, applying each restricted table's read predicate.
+        records = await virtual_table_repo.record_counts(
+            self.db,
+            organization_id=ctx.organization_id,
+            table_ids=[item.id for item in items],
+            extra_by_table=visibility,
+        )
         summaries = [
             TableListItem.model_validate(
                 {
@@ -216,11 +240,14 @@ class TableOperations(Operations):
     async def describe_table(self, ctx: AuthContext, table_id: UUID) -> TableRead:
         """One table with the columns of its current schema."""
         table = await self._load_table(ctx, table_id, Perm.TABLES_VIEW)
+        can_edit = await self._can_edit(ctx, table)
         return self._read(
             table,
             await self._columns(table),
-            can_edit=await self._can_edit(ctx, table),
+            can_edit=can_edit,
             can_restore=await self._can_restore(ctx, table),
+            can_manage_row_access=can_edit
+            and await task_repo.for_table(self.db, table.id, ctx.organization_id) is None,
         )
 
     async def table_source(
@@ -468,6 +495,8 @@ class TableOperations(Operations):
         honoured. An archived projects table is accepted: its records stay
         readable, so its membership still resolves.
         """
+        if data.rule == "grants":
+            return
         by_id = {column.id: column for column in columns}
         for field in ("view_column_id", "edit_column_id"):
             column_id = getattr(data, field)
@@ -538,8 +567,9 @@ class TableOperations(Operations):
         the policy first, not to silently break it.
         """
         policy = parse_policy(table.row_policy)
-        if policy is None:
+        if policy is None or policy.rule != "assignee":
             return
+        assert policy.view_column_id is not None and policy.edit_column_id is not None
         driving: dict[UUID, tuple[str, ...]] = {
             policy.view_column_id: ("user", "multi_user"),
             policy.edit_column_id: ("user", "multi_user"),

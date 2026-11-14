@@ -1,5 +1,5 @@
 ---
-source_sha: "7074af14aeab"
+source_sha: "97721edb5d9f"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -135,12 +135,29 @@ lub `max` kolumny liczb - `min` i `max` także dat. Obie są wyliczane przy
 odczycie rekordu i nigdy nie są zapisywane, filtrowane ani sortowane.
 
 To, co pokazuje odczyt, nie sięga dalej niż czytelnik: powiązana tabela, której
-czytelnik nie widzi, zostawia powiązania bez nazw, a każdy odczyt i każde
-podsumowanie przez nie puste. Powiązanie zachowuje swoją tabelę na zawsze.
+czytelnik nie widzi, pozostawia powiązania oraz każdy odczyt i podsumowanie puste.
+Obowiązuje też polityka wierszy tabeli docelowej: identyfikatory w `values` i nazwy
+w `links` obejmują tylko dostępne rekordy. Zarchiwizowane pola powiązań są pomijane
+w zwracanych wartościach. Powiązanie zachowuje swoją tabelę na zawsze.
 Odczyt czyta kolumnę z wartościami, nie inne powiązanie ani odczyt, a
 archiwizacja kolumny powiązania jest odrzucana, dopóki czyta przez nią odczyt
 lub podsumowanie. Eksport zapisuje powiązanie nazwami jego rekordów, a odczyt
 tym, co przeczytał.
+
+Filtry powiązań używają tych samych dostępnych rekordów docelowych. `contains`
+nigdy nie dopasowuje niedostępnego ani usuniętego rekordu; `is_null: true` oznacza
+brak dostępnego celu, nawet gdy ukryte powiązania pozostają zapisane. Listy,
+liczniki, eksporty i zapytania stron sprawdzają ten warunek przed paginacją.
+Zwrócona tablica powiązań jest widocznym podzbiorem dla wywołującego. Zastąpienie
+jej przez starszego klienta zachowuje istniejące powiązania, których wywołujący
+nie może odczytać; zmiana innego pola zachowuje wszystkie powiązania.
+
+Nieprawidłowa zapisana polityka wierszy blokuje odczyt i zapis rekordów błędem
+`ROW_POLICY_INVALID` (409), zamiast wyłączać politykę. Uprawnieni użytkownicy nadal
+mogą odczytać metadane tabeli z `row_policy_valid: false`, a uprawniony edytor
+tabeli może naprawić politykę przez `PUT /tables/{id}/row-policy`. Do czasu naprawy
+cel z nieprawidłową polityką nie udostępnia powiązanych rekordów ani dostępu
+dziedziczonego z projektu.
 
 ### Atomowe zmiany powiązań { #atomic-link-changes }
 
@@ -736,6 +753,59 @@ samo jak `Agent.can_run` - więc wiersz katalogu albo strona szczegółów nigdy
 musi zgadywać, czy jej kontrolki edycji zostałyby odrzucone. Własne `can_manage` i
 `can_delete` zapisanego widoku to ta sama idea, o jeden poziom niżej (zobacz
 [Zapisane widoki](#saved-views)).
+
+### Odczyt i zapis pojedynczych wierszy { #row-read-write }
+
+Dostęp do wiersza ma dwa poziomy. **Odczyt (Read)** pokazuje wiersz i widoczne
+powiązane rekordy. **Zapis (Write)** obejmuje odczyt i zmianę zwykłych komórek.
+Sam zapis nie pozwala usuwać wiersza, udostępniać go, zmieniać jego pól dostępu,
+tworzyć rekordów ani zmieniać schematu tabeli. Administratorzy tabeli zachowują
+dotychczasowe prawa. Osoba nadal potrzebuje dostępu do tabeli nadrzędnej; grant do
+wiersza sam nie otwiera innej tabeli ani powiązanego rekordu.
+
+W oknie udostępniania tabeli **Reguły dostępu do wierszy (Row access rules)**
+określają domyślny dostęp:
+
+| Reguła | Odczyt | Zapis |
+|---|---|---|
+| `none` | Każdy, kto może odczytać tabelę | Dotychczasowi edytorzy tabeli i granty zapisu do wiersza |
+| `grants` | Aktualny grant odczytu lub zapisu do wiersza | Aktualny grant zapisu do wiersza |
+| `assignee` | Pole odczytu, pole zapisu, opcjonalne członkostwo projektu lub grant do wiersza | Pole zapisu lub grant zapisu do wiersza |
+
+Właściciel tabeli, role Owner/Admin organizacji i administrator wdrożenia zachowują
+pominięcie polityki. Nadal muszą przejść kontrolę dostępu do tabeli i ograniczeń klucza API.
+W trybie `grants` skonfiguruj granty przed przełączeniem istniejących użytkowników.
+Utworzenie wiersza nadal wymaga administracji tabelą, a nowy wiersz musi być widoczny
+dla twórcy. Zarządzane tablice zadań zachowują własne reguły i nie oferują tych
+kontrolek udostępniania wierszy.
+
+Otwórz wiersz i wybierz **Dostęp do wiersza (Row access)**, aby dodać osobę lub grupę,
+wybrać odczyt lub zapis, ustawić termin wygaśnięcia, zmienić poziom albo odebrać dostęp.
+Granty dla osób mogą być bezterminowe; grupowe domyślnie wygasają po 90 dniach.
+Obowiązują aktualne członkostwa organizacji i grup oraz niewygasłe granty.
+Wygrywa najsilniejszy aktualny grant. Odebranie jednego grantu nie odbiera dostępu
+wynikającego z innego grantu ani reguły tabeli.
+
+Trasy REST znajdują się pod `/tables/{table_id}/records/{record_id}/access`:
+
+- `GET` wyświetla jawne granty administratorowi tabeli, który może odczytać wiersz.
+- `PUT /grants` zapisuje jedno `subject_user_id` lub `subject_group_id`,
+  `level` równy `read` lub `write` i opcjonalne `expires_at`.
+- `DELETE /grants/{subject_user_id}` i
+  `DELETE /group-grants/{subject_group_id}` odbierają wskazany grant.
+
+Ten sam serwis chroni zapis z konsoli, API, agenta i workflow. Granty wierszy trafiają
+do istniejącej tabeli `resource_grants` z typem `table_record`; tylko tam API `write`
+odpowiada zapisanemu `edit`. Nie stają się grantami administracji tabelą.
+Klucz API wymaga zakresu `tables:view` do odczytu i `tables:edit` do zapisu;
+grant nie poszerza klucza. Usunięcie rekordu usuwa jego granty w tej samej transakcji.
+
+Każdy zwracany rekord zawiera `access`, `can_delete`, `can_manage_access` i
+`read_only_column_ids`. Ostatnia lista obejmuje pola sterujące polityką i pola
+członkostwa projektu używane przez inną tabelę. Korzystają z nich komórki siatki,
+panel rekordu i przesunięcia kanban. Listy rekordów, liczniki katalogu, eksport i etykiety
+powiązań stosują tę samą regułę odczytu. Ponowienie zapisu idempotentnego sprawdza
+aktualne prawa, więc zapisane potwierdzenie nie zachowuje odebranego zapisu.
 
 ## Błędy { #errors }
 

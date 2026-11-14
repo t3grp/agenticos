@@ -130,11 +130,27 @@ or `max` of a column of numbers - `min` and `max` also of dates. Both are worked
 out when a record is read and never stored, written, filtered or sorted by.
 
 What a lookup shows goes no further than its reader may: a linked table the
-reader cannot see leaves the links unnamed and every lookup and rollup through
-them empty. A link keeps its table for life. A lookup reads a column holding
+reader cannot see leaves the links and every lookup and rollup through them
+empty. The destination's row policy also applies: both raw link IDs in `values`
+and labels in `links` contain only readable records. Archived link fields are
+omitted from returned values. A link keeps its table for life. A lookup reads a column holding
 values, not another link or lookup, and archiving a link column is refused
 while a lookup or rollup still reads through it. An export writes a link by the
 names of its records, and a lookup by what it read.
+
+Link filters use the same readable destinations. `contains` never matches an
+unreadable or deleted destination; `is_null: true` means no readable destination,
+including when hidden links remain stored. Lists, counts, exports and page queries
+apply this condition before pagination. Treat a returned link array as the
+caller's visible subset. Replacing that array through an older client preserves
+existing links the caller cannot read; unrelated field edits preserve all links.
+
+An invalid stored row policy blocks record reads and writes with
+`ROW_POLICY_INVALID` (409). It never disables the policy. Authorized users can
+still read table metadata, which reports `row_policy_valid: false`, and an
+authorized table editor can repair it through `PUT /tables/{id}/row-policy`.
+A destination with an invalid policy supplies no linked records or inherited
+project access until repaired.
 
 ### Atomic link changes { #atomic-link-changes }
 
@@ -701,6 +717,57 @@ idea, one level down (see [Saved views](#saved-views)).
 
 Another organization's table, and one the caller may not reach, are both a 404. A
 context with no signed-in subject reaches nothing.
+
+### Read and Write on individual rows { #row-read-write }
+
+Row access has two levels. **Read** shows the row and its visible linked records.
+**Write** includes Read and changes to ordinary cells. Write alone does not allow
+deleting a row, sharing it, changing its access fields, creating records, or changing
+the table schema. Existing table administrators retain their existing rights.
+A person still needs access to the parent table; a row grant never opens another
+table or a linked record on its own.
+
+In the table's sharing dialog, **Row access rules** chooses the default:
+
+| Rule | Read access | Write access |
+|---|---|---|
+| `none` | Everyone who can read the table | Existing table editors, plus row Write grants |
+| `grants` | A live Read or Write grant on the row | A live Write grant on the row |
+| `assignee` | The Read field, Write field, optional project membership, or a row grant | The Write field or a row Write grant |
+
+The table owner, organization Owner/Admin roles and deployment administrator retain
+their policy bypass. They must still pass table access and API-key ceilings. In
+`grants` mode, configure grants before switching existing users over. Creating a new
+row still requires table administration and the new row must be visible to its creator.
+Managed task boards keep their board-specific access rules and do not offer these
+row-sharing controls.
+
+Open a row and choose **Row access** to add a member or group, select Read or Write,
+set an optional expiry, change a level, or revoke access. Member grants may be permanent;
+group grants default to 90 days. Effective access uses current organization and group
+membership and unexpired grants. The strongest live grant wins. Revoking one grant
+does not remove access provided by another grant or a table rule.
+
+The REST endpoints live under `/tables/{table_id}/records/{record_id}/access`:
+
+- `GET` lists explicit grants for a table administrator who can read the row.
+- `PUT /grants` upserts one `subject_user_id` or `subject_group_id`, a
+  `level` of `read` or `write`, and optional `expires_at`.
+- `DELETE /grants/{subject_user_id}` and
+  `DELETE /group-grants/{subject_group_id}` revoke the named grant.
+
+The same service protects console, API, agent and workflow writes. Row grants are stored
+in the existing `resource_grants` table under `table_record`; only there, API `write`
+maps to stored `edit`. They never become table administration grants. API keys need the
+`tables:view` scope to read and `tables:edit` to write; a grant cannot widen a key.
+Deleting a record removes its grants in the same transaction.
+
+Every returned record carries `access`, `can_delete`, `can_manage_access` and
+`read_only_column_ids`. The last list includes policy-driving fields and project
+membership fields used by another table. Grid cells, the record sheet and kanban moves
+use these answers. Record lists, catalog counts, exports and linked labels use the same
+read rule. An idempotent write replay checks current authority again, so a saved receipt
+cannot retain a revoked Write permission.
 
 ## Errors { #errors }
 

@@ -8,11 +8,12 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
-from app.core.permissions import AuthContext
-from app.repositories import virtual_table_repo
+from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.permissions import AuthContext, Perm
+from app.db.models.resource_grant import GrantLevel
+from app.repositories import resource_grant_repo, virtual_table_repo
 from app.schemas.virtual_table import ColumnDef, RecordLinkChange, RecordSource, RowPolicy
-from app.services.virtual_tables import records
+from app.services.virtual_tables import record_access, records
 from app.services.virtual_tables.exceptions import (
     ArchivedColumnError,
     InvalidRecordError,
@@ -101,6 +102,9 @@ def linked(monkeypatch):
     monkeypatch.setattr(virtual_table_repo, "add_outbox", outbox)
     monkeypatch.setattr(records.trigger_repo, "has_active", AsyncMock(return_value=True))
     monkeypatch.setattr(records, "resolve_access", AsyncMock(return_value=True))
+    monkeypatch.setattr(record_access, "resolve_access", AsyncMock(return_value=True))
+    monkeypatch.setattr(resource_grant_repo, "record_levels", AsyncMock(return_value={}))
+    monkeypatch.setattr(virtual_table_repo, "referenced_access_columns", AsyncMock(return_value=[]))
     monkeypatch.setattr(records.quotas, "enforce_record_size", AsyncMock())
     monkeypatch.setattr(
         records,
@@ -139,6 +143,43 @@ async def test_a_delta_preserves_hidden_targets_and_writes_one_revision_history_
     state.history.assert_awaited_once()
     assert state.history.await_args.kwargs["revision"] == 2
     state.outbox.assert_awaited_once()
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("changes_access", [False, True])
+async def test_row_write_allows_ordinary_edits_but_not_access_link_deltas(
+    linked, monkeypatch, changes_access
+):
+    state = linked
+
+    async def table_reader(db, ctx, table, permission, **kwargs):
+        return permission != Perm.TABLES_EDIT
+
+    monkeypatch.setattr(record_access, "resolve_access", table_reader)
+    monkeypatch.setattr(
+        resource_grant_repo,
+        "record_levels",
+        AsyncMock(return_value={state.row.id: GrantLevel.EDIT}),
+    )
+    monkeypatch.setattr(
+        virtual_table_repo, "referenced_access_columns", AsyncMock(return_value=[str(LINK)])
+    )
+    change = {LINK: RecordLinkChange(add=[ADDED])} if changes_access else None
+
+    async def write():
+        await state.service._apply(
+            state.ctx, state.source, state.row, {str(TEXT): "After"}, 1, link_changes=change
+        )
+
+    if changes_access:
+        with pytest.raises(AuthorizationError, match="table administration"):
+            await write()
+        state.written.assert_not_awaited()
+        assert state.row.values[str(TEXT)] == "Before"
+    else:
+        await write()
+        assert state.row.values[str(TEXT)] == "After"
+        assert state.row.values[str(LINK)] == [str(HIDDEN), str(VISIBLE)]
 
 
 @pytest.mark.security
