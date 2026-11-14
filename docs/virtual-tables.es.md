@@ -1,5 +1,5 @@
 ---
-source_sha: "96494123ddae"
+source_sha: "661f2b0ab075"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -705,6 +705,60 @@ que `Agent.can_run` - así una fila del catálogo o una página de detalle nunca
 tienen que adivinar si sus controles de edición serían rechazados. El propio
 `can_manage` y `can_delete` de una vista guardada son la misma idea, un nivel más abajo (ver
 [Vistas guardadas](#saved-views)).
+
+### Lectura y escritura de filas individuales { #row-read-write }
+
+El acceso a filas tiene dos niveles. **Read** muestra la fila y sus registros enlazados
+visibles. **Write** incluye Read y cambios en celdas normales. Write por sí solo no
+permite borrar una fila, compartirla, cambiar sus campos de acceso, crear registros ni
+modificar el esquema. Los administradores de la tabla conservan sus derechos.
+La persona sigue necesitando acceso a la tabla superior; un grant de fila por sí solo
+no abre otra tabla ni un registro enlazado.
+
+En el diálogo de uso compartido de la tabla, **Row access rules** establece el valor
+predeterminado:
+
+| Regla | Acceso de lectura | Acceso de escritura |
+|---|---|---|
+| `none` | Todos los que pueden leer la tabla | Los editores actuales de la tabla y los grants Write de fila |
+| `grants` | Un grant Read o Write vigente para la fila | Un grant Write vigente para la fila |
+| `assignee` | El campo Read, el campo Write, la membresía opcional del proyecto o un grant de fila | El campo Write o un grant Write de fila |
+
+El propietario de la tabla, los roles Owner/Admin de la organización y el administrador
+del despliegue conservan su excepción a la política. Siguen sujetos al acceso a la tabla
+y a los límites de la clave API. En modo `grants`, configure los grants antes de cambiar
+a los usuarios existentes. Crear una fila sigue requiriendo administración de la tabla,
+y la fila debe ser visible para su creador. Los tableros de tareas administrados
+conservan sus propias reglas y no ofrecen estos controles.
+
+Abra una fila y elija **Row access** para añadir una persona o grupo, seleccionar Read
+o Write, fijar un vencimiento opcional, cambiar un nivel o revocar acceso. Los grants
+personales pueden ser permanentes; los de grupo vencen por defecto a los 90 días.
+Se aplican las membresías actuales de organización y grupo y los grants no vencidos.
+Prevalece el grant vigente más fuerte. Revocar un grant no elimina el acceso concedido
+por otro grant o por una regla de la tabla.
+
+Los endpoints REST están bajo `/tables/{table_id}/records/{record_id}/access`:
+
+- `GET` lista los grants explícitos para un administrador de tabla que puede leer la fila.
+- `PUT /grants` establece un único `subject_user_id` o `subject_group_id`,
+  un `level` de `read` o `write` y un `expires_at` opcional.
+- `DELETE /grants/{subject_user_id}` y
+  `DELETE /group-grants/{subject_group_id}` revocan el grant indicado.
+
+El mismo servicio protege las escrituras de consola, API, agent y workflow. Los grants
+de fila se guardan en la tabla existente `resource_grants` bajo `table_record`;
+solo allí, el `write` de la API se guarda como `edit`. Nunca se convierte en
+administración de tablas. Las claves API necesitan `tables:view` para leer y
+`tables:edit` para escribir; un grant no amplía la clave. Borrar un registro elimina
+sus grants en la misma transacción.
+
+Cada registro devuelto incluye `access`, `can_delete`, `can_manage_access` y
+`read_only_column_ids`. Esta última lista incluye los campos de política y de membresía
+del proyecto usados por otra tabla. Las celdas, el panel de registro y los movimientos
+kanban usan estas respuestas. Las listas, contadores del catálogo, exportaciones y etiquetas
+enlazadas aplican la misma regla de lectura. Repetir una escritura idempotente comprueba
+los derechos actuales para que un recibo guardado no conserve un permiso Write revocado.
 
 ## Errores { #errors }
 

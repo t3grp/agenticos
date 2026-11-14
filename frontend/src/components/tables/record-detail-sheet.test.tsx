@@ -125,6 +125,29 @@ beforeEach(() => {
 });
 
 describe("RecordDetailSheet", () => {
+  it("lets a row writer edit ordinary cells without delete or sharing controls", () => {
+    renderSheet({
+      canEdit: false,
+      record: { ...record, access: "write", can_delete: false, can_manage_access: false },
+    });
+    expect(screen.getByRole("textbox")).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Delete record" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Row access" })).not.toBeInTheDocument();
+  });
+
+  it("honors an explicit Read result and protected cells over table edit defaults", () => {
+    const { rerender } = renderSheet({ record: { ...record, access: "read", can_delete: false } });
+    expect(screen.getByRole("textbox")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Delete record" })).not.toBeInTheDocument();
+    rerender(
+      sheet({
+        canEdit: false,
+        record: { ...record, access: "write", read_only_column_ids: ["c1"] },
+      }),
+    );
+    expect(screen.getByRole("textbox")).toBeDisabled();
+  });
+
   it("is titled by its first column, and says when it was added and changed", () => {
     const { rerender } = renderSheet({
       record: { ...record, updated_at: "2026-09-24T10:00:00Z" },

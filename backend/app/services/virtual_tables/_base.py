@@ -31,6 +31,7 @@ class Operations:
         lock: bool = False,
         share: bool = False,
         deadline: ReadDeadline | None = None,
+        alternative_perm: Perm | None = None,
     ) -> VirtualTable:
         """The table, if this caller may exercise `perm` on it.
 
@@ -50,9 +51,14 @@ class Operations:
             for_share=share,
         )
         await arm_if_set(self.db, deadline)
-        if table is None or not await resolve_access(
+        allowed = table is not None and await resolve_access(
             self.db, ctx, table, perm, resource_type=TABLE
-        ):
+        )
+        if not allowed and table is not None and alternative_perm is not None:
+            allowed = await resolve_access(
+                self.db, ctx, table, alternative_perm, resource_type=TABLE
+            )
+        if table is None or not allowed:
             raise NotFoundError(message="Table not found", details={"table_id": table_id})
         return table
 
@@ -105,6 +111,7 @@ class Operations:
         *,
         can_edit: bool,
         can_restore: bool = False,
+        can_manage_row_access: bool = False,
     ) -> TableRead:
         return TableRead(
             id=table.id,
@@ -119,6 +126,7 @@ class Operations:
             updated_at=table.updated_at,
             can_edit=can_edit,
             can_restore=can_restore,
+            can_manage_row_access=can_manage_row_access,
             row_policy=parse_policy(table.row_policy),
             columns=columns,
         )

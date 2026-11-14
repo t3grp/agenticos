@@ -88,6 +88,25 @@ beforeEach(() => {
 });
 
 describe("TableGridView", () => {
+  it("allows a row writer to edit ordinary cells while hiding delete selection", () => {
+    renderEditable({
+      canEdit: false,
+      records: [
+        { ...records[0]!, access: "write", can_delete: false, read_only_column_ids: ["c2"] },
+      ],
+    });
+    expect(screen.getByRole("button", { name: "Edit Name" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Edit Tags" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("never selects a Read-only row for bulk deletion", () => {
+    renderEditable({ records: [{ ...records[0]!, access: "read", can_delete: false }] });
+    expect(screen.queryByRole("button", { name: "Edit Name" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.getByRole("checkbox", { name: "Select every row on this page" })).toBeDisabled();
+  });
+
   it("shows system metadata without exposing a cell editor", () => {
     renderEditable({ columns: [...columns, ...TABLE_SYSTEM_COLUMNS] });
     expect(screen.getByRole("columnheader", { name: /^Created$/ })).toBeVisible();
