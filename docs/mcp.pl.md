@@ -1,5 +1,5 @@
 ---
-source_sha: "64b3eac00c71"
+source_sha: "a6eae1ab61a9"
 ---
 
 # MCP — narzędzia, których nikt tutaj nie musi pisać { #mcp-the-tools-nobody-here-has-to-write }
@@ -11,8 +11,8 @@ Organizacja wskazuje serwer, jego narzędzia pojawiają się w Builderze i po na
 stronie nie zmienia się żaden kod.
 
 Wszystko w [katalogu capability](reference/capabilities.md) to kod, który
-napisaliśmy i trzymamy na 100% pokrycia. Wszystko tutaj to URL, który ktoś
-wkleił.
+napisaliśmy i utrzymujemy z 100% pokryciem. Połączenia MCP udostępniają narzędzia
+przez adres URL serwera lub zarządzane połączenie aplikacji.
 
 !!! info "To nie są alternatywy"
 

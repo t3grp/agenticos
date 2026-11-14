@@ -1,5 +1,5 @@
 ---
-source_sha: "64b3eac00c71"
+source_sha: "a6eae1ab61a9"
 ---
 
 # MCP — las herramientas que aquí nadie tiene que escribir { #mcp-the-tools-nobody-here-has-to-write }
@@ -11,8 +11,9 @@ Una organización apunta a un servidor, sus herramientas aparecen en el Builder,
 no cambia ni una línea de código de nuestro lado.
 
 Todo lo que hay en el [catálogo de capabilities](reference/capabilities.md) es
-código que escribimos nosotros y que mantenemos al 100% de cobertura. Todo lo que
-hay aquí es una URL que alguien pegó.
+código que escribimos nosotros y que mantenemos con una cobertura del 100%. Las
+conexiones MCP acceden a las herramientas mediante una URL de servidor o una
+conexión de app gestionada.
 
 !!! info "Las dos cosas no son alternativas"
 
