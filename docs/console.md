@@ -48,6 +48,10 @@ Page headers use the surrounding layout’s spacing once. Cards, sidebar rows, t
 
 Secondary buttons and toolbar filters share a more visible filled surface, full-contrast labels and distinct hover, pressed and open states. The chat model picker follows the same secondary-action styling.
 
+An agent chat's header shows its current model with the provider's icon. Open the model pill to search saved models, switch provider or account, or choose **Use agent's model**. The selection applies to the next message and is remembered for your account in the current organization; it does not edit the agent. A running turn keeps its model. Disconnected connections and models that cannot chat remain visible but cannot be selected. An unreadable model list offers **Retry**. **Controls** beside the message box retains the full model and connection setup.
+
+Changing the header selection requires `connections:manage`, as the existing model controls do. Read-only conversations and people without that permission still see the current model.
+
 Personal settings keep horizontal tabs at the top, including desktop-only pages inside the app. Settings panels show their descriptions directly and use content-sized forms. Account holds password changes and active sessions; the password action sits below the fields.
 
 Profile fields share a row when there is room; **Save changes** is available only after an edit. Capability cards have one settings target and a separate enable switch; settings panels keep examples behind an information icon rather than repeating the gallery illustration.
