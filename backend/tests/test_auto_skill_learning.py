@@ -162,9 +162,7 @@ async def test_a_proposal_without_an_existing_skill_target_is_not_accepted(
     _service: AutoSkillLearningService,
 ) -> None:
     with pytest.raises(NotFoundError, match="Applied skill proposal not found"):
-        await _service.learn(
-            _ctx(), uuid.uuid4(), _proposal(skill_id=None, name="refund-tracking")
-        )
+        await _service.learn(_ctx(), uuid.uuid4(), _proposal(skill_id=None, name="refund-tracking"))
 
     assert _service.skills.create_calls == 0  # type: ignore[attr-defined]
     _service.audit.assert_not_awaited()  # type: ignore[attr-defined]
