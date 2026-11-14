@@ -240,6 +240,7 @@ retranslated is how a stale translation stops being visible.
 | Every component a deployment is made of, and the release SBOM | `docs/reference/components.md` |
 | Threat model, data flow, at-rest, the controls matrix | `docs/security.md` |
 | Skills — format, library, skills vs knowledge | `docs/skills.md` |
+| Browser teaching and site procedural memory proposal | `docs/design/browser-teaching-site-memory.md` (repo only; not implemented) |
 | Context files — standing knowledge bound to agents | `docs/context.md` |
 | Virtual Tables — typed records, schema versions, revisions, idempotent writes, the `/tables` API | `docs/virtual-tables.md` |
 | Agent and team tasks: research and proposal only | `docs/design/agent-tasks.md` (repo only) |
