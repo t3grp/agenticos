@@ -1,5 +1,5 @@
 ---
-source_sha: "ea199724b6c8"
+source_sha: "0396b8e0d8e1"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -144,8 +144,9 @@ Was ein Nachschlagen zeigt, reicht nicht weiter als der Leser darf: Eine
 verknüpfte Tabelle, die der Leser nicht sieht, lässt die Verknüpfungen sowie
 jedes Nachschlagen und jede Zusammenfassung darüber leer. Auch die Zeilenrichtlinie
 des Ziels gilt: IDs in `values` und Namen in `links` enthalten nur lesbare
-Datensätze. Archivierte Verknüpfungsspalten fehlen in den zurückgegebenen Werten. Eine
-Verknüpfung behält ihre Tabelle für immer. Ein Nachschlagen liest eine Spalte
+Datensätze. Archivierte Verknüpfungsspalten fehlen in den zurückgegebenen Werten.
+
+Eine Verknüpfung behält ihre Tabelle für immer. Ein Nachschlagen liest eine Spalte
 mit Werten, keine andere Verknüpfung und kein Nachschlagen, und das Archivieren
 einer Verknüpfungsspalte wird abgelehnt, solange etwas über sie liest. Ein
 Export schreibt eine Verknüpfung mit den Namen ihrer Datensätze und ein

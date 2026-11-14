@@ -1,5 +1,5 @@
 ---
-source_sha: "ea199724b6c8"
+source_sha: "0396b8e0d8e1"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -138,7 +138,9 @@ To, co pokazuje odczyt, nie sięga dalej niż czytelnik: powiązana tabela, któ
 czytelnik nie widzi, pozostawia powiązania oraz każdy odczyt i podsumowanie puste.
 Obowiązuje też polityka wierszy tabeli docelowej: identyfikatory w `values` i nazwy
 w `links` obejmują tylko dostępne rekordy. Zarchiwizowane pola powiązań są pomijane
-w zwracanych wartościach. Powiązanie zachowuje swoją tabelę na zawsze.
+w zwracanych wartościach.
+
+Powiązanie zachowuje swoją tabelę na zawsze.
 Odczyt czyta kolumnę z wartościami, nie inne powiązanie ani odczyt, a
 archiwizacja kolumny powiązania jest odrzucana, dopóki czyta przez nią odczyt
 lub podsumowanie. Eksport zapisuje powiązanie nazwami jego rekordów, a odczyt

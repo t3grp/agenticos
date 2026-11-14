@@ -1506,7 +1506,10 @@ class RecordOperations(Operations):
             readable = await visible_link_ids(self.db, ctx, column.link_table_id, removed)
             hidden = removed - readable
             if hidden:
-                preserved = current + [str(item) for item in old if str(item) in hidden]
+                preserved = current.copy()
+                for position, item in enumerate(old):
+                    if str(item) in hidden:
+                        preserved.insert(min(position, len(preserved)), str(item))
                 try:
                     merged[key] = validate_cell(column, preserved)
                 except CellProblem as problem:

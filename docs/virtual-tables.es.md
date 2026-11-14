@@ -1,5 +1,5 @@
 ---
-source_sha: "ea199724b6c8"
+source_sha: "0396b8e0d8e1"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -141,7 +141,9 @@ Lo que muestra una búsqueda no llega más allá de lo que su lector puede ver: 
 tabla enlazada que el lector no ve deja vacíos los enlaces, las búsquedas y los
 resúmenes. También se aplica la política de filas del destino: los IDs en `values`
 y los nombres en `links` incluyen solo registros legibles. Los campos de enlace
-archivados se omiten de los valores devueltos. Un enlace conserva su tabla para siempre.
+archivados se omiten de los valores devueltos.
+
+Un enlace conserva su tabla para siempre.
 Una búsqueda lee una columna con valores, no otro enlace ni otra búsqueda, y
 archivar una columna de enlace se rechaza mientras algo lea a través de ella. Una
 exportación escribe un enlace con los nombres de sus registros y una búsqueda con
