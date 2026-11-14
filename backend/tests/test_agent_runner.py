@@ -94,8 +94,8 @@ from app.db.models.intercepted_tool_call import InterceptionOutcome, Interceptio
 from app.db.models.skill import Skill
 from app.db.vector_tables import VectorScope
 from app.repositories.group import CappedGroup
-from app.services.agent_registry import UnpublishedCandidate
 from app.services import agent_runner as runner_module
+from app.services.agent_registry import UnpublishedCandidate
 from app.services.agent_runner import (
     ASIDE_PREFIX,
     AgentRunnerService,
@@ -472,7 +472,9 @@ class TestPrepare:
         """
         ctx = _ctx()
         service = AgentRunnerService(_db())
-        agent = MagicMock(id=uuid.uuid4(), current_version_id=uuid.uuid4())
+        agent = MagicMock(
+            id=uuid.uuid4(), current_version_id=uuid.uuid4(), kind="agent", system_key=None
+        )
         spec = AgentSpec(name="Support", model_profile_id=uuid.uuid4(), instructions="Old text.")
         run = MagicMock(id=uuid.uuid4())
 
@@ -7110,6 +7112,7 @@ class TestTellingTheAgentWhichAccountIsWhich:
             refs=[PersonalMcpServerRef(account="personal", catalog_key="notion")],
             user_id=uuid.uuid4(),
             request_connection=AsyncMock(),
+            taken_names={},
         )
 
         assert (

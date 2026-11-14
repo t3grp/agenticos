@@ -162,7 +162,8 @@
          "legal" : "Legal and professional services",
          "manufacturing" : "Manufacturing and logistics",
          "public-sector" : "Public sector and utilities",
-         "software" : "Software teams"
+         "software" : "Software teams",
+         "aerospace" : "Aerospace"
       },
       "industryHint" : "Each arrives as a draft: pick a model, attach what it needs, then publish.",
       "installed" : "{name} created as a draft - pick a model, then publish",
@@ -407,8 +408,8 @@
       "disconnectOwnNamed" : "Disconnect {name}",
       "documentCount" : "{count, plural, =1 {1 document} other {# documents}}",
       "draft" : "Draft",
-      "draftDiffersFromPublished" : "Draft differs from v{version}",
-      "draftDiffersHint" : "The draft is saved. Everything published - channels, widgets, the API - keeps answering with v{version} until you publish.",
+      "draftDiffersFromPublished" : "Draft differs from agent v{version}",
+      "draftDiffersHint" : "The draft is saved and differs from v{version}, the latest published version. Publishing makes it a new version.",
       "duplicate" : "Duplicate",
       "eachPersonsOwnAccount" : "Each person's own account",
       "eachPersonsOwnAccountShort" : "Everyone connects their own; not for API keys, the widget or routines.",
@@ -1025,7 +1026,7 @@
       "unchangedLines" : "{count, plural, =1 {1 unchanged line} other {# unchanged lines}}",
       "unknownAuthor" : "unknown author",
       "unnamedSpecialist" : "Unnamed specialist",
-      "upToDateWithPublished" : "Up to date with v{version}",
+      "upToDateWithPublished" : "Up to date with agent v{version}",
       "updateModel" : "Update model",
       "updateModelHint" : "Saves the new key, endpoint or API on {label}. Everything that uses this model switches with it: every agent, and any collection or scheduled work on it. To leave those as they are, choose “Name it something else” and add a separate model.",
       "updateToLatest" : "Update to latest",
@@ -6981,7 +6982,7 @@
          "privateUpdate" : "There is an update about your work.",
          "questions" : "Agent needs an answer",
          "test" : "Send a test notification",
-         "testBody" : "If you can see this message, macOS delivered the notification.",
+         "testBody" : "If you can see this message, this computer delivered the notification.",
          "testTitle" : "Test notification",
          "title" : "Desktop notifications",
          "unmute" : "Unmute this conversation",
@@ -7052,7 +7053,7 @@
          "askAgentAdmin" : "Ask an administrator to publish or share an agent you can use.",
          "configure" : "Configure",
          "connect" : "Connect",
-         "description" : "What is ready on this Mac and for your account on this server. Enable only what you want to use.",
+         "description" : "What is ready on this computer and for your account on this server. Enable only what you want to use.",
          "desktopOnly" : "Open the desktop app to check its setup.",
          "done" : "Continue",
          "enable" : "Set up",
@@ -7061,7 +7062,7 @@
             "accessibility" : "Accessibility",
             "account" : "Signed-in account",
             "agent" : "An agent you can use",
-            "device" : "Paired computer",
+            "device" : "Linked computer",
             "microphone" : "Microphone",
             "model" : "AI Architect model",
             "notifications" : "Notifications",
@@ -7071,7 +7072,7 @@
          "later" : "Later",
          "link" : "Link",
          "opening" : "Opening your workspace…",
-         "permissionNote" : "These checks capture no screen, audio or clipboard. Permissions are optional and requested only when you click. macOS may require restarting the app after a Screen Recording change.",
+         "permissionNote" : "These checks capture no screen, audio or clipboard. Permissions are optional and requested only when you click. After a Screen Recording permission change, the app may need to restart.",
          "permissionNoteMac" : "These checks capture no screen, audio or clipboard. Permissions are optional and requested only when you click. macOS may require restarting the app after a Screen Recording change.",
          "refresh" : "Check again",
          "requestFailed" : "Could not change the system permission. Open System Settings and check again.",
@@ -7149,9 +7150,9 @@
             "whoHint" : "One of the cast, the face of one of your agents, or a face of your own."
          },
          "device" : {
-            "connected" : "Connected - your agents can work here",
+            "connected" : "Linked - your agents can work here",
             "description" : "Let your own agents work here when you choose \"This computer\" in a chat - in the folder you pick, as the mode you pick allows. Nobody else's runs reach it.",
-            "link" : "Let agents work here",
+            "link" : "Link this computer",
             "linkFailed" : "This computer could not be linked.",
             "live" : "Live",
             "notLinked" : "Not linked",
@@ -7256,7 +7257,7 @@
             "title" : "You're all set"
          },
          "loop" : {
-            "body" : "Approvals arrive as notifications you can answer without opening anything.",
+            "body" : "Approval requests arrive as notifications. To answer most of them there, turn on previews in Settings → Desktop app.",
             "keepRunning" : "Keep running when the window is closed",
             "login" : "Open AgenticOS at login",
             "send" : "Send a test",
@@ -9850,10 +9851,10 @@
       "stateDisabled" : "Disabled",
       "storedEncryptedNeverShown" : "Stored encrypted and never shown again.",
       "theOrganizations" : "The organization's",
-      "toolReadsOnly" : "reads",
+      "toolReadsOnly" : "read-only",
       "toolSelectionSaved" : "Tool selection saved.",
       "toolUnspecified" : "not declared",
-      "toolWrites" : "writes",
+      "toolWrites" : "may change data",
       "tools" : "Tools",
       "toolsFrom" : "Tools from \"{name}\"",
       "toolsSelected" : "{on} of {total} on",
@@ -15340,7 +15341,7 @@
       "visibilityOrg" : "Everyone in the organization",
       "visibilityOrgReaches" : "Everyone in the organization who can view {resource, select, agent {agents} skill {skills} collection {collections} artifact {apps} context {context files} mcp_connection {MCP servers} other {secrets}} at all.",
       "visibilityPrivate" : "Only people with access",
-      "visibilityPrivateReaches" : "Only the people listed above. Nobody else finds this {resource, select, agent {agent} skill {skill} collection {collection} artifact {app} context {context file} mcp_connection {MCP server} other {secret}} in their list - and if it has no owner yet, it becomes yours.",
+      "visibilityPrivateReaches" : "Only the people listed above. Nobody else finds this {resource, select, agent {agent} skill {skill} collection {collection} artifact {app} context {context file} mcp_connection {MCP server} project {project} other {secret}} in their list - and if it has no owner yet, it becomes yours.",
       "visibilityTeam" : "Team (no longer offered)",
       "visibilityTeamReaches" : "Anyone whose role reaches team {resource, select, agent {agents} skill {skills} collection {collections} artifact {apps} context {context files} mcp_connection {MCP servers} other {secrets}}. This organization has no teams - pick one of the two above.",
       "visibilityUpdated" : "Visibility updated"
@@ -16064,7 +16065,8 @@
       "sizeUploadsWhenCreated" : "{size} · uploads when the skill is created",
       "support" : "support",
       "whatSoModelCan" : "What is in it, so the model can decide without loading it",
-      "whoCanUseIt" : "Who can use it"
+      "whoCanUseIt" : "Who can use it",
+      "savedCategory" : "Saved."
    },
    "start" : {
       "administration" : {

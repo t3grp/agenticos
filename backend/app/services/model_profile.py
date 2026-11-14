@@ -33,9 +33,9 @@ from app.core.exceptions import (
     AlreadyExistsError,
     AuthorizationError,
     BadRequestError,
+    ConcurrentChangeError,
     ConfigurationError,
     ExternalServiceError,
-    ConcurrentChangeError,
     InUseError,
     NotFoundError,
 )

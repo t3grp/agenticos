@@ -52,7 +52,7 @@ from app.api.routes.v1 import runs as agent_runs
 from app.api.routes.v1 import stats
 from app.api.routes.v1 import skill_changes
 from app.api.routes.v1 import auto_skill_learning
-from app.api.routes.v1 import context_changes, skill_changes, skill_checks
+from app.api.routes.v1 import context_changes, skill_checks
 from app.api.routes.v1 import workspaces as agent_workspaces
 from app.api.routes.v1 import skills as agent_skills
 from app.api.routes.v1 import artifacts

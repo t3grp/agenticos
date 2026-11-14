@@ -153,7 +153,7 @@
       "browse" : "Szablony agentów",
       "budget" : "{amount} USD / miesiąc",
       "count" : "{count, plural, one {1 agent} few {# agenty} many {# agentów} other {# agentów}}",
-      "description" : "Gotowi agenci według branży. Instalacja tworzy draft, którego kończysz i publikujesz.",
+      "description" : "Gotowi agenci według branży. Instalacja tworzy wersję roboczą, którą możesz dokończyć i opublikować.",
       "industry" : {
          "ecommerce" : "E-commerce i print on demand",
          "finance" : "Finanse i ubezpieczenia",
@@ -162,10 +162,11 @@
          "legal" : "Prawo i doradztwo",
          "manufacturing" : "Produkcja i logistyka",
          "public-sector" : "Sektor publiczny i utilities",
-         "software" : "Zespoły software'owe"
+         "software" : "Zespoły software'owe",
+         "aerospace" : "Lotnictwo i kosmonautyka"
       },
-      "industryHint" : "Każdy przychodzi jako draft: wybierz model, podłącz czego potrzebuje, potem opublikuj.",
-      "installed" : "{name} utworzony jako draft - wybierz model, potem opublikuj",
+      "industryHint" : "Każdy zaczyna jako wersja robocza: wybierz model, podłącz potrzebne usługi, a potem opublikuj.",
+      "installed" : "Utworzono {name} jako wersję roboczą - wybierz model, a potem opublikuj",
       "suggestsMcp" : "Dobrze działa z",
       "title" : "Szablony agentów",
       "use" : "Użyj tego"
@@ -173,7 +174,7 @@
    "agents" : {
       "a2aAuthHint" : "Wywołujący wysyła jako bearer token klucz API organizacji albo token dostępu OAuth z tego wdrożenia, który musi mieć prawo uruchamiać tego agenta.",
       "a2aCardUrl" : "Agent card",
-      "a2aDescription" : "Pozwól agentom z innych systemów wysyłać temu agentowi zadania przez protokół A2A. Każde zadanie to run opublikowanej wersji, z jej budżetem i zatwierdzeniami, widoczny w Activity.",
+      "a2aDescription" : "Pozwól agentom z innych systemów wysyłać temu agentowi zadania przez protokół A2A. Każde zadanie to run opublikowanej wersji, z jej budżetem i zatwierdzeniami, widoczny w Aktywności.",
       "a2aEndpoint" : "Endpoint dla zadań",
       "a2aOff" : "Wyłączone. Włącz, by agent dostał agent card, po którym inne systemy go znajdą.",
       "a2aPublishFirst" : "Najpierw opublikuj agenta: przez A2A udostępniana jest opublikowana wersja.",
@@ -200,10 +201,10 @@
       "addSpecialist" : "Dodaj specjalistę",
       "addStarter" : "Dodaj",
       "addToAgent" : "Dodaj do agenta",
-      "addToAgentHint" : "Wybierz agenta. Zmienia się jego szkic; opublikuj go w Builderze, żeby zmiana zaczęła działać.",
+      "addToAgentHint" : "Wybierz agenta. Zmienia się jego wersja robocza; opublikuj ją w Builderze, żeby zmiana zaczęła działać.",
       "addVariable" : "Dodaj zmienną",
       "addedFirstMessageEach" : "Dodawane do pierwszej wiadomości każdej rozmowy. Nigdy nie zastępuje własnych instrukcji agenta.",
-      "addedToAgent" : "Dodano {name} do szkicu agenta {agent}.",
+      "addedToAgent" : "Dodano {name} do wersji roboczej agenta {agent}.",
       "advancedSettings" : "Ustawienia zaawansowane",
       "agent" : "Agent",
       "agentCount" : "{count, plural, =1 {1 agent} few {# agenty} many {# agentów} other {# agenta}}",
@@ -407,8 +408,8 @@
       "disconnectOwnNamed" : "Odłącz {name}",
       "documentCount" : "{count, plural, =1 {1 dokument} few {# dokumenty} many {# dokumentów} other {# dokumentu}}",
       "draft" : "Wersja robocza",
-      "draftDiffersFromPublished" : "Wersja robocza różni się od v{version}",
-      "draftDiffersHint" : "Wersja robocza jest zapisana. Wszystko, co opublikowane - kanały, widgety, API - nadal odpowiada wersją v{version}, dopóki nie opublikujesz.",
+      "draftDiffersFromPublished" : "Wersja robocza różni się od agenta v{version}",
+      "draftDiffersHint" : "Wersja robocza jest zapisana i różni się od v{version}, ostatniej opublikowanej wersji. Publikacja tworzy nową wersję.",
       "duplicate" : "Duplikuj",
       "eachPersonsOwnAccount" : "Własne konto każdej osoby",
       "eachPersonsOwnAccountShort" : "Każdy łączy własne; nie dla kluczy API, widżetu ani rutyn.",
@@ -890,7 +891,7 @@
       "speechVoicePlaceholder" : "Wybierz głos",
       "staleCollections" : "{count, plural, one {1 kolekcję wiedzy} few {# kolekcje wiedzy} many {# kolekcji wiedzy} other {# kolekcji wiedzy}}",
       "staleContext" : "{count, plural, one {1 plik kontekstu} few {# pliki kontekstu} many {# plików kontekstu} other {# pliku kontekstu}}",
-      "staleReferences" : "Ten szkic wciąż odwołuje się do: {list}, których ta organizacja już nie ma. Publikacja jest odrzucana, dopóki ich nie usuniesz.",
+      "staleReferences" : "Ta wersja robocza wciąż odwołuje się do: {list}, których ta organizacja już nie ma. Publikacja jest odrzucana, dopóki ich nie usuniesz.",
       "staleServers" : "{count, plural, one {1 serwer MCP} few {# serwery MCP} many {# serwerów MCP} other {# serwera MCP}}",
       "staleSkills" : "{count, plural, one {1 skill} few {# skille} many {# skilli} other {# skilla}}",
       "starterIcon" : "Ikona propozycji {number}",
@@ -965,14 +966,14 @@
       "testPanelAsk" : "Zapytaj",
       "testPanelAskBoth" : "Zapytaj oba",
       "testPanelAskBothPlaceholder" : "Zapytaj oba o to samo...",
-      "testPanelChanges" : "Co zmienia szkic",
-      "testPanelChangesTitle" : "Co zmienia szkic",
-      "testPanelChangesWhy" : "Testowany szkic na tle wersji {version}, tej opublikowanej.",
+      "testPanelChanges" : "Co zmienia wersja robocza",
+      "testPanelChangesTitle" : "Co zmienia wersja robocza",
+      "testPanelChangesWhy" : "Testowana wersja robocza na tle opublikowanej wersji {version}.",
       "testPanelClose" : "Zamknij panel testowy",
       "testPanelCompare" : "Porównaj dwa obok siebie",
       "testPanelCompareHint" : "Zapytaj oba chaty z pola poniżej, żeby otrzymały ten sam prompt.",
       "testPanelComparedWith" : "Porównywany z",
-      "testPanelDraft" : "Szkic",
+      "testPanelDraft" : "Wersja robocza",
       "testPanelDraftSaving" : "Zapisywanie ostatniej zmiany - wyślij po zapisaniu, żeby ją przetestować.",
       "testPanelEnvironment" : "{name} (wersja {version})",
       "testPanelNew" : "Nowa rozmowa",
@@ -1024,7 +1025,7 @@
       "unchangedLines" : "{count, plural, =1 {1 niezmieniony wiersz} few {# niezmienione wiersze} many {# niezmienionych wierszy} other {# niezmienionego wiersza}}",
       "unknownAuthor" : "nieznany autor",
       "unnamedSpecialist" : "Specjalista bez nazwy",
-      "upToDateWithPublished" : "Aktualny z v{version}",
+      "upToDateWithPublished" : "Aktualny z agentem v{version}",
       "updateModel" : "Zaktualizuj model",
       "updateModelHint" : "Zapisuje nowy klucz, endpoint lub API w {label}. Wszystko, co używa tego modelu, przełączy się razem z nim: każdy agent oraz każda kolekcja czy zaplanowana praca na nim. Aby zostawić je bez zmian, wybierz „Nazwij to inaczej” i dodaj osobny model.",
       "updateToLatest" : "Zaktualizuj do najnowszej",
@@ -3847,9 +3848,9 @@
          "finished" : "zakończone",
          "openExchanges" : "Otwórz rozmowy z zespołem",
          "openInRunHistory" : "Otwórz w historii runów",
-         "promoteSpecialist" : "Zamień na szkic agenta",
-         "promoteSpecialistDetail" : "Tego specjalistę napisał model i nigdzie nie jest zapisany. Zamień go na szkic agenta, póki ten run jest na ekranie.",
-         "specialistPromoted" : "{name} zamieniony na szkic agenta",
+         "promoteSpecialist" : "Zamień w wersję roboczą agenta",
+         "promoteSpecialistDetail" : "Tego specjalistę napisał model i nigdzie nie jest zapisany. Zamień go w wersję roboczą agenta, póki ten run jest na ekranie.",
+         "specialistPromoted" : "{name} zamieniony w wersję roboczą agenta",
          "stopped" : "zatrzymane",
          "talkedWith" : "Omówione z: {names}",
          "teamAtWork" : "Zespół przy pracy",
@@ -5160,7 +5161,7 @@
       "newContext" : "Nowy plik kontekstu",
       "save" : "Zapisz",
       "savedAgentsCurrent" : "Zapisano. Każdy agent używający tego pliku kontekstu ma już aktualną wersję.",
-      "savingReachesEveryAgent" : "Zapis dociera do każdego agenta powiązanego z tym plikiem przy jego następnym runie. Nie ma szkicu ani kroku publikacji.",
+      "savingReachesEveryAgent" : "Zapis dociera do każdego agenta powiązanego z tym plikiem przy jego następnym runie. Nie ma wersji roboczej ani etapu publikacji.",
       "shownWhenLinked" : "Pokazywany obok nazwy, gdy plik jest linkowany.",
       "textOnlyBinaryElsewhere" : "Tylko tekst. Dokument do przeszukiwania należy do kolekcji wiedzy.",
       "usageForAgent" : "Sposób użycia pliku {name}",
@@ -6961,7 +6962,7 @@
          "privateUpdate" : "Pojawiła się aktualizacja dotycząca Twojej pracy.",
          "questions" : "Agent potrzebuje odpowiedzi",
          "test" : "Wyślij powiadomienie testowe",
-         "testBody" : "Jeśli widzisz tę wiadomość, macOS dostarczył powiadomienie.",
+         "testBody" : "Jeśli widzisz tę wiadomość, ten komputer dostarczył powiadomienie.",
          "testTitle" : "Test powiadomień",
          "title" : "Powiadomienia desktopowe",
          "unmute" : "Włącz powiadomienia tej rozmowy",
@@ -7032,7 +7033,7 @@
          "askAgentAdmin" : "Poproś administratora o opublikowanie lub udostępnienie agenta, z którego możesz korzystać.",
          "configure" : "Skonfiguruj",
          "connect" : "Połącz",
-         "description" : "Stan tego Maca oraz Twojego konta na tym serwerze. Włącz tylko to, z czego chcesz korzystać.",
+         "description" : "Co jest gotowe na tym komputerze i dla Twojego konta na tym serwerze. Włącz tylko to, czego chcesz używać.",
          "desktopOnly" : "Otwórz aplikację desktopową, aby sprawdzić jej konfigurację.",
          "done" : "Kontynuuj",
          "enable" : "Skonfiguruj",
@@ -7041,7 +7042,7 @@
             "accessibility" : "Dostępność",
             "account" : "Zalogowane konto",
             "agent" : "Dostępny agent",
-            "device" : "Sparowany komputer",
+            "device" : "Połączony komputer",
             "microphone" : "Mikrofon",
             "model" : "Model Architekta AI",
             "notifications" : "Powiadomienia",
@@ -7051,7 +7052,7 @@
          "later" : "Później",
          "link" : "Połącz",
          "opening" : "Otwieranie przestrzeni roboczej…",
-         "permissionNote" : "Sprawdzenie nie przechwytuje ekranu, dźwięku ani schowka. Uprawnienia są opcjonalne i wymagają kliknięcia. Po zmianie Nagrywania ekranu macOS może wymagać restartu aplikacji.",
+         "permissionNote" : "Te sprawdzenia nie przechwytują ekranu, dźwięku ani schowka. Uprawnienia są opcjonalne i wymagają kliknięcia. Po zmianie uprawnienia Nagrywania ekranu może być potrzebny restart aplikacji.",
          "permissionNoteMac" : "Sprawdzenie nie przechwytuje ekranu, dźwięku ani schowka. Uprawnienia są opcjonalne i wymagają kliknięcia. Po zmianie Nagrywania ekranu macOS może wymagać restartu aplikacji.",
          "refresh" : "Sprawdź ponownie",
          "requestFailed" : "Nie udało się zmienić uprawnienia systemowego. Otwórz Ustawienia systemowe i sprawdź ponownie.",
@@ -7129,9 +7130,9 @@
             "whoHint" : "Ktoś z obsady, twarz jednego z twoich agentów albo własna twarz."
          },
          "device" : {
-            "connected" : "Połączony - Twoje agenty mogą tu pracować",
+            "connected" : "Połączono - Twoje agenty mogą tu pracować",
             "description" : "Pozwól swoim agentom pracować tutaj, gdy w czacie wybierzesz „Ten komputer” - w wybranym folderze i w trybie, który wybierzesz. Runy innych osób tu nie trafiają.",
-            "link" : "Pozwól agentom tu pracować",
+            "link" : "Połącz ten komputer",
             "linkFailed" : "Nie udało się połączyć tego komputera.",
             "live" : "Na żywo",
             "notLinked" : "Niepołączony",
@@ -7236,7 +7237,7 @@
             "title" : "Wszystko gotowe"
          },
          "loop" : {
-            "body" : "Akceptacje przychodzą jako powiadomienia, na które odpowiesz bez otwierania czegokolwiek.",
+            "body" : "Prośby o zatwierdzenie przychodzą jako powiadomienia. Aby odpowiadać na większość z nich bezpośrednio, włącz podglądy w Ustawieniach → Aplikacja desktopowa.",
             "keepRunning" : "Działaj po zamknięciu okna",
             "login" : "Otwieraj AgenticOS przy logowaniu",
             "send" : "Wyślij testowe",
@@ -9490,10 +9491,10 @@
       "stateDisabled" : "Wyłączone",
       "storedEncryptedNeverShown" : "Zapisane w postaci zaszyfrowanej i nigdy więcej niepokazywane.",
       "theOrganizations" : "Organizacji",
-      "toolReadsOnly" : "czyta",
+      "toolReadsOnly" : "tylko do odczytu",
       "toolSelectionSaved" : "Wybór narzędzi zapisany.",
       "toolUnspecified" : "brak deklaracji",
-      "toolWrites" : "zapisuje",
+      "toolWrites" : "może zmieniać dane",
       "tools" : "Narzędzia",
       "toolsFrom" : "Narzędzia z „{name}”",
       "toolsSelected" : "{on} z {total} włączonych",
@@ -10006,7 +10007,7 @@
             "title" : "Zaprzęgnij go do pracy"
          },
          "agent-editor-fullscreen" : {
-            "body" : "Przycisk powiększania pozwala wygodnie czytać i edytować dokument. Zamknięcie powiększonego edytora zachowuje bieżący szkic.",
+            "body" : "Przycisk powiększania pozwala wygodnie czytać i edytować dokument. Zamknięcie powiększonego edytora zachowuje bieżącą wersję roboczą.",
             "title" : "Powiększ edytor"
          },
          "agent-environment-guards" : {
@@ -10038,7 +10039,7 @@
             "title" : "Każde usprawnienie zapisane"
          },
          "agent-instructions" : {
-            "body" : "Otwórz agenta, a trafisz do kreatora, gdzie składa się go zakładka po zakładce. Build jest pierwsza: instrukcje to jego zachowanie, pisane zwykłym Markdown, nie kodem.",
+            "body" : "Otwórz agenta, a trafisz do kreatora, gdzie składa się go zakładka po zakładce. Budowa jest pierwsza: instrukcje to jego zachowanie, pisane zwykłym Markdown, nie kodem.",
             "title" : "Instrukcje to zachowanie"
          },
          "agent-knowledge" : {
@@ -10062,7 +10063,7 @@
             "title" : "Wybierz mózg"
          },
          "agent-publish" : {
-            "body" : "Nic nie działa, dopóki nie opublikujesz. Publikacja zamraża bieżący szkic jako wersję, i to ta wersja odpowiada wszędzie tam, gdzie agent jest dostępny.",
+            "body" : "Nic nie działa, dopóki nie opublikujesz. Publikacja zamraża bieżącą wersję roboczą jako wersję, która odpowiada wszędzie tam, gdzie agent jest dostępny.",
             "title" : "Opublikuj, żeby go wypuścić"
          },
          "agent-share" : {
@@ -10086,7 +10087,7 @@
             "title" : "Co czyta"
          },
          "agent-test" : {
-            "body" : "Otwiera obok Buildera czat, który odpowiada jako nieopublikowany szkic albo dowolne środowisko. Runy testowe są liczone i rozliczane w budżecie, a w Aktywności są oznaczone.",
+            "body" : "Otwiera obok Buildera czat, który odpowiada jako nieopublikowana wersja robocza albo dowolne środowisko. Runy testowe są liczone i rozliczane w budżecie, a w Aktywności są oznaczone.",
             "title" : "Testuj w trakcie budowania"
          },
          "agent-test-connections" : {
@@ -10118,7 +10119,7 @@
             "title" : "Agenci systemowi"
          },
          "agents-templates" : {
-            "body" : "Dwadzieścia osiem gotowych agentów według branż. Instalacja tworzy szkic z już podpiętymi skillami.",
+            "body" : "Dwadzieścia osiem gotowych agentów według branż. Instalacja tworzy wersję roboczą z już podpiętymi skillami.",
             "title" : "Zacznij od szablonu"
          },
          "app-connections" : {
@@ -10418,7 +10419,7 @@
             "title" : "Pozwól mu działać w platformie (opcjonalnie)"
          },
          "flow-agent-publish" : {
-            "body" : "Agent musi być opublikowany, żeby dało się z nim pisać - szkic nie przyjmuje wiadomości. Kliknij Publish, aby udostępnić tę wersję; przejdziemy dalej w chwili, gdy się opublikuje.",
+            "body" : "Agent musi być opublikowany, żeby dało się z nim pisać - wersja robocza nie przyjmuje wiadomości. Kliknij Publikuj, aby udostępnić tę wersję; przejdziemy dalej w chwili, gdy się opublikuje.",
             "title" : "Opublikuj go"
          },
          "flow-agent-run-pick" : {
@@ -10951,7 +10952,7 @@
             "title" : "Proaktywność"
          },
          "org-proactivity-model" : {
-            "body" : "Wybierz dostawcę, model i klucz z Vault, a potem dodaj profil modelu. Utworzenie profilu zapisuje go od razu; Save stosuje go do nocnych sugestii i obserwacji MCP. Te zadania korzystają z tego modelu niezależnie od agenta startowego AgenticOS widocznego w Activity.",
+            "body" : "Wybierz dostawcę, model i klucz z Vault, a potem dodaj profil modelu. Utworzenie profilu zapisuje go od razu; Save stosuje go do nocnych sugestii i obserwacji MCP. Te zadania korzystają z tego modelu niezależnie od agenta startowego AgenticOS widocznego w Aktywności.",
             "title" : "Wybierz model proaktywności"
          },
          "org-profile" : {
@@ -11055,7 +11056,7 @@
             "title" : "Co działa bez Ciebie"
          },
          "routines-watches" : {
-            "body" : "Obserwacje czytają twoje własne połączone konta według harmonogramu - review czekające na ciebie, przypisane ci issues - i wrzucają to, co nowe, do twojego inboksu. Każdy wiersz mówi, kiedy ostatnio sprawdzała i ile z tego, co znalazła, wciąż czeka.",
+            "body" : "Obserwacje czytają twoje własne połączone konta według harmonogramu - przeglądy czekające na ciebie, przypisane ci issues - i wrzucają to, co nowe, do twojego inboksu. Każdy wiersz mówi, kiedy ostatnio sprawdzała i ile z tego, co znalazła, wciąż czeka.",
             "title" : "Co obserwuje twoje konta"
          },
          "run-detail-input" : {
@@ -11227,7 +11228,7 @@
             "title" : "Pracuj na pełnym ekranie"
          },
          "workflow-input-contract" : {
-            "body" : "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema Draft 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu.",
+            "body" : "Wyzwalacze Ręcznie, API i Wywołany przez workflow obsługują proste pola lub kontrakt JSON Schema 2020-12. Schemat obsługuje zagnieżdżone wartości i jest sprawdzany przed rozpoczęciem runu.",
             "title" : "Określ oczekiwane dane wejściowe"
          },
          "workflow-log-alerts" : {
@@ -11770,7 +11771,7 @@
          "deletePermanently" : "Usuń na stałe",
          "discovery" : "Kategorie i tagi",
          "discoveryHelp" : "Etykiety do odnajdywania tego agenta. Zapisują się od razu i nie są częścią opublikowanego specu, więc zmiana tagów nigdy nie wymaga publikacji. Serwer zamienia je na małe litery, przycina i usuwa duplikaty.",
-         "draftAsStandsWhat" : "Szkic w obecnej postaci: co dociera do tego agenta i po co on sięga. Przerywana ramka to coś, do czego nic nie jest podpięte.",
+         "draftAsStandsWhat" : "Wersja robocza w obecnej postaci: co dociera do tego agenta i po co on sięga. Przerywana ramka to coś, do czego nic nie jest podpięte.",
          "draftAsTested" : "Wersja robocza z chwili testu",
          "duplicate" : "Duplikuj",
          "eachPersonsOwnNamed" : "{name} (własne konto każdej osoby)",
@@ -11790,7 +11791,7 @@
          "howAgentAsksIts" : "Jak ten agent prosi swój model o zachowanie, ponad to, co ustawia już profil modelu. Ustawienie, którego nikt nie ruszał, w ogóle nie jest wysyłane - celowo, nie dla porządku: modele rozumujące odrzucają temperaturę od razu, więc agent, który jej nie wybrał, nie może jej mieć wysłanej w swoim imieniu. Provider, który nie obsługuje ustawienia, je ignoruje. Samo rozumowanie to capability, poniżej.",
          "howManyModelRequests" : "Ile żądań do modelu może zrobić jeden run. Pętla narzędzi trafia na ten limit na długo przed tym, zanim kosztuje dość, by trafić na budget.",
          "identity" : "Nazwa i opis",
-         "identityHelp" : "Zapisywane razem ze szkicem. Zmiana nazwy zachowuje handle @{slug}, więc delegacje i wzmianki, które na niego wskazują, działają dalej.",
+         "identityHelp" : "Zapisywane razem z wersją roboczą. Zmiana nazwy zachowuje handle @{slug}, więc delegacje i wzmianki, które na niego wskazują, działają dalej.",
          "improveFromGaps" : "Popraw tego agenta na podstawie tych braków",
          "improveSession" : "Popraw",
          "inCategoryUse" : "Kategorie już w użyciu",
@@ -14888,7 +14889,7 @@
       "visibilityOrg" : "Wszyscy w organizacji",
       "visibilityOrgReaches" : "Każdy w organizacji, kto w ogóle może przeglądać {resource, select, agent {agentów} skill {skille} collection {kolekcje} artifact {aplikacje} context {pliki kontekstu} mcp_connection {serwery MCP} other {sekrety}}.",
       "visibilityPrivate" : "Tylko osoby z dostępem",
-      "visibilityPrivateReaches" : "Tylko osoby wymienione wyżej. Nikt inny nie znajdzie {resource, select, agent {tego agenta} skill {tego skilla} collection {tej kolekcji} artifact {tej aplikacji} context {tego pliku kontekstu} mcp_connection {tego serwera MCP} other {tego sekretu}} na swojej liście - a jeśli nie ma jeszcze właściciela, właścicielem zostajesz Ty.",
+      "visibilityPrivateReaches" : "Tylko osoby wymienione wyżej. Nikt inny nie znajdzie {resource, select, agent {tego agenta} skill {tego skilla} collection {tej kolekcji} artifact {tej aplikacji} context {tego pliku kontekstu} mcp_connection {tego serwera MCP} project {tego projektu} other {tego sekretu}} na swojej liście - a jeśli nie ma jeszcze właściciela, właścicielem zostajesz Ty.",
       "visibilityTeam" : "Zespół (już nieoferowane)",
       "visibilityTeamReaches" : "Każdy, czyja rola sięga zespołowych {resource, select, agent {agentów} skill {skilli} collection {kolekcji} artifact {aplikacji} context {plików kontekstu} mcp_connection {serwerów MCP} other {sekretów}}. Ta organizacja nie ma zespołów - wybierz jedną z dwóch powyżej.",
       "visibilityUpdated" : "Widoczność zaktualizowana"
@@ -15612,7 +15613,8 @@
       "sizeUploadsWhenCreated" : "{size} · zostanie przesłany przy tworzeniu skilla",
       "support" : "support",
       "whatSoModelCan" : "Co w nim jest, żeby model mógł zdecydować bez wczytywania go",
-      "whoCanUseIt" : "Kto może z tego korzystać"
+      "whoCanUseIt" : "Kto może z tego korzystać",
+      "savedCategory" : "Zapisano."
    },
    "start" : {
       "administration" : {
@@ -15946,7 +15948,7 @@
    },
    "steps" : {
       "agents-templates" : {
-         "body" : "Dwadzieścia osiem gotowych agentów według branży. Instalacja tworzy draft z już podpiętymi skillami.",
+         "body" : "Dwadzieścia osiem gotowych agentów według branży. Instalacja tworzy wersję roboczą z już podpiętymi skillami.",
          "title" : "Zacznij od szablonu"
       },
       "skills-gallery" : {
@@ -16875,7 +16877,7 @@
       "removed" : "Wyzwalacz usunięty",
       "repeat" : "Powtarzaj",
       "resultInbox" : "Tylko gdy coś wymaga uwagi",
-      "resultInboxHint" : "Utwórz jedną sprawę w Inbox i rozmowę na element źródłowy. Umieść tam zamówiony draft; sprawdzenia bez zmian pozostają ciche. Wysyłka nadal wymaga odpowiednich uprawnień i zgody.",
+      "resultInboxHint" : "Utwórz jedną sprawę w Inbox i rozmowę na element źródłowy. Umieść tam zamówioną wersję roboczą; sprawdzenia bez zmian pozostają ciche. Wysyłka nadal wymaga odpowiednich uprawnień i zgody.",
       "resultMode" : "Kiedy przekazywać wyniki",
       "resultReport" : "Po każdym zakończonym wykonaniu",
       "resultReportHint" : "Po każdym wykonaniu przekaż raport do wybranej rozmowy.",

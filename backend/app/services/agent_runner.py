@@ -197,7 +197,6 @@ from app.agents.capabilities.sandbox import (
 )
 from app.agents.capabilities.sandbox._identity import SessionScope
 from app.agents.capabilities.sandbox._recording import RecordingWorkspace
-from app.agents.capabilities.sol_loop import SolLoopConfig
 from app.agents.capabilities.skills import (
     SKILL_BODIES_RESOURCE,
     SKILL_USE_LOG_RESOURCE,
@@ -206,6 +205,7 @@ from app.agents.capabilities.skills import (
     served_skills,
     tool_identities,
 )
+from app.agents.capabilities.sol_loop import SolLoopConfig
 from app.agents.capabilities.subagents import SubagentsConfig, acting_delegate
 from app.agents.capabilities.tool_output_limits import SPILL_LOG_RESOURCE
 from app.agents.code_checkpoint import CodeCheckpoint

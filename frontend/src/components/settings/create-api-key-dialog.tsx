@@ -154,8 +154,7 @@ export function CreateApiKeyDialog({
                     value={expiry}
                     disabled={busy}
                     onValueChange={(value) => {
-                      if (value === "30" || value === "90" || value === "365" || value === "never")
-                        setExpiry(value);
+                      if (value === "30" || value === "90") setExpiry(value);
                     }}
                   >
                     <SelectTrigger id="api-key-expiry">

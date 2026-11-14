@@ -147,12 +147,6 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: FlaskConical,
         permission: Perm.datasetsView,
       },
-      {
-        labelKey: "artifacts",
-        href: ROUTES.ARTIFACTS,
-        icon: PanelsTopLeft,
-        permission: Perm.artifactsView,
-      },
     ],
   },
   {

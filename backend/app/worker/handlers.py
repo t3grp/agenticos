@@ -54,9 +54,9 @@ def production() -> Handlers:
         coding_tasks,
         conversation_tasks,
         diagnostics_tasks,
-        failure_learning_tasks,
         eval_suite_tasks,
         eval_tasks,
+        failure_learning_tasks,
         generated_media_tasks,
         improvement_tasks,
         invitation_tasks,
@@ -190,7 +190,7 @@ def _settler[P: Payload](task: Task[P], settle: Callable[[P, str], Awaitable[Non
 
 @cache
 def _settlers() -> dict[str, Settler]:
-from app.worker.tasks import (
+    from app.worker.tasks import (
         authoring_tasks,
         case_generation_tasks,
         conversation_tasks,

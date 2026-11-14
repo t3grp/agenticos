@@ -849,6 +849,8 @@ export interface ParkedSecretRequest {
   status: string;
   fulfilled_secret_id?: string | null;
   fulfilled_hint?: string | null;
+}
+
 /** A skill a run opened or read, at the version it was served. */
 export interface RunSkillUse {
   skill_id: string;

@@ -45,6 +45,7 @@ from sqlalchemy.orm import Session as DatabaseSession
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError
 from app.db.models.session import Session
+from app.db.models.user import User
 from app.services.session import SessionService, hash_token
 
 # Owned by this module alone, and by this run of it. Not the integration suite's

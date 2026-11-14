@@ -162,7 +162,8 @@
          "legal" : "Recht und freie Berufe",
          "manufacturing" : "Produktion und Logistik",
          "public-sector" : "Öffentlicher Sektor und Versorger",
-         "software" : "Software-Teams"
+         "software" : "Software-Teams",
+         "aerospace" : "Luft- und Raumfahrt"
       },
       "industryHint" : "Jeder kommt als Entwurf an: Modell wählen, anhängen, was er braucht, dann veröffentlichen.",
       "installed" : "{name} als Entwurf erstellt - Modell wählen, dann veröffentlichen",
@@ -173,7 +174,7 @@
    "agents" : {
       "a2aAuthHint" : "Aufrufer senden einen API-Key der Organisation oder ein OAuth-Zugriffstoken dieses Deployments als Bearer-Token, das diesen Agent ausführen darf.",
       "a2aCardUrl" : "Agent Card",
-      "a2aDescription" : "Lassen Sie Agents anderer Systeme diesem Agent Aufgaben über das A2A-Protokoll senden. Jede Aufgabe ist ein Run der veröffentlichten Version, unter ihrem Budget und ihren Freigaben, und erscheint in Activity.",
+      "a2aDescription" : "Lassen Sie Agents anderer Systeme diesem Agent Aufgaben über das A2A-Protokoll senden. Jede Aufgabe ist ein Run der veröffentlichten Version, unter ihrem Budget und ihren Freigaben, und erscheint in Aktivität.",
       "a2aEndpoint" : "Endpunkt für Aufgaben",
       "a2aOff" : "Aus. Schalten Sie es ein, damit dieser Agent eine Agent Card bekommt, über die andere Systeme ihn finden.",
       "a2aPublishFirst" : "Veröffentlichen Sie den Agent zuerst: Über A2A wird die veröffentlichte Version angeboten.",
@@ -407,8 +408,8 @@
       "disconnectOwnNamed" : "{name} trennen",
       "documentCount" : "{count, plural, =1 {1 Dokument} other {# Dokumente}}",
       "draft" : "Entwurf",
-      "draftDiffersFromPublished" : "Entwurf weicht von v{version} ab",
-      "draftDiffersHint" : "Der Entwurf ist gespeichert. Alles Veröffentlichte – Kanäle, Widgets, die API – antwortet weiter mit v{version}, bis Sie veröffentlichen.",
+      "draftDiffersFromPublished" : "Entwurf weicht von Agent v{version} ab",
+      "draftDiffersHint" : "Der Entwurf ist gespeichert und weicht von v{version}, der zuletzt veröffentlichten Version, ab. Beim Veröffentlichen entsteht eine neue Version.",
       "duplicate" : "Duplizieren",
       "eachPersonsOwnAccount" : "Das eigene Konto jeder Person",
       "eachPersonsOwnAccountShort" : "Jede Person verbindet ihr eigenes; nicht für API-Schlüssel, Widget oder Routinen.",
@@ -431,8 +432,8 @@
       "embedVoiceUnchecked" : "Sprachanrufe lassen sich gerade nicht prüfen: Der Anrufstatus dieses Agents konnte nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
       "empty" : "leer",
       "endpoint" : "Endpunkt",
-      "environment" : "Environment",
-      "environmentOn" : "Environment auf {bot}",
+      "environment" : "Umgebung",
+      "environmentOn" : "Umgebung auf {bot}",
       "everyPageCarryingIts" : "Jede Seite, die seinen Schlüssel trägt, hört sofort auf zu funktionieren. Der Schlüssel lässt sich nicht neu ausgeben – ein neues Widget bekommt einen neuen.",
       "everyRunAlreadyTraced" : "Jeder Run wird bereits in das Logfire-Projekt geschrieben, mit dem dieses Deployment konfiguriert ist. Wählen Sie ein Write-Token, um die Runs dieses Agents stattdessen in ein eigenes Projekt zu senden – ein für einen Kunden gebauter Agent schreibt seine Traces in das Projekt des Kunden, mit dessen Aufbewahrung und dessen Alarmierung.",
       "everyToolFollowsThis" : "Jedes Tool folgt dem, bis Sie es einzeln beantworten.",
@@ -442,13 +443,13 @@
       "exposureResumed" : "Antwortet wieder auf {bot}",
       "exposureRevoked" : "Dort nicht mehr verfügbar",
       "failed" : "Fehlgeschlagen",
-      "failedCreateEnvironment" : "Environment konnte nicht erstellt werden",
+      "failedCreateEnvironment" : "Umgebung konnte nicht erstellt werden",
       "failedGuards" : "Die Wächter konnten nicht gespeichert werden",
       "failedGuardsRun" : "Die Wächter konnten nicht gestartet werden",
       "failedPromote" : "Heraufstufen fehlgeschlagen",
       "failedReleaseMode" : "Der Release-Modus konnte nicht gespeichert werden",
-      "failedRemoveEnvironment" : "Environment konnte nicht entfernt werden",
-      "failedRenameEnvironment" : "Environment konnte nicht umbenannt werden",
+      "failedRemoveEnvironment" : "Umgebung konnte nicht entfernt werden",
+      "failedRenameEnvironment" : "Umgebung konnte nicht umbenannt werden",
       "failedTestConnections" : "Die Testverbindungen konnten nicht gespeichert werden",
       "filesWorkspaceHasNo" : "Der Dateien-Workspace hat keine Shell - kombinieren Sie ihn mit „Python ausführen“, um zu rechnen.",
       "followCapabilityAlwaysAsk" : "Der Capability folgen – immer fragen",
@@ -594,7 +595,7 @@
       "neverEdited" : "nie bearbeitet",
       "neverPublished" : "Nie veröffentlicht.",
       "newAgent" : "Neuer Agent",
-      "newEnvironment" : "Neues Environment",
+      "newEnvironment" : "Neue Umgebung",
       "newKindLabel" : "Was erstellt wird",
       "newStarter" : "Neue erste Nachricht",
       "newStarterPlaceholder" : "Wobei kannst du mir helfen?",
@@ -995,7 +996,7 @@
       "testStarterScopeTitle" : "Wofür er da ist",
       "testWelcomeDraft" : "Antwortet als dein unveröffentlichter Entwurf, als Test-Run. Nichts wird veröffentlicht, und es wird wie jeder Run abgerechnet.",
       "testWelcomeTitle" : "{name} testen",
-      "testWelcomeVersion" : "Antwortet als die veröffentlichte Version, die dieses Environment ausliefert, als Test-Run.",
+      "testWelcomeVersion" : "Antwortet als die veröffentlichte Version, die diese Umgebung ausliefert, als Test-Run.",
       "theAgentItself" : "{name}, der Agent",
       "timeZoneChosen" : "einer gewählten Zeitzone",
       "timeZoneLabel" : "Uhrzeit in",
@@ -1024,7 +1025,7 @@
       "unchangedLines" : "{count, plural, =1 {1 unveränderte Zeile} other {# unveränderte Zeilen}}",
       "unknownAuthor" : "unbekannter Autor",
       "unnamedSpecialist" : "Spezialist ohne Namen",
-      "upToDateWithPublished" : "Auf dem Stand von v{version}",
+      "upToDateWithPublished" : "Auf dem Stand von Agent v{version}",
       "updateModel" : "Modell aktualisieren",
       "updateModelHint" : "Speichert den neuen Schlüssel, Endpunkt oder die API für {label}. Alles, was dieses Modell nutzt, wechselt mit: jeder Agent und jede Sammlung oder geplante Arbeit darauf. Um diese unverändert zu lassen, wählen Sie „Nennen Sie ihn anders“ und fügen Sie ein eigenes Modell hinzu.",
       "updateToLatest" : "Auf die neueste aktualisieren",
@@ -6912,7 +6913,7 @@
          "privateUpdate" : "Es gibt Neuigkeiten zu Ihrer Arbeit.",
          "questions" : "Agent benötigt eine Antwort",
          "test" : "Testmitteilung senden",
-         "testBody" : "Wenn du diese Nachricht siehst, hat macOS die Benachrichtigung zugestellt.",
+         "testBody" : "Wenn Sie diese Nachricht sehen, hat dieser Computer die Benachrichtigung zugestellt.",
          "testTitle" : "Testbenachrichtigung",
          "title" : "Desktop-Mitteilungen",
          "unmute" : "Mitteilungen für dieses Gespräch aktivieren",
@@ -6958,7 +6959,7 @@
          "askAgentAdmin" : "Bitten Sie einen Administrator, einen nutzbaren Agent zu veröffentlichen oder freizugeben.",
          "configure" : "Konfigurieren",
          "connect" : "Verbinden",
-         "description" : "Der Zustand dieses Macs und Ihres Kontos auf diesem Server. Aktivieren Sie nur benötigte Funktionen.",
+         "description" : "Was auf diesem Computer und für Ihr Konto auf diesem Server bereit ist. Aktivieren Sie nur, was Sie nutzen möchten.",
          "desktopOnly" : "Öffnen Sie die Desktop-App, um ihre Einrichtung zu prüfen.",
          "done" : "Weiter",
          "enable" : "Einrichten",
@@ -6967,7 +6968,7 @@
             "accessibility" : "Bedienungshilfen",
             "account" : "Angemeldetes Konto",
             "agent" : "Nutzbarer Agent",
-            "device" : "Gekoppelter Computer",
+            "device" : "Verknüpfter Computer",
             "microphone" : "Mikrofon",
             "model" : "Modell des AI Architect",
             "notifications" : "Mitteilungen",
@@ -6977,7 +6978,7 @@
          "later" : "Später",
          "link" : "Verknüpfen",
          "opening" : "Arbeitsbereich wird geöffnet…",
-         "permissionNote" : "Die Prüfung erfasst weder Bildschirm noch Audio oder Zwischenablage. Berechtigungen sind optional und erfordern einen Klick. Nach Änderungen an der Bildschirmaufnahme kann macOS einen App-Neustart verlangen.",
+         "permissionNote" : "Diese Prüfungen erfassen weder Bildschirm noch Audio oder Zwischenablage. Berechtigungen sind optional und werden nur auf Ihren Klick angefragt. Nach einer Änderung der Bildschirmaufnahmeberechtigung muss die App eventuell neu gestartet werden.",
          "permissionNoteMac" : "Die Prüfung erfasst weder Bildschirm noch Audio oder Zwischenablage. Berechtigungen sind optional und erfordern einen Klick. Nach Änderungen an der Bildschirmaufnahme kann macOS einen App-Neustart verlangen.",
          "refresh" : "Erneut prüfen",
          "requestFailed" : "Die Systemberechtigung konnte nicht geändert werden. Öffnen Sie die Systemeinstellungen und prüfen Sie erneut.",
@@ -7021,9 +7022,9 @@
             "unknown" : "Status unbekannt"
          },
          "device" : {
-            "connected" : "Verbunden - Ihre Agents können hier arbeiten",
+            "connected" : "Verknüpft - Ihre Agents können hier arbeiten",
             "description" : "Lassen Sie Ihre eigenen Agents hier arbeiten, wenn Sie in einem Chat „Dieser Computer“ wählen - im gewählten Ordner, so weit der gewählte Modus es erlaubt. Runs anderer erreichen ihn nicht.",
-            "link" : "Agents hier arbeiten lassen",
+            "link" : "Diesen Computer verknüpfen",
             "linkFailed" : "Dieser Computer konnte nicht verbunden werden.",
             "live" : "Live",
             "notLinked" : "Nicht verbunden",
@@ -9430,10 +9431,10 @@
       "stateDisabled" : "Deaktiviert",
       "storedEncryptedNeverShown" : "Verschlüsselt gespeichert und nie wieder angezeigt.",
       "theOrganizations" : "Die der Organisation",
-      "toolReadsOnly" : "liest",
+      "toolReadsOnly" : "nur lesend",
       "toolSelectionSaved" : "Tool-Auswahl gespeichert.",
       "toolUnspecified" : "nicht angegeben",
-      "toolWrites" : "schreibt",
+      "toolWrites" : "kann Daten ändern",
       "tools" : "Tools",
       "toolsFrom" : "Tools aus „{name}“",
       "toolsSelected" : "{on} von {total} aktiv",
@@ -9943,7 +9944,7 @@
             "title" : "Wonach er gesucht hat"
          },
          "agent-history" : {
-            "body" : "Jede Veröffentlichung friert den Spec als Version ein, die Sie in ein Environment heben, auf die Sie zurückrollen oder gegen die Sie die Run-Historie lesen können.",
+            "body" : "Jede Veröffentlichung friert den Spec als Version ein, die Sie in eine Umgebung heben, auf die Sie zurückrollen oder gegen die Sie die Run-Historie lesen können.",
             "title" : "Jede Version, aufbewahrt"
          },
          "agent-identity" : {
@@ -10868,7 +10869,7 @@
             "title" : "Proaktivität"
          },
          "org-proactivity-model" : {
-            "body" : "Wähle Anbieter, Modell und Vault-Schlüssel und füge das Modellprofil hinzu. Das Profil wird sofort gespeichert; Save übernimmt es für nächtliche Vorschläge und MCP-Beobachtungen. Diese Prüfungen verwenden dieses Modell unabhängig vom AgenticOS-Startagenten in Activity.",
+            "body" : "Wähle Anbieter, Modell und Vault-Schlüssel und füge das Modellprofil hinzu. Das Profil wird sofort gespeichert; Save übernimmt es für nächtliche Vorschläge und MCP-Beobachtungen. Diese Prüfungen verwenden dieses Modell unabhängig vom AgenticOS-Startagenten in Aktivität.",
             "title" : "Proaktivitätsmodell auswählen"
          },
          "org-profile" : {
@@ -10972,7 +10973,7 @@
             "title" : "Was ohne Sie läuft"
          },
          "routines-watches" : {
-            "body" : "Beobachtungen lesen Ihre eigenen verbundenen Konten nach Zeitplan - Reviews, die auf Sie warten, Ihnen zugewiesene Issues - und legen Neues in Ihren Posteingang. Jede Zeile sagt, wann zuletzt geprüft wurde und wie viel vom Gefundenen noch wartet.",
+            "body" : "Beobachtungen lesen Ihre eigenen verbundenen Konten nach Zeitplan - Prüfungen, die auf Sie warten, Ihnen zugewiesene Issues - und legen Neues in Ihren Posteingang. Jede Zeile sagt, wann zuletzt geprüft wurde und wie viel vom Gefundenen noch wartet.",
             "title" : "Was Ihre Konten beobachtet"
          },
          "run-detail-input" : {
@@ -11144,7 +11145,7 @@
             "title" : "Im Vollbild arbeiten"
          },
          "workflow-input-contract" : {
-            "body" : "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema Draft 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft.",
+            "body" : "Die Trigger Manuell, API und Von einem Workflow aufgerufen unterstützen einfache Felder oder einen Vertrag nach JSON Schema 2020-12. Das Schema unterstützt verschachtelte Werte und wird vor dem Start eines Runs geprüft.",
             "title" : "Erwartete Eingabe festlegen"
          },
          "workflow-log-alerts" : {
@@ -11692,7 +11693,7 @@
          "duplicate" : "Duplizieren",
          "eachPersonsOwnNamed" : "{name} (eigenes Konto jeder Person)",
          "eachPublishFreezesSpec" : "Jede Veröffentlichung friert einen Spec ein. Runs halten die Version fest, was ein Agent letzten Dienstag getan hat, bleibt also auch nach einem Dutzend Änderungen beantwortbar. Das Wiederherstellen veröffentlicht eine neue Version, die aus der alten kopiert ist – die Zeitleiste zeigt, dass zurückgerollt wurde, statt so zu tun, als habe es die schlechte Version nie gegeben.",
-         "environments" : "Environments",
+         "environments" : "Umgebungen",
          "evals" : "Evals",
          "exportYaml" : "YAML exportieren",
          "filterByCategory" : "Nach Kategorie filtern",
@@ -11740,7 +11741,7 @@
          "moreActions" : "Weitere Aktionen",
          "n100Default" : "100 (Standard)",
          "namedMissing" : "{name} (fehlt)",
-         "namedPointersAtPublished" : "Eine Veröffentlichung prägt eine Version; sie irgendwohin zu stellen ist eine eigene Entscheidung. Ein Environment wartet entweder darauf, dass etwas darauf heraufgestuft wird, oder es folgt jeder Veröffentlichung. Production folgt, solange es das einzige Environment ist; heften Sie es an, sobald ein Dev- oder Staging-Environment daneben steht. Ein an ein Environment gebundener Bot liefert dessen Version.",
+      "namedPointersAtPublished" : "Eine Veröffentlichung prägt eine Version; sie irgendwohin zu stellen ist eine eigene Entscheidung. Eine Umgebung wartet entweder darauf, dass etwas darauf heraufgestuft wird, oder sie folgt jeder Veröffentlichung. Production folgt, solange es die einzige Umgebung ist; heften Sie es an, sobald eine Dev- oder Staging-Umgebung daneben steht. Ein an eine Umgebung gebundener Bot liefert deren Version.",
          "newAgent" : "Neuer Agent",
          "noAgentHereMatches" : "Kein Agent hier passt zu diesem Filter und dieser Suche.",
          "noAgentsYet" : "Noch keine Agents",
@@ -11982,7 +11983,7 @@
          "platform" : "Plattform",
          "polling" : "Abfrage",
          "rateAnswers" : "Daumen unter Antworten",
-         "rateAnswersHint" : "Antworten lassen sich mit Daumen hoch oder runter bewerten; ein Daumen runter fragt, was falsch war. Bewertungen erscheinen in Activity und auf dem Dashboard.",
+         "rateAnswersHint" : "Antworten lassen sich mit Daumen hoch oder runter bewerten; ein Daumen runter fragt, was falsch war. Bewertungen erscheinen in Aktivität und auf dem Dashboard.",
          "register" : "Registrieren",
          "registeredCount" : "{count, plural, =1 {1 Kanal registriert} other {# Kanäle registriert}}",
          "removeBot" : "{bot} entfernen",
@@ -12827,7 +12828,7 @@
          "agentActivity" : "Agent-Aktivität",
          "agentContext" : {
             "about" : "Woran Sie arbeiten",
-            "aboutPlaceholder" : "Großkunden in Skandinavien; wöchentlicher Pipeline-Review mit dem CFO.",
+            "aboutPlaceholder" : "Großkunden in Skandinavien; wöchentliche Pipeline-Prüfungen mit dem CFO.",
             "chooseTimeZone" : "Zeitzone auswählen",
             "description" : "Jeder Agent liest das zu Beginn eines Gesprächs, damit Sie es im Chat nie wiederholen müssen.",
             "noTimeZone" : "Nicht festgelegt",
@@ -14813,7 +14814,7 @@
       "visibilityOrg" : "Alle in der Organisation",
       "visibilityOrgReaches" : "Alle in der Organisation, die {resource, select, agent {Agents} skill {Skills} collection {Collections} artifact {Apps} context {Kontextdateien} mcp_connection {MCP-Server} other {Secrets}} überhaupt ansehen dürfen.",
       "visibilityPrivate" : "Nur Personen mit Zugriff",
-      "visibilityPrivateReaches" : "Nur die oben aufgeführten Personen. Sonst findet niemand {resource, select, agent {diesen Agent} skill {diesen Skill} collection {diese Collection} artifact {diese App} context {diese Kontextdatei} mcp_connection {diesen MCP-Server} other {dieses Secret}} in seiner Liste – und wenn es noch keinen Besitzer hat, wird es Ihres.",
+      "visibilityPrivateReaches" : "Nur die oben aufgeführten Personen. Sonst findet niemand {resource, select, agent {diesen Agent} skill {diesen Skill} collection {diese Collection} artifact {diese App} context {diese Kontextdatei} mcp_connection {diesen MCP-Server} project {dieses Projekt} other {dieses Secret}} in seiner Liste – und wenn es noch keinen Besitzer hat, wird es Ihres.",
       "visibilityTeam" : "Team (wird nicht mehr angeboten)",
       "visibilityTeamReaches" : "Jeder, dessen Rolle {resource, select, agent {Team-Agents} skill {Team-Skills} collection {Team-Collections} artifact {Team-Apps} context {Team-Kontextdateien} mcp_connection {Team-MCP-Server} other {Team-Secrets}} erreicht. Diese Organisation hat keine Teams – wählen Sie eine der beiden Optionen darüber.",
       "visibilityUpdated" : "Sichtbarkeit aktualisiert"
@@ -15537,7 +15538,8 @@
       "sizeUploadsWhenCreated" : "{size} · wird beim Erstellen des Skills hochgeladen",
       "support" : "support",
       "whatSoModelCan" : "Was darin steht, damit das Modell entscheiden kann, ohne ihn zu laden",
-      "whoCanUseIt" : "Wer es nutzen darf"
+      "whoCanUseIt" : "Wer es nutzen darf",
+      "savedCategory" : "Gespeichert."
    },
    "start" : {
       "administration" : {
@@ -16657,19 +16659,19 @@
       "deliveryUnavailable" : "Letzte Antwort im Chat nicht verfügbar",
       "done" : "Fertig",
       "edit" : "Bearbeiten",
-      "editDescriptionEvent" : "Nachricht, Filter oder Environment ändern. Um auf eine andere Quelle zu zeigen, löschen Sie diesen und legen einen neuen an.",
-      "editDescriptionSchedule" : "Nachricht, Takt oder Environment ändern.",
+      "editDescriptionEvent" : "Nachricht, Filter oder Umgebung ändern. Um auf eine andere Quelle zu zeigen, löschen Sie diesen und legen einen neuen an.",
+      "editDescriptionSchedule" : "Nachricht, Takt oder Umgebung ändern.",
       "editTitleEvent" : "Ereignis-Trigger bearbeiten",
       "editTitleSchedule" : "Zeitplan bearbeiten",
       "empty" : "Dieser Agent läuft nur, wenn ihm jemand schreibt.",
       "endsAtHint" : "Leer lassen, um bis zum Stoppen fortzufahren. Diese Zeit verwendet {zone}, unabhängig von der Zeitzone des Zeitplans.",
       "endsAtInvalid" : "Wählen Sie einen gültigen Zeitpunkt in der Zukunft oder leeren Sie das Feld, um das Ende zu entfernen.",
       "endsAtLabel" : "Endet am (Gerätezeit)",
-      "environment" : "Environment",
+      "environment" : "Umgebung",
       "environmentBehind" : "{count, plural, =1 {1 Version zurück} other {# Versionen zurück}}",
-      "environmentCaptionDefault" : "Auslösungen führen aus, worauf das Standard-Environment im Moment des Auslösens zeigt.",
+      "environmentCaptionDefault" : "Auslösungen führen aus, worauf die Standardumgebung im Moment des Auslösens zeigt.",
       "environmentCaptionPinned" : "Die nächste Auslösung führt v{version} aus.",
-      "environmentCaptionTracking" : "Die nächste Auslösung führt v{version} aus – dieses Environment folgt Veröffentlichungen, die nächste Veröffentlichung ändert also, was läuft.",
+      "environmentCaptionTracking" : "Die nächste Auslösung führt v{version} aus – diese Umgebung folgt Veröffentlichungen, die nächste Veröffentlichung ändert also, was läuft.",
       "environmentFollows" : "folgt Veröffentlichungen",
       "event" : {
          "github" : "Bei neuen GitHub-Issues",

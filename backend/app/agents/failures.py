@@ -6,7 +6,12 @@ there, from the handle the subagents library settles. It lives here so both
 layers write the same sentence for the same failure (#699).
 """
 
-from pydantic_ai.exceptions import ContentFilterError, ModelHTTPError, ModelRequestTimeout, UsageLimitExceeded
+from pydantic_ai.exceptions import (
+    ContentFilterError,
+    ModelHTTPError,
+    ModelRequestTimeout,
+    UsageLimitExceeded,
+)
 
 from app.core.exceptions import AppException
 

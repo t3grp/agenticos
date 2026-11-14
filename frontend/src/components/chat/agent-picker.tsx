@@ -26,7 +26,8 @@ import { Perm } from "@/types/permissions";
  * explain model setup; selecting it never executes its draft.
  */
 const isRunnable = (agent: Agent): boolean =>
-  agent.status === "published" || (agent.setup_required === true && agent.can_run === true);
+  agent.can_run === true &&
+  (agent.status === "published" || agent.setup_required === true);
 
 /**
  * A workflow the chat can hand a message to: one whose live version starts from

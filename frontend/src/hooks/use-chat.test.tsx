@@ -7269,7 +7269,6 @@ describe("useChat - the floating assistant's submitted page and agent", () => {
     expect(lastFrame()).not.toHaveProperty("agent_id");
     expect(lastFrame()).toHaveProperty("page_context");
   });
-  });
 });
 
 it("renders a setup reply as an AgenticOS message and receipt without inventing a run", () => {

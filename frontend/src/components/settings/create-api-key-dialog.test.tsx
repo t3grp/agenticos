@@ -180,7 +180,7 @@ it("retains custom selections across search and an in-flight refusal, blocking d
   await userEvent.click(screen.getByRole("checkbox", { name: "collections:view" }));
   await userEvent.clear(screen.getByLabelText("Find a permission"));
   expect(screen.getByRole("checkbox", { name: "agents:view" })).toBeChecked();
-  await pick("Expires", "Never");
+  await pick("Expires", "In 30 days");
   await userEvent.click(screen.getByRole("button", { name: "Create" }));
   expect(screen.getByLabelText("Name")).toBeDisabled();
   expect(screen.getByLabelText("Find a permission")).toBeDisabled();
@@ -193,15 +193,19 @@ it("retains custom selections across search and an in-flight refusal, blocking d
   held.reject(new Error("refused"));
   await waitFor(() => expect(screen.getByLabelText("Name")).toBeEnabled());
   expect(screen.getByLabelText("Name")).toHaveValue("Support sync");
-  expect(screen.getByLabelText("Expires")).toHaveTextContent("Never");
+  expect(screen.getByLabelText("Expires")).toHaveTextContent("In 30 days");
   expect(screen.getByRole("checkbox", { name: "agents:view" })).toBeChecked();
   await userEvent.click(screen.getByRole("button", { name: "Create" }));
   await screen.findByRole("heading", { name: "Copy your key" });
   expect(create).toHaveBeenLastCalledWith({
     name: "Support sync",
     scopes: ["agents:view", "collections:view"],
-    expires_at: null,
+    expires_at: expect.any(String),
   });
+  const [retried] = create.mock.lastCall ?? [];
+  const lifetime = new Date(retried?.expires_at ?? 0).getTime() - Date.now();
+  expect(lifetime).toBeGreaterThan(29 * DAY_MS);
+  expect(lifetime).toBeLessThanOrEqual(30 * DAY_MS);
 });
 
 it("submits the name with Enter while Enter in permission search leaves the form intact", async () => {

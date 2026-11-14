@@ -653,6 +653,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     target: "agent-failure-learning",
     activate: "agent-tab-failure-learning",
     permission: Perm.agentsView,
+    agentKind: "ordinary",
     inTour: true,
   },
   // The agent's improvement sessions, read with its runs.

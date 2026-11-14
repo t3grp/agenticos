@@ -54,10 +54,9 @@ from app.services.virtual_tables.exceptions import (
 from app.services.virtual_tables.principals import principal_problems
 from app.services.virtual_tables.quotas import enforce_storage, enforce_table_count, lock_storage
 from app.services.virtual_tables.receipts import run_once
+from app.services.virtual_tables.record_sources import source_for
 from app.services.virtual_tables.row_policy import parse_policy
 from app.services.virtual_tables.schema import SchemaDiff, build_columns, diff
-from app.services.virtual_tables.record_sources import source_for
-from app.services.virtual_tables.schema import build_columns, diff
 from app.services.virtual_tables.types import COMPUTED_TYPES, READ_THROUGH_LINK, CellProblem
 
 _OPERATION_KEY = TypeAdapter(OperationKey)

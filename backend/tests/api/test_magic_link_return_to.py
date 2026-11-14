@@ -159,6 +159,6 @@ async def test_only_the_address_bound_link_proves_this_sessions_current_mailbox(
     response = await client.post(VERIFY, json={"token": token})
     assert response.status_code == 200
     sessions = client.sessions  # ty: ignore[unresolved-attribute]
-    assert sessions.create_session.await_args.kwargs["proved_email"] == (
+    assert sessions.issue_tokens.await_args.kwargs["proved_email"] == (
         user.email if address == user.email else None
     )
