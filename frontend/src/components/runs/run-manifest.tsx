@@ -356,8 +356,7 @@ export function RunManifest({ runId }: { runId: string }) {
               const proven = beforeFailed.some((before) =>
                 afterPassed.some(
                   (after) =>
-                    normalizeCommand(before.command ?? "") ===
-                    normalizeCommand(after.command ?? ""),
+                    normalizeCommand(before.command) === normalizeCommand(after.command),
                 ),
               );
               return (

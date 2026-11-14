@@ -200,6 +200,28 @@ describe("the query key factory", () => {
     // while its own request is still in flight - a leak that looks like a delay.
     expect(qk.integrations.reusable("org-a")).not.toEqual(qk.integrations.reusable("org-b"));
   });
+
+  it("keys optional stats filters and agent-message pagination explicitly", () => {
+    expect(qk.stats.usageByUser("org", "from", "to", 25)).toEqual([
+      "stats",
+      "usage",
+      "user",
+      "org",
+      "from",
+      "to",
+      25,
+      null,
+    ]);
+    expect(qk.stats.usageByUser("org", "from", "to", 25, { userId: "u-1" })).toContainEqual({
+      userId: "u-1",
+    });
+    expect(qk.stats.usageByHour("org", "from", "to").at(-1)).toBeNull();
+    expect(qk.stats.usageByHour("org", "from", "to", { agentId: "a-1" }).at(-1)).toEqual({
+      agentId: "a-1",
+    });
+    expect(qk.agentMessages.list()).toEqual(["agent-messages", "list"]);
+    expect(qk.agentMessages.list(20, 10)).toEqual(["agent-messages", "list", 20, 10]);
+  });
 });
 
 it("keeps trigger conversation histories separate from each other and Activity", async () => {

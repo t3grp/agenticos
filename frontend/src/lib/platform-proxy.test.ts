@@ -25,6 +25,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { sourceFiles } from "@/test-utils/source-files";
 
+import * as authCatchAll from "@/app/api/auth/[[...path]]/route";
+import * as failureLearningCatchAll from "@/app/api/failure-learning/[[...path]]/route";
 import { platformProxy } from "./platform-proxy";
 
 const BACKEND = "http://localhost:8000";
@@ -57,6 +59,13 @@ function backendReplies(body: string, init: ResponseInit = {}) {
 describe("platformProxy", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("exports each proxy method from both catch-all API routes", () => {
+    const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+    for (const route of [authCatchAll, failureLearningCatchAll]) {
+      for (const method of methods) expect(route[method]).toBeTypeOf("function");
+    }
   });
 
   it("forwards the path and query verbatim to the backend's v1 prefix", async () => {

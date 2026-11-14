@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiClient } from "@/lib/api-client";
 import { getProject } from "@/lib/projects-api";
@@ -86,6 +87,8 @@ beforeEach(() => {
       }) as never,
   );
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("ProjectChip", () => {
   it("starts a chat from a project's New chat in it, with its default agent", async () => {
@@ -187,6 +190,18 @@ describe("ProjectChip", () => {
     await waitFor(() =>
       expect(apiClient.patch).toHaveBeenCalledWith("/conversations/c-1", { project_id: null }),
     );
+  });
+
+  it("reports a failed move and leaves the project picker available", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ id: "c-1", project_id: "p-1" });
+    vi.mocked(apiClient.patch).mockRejectedValue(new Error("Forbidden"));
+    const toastError = vi.spyOn(toast, "error").mockReturnValue("toast-error");
+    chip("c-1", true);
+
+    await userEvent.click(screen.getByRole("button", { name: "pick" }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "pick" })).toBeVisible();
   });
 
   it("shows a shared thread's project read-only when its access says so, with no move action", async () => {

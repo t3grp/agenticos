@@ -119,7 +119,10 @@ test.describe("desktop pointer controls", () => {
     expect(items.length).toBeGreaterThan(0);
     await expect(page.locator("main")).toContainText(listingText(items[0]?.name));
     await expectReachableButtons(page);
-    await clickCenter(page, page.getByRole("button", { name: "New agent", exact: true }));
+    const newAgent = page.getByRole("button", { name: "New agent", exact: true });
+    // The button stays disabled until the organization ceiling query completes.
+    await expect(newAgent).toBeEnabled();
+    await clickCenter(page, newAgent);
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();

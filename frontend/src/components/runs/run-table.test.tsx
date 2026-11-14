@@ -128,6 +128,24 @@ describe("a run history row", () => {
     expect(within(row()).queryByText(/Expires in/)).toBeNull();
   });
 
+  it("names a requested secret while an answer is waiting", () => {
+    render(
+      <RunTable
+        runs={[
+          run({
+            status: "awaiting_answer",
+            waiting_questions: [],
+            waiting_secret_requests: ["GitHub token"],
+            waiting_expires_at: null,
+          }),
+        ]}
+      />,
+    );
+
+    const waiting = within(row()).getByText("Needs secret: GitHub token");
+    expect(waiting).toHaveAttribute("title", "Needs secret: GitHub token");
+  });
+
   it("still marks an orphaned delegation, without a handle it cannot honour", () => {
     // Deleting the parent nulls the handle - the transcript it named went with
     // the parent - but the row is still a delegation and still must not be read

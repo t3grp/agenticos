@@ -204,9 +204,13 @@ class OnboardingTeamService:
         # 1. Ceiling check
         ceiling = await self.registry.ceiling(ctx)
         needed = len(request.specialists) + 1
-        if ceiling.remaining is not None and ceiling.remaining < needed:
+        if ceiling.at_limit or (
+            ceiling.limit is not None
+            and ceiling.held is not None
+            and ceiling.held + needed > ceiling.limit
+        ):
             raise BadRequestError(
-                message=f"Creating {needed} agents would exceed the organization limit of {ceiling.max_agents}."
+                message=f"Creating {needed} agents would exceed the organization limit of {ceiling.limit}."
             )
 
         # 2. Check available model profiles in organization

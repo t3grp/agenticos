@@ -946,6 +946,40 @@ describe("what a person attached", () => {
     expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
   });
 
+  it("shows a quote on an assistant's reply", () => {
+    item({
+      role: "assistant",
+      content: "I will check that.",
+      replyTo: { messageId: "m-1", role: "user", excerpt: "Can you confirm this?" },
+    });
+
+    expect(screen.getByText("Can you confirm this?")).toBeVisible();
+  });
+
+  it("keeps the sender or answering agent on a reply target", async () => {
+    const sender = { user_id: "u-2", name: "Anna", has_avatar: false, avatar_color: null };
+    const { unmount } = item({
+      role: "user",
+      content: "Please check this.",
+      conversationId: "c-1",
+      sender,
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Reply" }));
+    expect(useChatStore.getState().replyTo).toMatchObject({ sender, agentId: undefined });
+    unmount();
+
+    item(
+      { role: "assistant", content: "I checked it.", conversationId: "c-1" },
+      { agent: { id: "a-1", slug: "support", name: "Support" } as Agent },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Reply" }));
+    expect(useChatStore.getState().replyTo).toMatchObject({
+      sender: undefined,
+      agentId: "a-1",
+      agentName: "Support",
+    });
+  });
+
   it("keeps the quote on a file-only reply with no message text", () => {
     item({
       role: "user",

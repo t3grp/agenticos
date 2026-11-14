@@ -55,7 +55,6 @@ from app.core.claude_subscription import (
     CLAUDE_SUBSCRIPTION_IMAGE_TYPES,
     CLAUDE_SUBSCRIPTION_PROVIDER,
     ClaudeSubscriptionImage,
-    ClaudeSubscriptionImageType,
     ClaudeSubscriptionModel,
     ClaudeSubscriptionOwner,
     ClaudeSubscriptionThinking,
@@ -326,11 +325,7 @@ def _text_content(
             and item.media_type in CLAUDE_SUBSCRIPTION_IMAGE_TYPES
             and item.data
         ):
-            images.append(
-                ClaudeSubscriptionImage(
-                    media_type=cast(ClaudeSubscriptionImageType, item.media_type), data=item.data
-                )
-            )
+            images.append(ClaudeSubscriptionImage(media_type=item.media_type, data=item.data))
             parts.append(f"[image:{len(images)}]")
         else:
             raise UserError(

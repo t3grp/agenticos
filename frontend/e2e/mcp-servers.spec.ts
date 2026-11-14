@@ -49,7 +49,9 @@ test.describe("MCP servers", () => {
 
     for (const server of CATALOG) {
       await page.getByRole("textbox", { name: "Search servers…" }).fill(server);
-      const card = page.getByRole("group", { name: server, exact: true });
+      // GitHub may also appear as an existing account, so the catalog card is
+      // the first exact-name group; its Connect action confirms that identity.
+      const card = page.getByRole("group", { name: server, exact: true }).first();
       await expect(card, `${server} should be in the catalog`).toBeVisible();
       // Every card has the same foot whatever its state: where it stands, and
       // the verb that connects it. The category, the address and the auth it
@@ -121,7 +123,7 @@ test.describe("MCP servers", () => {
 
     // Asserted against a catalog that is on screen. Absence on a page that
     // failed to load is not a finding, it is an accident.
-    const github = page.getByRole("group", { name: "GitHub" });
+    const github = page.getByRole("group", { name: "GitHub" }).first();
     await expect(github).toBeVisible();
     await expect(github.getByRole("button", { name: "Connect" }).first()).toBeVisible();
 

@@ -1446,7 +1446,7 @@ class TestAProjectsApps:
         assert [item.id for item in items] == [made_here.artifact_id]
 
 
-async def test_favourites_keep_the_order_the_person_starred_apps(
+async def test_favourites_put_the_newest_starred_app_first(
     db: AsyncSession, storage: LocalFileStorage
 ) -> None:
     organization, user, agent = await _tenant(db)
@@ -1456,7 +1456,7 @@ async def test_favourites_keep_the_order_the_person_starred_apps(
     second = await _publish(
         db, organization, user, agent, body="<p>second</p>", name="second", title="Second"
     )
-    # The second app is starred later, but the sidebar keeps the earlier pin first.
+    # Favourites are ordered newest first, as the listing API promises.
     db.add_all(
         [
             ArtifactFavourite(
@@ -1479,7 +1479,7 @@ async def test_favourites_keep_the_order_the_person_starred_apps(
     )
 
     assert total == 2
-    assert [item.id for item in items] == [first.artifact_id, second.artifact_id]
+    assert [item.id for item in items] == [second.artifact_id, first.artifact_id]
 
 
 async def test_another_conversation_edits_stored_source_without_the_original_sandbox(

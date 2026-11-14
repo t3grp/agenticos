@@ -435,6 +435,12 @@ describe("what the model was told", () => {
             parameters_json_schema: { type: "object", properties: { sku: { type: "string" } } },
             kind: "function",
           },
+          {
+            name: "structured_answer",
+            description: null,
+            parameters_json_schema: { type: "object" },
+            kind: "output",
+          },
         ],
       }),
     });
@@ -444,6 +450,7 @@ describe("what the model was told", () => {
     expect(screen.getByText("1 tool")).toBeVisible();
     expect(screen.getByText("Look up how many of one item are in the warehouse.")).toBeVisible();
     expect(screen.getByText(/"sku"/)).toBeInTheDocument();
+    expect(screen.getByText("output")).toBeVisible();
   });
 
   it("says the model was given no tools rather than showing an empty list", () => {

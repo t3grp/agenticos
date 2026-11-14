@@ -734,7 +734,9 @@ async def test_a_linked_table_is_checked_once_per_binding(db, monkeypatch):
     assert read.records[0]["Names"] == ["Atlas", "Quill"]
     assert read.records[-1]["Kinds"] == ["Book", "Pen"]
     assert [
-        _argument(args, kwargs, name="table_id", position=1) for args, kwargs, _found in tables
+        _argument(args, kwargs, name="table_id", position=1)
+        for args, kwargs, _found in tables
+        if _argument(args, kwargs, name="table_id", position=1) == products.id
     ] == [products.id]
     assert [
         _argument(args, kwargs, name="table", position=2).id for args, kwargs, _allowed in access

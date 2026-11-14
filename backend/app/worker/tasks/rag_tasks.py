@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.agents.capabilities.budget import BudgetExceeded, SpendLedger, metered_by
 from app.core.config import settings
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.secret_kinds import SecretKind, StorableSecret, unseal_secret
 from app.core.vault import VaultScope
 from app.db.locks import LockScope, hold_name, try_hold_subject_on_connection
@@ -52,6 +52,7 @@ from app.services.notifications import NotificationService
 from app.services.portals.google_oauth import DRIVE_GRANT_SCOPES as GOOGLE_DRIVE_SCOPES
 from app.services.rag.config import DocumentExtensions
 from app.services.rag.connectors import CONNECTOR_REGISTRY, RemoteListing, WithdrawnFile
+from app.services.rag.connectors.google_drive import GoogleDriveConnector
 from app.services.rag.documents import DocumentProcessor
 from app.services.rag.drive_api import GoogleDriveOAuthGrant
 from app.services.rag.embeddings import EmbeddingService
@@ -1514,6 +1515,16 @@ async def _sync_source(source_id: str, sync_log_id: str | None) -> dict[str, Any
         )
 
     connector = connector_cls()
+    if isinstance(credential, GoogleDriveOAuthGrant) and not isinstance(
+        connector, GoogleDriveConnector
+    ):
+        raise BadRequestError(message="A Google OAuth grant can only be used with Google Drive.")
+    # Google Drive accepts its OAuth grant in addition to vault secrets. Keep
+    # that credential out of the shared connector interface, whose other
+    # implementations only accept storable vault secrets.
+    base_credential: StorableSecret | None = (
+        None if isinstance(credential, GoogleDriveOAuthGrant) else credential
+    )
 
     ingested = updated = skipped = failed = removed = 0
     total = 0
@@ -1549,7 +1560,7 @@ async def _sync_source(source_id: str, sync_log_id: str | None) -> dict[str, Any
                 if stored_state and stored_state.get("fingerprint") == fingerprint
                 else None
             )
-            version = await connector.remote_version(config, credential, previous)
+            version = await connector.remote_version(config, base_credential, previous)
             stale = await _stale_rows(source_id=UUID(source_id), collection_name=collection_name)
             unchanged = (
                 version is not None
@@ -1557,11 +1568,12 @@ async def _sync_source(source_id: str, sync_log_id: str | None) -> dict[str, Any
                 and not stale
                 and stored_state == SyncState(version=version, fingerprint=fingerprint).model_dump()
             )
-            listing = (
-                RemoteListing(files=[])
-                if unchanged
-                else await connector.list_files(config, credential)
-            )
+            if unchanged:
+                listing = RemoteListing(files=[])
+            elif isinstance(connector, GoogleDriveConnector):
+                listing = await connector.list_files(config, credential)
+            else:
+                listing = await connector.list_files(config, base_credential)
             # After the listing and before the files, so what it clears is
             # ingested again by this same run rather than missing until the next.
             unsettled, inherited = await _reconcile_stale_rows(
@@ -1608,9 +1620,17 @@ async def _sync_source(source_id: str, sync_log_id: str | None) -> dict[str, Any
                             skipped += 1
                             continue
 
-                        local_path = await connector.download_file(
-                            remote_file, Path(tmp_dir), config=config, credential=credential
-                        )
+                        if isinstance(connector, GoogleDriveConnector):
+                            local_path = await connector.download_file(
+                                remote_file, Path(tmp_dir), config=config, credential=credential
+                            )
+                        else:
+                            local_path = await connector.download_file(
+                                remote_file,
+                                Path(tmp_dir),
+                                config=config,
+                                credential=base_credential,
+                            )
 
                         # After it, because a hash needs the bytes and no remote
                         # system on this list offers one. A stored document with no

@@ -31,7 +31,7 @@ from app.services.rag.connectors import (
     RemoteListing,
 )
 from app.services.rag.drive_api import DriveClient, GoogleDriveOAuthGrant
-from app.services.rag.remote_names import checked_drive_folder_id
+from app.services.rag.remote_names import checked_drive_folder_id, destination_within
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +212,18 @@ class GoogleDriveConnector(BaseSyncConnector):
                 return self._list_folder(service, folder_id, include_subfolders)
 
         return RemoteListing(files=await asyncio.to_thread(_list))
+
+    async def download_file(
+        self,
+        file: RemoteFile,
+        dest_dir: Path,
+        config: ConnectorConfig | None = None,
+        credential: StorableSecret | GoogleDriveOAuthGrant | None = None,
+    ) -> Path:
+        """Download a Drive file using either supported Drive credential."""
+        dest_path = destination_within(dest_dir, file.name)
+        await self._fetch(file, dest_path, config or {}, credential)
+        return dest_path
 
     async def _fetch(
         self,

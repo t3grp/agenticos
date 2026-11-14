@@ -4,6 +4,7 @@ import type { Page } from "@playwright/test";
 import {
   AUTH_STATE,
   DRAFT_AGENT_NAME,
+  FAKE_KEY_LABEL,
   SEEDED_MODEL_ID,
   SEEDED_MODEL_LABEL,
   expectNoRenderedSecret,
@@ -84,6 +85,7 @@ test.describe("Models", () => {
     // agent is on, and which provider that is depends on what ran before.
     await pickProvider(page, "Anthropic");
     await pickProvider(page, "OpenAI");
+    await pickKey(page, FAKE_KEY_LABEL);
     // Refused. A profile with a provider and no model id is one that fails at the
     // moment a run needs it rather than here.
     const submit = page.getByRole("button", { name: "Add model" });
@@ -189,6 +191,18 @@ test.describe("Models", () => {
 async function pickProvider(page: Page, label: string): Promise<void> {
   await page.locator("#add-model-provider").click();
   await page.getByRole("option", { name: label, exact: true }).click();
+}
+
+/** Choose the seeded OpenAI key when the organization has more than one. */
+async function pickKey(page: Page, name: string): Promise<void> {
+  const key = page.locator("#add-model-key");
+  if (await key.count()) {
+    await key.click();
+    await page.getByRole("option", { name: new RegExp(name) }).click();
+    return;
+  }
+  // A single key is selected automatically; confirm the form loaded it.
+  await expect(page.getByText(new RegExp(name))).toBeVisible();
 }
 
 /**
