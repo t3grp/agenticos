@@ -1,5 +1,5 @@
 ---
-source_sha: "fb90129811ca"
+source_sha: "0396b8e0d8e1"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -769,6 +769,68 @@ Lesen mitgeschickt, genau wie `Agent.can_run` - sodass eine Katalogzeile oder ei
 Detailseite nie raten muss, ob ihre Bearbeitungskontrollen abgelehnt würden. Das
 eigene `can_manage` und `can_delete` einer gespeicherten Ansicht sind dieselbe Idee,
 eine Ebene tiefer (siehe [Gespeicherte Ansichten](#saved-views)).
+
+### Lesen und Schreiben einzelner Zeilen { #row-read-write }
+
+Zeilenzugriff hat zwei Stufen. **Lesen (Read)** zeigt die Zeile und ihre sichtbaren
+verknüpften Datensätze. **Schreiben (Write)** umfasst Lesen und Änderungen an
+gewöhnlichen Zellen. Schreiben allein erlaubt weder Löschen noch Teilen der Zeile,
+Änderungen an Zugriffsfeldern, das Erstellen von Datensätzen oder Schemaänderungen.
+Tabellenadministratoren behalten ihre bisherigen Rechte. Die Person benötigt weiterhin
+Zugriff auf die übergeordnete Tabelle; eine Zeilenfreigabe öffnet allein keine andere
+Tabelle und keinen verknüpften Datensatz.
+
+Im Freigabedialog der Tabelle legen **Regeln für den Zeilenzugriff (Row access rules)**
+den Standard fest:
+
+| Regel | Lesezugriff | Schreibzugriff |
+|---|---|---|
+| `none` | Alle, die die Tabelle lesen dürfen | Bisherige Tabellenbearbeiter sowie Schreibfreigaben für die Zeile |
+| `grants` | Eine gültige Lese- oder Schreibfreigabe für die Zeile | Eine gültige Schreibfreigabe für die Zeile |
+| `assignee` | Lesefeld, Schreibfeld, optionale Projektmitgliedschaft oder Zeilenfreigabe | Schreibfeld oder Schreibfreigabe für die Zeile |
+
+Tabelleneigentümer, die Organisationsrollen Owner/Admin und der Deployment-Administrator
+behalten ihre Policy-Ausnahme. Tabellenzugriff und API-Key-Grenzen gelten weiterhin.
+Richten Sie im Modus `grants` Freigaben ein, bevor Sie bestehende Benutzer umstellen.
+Neue Zeilen benötigen weiterhin Tabellenverwaltung und müssen ihrem Ersteller sichtbar
+sein. Verwaltete Aufgabenboards behalten ihre eigenen Zugriffsregeln und bieten diese
+Zeilenfreigaben nicht an.
+
+Öffnen Sie eine Zeile und wählen Sie **Zeilenzugriff (Row access)**, um Personen oder
+Gruppen hinzuzufügen, Lesen oder Schreiben zu wählen, einen Ablauf festzulegen, die Stufe
+zu ändern oder Zugriff zu entziehen. Personenfreigaben können dauerhaft sein;
+Gruppenfreigaben laufen standardmäßig nach 90 Tagen ab. Es gelten aktuelle Organisations-
+und Gruppenmitgliedschaften sowie nicht abgelaufene Grants. Der stärkste gültige Grant
+gewinnt. Der Entzug eines Grants entfernt keinen Zugriff aus anderen Grants oder Tabellenregeln.
+
+Die REST-Endpunkte liegen unter `/tables/{table_id}/records/{record_id}/access`:
+
+- `GET` listet explizite Grants für einen Tabellenadministrator, der die Zeile lesen darf.
+- `PUT /grants` setzt genau eine `subject_user_id` oder `subject_group_id`,
+  einen `level` von `read` oder `write` und optional `expires_at`.
+- `DELETE /grants/{subject_user_id}` und
+  `DELETE /group-grants/{subject_group_id}` entziehen den angegebenen Grant.
+
+Derselbe Service schützt Schreibzugriffe aus Konsole, API, Agent und Workflow.
+Zeilengrants stehen in der bestehenden Tabelle `resource_grants` unter `table_record`;
+nur dort wird API-`write` als `edit` gespeichert. Sie werden nie zu
+Tabellenverwaltungsrechten. API-Keys benötigen `tables:view` zum Lesen und `tables:edit`
+zum Schreiben; ein Grant erweitert keinen Key. Das Löschen eines Datensatzes entfernt
+seine Grants in derselben Transaktion.
+
+Jeder gelieferte Datensatz enthält `access`, `can_delete`, `can_manage_access` und
+`read_only_column_ids`. Letzteres umfasst Policy-Felder und Projektmitgliedschaftsfelder,
+die eine andere Tabelle verwendet. Rasterzellen, Datensatzpanel und Kanban-Verschiebungen
+verwenden diese Antworten. Datensatzlisten, Katalogzähler, Exporte und verknüpfte Beschriftungen
+verwenden dieselbe Leseregel. Die Wiederholung eines idempotenten Schreibzugriffs prüft
+die aktuellen Rechte erneut, damit ein gespeicherter Beleg kein entzogenes Schreibrecht bewahrt.
+
+Workflow-Trigger prüfen das aktuelle Leserecht der veröffentlichenden Person für die
+Quellzeile erneut. Filter und Eingaben des Laufs enthalten nur lesbare verknüpfte
+Datensätze, sowohl in den aktuellen als auch in den vorherigen Werten. Eine Änderung
+ausschließlich verborgener Verknüpfungen startet keinen Workflow. Eine ungültige
+Zielrichtlinie zeigt keine verknüpften IDs; eine ungültige Quellrichtlinie filtert das
+Ereignis heraus. Gespeichertes Ereignis und Verlauf bleiben unverändert.
 
 ## Fehler { #errors }
 

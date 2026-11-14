@@ -43,7 +43,7 @@ from app.core.field_errors import field_problems
 from app.core.permissions import AuthContext, Perm
 from app.db.locks import LockScope, try_hold_name
 from app.db.models.virtual_table import VirtualTable, VirtualTableRecord
-from app.repositories import virtual_table_repo
+from app.repositories import resource_grant_repo, virtual_table_repo
 from app.repositories import virtual_table_trigger as trigger_repo
 from app.repositories.virtual_table import FilterClause, SearchClause, SortClause
 from app.schemas.virtual_table import (
@@ -93,6 +93,11 @@ from app.services.virtual_tables.exceptions import (
 )
 from app.services.virtual_tables.principals import principal_problems
 from app.services.virtual_tables.receipts import DeleteOutcome, WriteOutcome, run_once
+from app.services.virtual_tables.record_access import (
+    can_write_record,
+    require_access_fields,
+    with_record_access,
+)
 from app.services.virtual_tables.record_sources import source_for
 from app.services.virtual_tables.row_policy import (
     may_edit_row,
@@ -570,7 +575,9 @@ class RecordOperations(Operations):
         )
         if record is None:
             raise NotFoundError(message="Record not found", details={"record_id": record_id})
-        if not await may_view_row(self.db, ctx, table, await self._columns(table), record.values):
+        if not await may_view_row(
+            self.db, ctx, table, await self._columns(table), record.values, record_id=record.id
+        ):
             raise NotFoundError(message="Record not found", details={"record_id": record_id})
         return await self._read_through(ctx, table, RecordRead.model_validate(record))
 
@@ -584,7 +591,9 @@ class RecordOperations(Operations):
         )
         if record is None:
             raise NotFoundError(message="Record not found", details={"external_id": external_id})
-        if not await may_view_row(self.db, ctx, table, await self._columns(table), record.values):
+        if not await may_view_row(
+            self.db, ctx, table, await self._columns(table), record.values, record_id=record.id
+        ):
             raise NotFoundError(message="Record not found", details={"external_id": external_id})
         return await self._read_through(ctx, table, RecordRead.model_validate(record))
 
@@ -700,6 +709,7 @@ class RecordOperations(Operations):
             columns,
             [RecordRead.model_validate(row) for row in rows[: query.limit]],
         )
+        items = await with_record_access(self.db, ctx, table, columns, items)
         if selected is not None:
             # Compute before projecting: a selected formula can depend on an omitted cell.
             items = [
@@ -1148,7 +1158,9 @@ class RecordOperations(Operations):
         operation_key: str | None,
     ) -> RecordWrite:
         operation_key = _operation_key(operation_key)
-        table = await self._load_table(ctx, table_id, Perm.TABLES_EDIT, share=True)
+        table = await self._load_table(
+            ctx, table_id, Perm.TABLES_EDIT, share=True, alternative_perm=Perm.TABLES_VIEW
+        )
 
         async def action() -> WriteOutcome:
             self._ensure_live(table)
@@ -1233,7 +1245,9 @@ class RecordOperations(Operations):
     ) -> RecordWrite:
         external_id = _external_id(external_id)
         operation_key = _operation_key(operation_key)
-        table = await self._load_table(ctx, table_id, Perm.TABLES_EDIT, share=True)
+        table = await self._load_table(
+            ctx, table_id, Perm.TABLES_EDIT, share=True, alternative_perm=Perm.TABLES_VIEW
+        )
 
         async def action() -> WriteOutcome:
             self._ensure_live(table)
@@ -1254,6 +1268,10 @@ class RecordOperations(Operations):
                 existing = await self._lookup(ctx, table, external_id)
                 if existing is None:
                     raise ConcurrentChangeError()
+            if not await can_write_record(
+                self.db, ctx, table, existing.id, await self._columns(table), existing.values
+            ):
+                raise NotFoundError(message="Record not found", details={"record_id": existing.id})
             revision = existing.revision if at_current_revision else expected_revision
             if revision is None:
                 raise RevisionRequiredError(
@@ -1325,6 +1343,12 @@ class RecordOperations(Operations):
             from app.services.task_execution import TaskExecution
 
             await TaskExecution(self.db).deleted(ctx, record)
+            await resource_grant_repo.delete_for_resource(
+                self.db,
+                organization_id=ctx.organization_id,
+                resource_type="table_record",
+                resource_id=record.id,
+            )
             await virtual_table_repo.delete_record(self.db, record)
             return DeleteOutcome(record_id=record_id)
 
@@ -1375,6 +1399,26 @@ class RecordOperations(Operations):
             )
         # Worked out after the receipt, never stored in it: a replay shows what the
         # linked records say now, as any other read would.
+        if replayed:
+            current = await virtual_table_repo.get_record(
+                self.db,
+                outcome.record.id,
+                table_id=table.id,
+                organization_id=ctx.organization_id,
+            )
+            columns = await self._columns(table)
+            if (
+                current is None
+                or not await can_write_record(
+                    self.db, ctx, table, current.id, columns, current.values
+                )
+                or not await can_write_record(
+                    self.db, ctx, table, current.id, columns, outcome.record.values
+                )
+            ):
+                raise NotFoundError(
+                    message="Record not found", details={"record_id": outcome.record.id}
+                )
         return RecordWrite(
             record=await self._read_through(ctx, table, outcome.record),
             created=outcome.created,
@@ -1425,7 +1469,9 @@ class RecordOperations(Operations):
         self, ctx: AuthContext, table: VirtualTable, record: RecordRead
     ) -> RecordRead:
         """One record with its links named and its lookups and rollups worked out."""
-        return (await read_through(self.db, ctx, await self._columns(table), [record]))[0]
+        columns = await self._columns(table)
+        records = await read_through(self.db, ctx, columns, [record])
+        return (await with_record_access(self.db, ctx, table, columns, records))[0]
 
     async def _preserve_unreadable_links(
         self,
@@ -1518,7 +1564,13 @@ class RecordOperations(Operations):
                 str(row.id)
                 for row in found
                 if await may_view_row(
-                    self.db, ctx, target, target_columns, row.values, project_ids=project_ids
+                    self.db,
+                    ctx,
+                    target,
+                    target_columns,
+                    row.values,
+                    project_ids=project_ids,
+                    record_id=row.id,
                 )
             }
             missing = set(map(str, ids)) - seen
@@ -1563,6 +1615,8 @@ class RecordOperations(Operations):
         values: dict[str, CellValue],
     ) -> VirtualTableRecord | None:
         """Insert a record with its history and created event, or `None` if the id is taken."""
+        if not await resolve_access(self.db, ctx, table, Perm.TABLES_EDIT, resource_type=TABLE):
+            raise NotFoundError(message="Table not found", details={"table_id": table.id})
         columns = await self._columns(table)
         merged = await normalize_task_cells(
             self.db, ctx.organization_id, table.id, _merge(columns, values, None)
@@ -1672,7 +1726,7 @@ class RecordOperations(Operations):
         refusal never confirms the row exists.
         """
         columns = await self._columns(table)
-        if not await may_edit_row(self.db, ctx, table, columns, record.values):
+        if not await can_write_record(self.db, ctx, table, record.id, columns, record.values):
             raise NotFoundError(message="Record not found", details={"record_id": record.id})
         self._check_revision(record, expected_revision)
         before = dict(record.values)
@@ -1680,6 +1734,7 @@ class RecordOperations(Operations):
             self.db, ctx.organization_id, table.id, _merge(columns, values, before)
         )
         await self._preserve_unreadable_links(ctx, columns, values, before, merged)
+        await require_access_fields(self.db, ctx, table, columns, before, merged)
         if merged == before:
             # Nothing to record. Bumping the revision and keeping a full before-and-after
             # snapshot, and a receipt holding a whole copy, for a request that changed
@@ -1698,7 +1753,7 @@ class RecordOperations(Operations):
         if problems:
             raise InvalidRecordError([(f"values.{key}", message) for key, message in problems])
         await self._check_links(ctx, columns, values, stored=before)
-        if not await may_edit_row(self.db, ctx, table, columns, merged):
+        if not await can_write_record(self.db, ctx, table, record.id, columns, merged):
             raise NotFoundError(message="Record not found", details={"record_id": record.id})
         await quotas.enforce_record_size(ctx, table, merged)
         await virtual_table_repo.update_record(

@@ -5541,6 +5541,14 @@
         "title": "When a record is added",
         "body": "Run a published workflow for every record added to this table, however it was added. Filter which records start it and choose what its run starts with."
       },
+      "table-row-access": {
+        "title": "Row access rules",
+        "body": "Choose who can read rows, then open a row to give a person or group Read or Write."
+      },
+      "record-access": {
+        "title": "Share this row",
+        "body": "Write includes Read and changes to ordinary cells. It does not allow deletion, access management, or table schema changes."
+      },
       "table-view-tabs": {
         "title": "Three ways to look",
         "body": "The same records as a table, as a kanban board grouped by a single-select column, or as a list. Save a view to keep its filters, sort and grouping."
@@ -10824,6 +10832,42 @@
     "removeFavouriteNamed": "Remove {name} from favourites"
   },
   "tables": {
+    "access": {
+      "read": "Read",
+      "write": "Write",
+      "manage": "Row access",
+      "title": "Share this row",
+      "writeHelp": "Write includes Read and changes to ordinary cells. It does not allow deletion, access management, or table schema changes.",
+      "tableRequired": "People and groups also need access to this table. A row grant does not share linked records or remove access already provided by table rules.",
+      "loading": "Loading row access…",
+      "personOrGroup": "Person or group",
+      "chooseSubject": "Choose a person or group",
+      "permission": "Permission",
+      "expiry": "Expires (optional)",
+      "expiryHelp": "Leave blank for a permanent person grant. Group grants expire after 90 days by default.",
+      "add": "Save grant",
+      "grants": "Explicit row grants",
+      "empty": "No explicit grants. Table and row rules still apply.",
+      "expired": "Expired — add the grant again to renew it.",
+      "expires": "Expires {date}",
+      "permissionFor": "Permission for {name}",
+      "removeFor": "Remove access for {name}",
+      "saved": "Row access updated",
+      "rowRules": "Row access rules",
+      "rowRulesHelp": "Choose who can read rows, then open a row to give a person or group Read or Write.",
+      "invalidPolicy": "The row access rules are invalid. Records are blocked until a table administrator saves valid rules here.",
+      "mode": "Default row access",
+      "modeAll": "Everyone with table access",
+      "modeGrants": "Only people with row grants",
+      "modeFields": "People named in row fields",
+      "allHelp": "Anyone who can read the table can read every row. Table editors retain their existing write permissions.",
+      "grantsHelp": "Each row needs a Read or Write grant. The table owner and organization administrators retain access. Set up grants before switching to this mode.",
+      "fieldsHelp": "The Read field allows viewing; the Write field also allows viewing. A row Write grant can allow editing without table administration. Existing project membership rules are preserved.",
+      "readField": "Read field",
+      "writeField": "Write field",
+      "chooseField": "Choose a people field",
+      "saveRules": "Save row rules"
+    },
     "cells": {
       "notSet": "Not set",
       "true": "True",
