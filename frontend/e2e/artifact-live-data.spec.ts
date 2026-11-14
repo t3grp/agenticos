@@ -228,7 +228,37 @@ let colleagueContext: BrowserContext | undefined;
 
 /** The colleague's own signed-in context, made once and closed at the teardown. */
 async function asColleague(browser: Browser): Promise<BrowserContext> {
-  colleagueContext ??= await signInAs(browser, COLLEAGUE_EMAIL, COLLEAGUE_PASSWORD);
+  if (colleagueContext) return colleagueContext;
+  colleagueContext = await signInAs(browser, COLLEAGUE_EMAIL, COLLEAGUE_PASSWORD);
+  const page = await colleagueContext.newPage();
+  try {
+    await page.goto("/chat");
+    const organizations = await rowsAt(page.request, "/api/orgs");
+    const organizationIndex = organizations.findIndex((row) => row.id === fixture.orgId);
+    expect(
+      organizationIndex,
+      "the colleague lost the artifact organization",
+    ).toBeGreaterThanOrEqual(0);
+    await page.locator('[data-tour="organization-switcher"]').click();
+    // Personal organizations can have the same name. The menu follows the
+    // authenticated organization list, so select the row with the fixture's ID.
+    await page.getByRole("menuitem").nth(organizationIndex).click();
+    const [permissions] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === "/api/me/permissions" &&
+          response.request().headers()["x-organization-id"] === fixture.orgId &&
+          response.status() !== 401,
+      ),
+      page.reload(),
+    ]);
+    expect(permissions.ok(), "reading the colleague's selected organization failed").toBe(true);
+    expect(((await permissions.json()) as { organization_id: string }).organization_id).toBe(
+      fixture.orgId,
+    );
+  } finally {
+    await page.close();
+  }
   return colleagueContext;
 }
 
