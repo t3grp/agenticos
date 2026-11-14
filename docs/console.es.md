@@ -1,5 +1,5 @@
 ---
-source_sha: "063cfd62059e"
+source_sha: "0f7c70175c8d"
 ---
 
 # La consola { #the-console }
@@ -631,6 +631,21 @@ cerrados; al cerrar uno, permanece cerrado cuando llegan nuevos resultados de
 herramientas. En pantallas estrechas, el panel seleccionado ocupa toda la pantalla.
 Tras un run, la imagen terminada lleva la etiqueta **Última vista (Last view)**;
 no es un escritorio en directo. Pide otra captura para actualizar la vista del equipo.
+
+**Ajustes del agente.** El control de ajustes de la derecha abre el borrador del
+agente seleccionado junto a la conversación. Edita su nombre, descripción breve,
+instrucciones, modelo predeterminado y capabilities existentes; después elige
+**Save draft**. **Review and publish** valida el borrador guardado y abre la
+confirmación de publicación existente. Cambiar el modelo predeterminado no elimina
+la selección de modelo de Chat controls; un run activo conserva su configuración.
+
+La edición y la publicación siguen la decisión del servidor para ese agente,
+incluidos los grants explícitos. Los chats de solo lectura muestran los ajustes
+sin controles de edición; los agentes de workflow se configuran en su propio paso.
+Cerrar el panel o abrir Browser, Computer o Files conserva los cambios sin guardar
+del agente seleccionado. Guarda antes de cambiar de agente o salir del chat. Los
+cambios externos detienen el guardado hasta que recargues o decidas conservar tus
+cambios.
 
 **Ver un recorrido.** El [navegador web](reference/capabilities.md#browser-automation)
 aparece en su propio panel junto al chat. Las tarjetas de páginas visitadas

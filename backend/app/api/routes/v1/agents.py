@@ -428,11 +428,14 @@ async def list_mentionables(
 async def get_agent(agent_id: UUID, service: AgentRegistrySvc, ctx: Auth) -> Any:
     """One agent with the spec currently being edited."""
     agent = await service.get(ctx, agent_id)
-    # `model_validate` reads the row's columns and parses `draft_spec` (JSONB) into
-    # `AgentSpec` off the schema field, so this route names only the one value the
-    # row does not carry: `can_run` is this caller's, not the agent's (#545).
+    can_edit, can_publish = await service.configuration_access(ctx, agent)
+    # Access hints belong to this caller, never to the stored agent row.
     return AgentDetail.model_validate(agent).model_copy(
-        update={"can_run": await service.may_run(ctx, agent)}
+        update={
+            "can_run": await service.may_run(ctx, agent),
+            "can_edit": can_edit,
+            "can_publish": can_publish,
+        }
     )
 
 

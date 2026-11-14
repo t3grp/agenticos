@@ -1244,6 +1244,38 @@
     "title": "Billing"
   },
   "chat": {
+    "agentSettings": {
+      "open": "Open agent settings",
+      "title": "Agent settings",
+      "close": "Close agent settings",
+      "expand": "Expand agent settings",
+      "restore": "Dock agent settings",
+      "loading": "Loading agent settings…",
+      "loadFailed": "Agent settings could not be loaded.",
+      "name": "Name",
+      "nameRequired": "Enter a name for the agent.",
+      "description": "Description",
+      "descriptionHint": "A short description for people choosing this agent.",
+      "instructions": "Instructions",
+      "instructionsHint": "The guidance the agent follows when it works. Keep existing instruction variables intact.",
+      "model": "Default model",
+      "modelHint": "This changes the agent’s draft default. A model chosen in the chat header still overrides it for chat requests.",
+      "capabilities": "Tools and capabilities",
+      "capabilitiesHint": "Enable or disable tools already configured for this agent. Add tools and edit their configuration in the full editor.",
+      "noCapabilities": "No capabilities are configured yet.",
+      "draftHint": "These settings belong to the agent. Save the draft, then publish a version to make it available. Running turns keep their current configuration.",
+      "readOnly": "You can view this agent’s settings. Editing is not available with your current access.",
+      "workflowOwned": "This agent is configured in its workflow step.",
+      "openBuilder": "Open full editor for skills, knowledge, connections and limits",
+      "saving": "Saving draft…",
+      "unsaved": "Unsaved changes",
+      "saved": "Draft saved · publish to apply changes",
+      "save": "Save draft",
+      "reset": "Discard changes",
+      "checking": "Checking draft…",
+      "publishContextFailed": "Publication history or environments could not be loaded. Open the full editor to retry before publishing.",
+      "publish": "Review and publish"
+    },
     "workspace": {
       "rail": "Workspace",
       "browser": "Browser",
@@ -4958,6 +4990,10 @@
       "chat-workspace": {
         "title": "Open your workspace",
         "body": "Open Browser, Computer or Files beside the chat. Ask the selected agent to start a hosted tool when it is configured; opening a panel alone starts no session."
+      },
+      "chat-agent-settings": {
+        "title": "Edit the agent beside your chat",
+        "body": "Open the settings pane to change this agent’s instructions, default model and configured tools. Save a draft and review it before publishing. The model in the chat header is a separate chat choice."
       },
       "chat-agent-picker": {
         "title": "Choose who answers",
