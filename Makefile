@@ -502,8 +502,10 @@ test-security:
 	$(TEST_DB_START)
 	$(TEST_DB_ENV) uv run --directory backend pytest tests/ -m security -q --no-cov -p no:randomly
 
-# The list of refusal tests written to backend/security-tests.txt, and appended to
-# the CI job summary when one is present. Collection only - no database, no run -
+# The complete list of refusal tests is written to backend/security-tests.txt;
+# a bounded preview is appended to the CI job summary when one is present.
+# GitHub caps each summary at 1 MiB. The artifact retains every collected test.
+# Collection only - no database, no run -
 # so it is the cheap step CI calls with `if: always()`. Informational: it lists,
 # it does not gate, which is why `check` never reaches it and test_ci_parity.py
 # names it in CI_ONLY_TARGETS.
@@ -515,8 +517,9 @@ security-report:
 	if [ -n "$$GITHUB_STEP_SUMMARY" ]; then \
 	  { echo "## Security refusal tests"; echo; \
 	    echo "$$count tests carry the security marker. Run them with: make test-security"; echo; \
-	    echo '<details><summary>The list</summary>'; echo; echo '```'; \
-	    cat backend/security-tests.txt; echo '```'; echo; echo '</details>'; \
+		    echo 'Download the security-tests artifact for the complete list.'; echo; \
+		    echo '<details><summary>First 100 tests (up to 500 characters each)</summary>'; echo; echo '```'; \
+		    head -n 100 backend/security-tests.txt | cut -c 1-500; echo '```'; echo; echo '</details>'; \
 	  } >> "$$GITHUB_STEP_SUMMARY"; \
 	fi
 

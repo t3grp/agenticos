@@ -1,5 +1,5 @@
 ---
-source_sha: "965793cc1a4b"
+source_sha: "063cfd62059e"
 ---
 
 # Die Konsole { #the-console }
@@ -16,7 +16,7 @@ neben dem Mikrofon.
 
 Ressourcenlisten, darunter Inbox und Routines, füllen auch im leeren Zustand die verbleibende Seitenhöhe. Routines bietet Vorlagen im Erstellungsformular statt in einem eigenen Ideenbereich an. Get started reserviert beim Laden der Checkliste seinen Platz, damit Briefing und die Karten darunter nicht springen.
 
-Im Chat sind Agentenporträts größer und ohne Ringe. Der Files-Schalter bleibt beim Öffnen und Schließen des Bereichs im Eingabefeld; reduzierte Bewegung wird berücksichtigt. Die Chat-Einstellungen zeigen zuerst das aktuelle Modell. Unter **Modell ändern** lassen sich vorausgefüllter Anbieter und Modell bearbeiten; erst die Bestätigung übernimmt die Änderung. Anhangskarten stehen ohne zusätzliches Schattenpanel über dem Eingabefeld.
+Im Chat sind Agentenporträts größer und ohne Ringe. Der Files-Schalter bleibt beim Öffnen und Schließen des Bereichs in den Bedienelementen rechts; reduzierte Bewegung wird berücksichtigt. Die Chat-Einstellungen zeigen zuerst das aktuelle Modell. Unter **Modell ändern** lassen sich vorausgefüllter Anbieter und Modell bearbeiten; erst die Bestätigung übernimmt die Änderung. Anhangskarten stehen ohne zusätzliches Schattenpanel über dem Eingabefeld.
 
 Seiteneinführungen und Erläuterungen zu Einstellungen sind über das Informationssymbol neben der Überschrift erreichbar. Aktuelle Zusammenfassungen und Warnungen vor destruktiven Aktionen bleiben sichtbar.
 
@@ -346,22 +346,22 @@ Auf einem Smartphone gibt es keine Sprechblase - sie würde die Seite verdecken,
 Freigaben, die sie schon genannt hat, bleiben für den Rest des Browser-Tabs
 genannt, auch wenn ein Link die Konsole neu lädt.
 
-Sein Fenster verwendet den Chat der Konsole und startet mit dem Hauptassistenten.
-Über die Agent-Auswahl in der Kopfzeile wählen Sie einen veröffentlichten Agent,
-den Sie ausführen dürfen. Ein Wechsel des Agents behält die aktuelle Unterhaltung;
-Kopfzeile und Verlauf folgen der Auswahl. Die Begrüßungskacheln des Architect
-erscheinen nur, wenn der Hauptassistent ausgewählt ist. Auf dem Telefon füllt das
-Fenster den Bildschirm.
+Sein Fenster nutzt den Chat der Konsole und startet mit dem ausgewählten
+Hauptassistenten. Über die Agent-Auswahl in der Kopfzeile wählen Sie einen
+veröffentlichten Agent, den Sie ausführen dürfen. Beim Wechsel bleibt das
+aktuelle Gespräch erhalten; Kopfzeile und Gesprächsverlauf folgen der Auswahl.
+Die Begrüßungskacheln des Architekten erscheinen nur beim Hauptassistenten.
+Auf dem Telefon füllt das Fenster den Bildschirm.
 
-Jede neue Frage enthält frischen strukturierten Kontext zur aktuellen Konsolenseite,
-solange der Seitenkontext aktiviert ist. Das Fenster zeigt, welche Seite geteilt
-wird, und lässt Sie die Freigabe ausschalten.
+Jede neue Frage enthält frischen, strukturierten Kontext zur aktuellen
+Konsolenseite, solange der Seitenkontext aktiviert ist. Das Fenster zeigt,
+welche Seite geteilt wird, und lässt Sie die Freigabe ausschalten.
 
-Eine Frage in der Warteschlange oder das Wiederholen einer abgelehnten Übermittlung
-behält den beim Absenden gewählten Seitenkontext und Agent. Eine neue Frage oder
-neu erzeugte Antwort verwendet die aktuelle Seite und den aktuellen Agent. Ein
-Wechsel des Kontos oder der Organisation setzt Unterhaltung, Agent-Auswahl und
-Seitenkontext-Einstellung des Fensters zurück.
+Eine Frage in der Warteschlange oder ein erneuter Versuch nach einer abgelehnten
+Übermittlung behält den Seitenkontext und den beim Absenden gewählten Agent.
+Eine neue Frage oder eine neu erzeugte Antwort nutzt die aktuelle Seite und den
+aktuellen Agent. Ein Wechsel des Kontos oder der Organisation setzt das Gespräch,
+die Agent-Auswahl und die Seitenkontexteinstellung des Fensters zurück.
 
 Nennt er eine Seite, öffnet der Link sie in der Konsole hinter dem Fenster und
 zeigt auf das gemeinte Bedienelement — die Schaltfläche, die einen Agent anlegt,
@@ -369,7 +369,7 @@ den Reiter mit den Freigaben. Die Kamera in seiner Kopfzeile zeigt ihm die Seite
 auf der Sie sind: Der Browser fragt, welchen Tab Sie teilen, und ein Bild hängt
 an Ihrer nächsten Nachricht.
 
-Der Architect plant längere Aufgaben als Checkliste, die Sie
+Der Architekt plant längere Aufgaben als Checkliste, die Sie
 verfolgen können, er merkt sich Notizen über Sie zwischen Unterhaltungen, sagt
 Ihnen, was Ihre Agents kosten, und löscht nur einen versehentlich angelegten
 Agent-Entwurf und eine Routine, deren Entfernen Sie verlangen. Neben Freigaben und einer leeren
@@ -654,6 +654,8 @@ entsprechende gehostete Capability und dürfen Sie ihn ausführen, bittet eine
 ausdrückliche Startaktion ihn, den Browser zu öffnen oder ein Desktop-Bild
 aufzunehmen. Andernfalls erklärt das Panel, was nicht verfügbar ist. Die
 veröffentlichten Einstellungen und Zugriffskontrollen des Agents gelten weiterhin.
+Wählen Sie in Teamräumen im Nachrichtenfeld einen Agenten aus und bitten Sie ihn,
+den Browser oder Computer zu öffnen. Die Panels bleiben zum Ansehen verfügbar.
 
 Browser- und Computer-Ansichten bleiben getrennt. Panels sind zunächst geschlossen;
 ein geschlossenes Panel bleibt auch bei neuen Werkzeugergebnissen geschlossen. Auf

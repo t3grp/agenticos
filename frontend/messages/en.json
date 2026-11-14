@@ -1271,11 +1271,60 @@
       "localSelected": "This chat is using tools on your own computer. Switch those off in Chat controls before starting a hosted session here.",
       "chooseAgent": "Select an agent to start a hosted session.",
       "readOnly": "You can view this conversation, but cannot start a session here.",
+      "roomComposer": "Choose a responder in the room composer and ask them to open the browser or computer.",
       "busy": "Wait for the current turn to finish before starting a session.",
       "disconnected": "Reconnect to the chat before starting a session.",
       "website": "Website address",
       "websitePlaceholder": "https://example.com",
       "websiteInvalid": "Enter a website address starting with https:// or http://, without sign-in details."
+    },
+    "teamRoom": {
+      "title": "Team room",
+      "titleInProject": "Team room · {name}",
+      "audience": "Everyone with access to this project can read this room.",
+      "alone": "You're the only person here right now.",
+      "here": "{count, plural, =1 {{names} is here} other {# teammates are here}}",
+      "emptyTitle": "A shared conversation for your team",
+      "emptyDescription": "Post an update, reply to a teammate, or choose an agent to help. Messages stay in this project for everyone with access.",
+      "newRoom": "New team room",
+      "defaultTitle": "Team room",
+      "creating": "Creating room…",
+      "createFailed": "Couldn't create the team room.",
+      "message": "Message to the team",
+      "placeholder": "Write to your team…",
+      "responder": "Who should answer",
+      "chooseResponder": "Choose who should answer",
+      "humanOnly": "Team only",
+      "askAgent": "Ask @{name}",
+      "responderHint": "Messages go to your team. Choose an agent only when you want an AI answer.",
+      "post": "Post message",
+      "posting": "Posting…",
+      "postFailed": "Couldn't confirm that your message was saved.",
+      "retryPost": "Retry same message",
+      "retryHint": "The result is unconfirmed. Retrying sends the same message once, with the same agent and reply.",
+      "checking": "Checking room access…",
+      "readOnly": "You can read this room. Posting requires permission to use its project.",
+      "loadFailed": "Couldn't load room access and agent requests.",
+      "retry": "Try again",
+      "queueTitle": "Agent requests · {count, plural, =0 {none active} =1 {1 active} other {# active}}",
+      "requests": "Agent requests",
+      "requestedBy": "{name} asked @{agent}",
+      "you": "You",
+      "teammate": "A teammate",
+      "agent": "agent",
+      "viewRun": "View run",
+      "cancel": "Cancel request",
+      "cancelFailed": "Couldn't cancel this request.",
+      "status": {
+        "queued": "Queued",
+        "running": "Working",
+        "awaiting_approval": "Waiting for approval",
+        "awaiting_answer": "Waiting for an answer",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "interrupted": "Interrupted"
+      }
     },
     "loadEarlierMessages": "Load earlier messages",
     "accessLevel": "Access level",
@@ -4922,6 +4971,14 @@
         "title": "Your own accounts, where the agent uses them",
         "body": "An agent bound to each person's own account speaks to Notion or Jira as you. This lists which of its services need an account of yours, and connects one without leaving the chat."
       },
+      "chat-team-room": {
+        "title": "Your team's room",
+        "body": "This conversation follows the project's sharing permissions. See who is here and use Share to check or manage its audience."
+      },
+      "chat-team-composer": {
+        "title": "Talk first, ask an agent when needed",
+        "body": "Post to your teammates without starting an agent. Choose an agent explicitly for an AI answer; its request joins the shared queue."
+      },
       "chat-composer": {
         "title": "Ask anything",
         "body": "Type a message, drop in a file, or start with a slash-command. Enter sends; Shift+Enter adds a line."
@@ -7365,14 +7422,14 @@
       "solLoopRounds": "{count, plural, =1 {1 sol-loop round} other {# sol-loop rounds}}",
       "solLoopRound": "Round {round} · {scope} · {verdict}",
       "solLoopStopReason": "Stopped: {reason}",
-      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFinding": "{id} — {severity}: {location} — {claim}",
       "solLoopFix": "Fix: {fix}",
       "solLoopOutcome": "Outcome: {outcome}",
       "evalToolTuningRuns": "{count, plural, =1 {1 eval tool-tuning run} other {# eval tool-tuning runs}}",
       "evalToolTuningRun": "{tool} · {passed}/{total} passed",
       "evalToolTuningDominantFailure": "Most common failure: {failure}",
       "evalToolTuningCase": "{name} · {classification}",
-      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposal": "{kind}: {title}",
       "evalToolTuningProposalEvidence": "Evidence: {evidence} · {status}",
       "proofScenarios": "{count, plural, =1 {1 proof scenario} other {# proof scenarios}}",
       "proofScenario": "{id} {name} — {proven}",
@@ -12582,7 +12639,7 @@
     "harness": {
       "harness": {
         "title": "Harness",
-        "description": "The CLI session that does the agent's work: Claude Code or Codex."
+        "description": "The CLI session that does the agent's work: Claude Code, Codex, OpenCode, Gemini CLI or Pi."
       },
       "access": {
         "title": "Access",
@@ -12590,7 +12647,7 @@
       },
       "model": {
         "title": "Model",
-        "description": "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex. Not set takes the harness's own default."
+        "description": "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex, a Gemini one for Gemini CLI, or any of those vendors' models for OpenCode or Pi. Not set takes the harness's own default."
       },
       "base_url": {
         "title": "Anthropic-compatible endpoint",
@@ -14367,8 +14424,7 @@
     "appsDescription": "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
     "connectApps": "Connect apps",
     "opensNewTab": "Opens in a new tab. Return here when you're ready.",
-    "skipHint": "No app connection is required. You can connect later from Connections → Apps.",
-    "continueToWorkspace": "Continue to workspace"
+    "skipHint": "No app connection is required. You can connect later from Connections → Apps."
   },
   "onboardingTeam": {
     "step1Title": "About you & your work",
@@ -14393,7 +14449,6 @@
     "step4Title": "Your recommended AI team",
     "step4Subtitle": "Here is your team structure. Your Team Lead coordinates incoming requests and delegates work to your specialists.",
     "leadBadge": "Team Lead & Orchestrator",
-    "leadOrchestrationHint": "Routes tasks to specialists and synthesizes unified answers for you.",
     "starterPromptsHeader": "Example starter prompts",
     "specialistsTitle": "Specialist agents",
     "addSpecialist": "Add specialist",

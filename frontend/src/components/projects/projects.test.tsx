@@ -16,6 +16,11 @@ import { ProjectFiles } from "./project-files";
 import { ProjectPickerDialog } from "./project-picker-dialog";
 import { ProjectSettings } from "./project-settings";
 
+vi.mock("@/hooks/use-room", async (original) => ({
+  ...(await original<typeof import("@/hooks/use-room")>()),
+  useCreateTeamRoom: () => ({ create: vi.fn(), isReady: true }),
+}));
+
 const nativeProject = vi.hoisted(() => ({
   enabled: false,
   target: null as LocalTarget | null,
@@ -298,10 +303,7 @@ describe("ProjectChats", () => {
     const row = screen.getByRole("row", { name: /Press release/ });
     expect(row).toHaveTextContent("Kacper");
     expect(screen.getByText("Untitled chat")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /New chat/ })).toHaveAttribute(
-      "href",
-      "/chat?project=p-1",
-    );
+    expect(screen.getByRole("button", { name: "New team room" })).toBeInTheDocument();
   });
 
   it("opens a chat from its row, sorts by any column and marks one unread", async () => {
@@ -446,7 +448,7 @@ describe("ProjectChats", () => {
   it("tells a reader who cannot chat that they can read, and offers no new chat", () => {
     wrap(<ProjectChats project={aProject({ can_use: false })} />);
     expect(screen.getByText(/but not chat in it/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /New chat/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New team room" })).not.toBeInTheDocument();
   });
 
   it("invites a first chat, and says when the list failed", () => {

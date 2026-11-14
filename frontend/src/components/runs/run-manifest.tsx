@@ -332,8 +332,6 @@ export function RunManifest({ runId }: { runId: string }) {
         </Section>
       )}
 
-
-
       {/* The proof scenarios: each reproduction and its observed attempts. A
           scenario is proven only when the same reproduction failed before the
           fix and passed after it - a unit-test attempt never counts, so it

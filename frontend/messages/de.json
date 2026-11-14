@@ -1270,11 +1270,60 @@
       "localSelected": "Dieser Chat verwendet Werkzeuge auf Ihrem eigenen Computer. Schalten Sie diese in den Chat-Einstellungen aus, bevor Sie hier eine gehostete Sitzung starten.",
       "chooseAgent": "Wählen Sie einen Agent, um eine gehostete Sitzung zu starten.",
       "readOnly": "Sie können diese Unterhaltung ansehen, aber hier keine Sitzung starten.",
+      "roomComposer": "Wählen Sie im Nachrichtenfeld des Raums einen Agenten aus und bitten Sie ihn, den Browser oder Computer zu öffnen.",
       "busy": "Warten Sie, bis der aktuelle Turn beendet ist, bevor Sie eine Sitzung starten.",
       "disconnected": "Verbinden Sie den Chat erneut, bevor Sie eine Sitzung starten.",
       "website": "Website-Adresse",
       "websitePlaceholder": "https://example.com",
       "websiteInvalid": "Geben Sie eine Website-Adresse ein, die mit https:// oder http:// beginnt und keine Anmeldedaten enthält."
+    },
+    "teamRoom": {
+      "title": "Teamraum",
+      "titleInProject": "Teamraum · {name}",
+      "audience": "Alle mit Zugriff auf dieses Projekt können diesen Raum lesen.",
+      "alone": "Du bist gerade allein in diesem Raum.",
+      "here": "{count, plural, =1 {{names} ist hier} other {# Teammitglieder sind hier}}",
+      "emptyTitle": "Ein gemeinsames Gespräch für dein Team",
+      "emptyDescription": "Teile Neuigkeiten, antworte einem Teammitglied oder wähle einen Agent zur Unterstützung. Nachrichten bleiben für alle mit Zugriff in diesem Projekt.",
+      "newRoom": "Neuer Teamraum",
+      "defaultTitle": "Teamraum",
+      "creating": "Raum wird erstellt…",
+      "createFailed": "Der Teamraum konnte nicht erstellt werden.",
+      "message": "Nachricht an das Team",
+      "placeholder": "Schreibe deinem Team…",
+      "responder": "Wer soll antworten",
+      "chooseResponder": "Wähle, wer antworten soll",
+      "humanOnly": "Nur das Team",
+      "askAgent": "@{name} fragen",
+      "responderHint": "Nachrichten gehen an dein Team. Wähle einen Agent, wenn du eine KI-Antwort möchtest.",
+      "post": "Nachricht senden",
+      "posting": "Wird gesendet…",
+      "postFailed": "Das Speichern deiner Nachricht konnte nicht bestätigt werden.",
+      "retryPost": "Dieselbe Nachricht erneut senden",
+      "retryHint": "Das Ergebnis ist unbestätigt. Ein erneuter Versuch sendet dieselbe Nachricht einmal, mit demselben Agent und Bezug.",
+      "checking": "Raumzugriff wird geprüft…",
+      "readOnly": "Du kannst diesen Raum lesen. Zum Schreiben brauchst du die Berechtigung, das Projekt zu nutzen.",
+      "loadFailed": "Raumzugriff und Agent-Anfragen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "queueTitle": "Agent-Anfragen · {count, plural, =0 {keine aktiv} =1 {1 aktiv} other {# aktiv}}",
+      "requests": "Agent-Anfragen",
+      "requestedBy": "{name} hat @{agent} gefragt",
+      "you": "Du",
+      "teammate": "Ein Teammitglied",
+      "agent": "Agent",
+      "viewRun": "Run ansehen",
+      "cancel": "Anfrage abbrechen",
+      "cancelFailed": "Diese Anfrage konnte nicht abgebrochen werden.",
+      "status": {
+        "queued": "In der Warteschlange",
+        "running": "In Arbeit",
+        "awaiting_approval": "Wartet auf Freigabe",
+        "awaiting_answer": "Wartet auf eine Antwort",
+        "completed": "Abgeschlossen",
+        "failed": "Fehlgeschlagen",
+        "cancelled": "Abgebrochen",
+        "interrupted": "Unterbrochen"
+      }
     },
     "loadEarlierMessages": "Ältere Nachrichten laden",
     "accessLevel": "Zugriffsstufe",
@@ -4667,6 +4716,14 @@
         "title": "Ihre eigenen Konten, dort wo der Agent sie nutzt",
         "body": "Ein Agent, der an das Konto jeder Person gebunden ist, spricht mit Notion oder Jira als Sie. Hier steht, welche seiner Dienste ein Konto von Ihnen brauchen, und hier verbinden Sie eines, ohne den Chat zu verlassen."
       },
+      "chat-team-room": {
+        "title": "Der Raum deines Teams",
+        "body": "Dieses Gespräch nutzt die Freigaben des Projekts. Sieh, wer hier ist, und prüfe oder verwalte mit Teilen den Teilnehmerkreis."
+      },
+      "chat-team-composer": {
+        "title": "Mit dem Team sprechen und bei Bedarf einen Agent fragen",
+        "body": "Schreibe deinem Team, ohne einen Agent zu starten. Wähle einen Agent ausdrücklich für eine KI-Antwort; die Anfrage kommt in die gemeinsame Warteschlange."
+      },
       "chat-composer": {
         "title": "Fragen Sie, was Sie wollen",
         "body": "Tippen Sie eine Nachricht, ziehen Sie eine Datei hinein oder beginnen Sie mit einem Slash-Befehl. Enter sendet; Umschalt+Enter fügt eine Zeile ein."
@@ -6496,14 +6553,14 @@
       "solLoopRounds": "{count, plural, =1 {1 Sol-loop-Runde} other {# Sol-loop-Runden}}",
       "solLoopRound": "Runde {round} · {scope} · {verdict}",
       "solLoopStopReason": "Gestoppt: {reason}",
-      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFinding": "{id} — {severity}: {location} — {claim}",
       "solLoopFix": "Fix: {fix}",
       "solLoopOutcome": "Ergebnis: {outcome}",
       "evalToolTuningRuns": "{count, plural, =1 {1 Eval-Tool-Tuning-Run} other {# Eval-Tool-Tuning-Runs}}",
       "evalToolTuningRun": "{tool} · {passed}/{total} bestanden",
       "evalToolTuningDominantFailure": "Häufigster Fehler: {failure}",
       "evalToolTuningCase": "{name} · {classification}",
-      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposal": "{kind}: {title}",
       "evalToolTuningProposalEvidence": "Belege: {evidence} · {status}",
       "proofScenarios": "{count, plural, =1 {1 Nachweis-Szenario} other {# Nachweis-Szenarien}}",
       "proofScenario": "{id} {name} — {proven}",
@@ -12250,7 +12307,7 @@
     "harness": {
       "harness": {
         "title": "Harness",
-        "description": "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code oder Codex."
+        "description": "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code, Codex, OpenCode, Gemini CLI oder Pi."
       },
       "access": {
         "title": "Zugriff",
@@ -12258,7 +12315,7 @@
       },
       "model": {
         "title": "Modell",
-        "description": "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex. Nicht gesetzt nimmt den Standard des Harness."
+        "description": "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex, ein Gemini-Modell für Gemini CLI oder ein beliebiges Modell dieser Anbieter für OpenCode oder Pi. Nicht gesetzt nimmt den Standard des Harness."
       },
       "base_url": {
         "title": "Anthropic-kompatibler Endpunkt",
@@ -13828,8 +13885,7 @@
     "appsDescription": "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
     "connectApps": "Apps verbinden",
     "opensNewTab": "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
-    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen.",
-    "continueToWorkspace": "Weiter zum Workspace"
+    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen."
   },
   "onboardingTeam": {
     "step1Title": "Über dich & deine Arbeit",
@@ -13854,7 +13910,6 @@
     "step4Title": "Dein empfohlenes KI-Team",
     "step4Subtitle": "Hier ist deine Teamstruktur. Dein Team Lead koordiniert Aufgaben und delegiert an Spezialisten.",
     "leadBadge": "Team Lead & Orchestrator",
-    "leadOrchestrationHint": "Leitet Aufgaben an Spezialisten weiter und bündelt die Ergebnisse für dich.",
     "starterPromptsHeader": "Beispiel-Prompts",
     "specialistsTitle": "Spezialisten-Agenten",
     "addSpecialist": "Spezialist hinzufügen",

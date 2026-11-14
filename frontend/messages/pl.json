@@ -420,11 +420,60 @@
       "localSelected": "Ten chat używa narzędzi na Twoim komputerze. Wyłącz je w ustawieniach chatu, zanim rozpoczniesz tutaj hostowaną sesję.",
       "chooseAgent": "Wybierz agenta, aby rozpocząć hostowaną sesję.",
       "readOnly": "Możesz oglądać tę rozmowę, ale nie możesz tutaj rozpocząć sesji.",
+      "roomComposer": "W polu wiadomości pokoju wybierz, kto ma odpowiedzieć, i poproś o otwarcie przeglądarki lub komputera.",
       "busy": "Zaczekaj na zakończenie bieżącej tury, zanim rozpoczniesz sesję.",
       "disconnected": "Połącz się ponownie z chatem, zanim rozpoczniesz sesję.",
       "website": "Adres strony",
       "websitePlaceholder": "https://example.com",
       "websiteInvalid": "Wpisz adres strony zaczynający się od https:// lub http://, bez danych logowania."
+    },
+    "teamRoom": {
+      "title": "Pokój zespołu",
+      "titleInProject": "Pokój zespołu · {name}",
+      "audience": "Każdy z dostępem do tego projektu może czytać ten pokój.",
+      "alone": "Jesteś teraz jedyną osobą w tym pokoju.",
+      "here": "{count, plural, one {{names} jest tutaj} few {# osoby z zespołu są tutaj} many {# osób z zespołu jest tutaj} other {# osoby z zespołu są tutaj}}",
+      "emptyTitle": "Wspólna rozmowa dla zespołu",
+      "emptyDescription": "Podziel się informacją, odpowiedz komuś z zespołu lub wybierz agenta do pomocy. Wiadomości pozostają w projekcie dla wszystkich z dostępem.",
+      "newRoom": "Nowy pokój zespołu",
+      "defaultTitle": "Pokój zespołu",
+      "creating": "Tworzenie pokoju…",
+      "createFailed": "Nie udało się utworzyć pokoju zespołu.",
+      "message": "Wiadomość do zespołu",
+      "placeholder": "Napisz do zespołu…",
+      "responder": "Kto ma odpowiedzieć",
+      "chooseResponder": "Wybierz, kto ma odpowiedzieć",
+      "humanOnly": "Tylko zespół",
+      "askAgent": "Zapytaj @{name}",
+      "responderHint": "Wiadomości trafiają do zespołu. Wybierz agenta, jeśli chcesz odpowiedź AI.",
+      "post": "Wyślij wiadomość",
+      "posting": "Wysyłanie…",
+      "postFailed": "Nie udało się potwierdzić zapisania wiadomości.",
+      "retryPost": "Ponów tę samą wiadomość",
+      "retryHint": "Wynik nie jest potwierdzony. Ponowienie zapisuje tę samą wiadomość tylko raz, z tym samym agentem i odniesieniem.",
+      "checking": "Sprawdzanie dostępu do pokoju…",
+      "readOnly": "Możesz czytać ten pokój. Pisanie wymaga uprawnienia do korzystania z projektu.",
+      "loadFailed": "Nie udało się wczytać dostępu do pokoju i próśb do agentów.",
+      "retry": "Spróbuj ponownie",
+      "queueTitle": "Prośby do agentów · {count, plural, =0 {brak aktywnych} one {1 aktywna} few {# aktywne} many {# aktywnych} other {# aktywnych}}",
+      "requests": "Prośby do agentów",
+      "requestedBy": "{name} poprosił(a) @{agent}",
+      "you": "Ty",
+      "teammate": "Osoba z zespołu",
+      "agent": "agent",
+      "viewRun": "Zobacz run",
+      "cancel": "Anuluj prośbę",
+      "cancelFailed": "Nie udało się anulować tej prośby.",
+      "status": {
+        "queued": "W kolejce",
+        "running": "W trakcie",
+        "awaiting_approval": "Oczekuje na zatwierdzenie",
+        "awaiting_answer": "Oczekuje na odpowiedź",
+        "completed": "Ukończono",
+        "failed": "Niepowodzenie",
+        "cancelled": "Anulowano",
+        "interrupted": "Przerwano"
+      }
     },
     "loadEarlierMessages": "Wczytaj wcześniejsze wiadomości",
     "accessLevel": "Poziom dostępu",
@@ -3330,14 +3379,14 @@
       "solLoopRounds": "{count, plural, one {1 runda sol-loop} few {# rundy sol-loop} many {# rund sol-loop} other {# rundy sol-loop}}",
       "solLoopRound": "Runda {round} · {scope} · {verdict}",
       "solLoopStopReason": "Zatrzymano: {reason}",
-      "solLoopFinding": "{id} [{severity}] {location} — {claim}",
+      "solLoopFinding": "{id} — {severity}: {location} — {claim}",
       "solLoopFix": "Poprawka: {fix}",
       "solLoopOutcome": "Wynik: {outcome}",
       "evalToolTuningRuns": "{count, plural, one {1 przebieg dostrajania narzędzi} few {# przebiegi dostrajania narzędzi} many {# przebiegów dostrajania narzędzi} other {# przebiegu dostrajania narzędzi}}",
       "evalToolTuningRun": "{tool} · {passed}/{total} zdanych",
       "evalToolTuningDominantFailure": "Najczęstszy błąd: {failure}",
       "evalToolTuningCase": "{name} · {classification}",
-      "evalToolTuningProposal": "[{kind}] {title}",
+      "evalToolTuningProposal": "{kind}: {title}",
       "evalToolTuningProposalEvidence": "Dowody: {evidence} · {status}",
       "proofScenarios": "{count, plural, =1 {1 scenariusz dowodowy} other {# scenariusze dowodowe}}",
       "proofScenario": "{id} {name} — {proven}",
@@ -6439,6 +6488,14 @@
       "chat-your-connections": {
         "title": "Twoje własne konta, tam gdzie agent ich używa",
         "body": "Agent powiązany z własnym kontem każdej osoby mówi do Notion czy Jiry jako Ty. Tu widać, które z jego usług potrzebują Twojego konta, i można je podłączyć bez wychodzenia z czatu."
+      },
+      "chat-team-room": {
+        "title": "Pokój twojego zespołu",
+        "body": "Ta rozmowa korzysta z uprawnień projektu. Sprawdź, kto jest obecny, i użyj Udostępnij, aby zobaczyć lub zmienić dostęp."
+      },
+      "chat-team-composer": {
+        "title": "Rozmawiaj z zespołem, a agenta pytaj w razie potrzeby",
+        "body": "Pisz do zespołu bez uruchamiania agenta. Aby otrzymać odpowiedź AI, wybierz agenta. Prośba trafi do wspólnej kolejki."
       },
       "chat-composer": {
         "title": "Zapytaj o cokolwiek",
@@ -9704,7 +9761,7 @@
     "harness": {
       "harness": {
         "title": "Harness",
-        "description": "Sesja CLI wykonująca pracę agenta: Claude Code albo Codex."
+        "description": "Sesja CLI wykonująca pracę agenta: Claude Code, Codex, OpenCode, Gemini CLI albo Pi."
       },
       "access": {
         "title": "Dostęp",
@@ -9712,7 +9769,7 @@
       },
       "model": {
         "title": "Model",
-        "description": "Model, na którym działa harness: model Claude dla Claude Code, model OpenAI dla Codexa. Nieustawiony oznacza domyślny model harnessu."
+        "description": "Model, na którym działa harness: model Claude dla Claude Code, model OpenAI dla Codexa, model Gemini dla Gemini CLI albo dowolny model tych dostawców dla OpenCode lub Pi. Nieustawiony oznacza domyślny model harnessu."
       },
       "base_url": {
         "title": "Endpoint zgodny z Anthropic",
@@ -13931,8 +13988,7 @@
     "appsDescription": "Połącz używane narzędzia przez Composio. Wybierz każdą aplikację i sprawdź jej uprawnienia przed udzieleniem dostępu.",
     "connectApps": "Połącz aplikacje",
     "opensNewTab": "Otwiera się w nowej karcie. Wróć tutaj, gdy będziesz gotowy.",
-    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Połączenia → Aplikacje.",
-    "continueToWorkspace": "Przejdź do workspace"
+    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Połączenia → Aplikacje."
   },
   "onboardingTeam": {
     "step1Title": "O Tobie i Twojej pracy",
@@ -13957,7 +14013,6 @@
     "step4Title": "Twój rekomendowany zespół AI",
     "step4Subtitle": "Oto struktura Twojego zespołu. Lider zespołu koordynuje zadania i deleguje pracę do specjalistów.",
     "leadBadge": "Lider zespołu i orkiestrator",
-    "leadOrchestrationHint": "Przekazuje zadania specjalistom i przygotowuje dla Ciebie zsyntetyzowane odpowiedzi.",
     "starterPromptsHeader": "Przykładowe zapytania",
     "specialistsTitle": "Agenci specjaliści",
     "addSpecialist": "Dodaj specjalistę",

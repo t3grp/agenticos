@@ -1,5 +1,5 @@
 ---
-source_sha: "965793cc1a4b"
+source_sha: "063cfd62059e"
 ---
 
 # Konsola { #the-console }
@@ -15,7 +15,7 @@ ustawieniach czatu, pod suwakami obok mikrofonu.
 
 Listy zasobów, w tym Inbox i Routines, wypełniają pozostałą wysokość strony również wtedy, gdy są puste. Szablony Routines pozostają w formularzu tworzenia zamiast osobnego panelu pomysłów. Get started rezerwuje miejsce podczas pobierania checklisty, aby Briefing i karty poniżej nie przeskakiwały.
 
-Czat używa większych portretów agentów bez obwódek. Przełącznik Files pozostaje w polu wiadomości podczas otwierania i zamykania panelu; animacja respektuje ograniczenie ruchu. Ustawienia czatu pokazują najpierw bieżący model. Rozwiń **Zmień model**, aby edytować uzupełnionego dostawcę i model; wybór zaczyna działać po zatwierdzeniu. Karty załączników znajdują się nad polem wiadomości bez dodatkowego panelu z cieniem.
+Czat używa większych portretów agentów bez obwódek. Przełącznik Files pozostaje w przyciskach po prawej stronie podczas otwierania i zamykania panelu; animacja respektuje ograniczenie ruchu. Ustawienia czatu pokazują najpierw bieżący model. Rozwiń **Zmień model**, aby edytować uzupełnionego dostawcę i model; wybór zaczyna działać po zatwierdzeniu. Karty załączników znajdują się nad polem wiadomości bez dodatkowego panelu z cieniem.
 
 Wprowadzenia do stron i objaśnienia ustawień są dostępne pod ikoną informacji obok nagłówka. Bieżące podsumowania i ostrzeżenia o nieodwracalnych działaniach pozostają widoczne.
 
@@ -322,20 +322,20 @@ Na telefonie dymka nie ma - zasłaniałby stronę, o której mówi - a przycisk 
 zamiast niego kropkę. Akceptacje, o których już powiedział, zostają powiedziane do
 końca karty przeglądarki, nawet gdy link przeładuje konsolę.
 
-Okno używa chatu konsoli i zaczyna z wybranym głównym asystentem. Wybierak agenta
-w nagłówku pozwala wybrać opublikowanego agenta, którego możesz uruchomić. Zmiana
-agenta zachowuje bieżącą rozmowę; nagłówek i historia podążają za wyborem. Kafelki
-powitalne Architecta pojawiają się tylko po wybraniu głównego asystenta. Na telefonie
-okno zajmuje cały ekran.
+Okno korzysta z czatu konsoli i początkowo ma wybranego głównego asystenta.
+Selektor w nagłówku pozwala wybrać opublikowanego agenta, którego możesz
+uruchomić. Zmiana agenta zachowuje bieżącą rozmowę; nagłówek i historia rozmów
+odpowiadają wybranemu agentowi. Kafelki powitalne Architekta pojawiają się tylko,
+gdy wybrany jest główny asystent. Na telefonie okno zajmuje cały ekran.
 
-Każde nowe pytanie zawiera świeży, uporządkowany kontekst bieżącej strony konsoli,
-gdy kontekst strony jest włączony. Okno pokazuje, która strona zostanie udostępniona,
-i pozwala wyłączyć udostępnianie.
+Każde nowe pytanie zawiera świeży, uporządkowany kontekst bieżącej strony
+konsoli, o ile udostępnianie kontekstu strony jest włączone. Okno pokazuje,
+która strona zostanie udostępniona, i pozwala wyłączyć udostępnianie.
 
-Pytanie w kolejce lub ponowienie odrzuconego wysłania zachowuje kontekst strony i
-agenta wybranych w chwili wysłania. Nowe pytanie lub ponownie wygenerowana odpowiedź
-korzysta z bieżącej strony i bieżącego agenta. Zmiana konta lub organizacji resetuje
-rozmowę okna, wybór agenta i ustawienie kontekstu strony.
+Pytanie w kolejce lub ponowienie odrzuconego wysłania zachowuje kontekst strony
+i agenta wybranego w chwili wysłania. Nowe pytanie lub ponownie wygenerowana
+odpowiedź korzysta z bieżącej strony i agenta. Zmiana konta lub organizacji
+resetuje rozmowę w oknie, wybór agenta i ustawienie kontekstu strony.
 
 Gdy wskazuje stronę, link otwiera się w konsoli za oknem i podświetla kontrolkę,
 o którą chodzi — przycisk tworzący agenta, zakładkę z akceptacjami. Aparat w
@@ -343,7 +343,7 @@ nagłówku okna pokazuje mu stronę, na której jesteś: przeglądarka pyta, kt�
 kartę udostępnić, a jedno zdjęcie trafia jako załącznik do twojej następnej
 wiadomości.
 
-Architect planuje dłuższe zadania jako listę kroków, którą widać na bieżąco,
+Architekt planuje dłuższe zadania jako listę kroków, którą widać na bieżąco,
 zapamiętuje notatki o tobie między rozmowami, powie, ile kosztują twoi agenci, i
 usuwa tylko draft agenta, który utworzył przez pomyłkę, oraz rutynę, o której
 usunięcie poprosisz. Oprócz
@@ -602,7 +602,8 @@ wpisz adres strony. Jeśli wybrany agent ma odpowiednią
 hostowaną capability i możesz go uruchomić, osobna akcja rozpoczęcia prosi go o
 otwarcie przeglądarki lub wykonanie zrzutu pulpitu. W przeciwnym razie panel
 wyjaśnia, co jest niedostępne. Opublikowane ustawienia agenta i kontrola dostępu
-nadal obowiązują.
+nadal obowiązują. W pokojach zespołu wybierz w polu wiadomości, kto ma odpowiedzieć,
+i poproś o otwarcie przeglądarki lub komputera. Panele pozostają dostępne do podglądu.
 
 Widoki przeglądarki i komputera pozostają oddzielne. Panele są początkowo zamknięte;
 zamknięty panel pozostaje zamknięty także po nadejściu nowych wyników narzędzi. Na

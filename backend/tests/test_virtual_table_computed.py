@@ -247,6 +247,20 @@ def test_a_projected_read_through_a_policy_table_fetches_the_assignee_cell():
     assert _linked_cell_keys(_linked_table(None), frozenset([_NAME])) == [str(_NAME)]
 
 
+@_pytest.mark.security
+def test_a_projected_read_keeps_the_cells_that_decide_linked_project_access() -> None:
+    policy = _RowPolicy(
+        rule="assignee",
+        view_column_id=_ASSIGNEE,
+        edit_column_id=_ASSIGNEE,
+        view_project_link_column_id=_LINK,
+        view_projects_table_id=_OTHER_TABLE,
+        view_project_members_column_id=_MEMBER,
+    )
+    keys = _linked_cell_keys(_linked_table(policy), frozenset([_NAME, _ASSIGNEE]))
+    assert keys == sorted([str(_NAME), str(_ASSIGNEE), str(_LINK)])
+
+
 async def test_linked_table_access_carries_the_linked_tables_policy(monkeypatch):
     table = SimpleNamespace(
         id=_OTHER_TABLE,

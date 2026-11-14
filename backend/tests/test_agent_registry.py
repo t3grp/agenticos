@@ -5924,3 +5924,28 @@ def test_where_a_coding_agent_runs_decides_which_listing_field_names_it() -> Non
     assert _personal_coding_harness(shared) is None
     assert _local_coding_agent(None) is None
     assert _personal_coding_harness(None) is None
+
+
+@pytest.mark.anyio
+@pytest.mark.security
+async def test_a_fallback_owned_by_another_person_cannot_be_published() -> None:
+    fallback = _profile(
+        usage_scope="personal", personal_owner_user_id=uuid.uuid4(), label="Personal backup"
+    )
+    profile = _profile(
+        usage_scope="organization",
+        personal_owner_user_id=None,
+        fallback_profile_ids=[str(fallback.id)],
+    )
+    with (
+        patch(f"{REGISTRY_PATH}.credential_repo.get_profile", new=AsyncMock(return_value=profile)),
+        patch(
+            f"{REGISTRY_PATH}.credential_repo.get_profiles_by_ids",
+            new=AsyncMock(return_value={fallback.id: fallback}),
+        ),
+        pytest.raises(BadRequestError) as refused,
+    ):
+        await AgentRegistryService(_db()).validate_spec(_ctx(), _spec(model_profile_id=profile.id))
+    assert refused.value.details["problems"] == [
+        "Remove the personal fallback that this signed-in user cannot use"
+    ]

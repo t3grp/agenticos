@@ -526,17 +526,22 @@ async def test_the_step_parses_in_a_child_process(monkeypatch: pytest.MonkeyPatc
     spawns.assert_gone()
 
 
-async def test_a_selector_that_never_finishes_fails_as_too_complex(
+@pytest.mark.security
+async def test_a_child_that_never_finishes_fails_as_too_complex(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ):
-    # soupsieve backtracks without memoising: `p div` over 20,000 nested divs takes
-    # minutes. The deadline is shortened so the test does not wait for it.
+    # Exercise the process budget independently of a selector's implementation:
+    # this child cannot finish before the deadline, even when parsing gets faster.
     monkeypatch.setattr(html_parse, "PARSE_DEADLINE_SECONDS", 1)
+    monkeypatch.setattr(
+        html_parse, "_CHILD_SCRIPT", _child_script(tmp_path, "import time\ntime.sleep(60)\n")
+    )
     spawns = _Spawns(monkeypatch)
     started = time.monotonic()
 
     result = await handle(
-        HtmlParseConfig(selector="p div"), HtmlParseInput(html="<p>" + "<div>" * 20_000)
+        HtmlParseConfig(selector="p div"), HtmlParseInput(html="<p>safe input</p>")
     )
 
     assert time.monotonic() - started < 15
@@ -547,6 +552,7 @@ async def test_a_selector_that_never_finishes_fails_as_too_complex(
         "This HTML took too long to read - try a simpler selector or a smaller page"
     )
     assert result.error.details == {"deadline_seconds": 1}
+    assert len(spawns.procs) == 1
     spawns.assert_gone()
 
 

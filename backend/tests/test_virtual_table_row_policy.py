@@ -8,7 +8,7 @@ rows) belongs to the integration suite.
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
@@ -22,6 +22,8 @@ from app.repositories.virtual_table import FilterClause, SqlKind, _matching, pol
 from app.schemas.virtual_table import ColumnDef, RowPolicy, RowPolicyUpdate, TableRead
 from app.services.virtual_tables import row_policy
 from app.services.virtual_tables._base import Operations
+from app.services.virtual_tables.deadline import ReadDeadline
+from app.services.virtual_tables.exceptions import DeadlineReached
 from app.services.virtual_tables.row_policy import (
     bypasses_policy,
     may_edit_row,
@@ -327,6 +329,69 @@ async def test_the_project_lookup_reads_the_members_column_and_nothing_else(monk
     assert filters[0].value == str(MEMBER)
 
 
+@pytest.mark.parametrize("remaining", [(90, 60, 30), (0,), (90, 0), (90, 60, 0)])
+async def test_a_bounded_project_lookup_refreshes_the_timeout_and_stops_on_expiry(
+    monkeypatch, remaining
+):
+    events = []
+    db = SimpleNamespace()
+    deadline = ReadDeadline(1, 100)
+    monkeypatch.setattr(deadline, "remaining_ms", Mock(side_effect=remaining))
+
+    async def arm(session, *, ms):
+        assert session is db
+        events.append(("timeout", ms))
+
+    async def table(session, table_id, *, organization_id):
+        assert session is db and table_id == PROJECTS_TABLE and organization_id == ORG
+        events.append(("table", None))
+        return SimpleNamespace(
+            id=PROJECTS_TABLE,
+            archived_at=None,
+            schema_version=1,
+            row_policy=None,
+            owner_user_id=None,
+        )
+
+    async def schema(session, *, table_id, version):
+        assert session is db and table_id == PROJECTS_TABLE and version == 1
+        events.append(("schema", None))
+        return SimpleNamespace(columns=[MEMBERS_COL.model_dump(mode="json")])
+
+    async def records(session, *, table_id, organization_id, filters):
+        assert session is db and table_id == PROJECTS_TABLE and organization_id == ORG
+        assert len(filters) == 1 and filters[0].value == str(MEMBER)
+        events.append(("records", None))
+        return [PROJECT_A]
+
+    monkeypatch.setattr(virtual_table_repo, "set_statement_timeout", arm)
+    monkeypatch.setattr(virtual_table_repo, "get_table", table)
+    monkeypatch.setattr(virtual_table_repo, "get_schema_version", schema)
+    monkeypatch.setattr(virtual_table_repo, "list_record_ids", records)
+
+    async def read():
+        return await view_expression(
+            db,
+            _ctx(MEMBER),
+            _table(PROJECT_POLICY),
+            [ASSIGNEE_COL, LINK_COL],
+            deadline=deadline,
+        )
+
+    if remaining[-1] == 0:
+        with pytest.raises(DeadlineReached):
+            await read()
+    else:
+        assert await read() is not None
+
+    completed = [ms for ms in remaining if ms > 0]
+    assert events == [
+        event
+        for ms, operation in zip(completed, ("table", "schema", "records"), strict=False)
+        for event in (("timeout", ms), (operation, None))
+    ]
+
+
 async def test_the_project_lookup_honours_the_projects_table_own_policy(monkeypatch):
     own_policy = RowPolicy(rule="assignee", view_column_id=ASSIGNEE, edit_column_id=ASSIGNEE)
     projects = SimpleNamespace(
@@ -465,6 +530,7 @@ def test_policy_expression_with_only_a_project_half_names_the_link():
     assert "?|" in _sql(expression)
 
 
+@pytest.mark.security
 def test_matching_ands_the_policy_with_the_tenant_and_the_callers_filters():
     clause = FilterClause(column_id=TEXT_COL.id, kind=SqlKind.TEXT, op="eq", value="x")
     expression = policy_expression(
@@ -475,6 +541,31 @@ def test_matching_ands_the_policy_with_the_tenant_and_the_callers_filters():
     assert "virtual_table_records.organization_id" in compiled
     assert " = " in compiled
     assert " AND " in compiled
+
+
+@pytest.mark.security
+async def test_matching_record_ids_keep_the_tenant_table_filter_and_policy_predicate() -> None:
+    clause = FilterClause(column_id=TEXT_COL.id, kind=SqlKind.TEXT, op="eq", value="visible")
+    policy = policy_expression(
+        FilterClause(column_id=ASSIGNEE, kind=SqlKind.TEXT, op="eq", value=str(MEMBER))
+    )
+    returned = Mock(all=Mock(return_value=[(PROJECT_A,), (PROJECT_B,)]))
+    db = Mock(execute=AsyncMock(return_value=returned))
+    ids = await virtual_table_repo.list_record_ids(
+        db, table_id=TABLE_ID, organization_id=ORG, filters=[clause], extra=policy
+    )
+    assert ids == [PROJECT_A, PROJECT_B]
+    assert db.execute.await_args is not None
+    statement = db.execute.await_args.args[0].compile(dialect=postgresql.dialect())
+    sql = str(statement)
+    assert "SELECT virtual_table_records.id" in sql
+    assert "virtual_table_records.table_id" in sql
+    assert "virtual_table_records.organization_id" in sql
+    assert " AND " in sql
+    assert TABLE_ID in statement.params.values()
+    assert ORG in statement.params.values()
+    assert "visible" in statement.params.values()
+    assert str(MEMBER) in statement.params.values()
 
 
 # -- the service, with the database stubbed out -------------------------------

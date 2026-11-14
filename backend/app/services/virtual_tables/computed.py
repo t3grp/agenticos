@@ -189,6 +189,7 @@ async def _linked_table(
     record_ids = [UUID(record_id) for record_id in ids]
     rows: Sequence[VirtualTableRecord | RecordCells]
     if targets is None:
+        await arm_if_set(db, deadline)
         rows = await virtual_table_repo.get_records_by_ids(
             db, record_ids, table_id=linked.table_id, organization_id=ctx.organization_id
         )
@@ -213,7 +214,7 @@ async def _linked_table(
         # leak that it exists and how many there are. Invisible linked
         # records are left out entirely - no label and no id - so lookups
         # and rollups below are worked out over the visible subset only.
-        project_ids = await visible_project_ids(db, ctx, linked.row_policy)
+        project_ids = await visible_project_ids(db, ctx, linked.row_policy, deadline=deadline)
         rows = [
             row
             for row in rows

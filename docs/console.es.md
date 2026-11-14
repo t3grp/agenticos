@@ -1,5 +1,5 @@
 ---
-source_sha: "965793cc1a4b"
+source_sha: "063cfd62059e"
 ---
 
 # La consola { #the-console }
@@ -16,7 +16,7 @@ al micrófono.
 
 Las listas de recursos, incluidas Inbox y Routines, ocupan la altura restante de la página incluso cuando están vacías. Las plantillas de Routines siguen en el formulario de creación, sin un panel de ideas aparte. Get started reserva su espacio mientras carga la lista para que Briefing y las tarjetas inferiores no salten.
 
-El chat usa retratos de agentes más grandes y sin marcos. El control Files permanece en el cuadro de mensaje al abrir y cerrar el panel; la animación respeta la preferencia de movimiento reducido. Los ajustes del chat muestran primero el modelo actual. **Change model** abre el formulario del proveedor y del modelo ya rellenados; el cambio solo se aplica al confirmarlo. Las tarjetas de adjuntos aparecen sobre el cuadro de mensaje sin otro panel con sombra.
+El chat usa retratos de agentes más grandes y sin marcos. El control Files permanece en los controles de la derecha al abrir y cerrar el panel; la animación respeta la preferencia de movimiento reducido. Los ajustes del chat muestran primero el modelo actual. **Change model** abre el formulario del proveedor y del modelo ya rellenados; el cambio solo se aplica al confirmarlo. Las tarjetas de adjuntos aparecen sobre el cuadro de mensaje sin otro panel con sombra.
 
 Las introducciones de páginas y explicaciones de ajustes están en el icono de información junto al encabezado. Los resúmenes actuales y avisos de acciones destructivas siguen visibles.
 
@@ -333,20 +333,21 @@ lleva el punto en su lugar. Las aprobaciones que ya mencionó siguen mencionadas
 durante el resto de la pestaña, aunque un enlace recargue la consola.
 
 Su ventana usa el chat de la consola y empieza con el asistente principal
-seleccionado. Usa el selector del encabezado para elegir un agent publicado que
-puedas ejecutar. Cambiar de agent conserva la conversación actual; el encabezado
-y el historial siguen la selección. Los mosaicos de bienvenida de Architect solo
-aparecen cuando está seleccionado el asistente principal. En un teléfono, la
-ventana ocupa toda la pantalla.
+seleccionado. El selector de agents de la cabecera permite elegir un agent
+publicado que tengas permiso para ejecutar. Cambiar de agent conserva la
+conversación actual; la cabecera y el historial siguen la selección. Los mosaicos
+de bienvenida del Architect solo aparecen con el asistente principal seleccionado.
+En un teléfono la ventana ocupa toda la pantalla.
 
-Cada pregunta nueva incluye contexto estructurado actualizado sobre la página
-actual de la consola mientras el contexto de página esté activado. La ventana
-muestra qué página se compartirá y permite desactivar el uso compartido.
+Cada pregunta nueva incluye contexto estructurado y actualizado de la página
+actual de la consola mientras esté activado el contexto de página. La ventana
+muestra qué página se compartirá y permite desactivar esa opción.
 
-Una pregunta en cola o el reintento de un envío rechazado conserva el contexto de
-página y el agent elegidos al enviarla. Una pregunta nueva o una respuesta regenerada
-usa la página y el agent actuales. Cambiar de cuenta u organización restablece la
-conversación de la ventana, la selección del agent y la opción de contexto de página.
+Una pregunta en cola o el reintento de un envío rechazado conserva el contexto
+de página y el agent seleccionado al enviarla. Una pregunta nueva o una respuesta
+regenerada usa la página y el agent actuales. Cambiar de cuenta u organización
+restablece la conversación de la ventana, la selección de agent y la opción de
+contexto de página.
 
 Cuando nombra una página, el enlace la abre en la consola detrás de la ventana y
 señala el control al que se refiere — el botón que crea un agent, la pestaña de
@@ -354,7 +355,7 @@ aprobaciones. La cámara de su cabecera le muestra la página en la que estás: 
 navegador pregunta qué pestaña compartir y una imagen se adjunta a tu próximo
 mensaje.
 
-Architect planifica los trabajos largos como una lista que puedes seguir, guarda
+El Architect planifica los trabajos largos como una lista que puedes seguir, guarda
 notas sobre ti entre conversaciones, te dice cuánto cuestan tus agents y solo
 borra un borrador de agent que creó por error y una rutina que le pidas quitar.
 Además de las
@@ -621,7 +622,9 @@ en el panel Navegador antes de iniciarlo. Si el agent seleccionado tiene la
 capability alojada correspondiente y puedes ejecutarlo, una acción explícita de
 inicio le pide que abra el navegador o capture el escritorio. De lo contrario,
 el panel explica qué no está disponible. Siguen vigentes la configuración
-publicada y los controles de acceso del agent.
+publicada y los controles de acceso del agent. En las salas de equipo, elige quién
+debe responder en el cuadro de mensaje de la sala y pídele que abra el navegador
+o el equipo. Los paneles siguen disponibles para verlos.
 
 Las vistas de navegador y equipo permanecen separadas. Los paneles empiezan
 cerrados; al cerrar uno, permanece cerrado cuando llegan nuevos resultados de

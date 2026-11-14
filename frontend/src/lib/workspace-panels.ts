@@ -57,6 +57,7 @@ export function selectedWorkspaceBrowse(
 }
 
 export interface WorkspaceStartAccess {
+  teamRoom: boolean;
   hasAgent: boolean;
   hostedCapabilities: readonly string[] | null;
   canRun: boolean;
@@ -68,6 +69,7 @@ export interface WorkspaceStartAccess {
 
 /** UI refusal keys; configuration is evidence of a target, not a runtime health claim. */
 export function workspaceStartReason(access: WorkspaceStartAccess, surface: BrowseSurface) {
+  if (access.teamRoom) return access.readOnly ? "readOnly" : "roomComposer";
   if (!access.hasAgent) return "chooseAgent";
   if (access.readOnly || !access.canRun) return "readOnly";
   if (access.hostedCapabilities === null) return "unknown";

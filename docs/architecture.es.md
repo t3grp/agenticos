@@ -1,5 +1,5 @@
 ---
-source_sha: "171618534c74"
+source_sha: "b641e9a7369e"
 ---
 
 # Arquitectura { #architecture }
@@ -54,6 +54,7 @@ importado como tipo y no como acceso a datos.
 | ↳ `rag_document.py` | Ciclo de vida de un documento RAG |
 | ↳ `rag_sync.py` | Orquestación de la sincronización con fuentes remotas |
 | ↳ `sync_source.py` | CRUD de fuentes de sincronización, y el historial de ejecuciones de una fuente |
+| ↳ `gdrive_picker.py` | Autorización de cuentas de Google de la organización y navegación paginada por carpetas de Drive |
 | ↳ `audit.py` | Lectura del rastro de auditoría de la propia organización de quien llama |
 | **`repositories/`** | **Capa de acceso a datos, consultas a la base de datos** |
 | ↳ `user.py` | Consultas de usuarios |

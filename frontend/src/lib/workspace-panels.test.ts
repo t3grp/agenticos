@@ -97,6 +97,7 @@ describe("workspace preview identity", () => {
 });
 
 const ready: WorkspaceStartAccess = {
+  teamRoom: false,
   hasAgent: true,
   hostedCapabilities: ["browser_use", "computer_use"],
   canRun: true,
@@ -108,6 +109,8 @@ const ready: WorkspaceStartAccess = {
 
 describe("hosted start availability", () => {
   it.each([
+    [{ teamRoom: true, hasAgent: false, canRun: false }, "roomComposer"],
+    [{ teamRoom: true, readOnly: true, hasAgent: false, canRun: false }, "readOnly"],
     [{ hasAgent: false }, "chooseAgent"],
     [{ canRun: false }, "readOnly"],
     [{ readOnly: true }, "readOnly"],

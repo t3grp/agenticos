@@ -177,6 +177,11 @@ class ConversationTaskJob(Payload):
     organization_id: UUID
 
 
+class RoomRequestJob(Payload):
+    request_id: UUID
+    organization_id: UUID
+
+
 class RunAgent(Payload):
     """An asynchronous `POST /agents/{id}/run`: who asked, and what they sent."""
 
@@ -452,6 +457,14 @@ RUN_CONVERSATION_TASK = Task(
     timeout=timedelta(hours=3),
     priority=Priority.INTERACTIVE,
 )
+RUN_ROOM_REQUEST = Task(
+    kind="run-room-request",
+    payload_type=RoomRequestJob,
+    pool=Pool.AGENT,
+    max_attempts=1,
+    timeout=timedelta(hours=3),
+    priority=Priority.INTERACTIVE,
+)
 RETURN_CONVERSATION_TASK = Task(
     kind="return-conversation-task",
     payload_type=ConversationTaskJob,
@@ -599,6 +612,7 @@ WORKFLOW_TABLE_TRIGGERS = _sweep("workflow-table-triggers", timeout=timedelta(mi
 WORKFLOW_RUN_RETENTION = _sweep("workflow-run-retention", timeout=timedelta(hours=2))
 WORKFLOW_LOG_ALERTS = _sweep("workflow-log-alerts", timeout=timedelta(minutes=5))
 RECONCILE_CONVERSATION_TASKS = _sweep("reconcile-conversation-tasks", timeout=timedelta(seconds=30))
+RECONCILE_ROOM_REQUESTS = _sweep("reconcile-room-requests", timeout=timedelta(seconds=30))
 SWEEP_GENERATED_MEDIA = _sweep("sweep-generated-media")
 SEND_DIAGNOSTICS = _sweep("send-diagnostics", timeout=timedelta(seconds=60))
 PROACTIVE_SWEEP = _sweep("proactive-sweep")
@@ -669,6 +683,8 @@ TASKS: dict[str, TaskKind] = {
         RUN_CONVERSATION_TASK,
         RETURN_CONVERSATION_TASK,
         RECONCILE_CONVERSATION_TASKS,
+        RUN_ROOM_REQUEST,
+        RECONCILE_ROOM_REQUESTS,
         WORKFLOW_DISPATCH_NODE,
         THINK_FOR_PERSON,
         EXTRACT_MEMORY,

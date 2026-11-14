@@ -684,9 +684,7 @@ describe("useRetryRun", () => {
     vi.mocked(apiClient.post).mockRejectedValue(new Error("This run has not finished"));
     const { result } = renderHook(() => useRetryRun(), { wrapper });
 
-    await expect(result.current.mutateAsync("run-9")).rejects.toThrow(
-      "This run has not finished",
-    );
+    await expect(result.current.mutateAsync("run-9")).rejects.toThrow("This run has not finished");
 
     expect(toast.error).toHaveBeenCalledWith("This run has not finished");
   });

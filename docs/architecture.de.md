@@ -1,5 +1,5 @@
 ---
-source_sha: "171618534c74"
+source_sha: "b641e9a7369e"
 ---
 
 # Architektur { #architecture }
@@ -53,6 +53,7 @@ von Sortierreihenfolgen, als Typ importiert und nicht als Datenzugriff.
 | ↳ `rag_document.py` | Lebenszyklus eines RAG-Dokuments |
 | ↳ `rag_sync.py` | Orchestrierung der Synchronisation entfernter Quellen |
 | ↳ `sync_source.py` | CRUD für Sync-Quellen, und die Laufhistorie einer Quelle |
+| ↳ `gdrive_picker.py` | Autorisierung von Google-Konten der Organisation und seitenweises Durchsuchen von Drive-Ordnern |
 | ↳ `audit.py` | Lesen des Audit-Trails der eigenen Organisation des Aufrufers |
 | **`repositories/`** | **Datenzugriffsschicht, Datenbankabfragen** |
 | ↳ `user.py` | Nutzerabfragen |

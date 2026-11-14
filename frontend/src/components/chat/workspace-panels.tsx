@@ -17,6 +17,7 @@ import { WorkspaceFiles } from "./workspace-files";
 import { WorkspaceRail } from "./workspace-rail";
 
 interface WorkspacePanelsProps {
+  teamRoom: boolean;
   agentId: string | null;
   hostedCapabilities: readonly string[] | null;
   canRun: boolean;
@@ -87,6 +88,7 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
     close,
   ]);
   const access: WorkspaceStartAccess = {
+    teamRoom: props.teamRoom,
     hasAgent: props.agentId !== null,
     hostedCapabilities: props.hostedCapabilities,
     canRun: props.canRun,

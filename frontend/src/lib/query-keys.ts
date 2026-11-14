@@ -10,6 +10,10 @@ import type { LogQuery, RunHistoryQuery } from "@/lib/workflows/types";
 import type { SharingResourceType } from "@/types/sharing";
 
 export const qk = {
+  roomRequests: {
+    list: (account: string | undefined, tenant: string | null, conversation: string | null) =>
+      ["room-requests", account, tenant, conversation] as const,
+  },
   personalSubscriptions: {
     claude: (scope: string) => ["personal-subscriptions", "claude", scope] as const,
   },
@@ -476,16 +480,16 @@ export const qk = {
     ledger: (agentId: string, status?: string) =>
       status === undefined
         ? (["failure-learning", "agents", agentId, "ledger"] as const)
-        : (["failure-learning", "agents", agentId, "ledger", status] as const),
+        : (["failure-learning", "agents", agentId, "ledger", "status", status] as const),
     ledgerEntry: (agentId: string, entryId: string) =>
-      ["failure-learning", "agents", agentId, "ledger", entryId] as const,
+      ["failure-learning", "agents", agentId, "ledger", "entry", entryId] as const,
     cases: (agentId: string) => ["failure-learning", "agents", agentId, "cases"] as const,
     proposals: (agentId: string, status?: string) =>
       status === undefined
         ? (["failure-learning", "agents", agentId, "proposals"] as const)
-        : (["failure-learning", "agents", agentId, "proposals", status] as const),
+        : (["failure-learning", "agents", agentId, "proposals", "status", status] as const),
     proposal: (agentId: string, proposalId: string) =>
-      ["failure-learning", "agents", agentId, "proposals", proposalId] as const,
+      ["failure-learning", "agents", agentId, "proposals", "detail", proposalId] as const,
     try: (agentId: string, tryId: string) =>
       ["failure-learning", "agents", agentId, "tries", tryId] as const,
   },

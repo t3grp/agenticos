@@ -52,6 +52,7 @@ const view = (callId: string, more: Partial<Browse> = {}): Browse => ({
   ...more,
 });
 const defaults = (): ComponentProps<typeof WorkspacePanels> => ({
+  teamRoom: false,
   agentId: "agent",
   hostedCapabilities: ["browser_use", "computer_use"],
   canRun: true,
@@ -227,6 +228,7 @@ describe("manual workspace launchers", () => {
   });
 
   it.each([
+    [{ teamRoom: true, agentId: null, canRun: false }, /Choose a responder in the room composer/],
     [{ hostedCapabilities: null }, /configuration is not available/],
     [{ hostedCapabilities: [] }, /not configured for hosted computer/],
     [{ agentId: null }, /Select an agent/],
@@ -245,15 +247,17 @@ describe("manual workspace launchers", () => {
     expect(props.onSend).not.toHaveBeenCalled();
   });
 
-  it.each([{ readOnly: true }, { canRun: false }, { loading: true }])(
-    "does not offer a start action without permission or loaded access: %j",
-    async (change) => {
-      render(<WorkspacePanels {...defaults()} {...change} />, { wrapper });
-      await userEvent.click(screen.getByRole("button", { name: "Open Computer" }));
-      expect(screen.getByRole("status")).toHaveTextContent(/cannot start a session/);
-      expect(screen.queryByRole("button", { name: "Ask agent to start computer" })).toBeNull();
-    },
-  );
+  it.each([
+    { readOnly: true },
+    { canRun: false },
+    { loading: true },
+    { teamRoom: true, readOnly: true, agentId: null, canRun: false },
+  ])("does not offer a start action without permission or loaded access: %j", async (change) => {
+    render(<WorkspacePanels {...defaults()} {...change} />, { wrapper });
+    await userEvent.click(screen.getByRole("button", { name: "Open Computer" }));
+    expect(screen.getByRole("status")).toHaveTextContent(/cannot start a session/);
+    expect(screen.queryByRole("button", { name: "Ask agent to start computer" })).toBeNull();
+  });
 
   it.each(["browser", "computer", "folder", "coding", "skills"] as const)(
     "refuses effective local %s context without changing it",
@@ -311,6 +315,28 @@ describe("manual workspace launchers", () => {
     );
     expect(useBrowserPanelStore.getState().surface).toBeNull();
     expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("keeps real room browser and computer views available without offering personal starts", async () => {
+    const props = { ...defaults(), teamRoom: true, agentId: null, canRun: false };
+    const page = view("page", { navigable: true, title: "Example Domain", outcome: "done" });
+    const desktop = view("desktop", { outcome: "done" });
+    render(
+      <WorkspacePanels
+        {...props}
+        browses={[page, desktop]}
+        surfaces={new Map([["desktop", "computer"]])}
+      />,
+      { wrapper },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open Browser" }));
+    expect(live.calls.at(-1)).toEqual(["actual-run", "page", true]);
+    expect(screen.queryByRole("button", { name: "Ask agent to open browser" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Open Computer" }));
+    expect(live.calls.at(-1)).toEqual(["actual-run", "desktop", true]);
+    expect(screen.getByText("Last view")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Ask agent to start computer" })).toBeNull();
+    expect(props.onSend).not.toHaveBeenCalled();
   });
 
   it("uses the existing Files listing in a closable narrow-screen drawer, never provisioning a workspace", async () => {
