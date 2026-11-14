@@ -54,6 +54,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.base import Base
 from app.db.models.resource_grant import Visibility
 from app.db.models.virtual_table import (
     VirtualTable,
@@ -64,6 +65,12 @@ from app.db.models.virtual_table import (
     VirtualTableRecordHistory,
     VirtualTableSchemaVersion,
 )
+from app.db.models.virtual_table_relation import (
+    VirtualTableLinkEvidence,
+    VirtualTableRecordLink,
+    VirtualTableRelation,
+)
+from app.repositories import virtual_table_relation as relation_repo
 from app.repositories._search import contains_ci
 from app.schemas.virtual_table import CellValue, FilterOp, FilterValue, SortDirection
 
@@ -102,6 +109,36 @@ async def storage_bytes(db: AsyncSession, *, organization_id: UUID) -> int:
                 "bytes"
             )
         ).where(VirtualTableOutbox.organization_id == organization_id),
+        select(
+            func.coalesce(
+                func.sum(
+                    func.pg_column_size(
+                        Base.metadata.tables[VirtualTableRelation.__tablename__].table_valued()
+                    )
+                ),
+                0,
+            ).label("bytes")
+        ).where(VirtualTableRelation.organization_id == organization_id),
+        select(
+            func.coalesce(
+                func.sum(
+                    func.pg_column_size(
+                        Base.metadata.tables[VirtualTableRecordLink.__tablename__].table_valued()
+                    )
+                ),
+                0,
+            ).label("bytes")
+        ).where(VirtualTableRecordLink.organization_id == organization_id),
+        select(
+            func.coalesce(
+                func.sum(
+                    func.pg_column_size(
+                        Base.metadata.tables[VirtualTableLinkEvidence.__tablename__].table_valued()
+                    )
+                ),
+                0,
+            ).label("bytes")
+        ).where(VirtualTableLinkEvidence.organization_id == organization_id),
     ).subquery()
     held = await db.scalar(select(func.sum(totals.c.bytes)))
     return int(held or 0)
@@ -307,6 +344,7 @@ async def add_schema_version(
     db.add(row)
     await db.flush()
     await db.refresh(row)
+    await relation_repo.sync_schema(db, table_id=table_id, columns=columns)
     return row
 
 
@@ -611,7 +649,10 @@ async def insert_record(
         .execution_options(populate_existing=True)
     )
     result = await db.execute(statement)
-    return result.scalar_one_or_none()
+    record = result.scalar_one_or_none()
+    if record is not None:
+        await relation_repo.sync_record(db, record=record)
+    return record
 
 
 async def update_record(
@@ -630,6 +671,7 @@ async def update_record(
     record.updated_by = updated_by
     record.updated_source = source
     await db.flush()
+    await relation_repo.sync_record(db, record=record)
     await db.refresh(record)
     return record
 
@@ -991,11 +1033,13 @@ async def get_record_sizes_by_ids(
     table_id: UUID,
     organization_id: UUID,
     keys: Sequence[str],
+    extra: ColumnElement[bool] | None = None,
 ) -> dict[UUID, int]:
     """The size of each record's cells under `keys`; an id the table does not hold is left out."""
     result = await db.execute(
         select(VirtualTableRecord.id, _size(keys)).where(
-            _among(record_ids, table_id, organization_id)
+            _among(record_ids, table_id, organization_id),
+            *([] if extra is None else [extra]),
         )
     )
     return {row[0]: row[1] for row in result.all()}
