@@ -277,9 +277,9 @@ async def list_visible(
             )
             .scalar_subquery()
         )
-        # Preserve the order in which a person pinned these apps. The id breaks
-        # ties deterministically when timestamps have the same precision.
-        ordering = [favourite_at.asc(), Artifact.id.asc()]
+        # Put the most recently pinned apps first. The id breaks ties
+        # deterministically when timestamps have the same precision.
+        ordering = [favourite_at.desc(), Artifact.id.asc()]
     else:
         ordering = [Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc()]
     items = await db.execute(

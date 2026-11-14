@@ -59,7 +59,7 @@ def _client(monkeypatch, *, organization_id, account, handler):
             client_secret=SecretStr("client-secret"),
             refresh_token=SecretStr("refresh-token"),
             scopes=frozenset({_DRIVE_READONLY}),
-        )
+        ),
     )
 
     def make_drive(cls, **kwargs):

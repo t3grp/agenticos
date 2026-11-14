@@ -527,7 +527,8 @@ async def test_the_step_parses_in_a_child_process(monkeypatch: pytest.MonkeyPatc
 
 
 async def test_a_selector_that_never_finishes_fails_as_too_complex(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ):
     monkeypatch.setattr(html_parse, "PARSE_DEADLINE_SECONDS", 1)
     monkeypatch.setattr(
@@ -536,9 +537,7 @@ async def test_a_selector_that_never_finishes_fails_as_too_complex(
     spawns = _Spawns(monkeypatch)
     started = time.monotonic()
 
-    result = await handle(
-        HtmlParseConfig(selector="p div"), HtmlParseInput(html="<p>content</p>")
-    )
+    result = await handle(HtmlParseConfig(selector="p div"), HtmlParseInput(html="<p>content</p>"))
 
     assert time.monotonic() - started < 15
     assert isinstance(result, Failed)

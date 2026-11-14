@@ -162,7 +162,9 @@ describe("what the model was told", () => {
 
     expect(screen.getByText("2 sol-loop rounds")).toBeInTheDocument();
     expect(screen.getByText("Round 1 · full · CHANGES")).toBeInTheDocument();
-    expect(screen.getByText("S1 · blocker · app/x.py:12 — The check is wrong.")).toBeInTheDocument();
+    expect(
+      screen.getByText("S1 · blocker · app/x.py:12 — The check is wrong."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Fix: Guard it.")).toBeInTheDocument();
     expect(screen.getByText("Round 2 · changed-only · APPROVE")).toBeInTheDocument();
     expect(screen.getByText("Stopped: approved")).toBeInTheDocument();

@@ -613,6 +613,13 @@ def _on(calls, table_id) -> list:
     return [call for call in calls if call[1].get("table_id") == table_id]
 
 
+def _argument(args, kwargs, *, name: str, position: int):
+    """Read a spied argument whether the call used its name or position."""
+    if name in kwargs:
+        return kwargs[name]
+    return args[position]
+
+
 async def _specs(service, ctx, *, visibility="org", count=4, size=900_000):
     """A products table whose records each carry a large spec, and their ids."""
     products = await service.create_table(
@@ -726,8 +733,12 @@ async def test_a_linked_table_is_checked_once_per_binding(db, monkeypatch):
     assert len(read.records) == 250
     assert read.records[0]["Names"] == ["Atlas", "Quill"]
     assert read.records[-1]["Kinds"] == ["Book", "Pen"]
-    assert [args[1] for args, _kwargs, _found in tables] == [products.id]
-    assert [args[2].id for args, _kwargs, _allowed in access] == [products.id]
+    assert [
+        _argument(args, kwargs, name="table_id", position=1) for args, kwargs, _found in tables
+    ] == [products.id]
+    assert [
+        _argument(args, kwargs, name="table", position=2).id for args, kwargs, _allowed in access
+    ] == [products.id]
 
 
 async def test_read_bound_reads_only_the_named_links(db, monkeypatch):

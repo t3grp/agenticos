@@ -126,19 +126,22 @@ test.describe("Dashboard navigation", () => {
    * the whole of what it held. Both of its older spellings are here: a URL
    * someone bookmarked has no way of knowing which rename it predates.
    */
-  const MOVED_ROUTES: readonly (readonly [string, string])[] = [
+  const MOVED_ROUTES: readonly (readonly [string, string, string?])[] = [
     ["/settings/providers", "/vault"],
     ["/providers", "/vault"],
-    ["/settings/mcp-servers", "/mcp-servers"],
+    ["/settings/mcp-servers", "/connectors", "?tab=mcp"],
     // Apps were artifacts until #2071.
     ["/artifacts", "/apps"],
   ];
 
-  for (const [from, to] of MOVED_ROUTES) {
-    test(`${from} still reaches ${to}`, async ({ page }) => {
+  for (const [from, path, search = ""] of MOVED_ROUTES) {
+    const target = new URL(path + search, "http://localhost");
+    test(`${from} still reaches ${path}${search}`, async ({ page }) => {
       await page.goto(from);
 
-      await expect(page).toHaveURL(new RegExp(`${to}$`));
+      await expect(page).toHaveURL(
+        (url) => url.pathname === target.pathname && url.search === search,
+      );
       await expect(page.getByRole("main")).toBeVisible();
     });
   }

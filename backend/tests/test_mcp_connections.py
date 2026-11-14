@@ -5774,16 +5774,15 @@ class TestGoogleDrivePickerGrant:
         resolve = AsyncMock(return_value=grant)
         monkeypatch.setattr(service, "account_grant", resolve)
 
-        assert await service.google_drive_picker_grant(
-            account_id, organization_id=organization_id
-        ) is grant
+        assert (
+            await service.google_drive_picker_grant(account_id, organization_id=organization_id)
+            is grant
+        )
         lookup.assert_awaited_once_with(service.db, account_id)
         resolve.assert_awaited_once_with(account, organization_id=organization_id)
 
     @pytest.mark.anyio
-    @pytest.mark.parametrize(
-        "invalid", ["missing", "scope", "organization", "catalog", "payload"]
-    )
+    @pytest.mark.parametrize("invalid", ["missing", "scope", "organization", "catalog", "payload"])
     async def test_a_non_org_google_account_is_hidden(self, monkeypatch, invalid):
         organization_id, account_id = uuid4(), uuid4()
         account = None
