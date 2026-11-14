@@ -553,6 +553,27 @@ async def test_fulfil_refuses_an_api_key_without_the_run_scope() -> None:
 
 
 @pytest.mark.security
+async def test_an_operator_cannot_create_a_secret_by_fulfilling_a_request() -> None:
+    service = _service()
+    operator = AuthContext(
+        user_id=USER_ID,
+        organization_id=ORG_ID,
+        role=OrgRoleName.OPERATOR,
+    )
+    assert not operator.has(Perm.SECRETS_EDIT)
+
+    with (
+        patch("app.services.secret_requests.agent_run_repo.claim_parked_run") as claim,
+        patch("app.services.secret_requests.OrganizationSecretService") as vault,
+        pytest.raises(AuthorizationError, match="may not create organization secrets"),
+    ):
+        await service.fulfil(operator, RUN_ID, REQUEST_ID, value=SecretStr(SENTINEL))
+
+    claim.assert_not_awaited()
+    vault.assert_not_called()
+
+
+@pytest.mark.security
 async def test_decline_on_a_run_that_is_not_parked_is_not_found() -> None:
     service = _service()
     with (
