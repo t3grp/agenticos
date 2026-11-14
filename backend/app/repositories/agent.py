@@ -358,6 +358,7 @@ async def list_visible_ids(
         shared_ids=shared_ids,
         shared_with_me=False,
         include_archived=False,
+        kind=AgentKind.AGENT,
     )
     if statuses:
         where.append(Agent.status.in_(list(statuses)))
