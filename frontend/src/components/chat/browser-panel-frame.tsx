@@ -13,8 +13,12 @@ const bounded = (width: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width
 /** Dock in the available chat width; narrow chats and explicit expansion use the full screen. */
 export function BrowserPanelFrame({
   children,
+  label,
+  resizeLabel,
 }: {
   children: (layout: { fullscreen: boolean; toggleFullscreen: () => void }) => ReactNode;
+  label?: string;
+  resizeLabel?: string;
 }) {
   const t = useTranslations("chat");
   const id = useId();
@@ -29,7 +33,7 @@ export function BrowserPanelFrame({
     <aside
       ref={panel}
       id={id}
-      aria-label={t("browserHeading")}
+      aria-label={label ?? t("browserHeading")}
       data-browser-panel={fullscreen ? "fullscreen" : "docked"}
       style={style}
       className={cn(
@@ -43,7 +47,7 @@ export function BrowserPanelFrame({
           decorative={false}
           orientation="vertical"
           tabIndex={0}
-          aria-label={t("browserResize")}
+          aria-label={resizeLabel ?? t("browserResize")}
           aria-controls={id}
           aria-valuemin={MIN_WIDTH}
           aria-valuemax={MAX_WIDTH}
