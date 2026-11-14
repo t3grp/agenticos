@@ -106,6 +106,7 @@ async def post(db: AsyncSession, room: Room, token: str, *, agent: bool = True):
     )
 
 
+@pytest.mark.security
 async def test_posts_and_queue_are_atomic_idempotent_and_tenant_scoped(db: AsyncSession) -> None:
     room = await seed(db)
     human = await post(db, room, "human", agent=False)

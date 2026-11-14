@@ -433,6 +433,7 @@ async def test_real_instrumented_agent_preserves_effective_thinking(thinking, so
     assert runtime.infer.await_args.kwargs["thinking"] == thinking
 
 
+@pytest.mark.security
 async def test_projected_thinking_survives_preparation_and_invalid_budget_is_refused():
     model, runtime = _model(_reply("Ready"))
     parameters = ModelRequestParameters(thinking="medium")

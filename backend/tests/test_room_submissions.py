@@ -256,6 +256,7 @@ async def test_pending_queue_is_bounded_before_the_human_post_is_written(room, m
     room.add_message.assert_not_called()
 
 
+@pytest.mark.security
 async def test_dedupe_scope_includes_tenant_room_and_requester(room) -> None:
     await room.service.post(room.ctx, room.topic.id, request(), room.user)
     scope = module.room_repo.for_client.call_args.kwargs
