@@ -18,7 +18,7 @@ import { ProjectSettings } from "./project-settings";
 
 vi.mock("@/hooks/use-room", async (original) => ({
   ...(await original<typeof import("@/hooks/use-room")>()),
-  useCreateTeamRoom: () => vi.fn(),
+  useCreateTeamRoom: () => ({ create: vi.fn(), isReady: true }),
 }));
 
 const nativeProject = vi.hoisted(() => ({

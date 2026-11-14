@@ -102,6 +102,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Starting a team room waits for the signed-in account and explicit organization selection, so initial organization loading cannot discard a successfully created room before it opens. Responses from an account or organization the person has left remain ignored.
 - Preserve existing personal API and Claude subscription connections when
   deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
   the personal-model, Google Drive OAuth, and Composio migration branches without

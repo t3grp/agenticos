@@ -14,13 +14,13 @@ import { useRouter } from "@/lib/locale-navigation";
 export function StartTeamRoom({ projectId }: { projectId: string }) {
   const t = useTranslations("chat.teamRoom");
   const tErrors = useTranslations("errors");
-  const create = useCreateTeamRoom();
+  const { create, isReady } = useCreateTeamRoom();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const inFlight = useRef(false);
 
   async function start() {
-    if (inFlight.current) return;
+    if (!isReady || inFlight.current) return;
     inFlight.current = true;
     setCreating(true);
     try {
@@ -35,7 +35,12 @@ export function StartTeamRoom({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Button size="sm" onClick={() => void start()} disabled={creating} data-tour="project-new-chat">
+    <Button
+      size="sm"
+      onClick={() => void start()}
+      disabled={!isReady || creating}
+      data-tour="project-new-chat"
+    >
       <Plus className="h-4 w-4" aria-hidden />
       {creating ? t("creating") : t("newRoom")}
     </Button>

@@ -254,11 +254,54 @@ it("creates an empty project room without invoking an agent", async () => {
   vi.mocked(apiClient.post).mockResolvedValueOnce({ id: "new-room", project_id: "project-a" });
   const { result } = renderHook(() => useCreateTeamRoom(), { wrapper });
   await act(async () =>
-    expect(result.current("project-a", "Our team")).resolves.toMatchObject({ id: "new-room" }),
+    expect(result.current.create("project-a", "Our team")).resolves.toMatchObject({
+      id: "new-room",
+    }),
   );
   expect(apiClient.post).toHaveBeenCalledWith("/conversations", {
     project_id: "project-a",
     title: "Our team",
+  });
+});
+
+describe("room creation readiness", () => {
+  it.each(["account", "organization", "fallback"] as const)(
+    "refuses a programmatic create while %s initialization is incomplete",
+    async (pending) => {
+      if (pending === "account") useAuthStore.setState({ user: null });
+      else useOrgStore.setState({ activeOrgId: null });
+      if (pending === "fallback") {
+        client.setQueryDefaults(qk.organizations.list(), { staleTime: Infinity });
+        client.setQueryData(qk.organizations.list(), [{ id: "org-a", is_personal: true }]);
+      }
+      const invalidate = vi.spyOn(client, "invalidateQueries");
+      const { result } = renderHook(() => useCreateTeamRoom(), { wrapper });
+      expect(result.current.isReady).toBe(false);
+      await act(async () =>
+        expect(result.current.create("project-a", "Our team")).resolves.toBeNull(),
+      );
+      expect(apiClient.post).not.toHaveBeenCalled();
+      expect(invalidate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not let a callback captured before selection create after hydration", async () => {
+    useOrgStore.setState({ activeOrgId: null });
+    const { result } = renderHook(() => useCreateTeamRoom(), { wrapper });
+    const beforeSelection = result.current.create;
+    act(() => useOrgStore.setState({ activeOrgId: "org-a" }));
+    expect(result.current.isReady).toBe(true);
+    await act(async () => expect(beforeSelection("project-a", "Our team")).resolves.toBeNull());
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("propagates a creation failure while the identity is still current", async () => {
+    const failure = new ApiError(403, "Project access changed");
+    vi.mocked(apiClient.post).mockRejectedValueOnce(failure);
+    const { result } = renderHook(() => useCreateTeamRoom(), { wrapper });
+    await act(async () =>
+      expect(result.current.create("project-a", "Our team")).rejects.toBe(failure),
+    );
   });
 });
 

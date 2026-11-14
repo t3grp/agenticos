@@ -151,11 +151,14 @@ export function useRoomActions(conversationId: string | null) {
 }
 
 export function useCreateTeamRoom() {
-  const { current } = useRoomIdentity();
+  const { accountId, organizationId, tenant, current } = useRoomIdentity();
   const queryClient = useQueryClient();
-  return useCallback(
+  // Creation must start after selection settles: otherwise null -> default
+  // invalidates its own successful response before the caller can open the room.
+  const isReady = accountId !== undefined && organizationId !== null && tenant !== null;
+  const create = useCallback(
     async (projectId: string, title: string) => {
-      if (!current()) return null;
+      if (!isReady || !current()) return null;
       try {
         const conversation = await createTeamRoom(projectId, title);
         if (!current()) return null;
@@ -167,6 +170,7 @@ export function useCreateTeamRoom() {
         throw error;
       }
     },
-    [current, queryClient],
+    [isReady, current, queryClient],
   );
+  return { create, isReady };
 }
