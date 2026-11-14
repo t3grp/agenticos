@@ -21,17 +21,27 @@ test.use({ storageState: AUTH_STATE });
  */
 
 /** Servers every deployment ships. */
-const CATALOG = ["GitHub", "PostgreSQL", "Notion", "Sentry"];
+const CATALOG = ["GitHub", "PostgreSQL", "Notion", "Sentry"] as const;
+type CatalogName = (typeof CATALOG)[number];
+
+/** The visible descriptions of these specific curated MCP entries. */
+const CATALOG_DESCRIPTIONS: Record<CatalogName, string> = {
+  GitHub: "Read issues, pull requests and code across an organization's repositories.",
+  PostgreSQL: "Query your own database over a Postgres MCP server you run. Not hosted by anybody.",
+  Notion: "Search pages and databases in a Notion workspace.",
+  Sentry: "Look up errors, issues and releases.",
+};
 
 /**
- * A public-registry entry may use the same name as a curated server. The
- * Registry badge marks an entry the deployment has not reviewed; these
- * assertions are about the curated catalog that every deployment ships.
+ * Managed apps and public-registry entries may share a curated server's name.
+ * Match its visible description as well, so a different GitHub connector cannot
+ * satisfy the assertion. The Registry badge still excludes unreviewed entries.
  */
-function curatedServer(page: Page, name: string) {
-  return page
-    .getByRole("group", { name, exact: true })
-    .filter({ hasNot: page.getByText("Registry", { exact: true }) });
+function curatedServer(page: Page, name: CatalogName) {
+  return page.getByRole("group", { name, exact: true }).filter({
+    has: page.getByText(CATALOG_DESCRIPTIONS[name], { exact: true }),
+    hasNot: page.getByText("Registry", { exact: true }),
+  });
 }
 
 /** Legacy links reach Connections; its MCP tab holds the server catalog. */
@@ -111,7 +121,7 @@ test.describe("MCP servers", () => {
 
     // A baked full-colour logo where the catalog has one, a brand glyph where
     // it does not: either way the mark is the first image on the card.
-    const mark = (server: string) => curatedServer(page, server).locator("img, svg").first();
+    const mark = (server: CatalogName) => curatedServer(page, server).locator("img, svg").first();
 
     await expect(mark("GitHub")).toBeAttached();
     await expect(mark("Sentry")).toBeAttached();
