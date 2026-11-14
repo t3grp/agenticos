@@ -42,14 +42,10 @@ migration graph shape; it does not replace the database migration checks.
 
 The existing `t3grp/armada-runner-runtime` Worker accepts pushes to `t3` and
 same-repository pull requests on `opened`, `synchronize` and `reopened`; fork pull
-requests are rejected. Add one repository webhook manually in Settings → Webhooks:
-
-- Payload URL: `https://t3-armada-github-runners.sherman-tansx.workers.dev/webhooks/github/agenticos`
-- Content type: `application/json`
-- Events: Pushes and Pull requests only
-- SSL verification: on
-
-No webhook-administration token or webhook-creation script is used.
+requests are rejected. Add the repository webhook manually after the Worker is
+live. Use its `/webhooks/github/agenticos` URL, `application/json` content type,
+Pushes and Pull requests events, and keep SSL verification enabled. No webhook
+administration token or webhook-creation script is used.
 
 Check the `armada` status on the pull request's exact head SHA. Open the status
 details for the task results; if no status appears, inspect recent webhook delivery
