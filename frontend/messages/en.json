@@ -1638,6 +1638,27 @@
       "changeModel": "Change model",
       "profilesUnavailable": "Model settings could not be read. Retry before choosing another model."
     },
+    "modelSelector": {
+      "choose": "Choose chat model: {model}",
+      "title": "Chat model",
+      "default": "Default",
+      "override": "Override",
+      "unavailable": "Model unavailable",
+      "useDefault": "Use agent's model",
+      "scope": "Choose a saved model for your next message. This chat preference is remembered for your account in this organization.",
+      "afterTurn": "The running turn keeps its model. Your selection applies to the next message and is remembered as your chat preference.",
+      "providers": "Model providers",
+      "search": "Search saved models or accounts…",
+      "account": "Provider account",
+      "allAccounts": "All accounts",
+      "personalAccount": "Your personal account",
+      "savedModels": "Saved models",
+      "empty": "No saved models yet. Open Controls beside the message box to add one.",
+      "noMatches": "No saved models match this search.",
+      "advancedHint": "Open Controls beside the message box to add a model or manage its connection. Your chat selection does not edit the agent.",
+      "missingKey": "Connection unavailable — reconnect in Controls",
+      "notChatModel": "Unavailable for chat"
+    },
     "newChat": "New chat",
     "newConversation": "New conversation",
     "noConversations": "No conversations yet",
@@ -4944,6 +4965,10 @@
       "chat-composer": {
         "title": "Ask anything",
         "body": "Type a message, drop in a file, or start with a slash-command. Enter sends; Shift+Enter adds a line."
+      },
+      "chat-model-selector": {
+        "title": "Choose a model from the header",
+        "body": "Open the model pill to search saved models, switch providers or accounts, and return to the agent's model. Your selection applies to the next message and is remembered as your chat preference. Controls beside the message box has the full connection setup."
       },
       "chat-model-picker": {
         "title": "Tune the model",

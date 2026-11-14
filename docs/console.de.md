@@ -1,5 +1,5 @@
 ---
-source_sha: "11bc663200ee"
+source_sha: "a72708bdf856"
 ---
 
 # Die Konsole { #the-console }
@@ -57,6 +57,10 @@ Auf Telefonen bleiben Beschreibung, Kategorie und Dateiverwaltung in Skill- und 
 Seitenüberschriften verwenden die Abstände des umgebenden Layouts ohne Verdopplung. Karten, Seitenleistenzeilen, Tabs und leere Zustände haben auf dem Desktop kompaktere Abstände; Bedienelemente behalten größere Touchflächen.
 
 Sekundäre Schaltflächen und Filter teilen eine deutlichere Füllfläche, kontrastreiche Beschriftungen und klare Zustände bei Hover, Betätigung und geöffnetem Menü. Die Modellauswahl im Chat verwendet denselben Stil.
+
+Der Kopf eines Agent-Chats zeigt das aktuelle Modell mit dem Provider-Symbol. Öffne die Modellauswahl, um gespeicherte Modelle zu suchen, den Provider oder das Konto zu wechseln oder **Use agent's model** zu wählen. Die Auswahl gilt ab der nächsten Nachricht und wird für dein Konto in der aktuellen Organisation gespeichert; sie bearbeitet den Agenten nicht. Ein laufender Turn behält sein Modell. Getrennte Verbindungen und Modelle ohne Chat-Unterstützung bleiben sichtbar, sind aber nicht auswählbar. Kann die Modellliste nicht gelesen werden, bietet sie **Retry**. **Controls** neben dem Nachrichtenfeld enthält weiterhin die vollständige Modell- und Verbindungseinrichtung.
+
+Die Modellauswahl im Kopf erfordert `connections:manage`, wie die bisherigen Modellkontrollen. In schreibgeschützten Gesprächen und ohne diese Berechtigung bleibt das aktuelle Modell sichtbar.
 
 Persönliche Einstellungen behalten horizontale Tabs am oberen Rand, einschließlich der Desktop-Seiten innerhalb der App. Beschreibungen stehen direkt im Panel; Formulare passen sich ihrem Inhalt an. Konto enthält Passwortänderung und aktive Sitzungen; die Passwortaktion steht unter den Feldern.
 
