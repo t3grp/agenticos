@@ -584,6 +584,22 @@ make.
 | `GET /api/v1/skill-improvements/awaiting` | The skill sessions waiting for a person |
 | `GET /api/v1/skill-checks/awaiting` | The checks a person started, still running or waiting for a decision, on skills the caller may edit |
 
+### Learned skills — an approved proposal becomes a skill on its own
+
+Applying a proposal edits the skill it names. When the approved proposal *is*
+a new skill — a recurring mistake with no skill to attach it to — automatic
+skill learning creates it instead: `POST /v1/agents/{agent_id}/learned-skills`
+with the proposal's text and provenance. The new skill is filed under the
+`learned` category, so the listing can show what the loop taught the
+organization, and the write is audited as `skill.learned` with the proposal,
+the ledger entry and the pattern key that motivated it.
+
+Learning the same proposal twice writes nothing the second time, and a skill
+somebody rewrote since the proposal was written is refused rather than
+overwritten. A learned skill is an ordinary skill from then on: editable,
+versioned by the same bump an edit always makes, and undone by a new edit
+rather than a restore.
+
 ## Getting skills into an organization
 
 **Write one.** Skills → New, in the UI. This is the normal path.

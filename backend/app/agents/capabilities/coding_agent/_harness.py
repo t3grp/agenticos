@@ -954,9 +954,7 @@ def _opencode_live(event: dict[str, Any]) -> list[LiveItem]:
     tool = _text(part.get("tool")) or _text(part.get("toolName")) or "tool"
     state = _mapping(part.get("state"))
     arguments = (
-        _mapping(state.get("input"))
-        or _mapping(part.get("input"))
-        or _mapping(part.get("args"))
+        _mapping(state.get("input")) or _mapping(part.get("input")) or _mapping(part.get("args"))
     )
     step = _named_step(tool, arguments, _OPENCODE_KINDS)
     key = _text(part.get("id")) or tool

@@ -398,10 +398,7 @@ it("keeps demo icons and choose-agent text off the loading trigger", () => {
 
 describe("the floating assistant's picker", () => {
   it("does not offer a visible agent without run permission", async () => {
-    await open([
-      ...PUBLISHED,
-      { ...agent("view-only", "Reference agent"), can_run: false },
-    ]);
+    await open([...PUBLISHED, { ...agent("view-only", "Reference agent"), can_run: false }]);
 
     expect(screen.queryByRole("radio", { name: /Reference agent/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(2);
@@ -459,10 +456,7 @@ describe("the floating assistant's picker", () => {
 
     expect(workflowsEnabled).toHaveBeenLastCalledWith(false);
     expect(screen.queryByRole("radiogroup", { name: "Workflows" })).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Support/ })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    expect(screen.getByRole("radio", { name: /Support/ })).toHaveAttribute("aria-checked", "true");
     expect(selectWorkflow).not.toHaveBeenCalled();
   });
 

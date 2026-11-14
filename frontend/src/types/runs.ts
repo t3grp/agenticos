@@ -445,6 +445,8 @@ export interface ManifestBurstRun {
   task: string;
   merged: string;
   results: ManifestBurstSubtask[];
+}
+
 /** One observed run of a proof scenario. */
 export interface ManifestProofAttempt {
   scenario_id: string;

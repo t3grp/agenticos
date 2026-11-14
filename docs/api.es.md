@@ -1,5 +1,5 @@
 ---
-source_sha: "d8ab63f0a753"
+source_sha: "158c11621790"
 ---
 
 # La API HTTP { #the-http-api }
@@ -51,7 +51,9 @@ SHA-256, y nunca aparece en una línea de log, una entrada de auditoría ni el
 cuerpo de un error. Las listas muestran su prefijo (`aos_1a2b3c4d`), que es
 también como una entrada de auditoría nombra la clave que actuó: cada entrada
 registrada durante una petición autenticada con clave lleva `via_api_key` en sus
-detalles. De forma predeterminada, una clave caduca a los 90 días; se puede
+detalles.
+
+De forma predeterminada, una clave caduca a los 90 días; se puede
 elegir una caducidad anterior, pero no una que supere los 90 días. Al rotar una
 clave antigua con una caducidad posterior, la nueva se limita a 90 días.
 Revocarla (`DELETE /api/v1/api-keys/{id}`) surte efecto
@@ -186,7 +188,9 @@ sesión: la respuesta trae `mfa_required`, un `mfa_token` y `expires_in`
 (cinco minutos), y no se fijan cookies. El cliente lo completa en
 `POST /api/v1/auth/mfa/verify` con el token y el código, y la respuesta es el
 par de tokens - más el destino del enlace mágico, cuando el desafío vino de
-uno. El token de desafío prueba el paso de la contraseña y nada más: no puede
+uno.
+
+El token de desafío prueba el paso de la contraseña y nada más: no puede
 llamar a la API como una sesión, y un cambio de contraseña desde que se emitió
 lo invalida. Un código de recuperación también completa el paso, y se gasta
 al hacerlo; el gasto queda auditado, así el titular de la cuenta puede ver

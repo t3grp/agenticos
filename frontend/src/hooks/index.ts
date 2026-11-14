@@ -15,6 +15,7 @@ export {
 export { useAdminOrganizationDetail } from "./use-admin-organization-detail";
 export { useWebSocket } from "./use-websocket";
 export { useChat } from "./use-chat";
+export { useRoomRequests, useRoomActions, useRoomSync, useCreateTeamRoom } from "./use-room";
 export {
   useCodingChanges,
   useCodingChangeSets,

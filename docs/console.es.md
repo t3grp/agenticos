@@ -1,5 +1,5 @@
 ---
-source_sha: "1d738a8f00d6"
+source_sha: "1488eff9ea76"
 ---
 
 # La consola { #the-console }
@@ -381,9 +381,22 @@ En un teléfono no hay bocadillo - taparía la página de la que habla - y el bo
 lleva el punto en su lugar. Las aprobaciones que ya mencionó siguen mencionadas
 durante el resto de la pestaña, aunque un enlace recargue la consola.
 
-Su ventana es el propio chat de la consola, no una página dentro de la página, y
-se abre con cuatro mosaicos, para que el primer mensaje sea un clic; guarda su
-propio historial de conversaciones. En un teléfono ocupa toda la pantalla.
+Su ventana usa el chat de la consola y empieza con el asistente principal
+seleccionado. El selector de agents de la cabecera permite elegir un agent
+publicado que tengas permiso para ejecutar. Cambiar de agent conserva la
+conversación actual; la cabecera y el historial siguen la selección. Los mosaicos
+de bienvenida del Architect solo aparecen con el asistente principal seleccionado.
+En un teléfono la ventana ocupa toda la pantalla.
+
+Cada pregunta nueva incluye contexto estructurado y actualizado de la página
+actual de la consola mientras esté activado el contexto de página. La ventana
+muestra qué página se compartirá y permite desactivar esa opción.
+
+Una pregunta en cola o el reintento de un envío rechazado conserva el contexto
+de página y el agent seleccionado al enviarla. Una pregunta nueva o una respuesta
+regenerada usa la página y el agent actuales. Cambiar de cuenta u organización
+restablece la conversación de la ventana, la selección de agent y la opción de
+contexto de página.
 
 Cuando nombra una página, el enlace la abre en la consola detrás de la ventana y
 señala el control al que se refiere — el botón que crea un agent, la pestaña de
@@ -391,7 +404,7 @@ aprobaciones. La cámara de su cabecera le muestra la página en la que estás: 
 navegador pregunta qué pestaña compartir y una imagen se adjunta a tu próximo
 mensaje.
 
-Planifica los trabajos largos como una lista que puedes seguir, guarda
+El Architect planifica los trabajos largos como una lista que puedes seguir, guarda
 notas sobre ti entre conversaciones, te dice cuánto cuestan tus agents y solo
 borra un borrador de agent que creó por error y una rutina que le pidas quitar.
 Además de las

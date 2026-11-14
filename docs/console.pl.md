@@ -1,5 +1,5 @@
 ---
-source_sha: "1d738a8f00d6"
+source_sha: "1488eff9ea76"
 ---
 
 # Konsola { #the-console }
@@ -370,9 +370,20 @@ Na telefonie dymka nie ma - zasłaniałby stronę, o której mówi - a przycisk 
 zamiast niego kropkę. Akceptacje, o których już powiedział, zostają powiedziane do
 końca karty przeglądarki, nawet gdy link przeładuje konsolę.
 
-Okno to ten sam czat co w konsoli, a nie strona osadzona w stronie. Otwiera się
-na czterech kafelkach, więc pierwsza wiadomość to jedno kliknięcie, i ma własną
-historię rozmów. Na telefonie zajmuje cały ekran.
+Okno korzysta z czatu konsoli i początkowo ma wybranego głównego asystenta.
+Selektor w nagłówku pozwala wybrać opublikowanego agenta, którego możesz
+uruchomić. Zmiana agenta zachowuje bieżącą rozmowę; nagłówek i historia rozmów
+odpowiadają wybranemu agentowi. Kafelki powitalne Architekta pojawiają się tylko,
+gdy wybrany jest główny asystent. Na telefonie okno zajmuje cały ekran.
+
+Każde nowe pytanie zawiera świeży, uporządkowany kontekst bieżącej strony
+konsoli, o ile udostępnianie kontekstu strony jest włączone. Okno pokazuje,
+która strona zostanie udostępniona, i pozwala wyłączyć udostępnianie.
+
+Pytanie w kolejce lub ponowienie odrzuconego wysłania zachowuje kontekst strony
+i agenta wybranego w chwili wysłania. Nowe pytanie lub ponownie wygenerowana
+odpowiedź korzysta z bieżącej strony i agenta. Zmiana konta lub organizacji
+resetuje rozmowę w oknie, wybór agenta i ustawienie kontekstu strony.
 
 Gdy wskazuje stronę, link otwiera się w konsoli za oknem i podświetla kontrolkę,
 o którą chodzi — przycisk tworzący agenta, zakładkę z akceptacjami. Aparat w
@@ -380,7 +391,7 @@ nagłówku okna pokazuje mu stronę, na której jesteś: przeglądarka pyta, kt�
 kartę udostępnić, a jedno zdjęcie trafia jako załącznik do twojej następnej
 wiadomości.
 
-Dłuższe zadania planuje jako listę kroków, którą widać na bieżąco,
+Architekt planuje dłuższe zadania jako listę kroków, którą widać na bieżąco,
 zapamiętuje notatki o tobie między rozmowami, powie, ile kosztują twoi agenci, i
 usuwa tylko draft agenta, który utworzył przez pomyłkę, oraz rutynę, o której
 usunięcie poprosisz. Oprócz

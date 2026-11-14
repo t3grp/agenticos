@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -290,6 +290,24 @@ describe("stepping to a neighbour", () => {
     ).toBeVisible();
   });
 
+  it.each([
+    { read: 90, write: undefined, text: "90 read from the provider's cache and 0 written to it" },
+    { read: undefined, write: 12, text: "0 read from the provider's cache and 12 written to it" },
+  ])(
+    "does not invent a missing cache counter ($read read, $write written)",
+    ({ read, write, text }) => {
+      serve({ run: run({ cache_read_tokens: read, cache_write_tokens: write }) });
+      renderRun();
+      expect(screen.getByText(new RegExp(text))).toBeInTheDocument();
+    },
+  );
+
+  it("admits a fallback whose serving model and original label are unavailable", () => {
+    serve({ run: run({ fallback_used: true, serving_model: null, model_label: null }) });
+    renderRun();
+    expect(screen.getByText("Served by - (fallback)")).toBeInTheDocument();
+  });
+
   it("warms both neighbours on arrival, so the step is a cache hit", () => {
     serve({ run: run() });
 
@@ -547,6 +565,30 @@ describe("a run parked on a question", () => {
     expect(screen.getByText("Which model should I use?")).toBeVisible();
     expect(screen.getByText("And the budget?")).toBeVisible();
     expect(screen.getByText(/Expires in 1 d/)).toBeVisible();
+  });
+
+  it("names every requested secret even when no ordinary question is pending", () => {
+    serve({
+      run: run({
+        status: "awaiting_answer",
+        waiting_secret_requests: ["Vendor API key", "Calendar token"],
+        waiting_expires_at: null,
+      }),
+    });
+    renderRun();
+    const waiting = screen.getByRole("region", { name: "Waiting on you" });
+    expect(within(waiting).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(waiting).getByText("Needs secret: Vendor API key")).toBeVisible();
+    expect(within(waiting).getByText("Needs secret: Calendar token")).toBeVisible();
+    expect(within(waiting).queryByText(/Expires in/)).not.toBeInTheDocument();
+  });
+
+  it("does not display an empty waiting section while pending details are absent", () => {
+    serve({
+      run: run({ status: "awaiting_answer", waiting_questions: [], waiting_secret_requests: [] }),
+    });
+    renderRun();
+    expect(screen.queryByRole("region", { name: "Waiting on you" })).not.toBeInTheDocument();
   });
 
   it("shows no waiting section once the run has finished", () => {

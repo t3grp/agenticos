@@ -285,6 +285,8 @@ class ManifestBurstRun(BaseSchema):
     task: str = ""
     merged: str = ""
     results: list[ManifestBurstSubtask] = Field(default_factory=list)
+
+
 class ManifestProofAttempt(BaseSchema):
     """One observed run of a proof scenario (#8).
 

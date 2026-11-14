@@ -69,7 +69,7 @@ transactions that can half-commit.
 from uuid import UUID
 
 from app.db.session import get_db_context
-from fastapi import Request
+from fastapi import Request, Response
 
 from app.clients.redis import RedisClient
 
@@ -98,6 +98,7 @@ from app.services.oauth_exchange import OAuthExchangeService
 from app.services.conversation import ConversationService
 from app.services.coding_task_changes import CodingTaskChangeService
 from app.services.conversation_tasks import ConversationTaskService
+from app.services.room_submission import RoomSubmissionService
 from app.services.tasks import TaskService
 from app.services.visual import VisualService
 from app.services.local_service import LocalServiceService
@@ -105,6 +106,22 @@ from app.services.ml import MLService
 from app.services.sandbox_connection import SandboxConnectionService
 from app.services.sandbox_workspace import SandboxWorkspaceService
 from app.services.conversation_share import ConversationShareService
+
+
+def take_started_oauth_client(request: Request, *, session_key: str) -> dict[str, str] | None:
+    """Consume this OAuth state's client handoff marker, if it had one."""
+    pending = dict(request.session.get(session_key) or {})
+    started = pending.pop(request.query_params.get("state") or "", None)
+    if pending:
+        request.session[session_key] = pending
+    else:
+        request.session.pop(session_key, None)
+    return started if isinstance(started, dict) else None
+
+
+def no_store_response(response: Response) -> None:
+    """Keep a private response out of browser and intermediary caches."""
+    response.headers["Cache-Control"] = "no-store"
 
 
 def get_user_service(db: DBSession) -> UserService:
@@ -180,6 +197,13 @@ def get_conversation_task_service(db: DBSession) -> ConversationTaskService:
 
 
 ConversationTaskSvc = Annotated[ConversationTaskService, Depends(get_conversation_task_service)]
+
+
+def get_room_submission_service(db: DBSession) -> RoomSubmissionService:
+    return RoomSubmissionService(db)
+
+
+RoomSubmissionSvc = Annotated[RoomSubmissionService, Depends(get_room_submission_service)]
 
 
 def get_coding_task_change_service(db: DBSession) -> CodingTaskChangeService:
@@ -324,6 +348,7 @@ StreamingMessageRatingSvc = Annotated[MessageRatingService, Depends(get_streamin
 from app.services.rag_document import RAGDocumentService
 from app.services.rag_sync import RAGSyncService
 from app.services.sync_source import SyncSourceService
+from app.services.gdrive_picker import GoogleDrivePickerService
 
 
 def get_rag_document_service(db: DBSession) -> RAGDocumentService:
@@ -341,9 +366,14 @@ def get_sync_source_service(db: DBSession) -> SyncSourceService:
     return SyncSourceService(db)
 
 
+def get_google_drive_picker_service(db: DBSession) -> GoogleDrivePickerService:
+    return GoogleDrivePickerService(db)
+
+
 RAGDocumentSvc = Annotated[RAGDocumentService, Depends(get_rag_document_service)]
 RAGSyncSvc = Annotated[RAGSyncService, Depends(get_rag_sync_service)]
 SyncSourceSvc = Annotated[SyncSourceService, Depends(get_sync_source_service)]
+GoogleDrivePickerSvc = Annotated[GoogleDrivePickerService, Depends(get_google_drive_picker_service)]
 from app.services.knowledge_base import KnowledgeBaseService
 
 

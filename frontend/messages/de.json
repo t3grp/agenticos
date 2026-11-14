@@ -2525,690 +2525,690 @@
       }
    },
    "capabilityConfig" : {
-      "agent_messages" : {
-         "allow_attachments" : {
-            "description" : "Ob dieser Agent Dateien, die er bereits hochgeladen hat, zusammen mit seinen Nachrichten senden darf. Aus bedeutet nur Text; bereits angehängte Dateien bleiben lesbar.",
-            "title" : "Dateianhänge zulassen"
-         },
-         "max_message_chars" : {
-            "description" : "Die längste Nachricht, die dieser Agent senden darf, in Zeichen. 16.000 ist auch die Obergrenze der Konsole, sodass ein Thema gleich liest, wie die Nachricht auch gesendet wurde; senken Sie sie für einen Agenten, der kurz schreiben soll.",
-            "title" : "Längste Nachricht"
-         }
-      },
-      "artifacts" : {
-         "preview_screenshot" : {
-            "description" : "Gibt dem Modell das Bild einer Seite, wenn es sie in der Vorschau ansieht. Für ein Modell ausschalten, das keine Bilder lesen kann; der schriftliche Bericht kommt trotzdem zurück.",
-            "title" : "Dem Modell das Bild einer Seite zeigen"
-         }
-      },
-      "babysit_pr" : {
-         "max_watch_minutes" : {
-            "description" : "Minuten, die eine Beobachtung laufen darf, bevor sie stoppt und blockiert meldet. Eine Beobachtung, die ohne Grün darüber hinaus läuft, wurde nicht freigegeben — sie ist abgelaufen.",
-            "title" : "Höchstens beobachten"
-         },
-         "poll_interval_seconds" : {
-            "description" : "Sekunden zwischen den Prüfungen des Pull Requests. Mindestens 60, damit der Watcher nie in einer engen Schleife abfragt und das gemeinsame GitHub-Limit nicht verbraucht.",
-            "title" : "Abfrageintervall"
-         }
-      },
       "browser_use" : {
-         "allowed_domains" : {
-            "description" : "Erlaubte Browser-Hosts. Ohne Einschränkung sind alle Domains erlaubt; eine leere Domainliste blockiert alle. Muster wie *.example.com werden unterstützt. Wird bei jedem Schritt geprüft.",
-            "title" : "Erlaubte Domains"
-         },
-         "candidate_cap" : {
-            "description" : "Wie viele Elemente der Seite pro Schritt zur Wahl stehen. Weniger ist günstiger und blinder; die Antwort auf eine zu dichte Seite ist Scrollen.",
-            "title" : "Angebotene Elemente pro Schritt"
-         },
          "cdp_url" : {
-            "description" : "Chromium-DevTools-Endpunkt, den der Agent steuert - ein Browser-Dienst des Betreibers, kein Prozess im API-Container.",
-            "title" : "DevTools-Endpunkt"
+            "title" : "DevTools-Endpunkt",
+            "description" : "Chromium-DevTools-Endpunkt, den der Agent steuert - ein Browser-Dienst des Betreibers, kein Prozess im API-Container."
          },
-         "connection" : {
-            "description" : "Eingebaut nutzt den Browser des Deployments und dessen Adresse. Ein Proxy schickt die Browses über eine eigene Adresse - eine private oder regionale, die Websites seltener sperren. Ein gehosteter Browser führt sie in einem bezahlten Browser-Dienst aus, erreicht über CDP. „Dieser Computer“ erfordert eine gekoppelte Desktop-App und lokales Browsing für diesen Chat.",
-            "title" : "Wie der Browser ins Netz geht"
-         },
-         "hosted_key_param" : {
-            "description" : "Wie der gehostete Browser seinen Schlüssel in der Query der Adresse nennt.",
-            "title" : "Query-Parameter für den Schlüssel"
-         },
-         "hosted_url" : {
-            "description" : "Die wss://-CDP-Adresse des Dienstes. Sein Schlüssel liegt im Vault und wird unten gewählt; beim Verbinden wird er an die Query der Adresse angehängt.",
-            "title" : "Adresse des gehosteten Browsers"
-         },
-         "locale" : {
-            "description" : "Ein Sprach-Tag wie pl-PL, gesendet als Accept-Language und navigator.language.",
-            "title" : "Sprache des Browsers"
+         "allowed_domains" : {
+            "title" : "Erlaubte Domains",
+            "description" : "Erlaubte Browser-Hosts. Ohne Einschränkung sind alle Domains erlaubt; eine leere Domainliste blockiert alle. Muster wie *.example.com werden unterstützt. Wird bei jedem Schritt geprüft."
          },
          "max_steps" : {
-            "description" : "Wie viele Schritte ein Aufruf machen darf; jeder Schritt ist eine Modellanfrage. Eine Aufgabe, die mehr braucht, macht beim nächsten Aufruf im selben Tab weiter.",
-            "title" : "Höchstens Schritte pro Aufruf"
-         },
-         "prefer_native_browser" : {
-            "description" : "Einen eingebetteten nativen Tab für lokales DOM-Browsing verwenden. Für isolierte Chromium-Kompatibilität deaktivieren. Vision sowie Sprach- und Zeitzonenüberschreibungen verwenden Chromium.",
-            "title" : "Nativen lokalen Browser verwenden"
-         },
-         "preview" : {
-            "description" : "Sendet die Ansicht des Browsers in den Chat, während er arbeitet, damit man zusehen kann. Kostet ein JPEG pro Schritt.",
-            "title" : "Live-Vorschau zeigen"
-         },
-         "preview_width" : {
-            "description" : "Die Breite der Browser-Ansicht in Pixeln und damit der Vorschaubilder. Sie entscheidet, was der Agent ohne Scrollen sieht.",
-            "title" : "Breite der Ansicht (Pixel)"
-         },
-         "proxy_url" : {
-            "description" : "http://, https:// oder socks5:// mit Host und Port. Sein username:password liegt im Vault und wird unten gewählt; Chromium kann sich nicht bei einem SOCKS-Proxy anmelden.",
-            "title" : "Proxy-Adresse"
-         },
-         "step_model_profile_id" : {
-            "description" : "Ein Modellprofil, das `browse_web` für jeden Schritt statt des eigenen Modells des Agents fragt. Schritte sind der Großteil der Zeit und Kosten eines Browse, also macht ein günstigeres Modell einen langen Browse günstiger und schneller, wo sein Anbieter schnell antwortet - messen Sie es, denn ein kleines Modell über ein langsames Gateway ist nicht schneller. Leer nutzt das Modell des Agents. Die eigenen Browser-Werkzeuge des Agents nutzen immer dessen Modell.",
-            "title" : "Modell für jeden Browse-Schritt"
-         },
-         "timezone" : {
-            "description" : "Eine IANA-Zeitzone wie Europe/Warsaw. Passend zur Region des Proxys setzen: Ein Browser, dessen Uhr und Adresse nicht zusammenpassen, wirkt wie ein Bot.",
-            "title" : "Zeitzone des Browsers"
+            "title" : "Höchstens Schritte pro Aufruf",
+            "description" : "Wie viele Schritte ein Aufruf machen darf; jeder Schritt ist eine Modellanfrage. Eine Aufgabe, die mehr braucht, macht beim nächsten Aufruf im selben Tab weiter."
          },
          "vision" : {
-            "description" : "Sendet dem Modell bei jedem Schritt einen Screenshot zusätzlich zu den Elementen der Seite. Besser bei visuellen Seiten, mehr Tokens, und das Modell muss Bilder lesen.",
-            "title" : "Dem Modell Screenshots zeigen"
-         }
-      },
-      "burst" : {
-         "max_bursts" : {
-            "description" : "Wie viele Bursts ein Run höchstens verlangen darf. Ein neuer Burst nach Korrekturen ist ein neuer Burst, und die Obergrenze verhindert, dass wiederholte Bursts den Umfang ausweiten.",
-            "title" : "Bursts höchstens"
+            "title" : "Dem Modell Screenshots zeigen",
+            "description" : "Sendet dem Modell bei jedem Schritt einen Screenshot zusätzlich zu den Elementen der Seite. Besser bei visuellen Seiten, mehr Tokens, und das Modell muss Bilder lesen."
          },
-         "max_subtasks" : {
-            "description" : "Wie viele Teilaufgaben ein Burst höchstens gleichzeitig ausführt. 3 ist der Standard von Subagents max_fanout und 10 sein Höchstwert: Ein Burst teilt diese Obergrenze, statt sie zu erhöhen. Bei Erreichen lehnt das Tool die übrigen Teile mit einer Meldung ab, auf die das Modell reagieren kann.",
-            "title" : "Teilaufgaben höchstens"
+         "candidate_cap" : {
+            "title" : "Angebotene Elemente pro Schritt",
+            "description" : "Wie viele Elemente der Seite pro Schritt zur Wahl stehen. Weniger ist günstiger und blinder; die Antwort auf eine zu dichte Seite ist Scrollen."
+         },
+         "preview" : {
+            "title" : "Live-Vorschau zeigen",
+            "description" : "Sendet die Ansicht des Browsers in den Chat, während er arbeitet, damit man zusehen kann. Kostet ein JPEG pro Schritt."
+         },
+         "preview_width" : {
+            "title" : "Breite der Ansicht (Pixel)",
+            "description" : "Die Breite der Browser-Ansicht in Pixeln und damit der Vorschaubilder. Sie entscheidet, was der Agent ohne Scrollen sieht."
+         },
+         "step_model_profile_id" : {
+            "title" : "Modell für jeden Browse-Schritt",
+            "description" : "Ein Modellprofil, das `browse_web` für jeden Schritt statt des eigenen Modells des Agents fragt. Schritte sind der Großteil der Zeit und Kosten eines Browse, also macht ein günstigeres Modell einen langen Browse günstiger und schneller, wo sein Anbieter schnell antwortet - messen Sie es, denn ein kleines Modell über ein langsames Gateway ist nicht schneller. Leer nutzt das Modell des Agents. Die eigenen Browser-Werkzeuge des Agents nutzen immer dessen Modell."
+         },
+         "connection" : {
+            "title" : "Wie der Browser ins Netz geht",
+            "description" : "Eingebaut nutzt den Browser des Deployments und dessen Adresse. Ein Proxy schickt die Browses über eine eigene Adresse - eine private oder regionale, die Websites seltener sperren. Ein gehosteter Browser führt sie in einem bezahlten Browser-Dienst aus, erreicht über CDP. „Dieser Computer“ erfordert eine gekoppelte Desktop-App und lokales Browsing für diesen Chat."
+         },
+         "proxy_url" : {
+            "title" : "Proxy-Adresse",
+            "description" : "http://, https:// oder socks5:// mit Host und Port. Sein username:password liegt im Vault und wird unten gewählt; Chromium kann sich nicht bei einem SOCKS-Proxy anmelden."
+         },
+         "hosted_url" : {
+            "title" : "Adresse des gehosteten Browsers",
+            "description" : "Die wss://-CDP-Adresse des Dienstes. Sein Schlüssel liegt im Vault und wird unten gewählt; beim Verbinden wird er an die Query der Adresse angehängt."
+         },
+         "hosted_key_param" : {
+            "title" : "Query-Parameter für den Schlüssel",
+            "description" : "Wie der gehostete Browser seinen Schlüssel in der Query der Adresse nennt."
+         },
+         "timezone" : {
+            "title" : "Zeitzone des Browsers",
+            "description" : "Eine IANA-Zeitzone wie Europe/Warsaw. Passend zur Region des Proxys setzen: Ein Browser, dessen Uhr und Adresse nicht zusammenpassen, wirkt wie ein Bot."
+         },
+         "locale" : {
+            "title" : "Sprache des Browsers",
+            "description" : "Ein Sprach-Tag wie pl-PL, gesendet als Accept-Language und navigator.language."
+         },
+         "prefer_native_browser" : {
+            "title" : "Nativen lokalen Browser verwenden",
+            "description" : "Einen eingebetteten nativen Tab für lokales DOM-Browsing verwenden. Für isolierte Chromium-Kompatibilität deaktivieren. Vision sowie Sprach- und Zeitzonenüberschreibungen verwenden Chromium."
          }
       },
       "channel_tools" : {
-         "default_limit" : {
-            "description" : "Mitglieder, Suchergebnisse oder Nachrichten, die zurückkommen, wenn das Modell keine Anzahl nennt",
-            "title" : "Ergebnisse ohne angegebene Anzahl"
-         },
          "tools" : {
-            "description" : "Welche Kanal-Abfragen diese Bindung erlaubt, nach Tool-ID. Leer bedeutet keine - so beginnt jede Bindung.",
-            "title" : "Erlaubte Abfragen"
+            "title" : "Erlaubte Abfragen",
+            "description" : "Welche Kanal-Abfragen diese Bindung erlaubt, nach Tool-ID. Leer bedeutet keine - so beginnt jede Bindung."
+         },
+         "default_limit" : {
+            "title" : "Ergebnisse ohne angegebene Anzahl",
+            "description" : "Mitglieder, Suchergebnisse oder Nachrichten, die zurückkommen, wenn das Modell keine Anzahl nennt"
          }
       },
       "clock" : {
          "timezone" : {
-            "description" : "IANA-Zeitzone, in der der Agent denkt, z. B. Europe/Warsaw",
-            "title" : "Zeitzone"
+            "title" : "Zeitzone",
+            "description" : "IANA-Zeitzone, in der der Agent denkt, z. B. Europe/Warsaw"
          }
       },
       "code_execution" : {
-         "max_memory_mb" : {
-            "description" : "Speichergrenze für einen Aufruf, in Megabyte",
-            "title" : "Speicherlimit pro Aufruf (MB)"
-         },
          "timeout_secs" : {
-            "description" : "Echtzeit-Budget für einen Aufruf, in Sekunden",
-            "title" : "Zeitlimit pro Aufruf (Sekunden)"
-         }
-      },
-      "coding_agent" : {
-         "access" : {
-            "description" : "Dateien ändern und Befehle ausführen, etwa Tests - oder nur den Code lesen und antworten. Setzen Sie in beiden Fällen Freigabe durch einen Menschen, damit vor jeder Aufgabe gefragt wird.",
-            "title" : "Was er darf"
+            "title" : "Zeitlimit pro Aufruf (Sekunden)",
+            "description" : "Echtzeit-Budget für einen Aufruf, in Sekunden"
          },
-         "base_url" : {
-            "description" : "Nur Claude Code: ein Gateway, das die API von Anthropic spricht, etwa https://openrouter.ai/api; der Key im Vault ist dann der dieses Gateways. Leer ruft Anthropic direkt auf.",
-            "title" : "Anthropic-kompatibler Endpunkt"
-         },
-         "harness" : {
-            "description" : "Welcher Coding Agent die Arbeit erledigt: Claude Code mit einem Anthropic-Key oder einem Claude-Abo-Token, oder Codex mit einem OpenAI-Key oder einer ChatGPT-Anmeldung.",
-            "title" : "Coding Agent"
-         },
-         "model" : {
-            "description" : "Das Modell, mit dem der Coding Agent läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex. Nicht gesetzt nimmt den Standard des Coding Agent. Auf diesem Computer nicht verfügbar; dort nutzt der Agent seine eigene Einstellung.",
-            "title" : "Modell"
-         },
-         "runs_on" : {
-            "description" : "Die Sandbox des Agents mit ihrem konfigurierten Schlüssel, eine temporäre private Cloud-Aufgabe mit dem Profilkonto der startenden Person oder ein in der Desktop-App auf ihrem Computer gewählter Ordner, wo Claude Code und Codex die vorhandene Anmeldung nutzen und keinen Schlüssel brauchen.",
-            "title" : "Wo es läuft"
-         },
-         "timeout_minutes" : {
-            "description" : "Wie lange eine Aufgabe laufen darf, bevor sie gestoppt wird.",
-            "title" : "Zeitlimit (Minuten)"
+         "max_memory_mb" : {
+            "title" : "Speicherlimit pro Aufruf (MB)",
+            "description" : "Speichergrenze für einen Aufruf, in Megabyte"
          }
       },
       "compaction" : {
-         "context_window" : {
-            "description" : "Das Fenster überschreiben, gegen das dies auslöst. Zugleich der Nenner der Kontextanzeige im Chat, sodass beide eine Obergrenze beschreiben. Setze es, wenn die ermittelte Zahl für deine Installation falsch ist - eine Beta oder ein Tarif kann weniger bekommen, als der Provider veröffentlicht - oder damit ein Agent früher komprimiert, als sein Modell verlangt",
-            "title" : "Kontextfenster überschreiben"
-         },
-         "fallback_context_window" : {
-            "description" : "Angenommenes Fenster, wenn das des Modells nicht ermittelt werden kann",
-            "title" : "Ersatz-Kontextfenster"
-         },
-         "keep_messages" : {
-            "description" : "Wie viele letzte Nachrichten eine Zusammenfassung oder ein gleitendes Fenster überstehen",
-            "title" : "Behaltene letzte Nachrichten"
-         },
-         "keep_tool_pairs" : {
-            "description" : "Wie viele letzte Tool-Aufrufe ihre Ergebnisse behalten, wenn Ergebnisse geleert werden",
-            "title" : "Behaltene letzte Tool-Ergebnisse"
+         "strategy" : {
+            "title" : "Strategie",
+            "description" : "Welche Strategie gilt, wenn sich der Verlauf dem Fenster nähert"
          },
          "max_fraction" : {
-            "description" : "Anteil des Kontextfensters des Modells, ab dem die Komprimierung beginnt",
-            "title" : "Ab diesem Anteil des Fensters beginnen"
+            "title" : "Ab diesem Anteil des Fensters beginnen",
+            "description" : "Anteil des Kontextfensters des Modells, ab dem die Komprimierung beginnt"
          },
-         "strategy" : {
-            "description" : "Welche Strategie gilt, wenn sich der Verlauf dem Fenster nähert",
-            "title" : "Strategie"
+         "keep_messages" : {
+            "title" : "Behaltene letzte Nachrichten",
+            "description" : "Wie viele letzte Nachrichten eine Zusammenfassung oder ein gleitendes Fenster überstehen"
+         },
+         "keep_tool_pairs" : {
+            "title" : "Behaltene letzte Tool-Ergebnisse",
+            "description" : "Wie viele letzte Tool-Aufrufe ihre Ergebnisse behalten, wenn Ergebnisse geleert werden"
          },
          "summary_prompt" : {
-            "description" : "Was das zusammenfassende Modell erhält. `{messages}` ist die Stelle, an der das ersetzte Gespräch eingefügt wird, und ist Pflicht - ein Prompt ohne fasst nichts zusammen. Passe ihn an, damit erhalten bleibt, worauf die Arbeit deines Agents beruht: Der Standard behält Absichten, Entscheidungen und offene Fäden, und das ist nicht dasselbe, was ein Support-Verlauf oder ein Code-Review braucht",
-            "title" : "Zusammenfassungs-Prompt"
-         }
-      },
-      "computer_use" : {
-         "daemon_url" : {
-            "description" : "Der computerd-Endpunkt Ihres Desktops. Sein Host muss in COMPUTER_DAEMON_ALLOWED_HOSTS stehen.",
-            "title" : "Daemon-URL"
+            "title" : "Zusammenfassungs-Prompt",
+            "description" : "Was das zusammenfassende Modell erhält. `{messages}` ist die Stelle, an der das ersetzte Gespräch eingefügt wird, und ist Pflicht - ein Prompt ohne fasst nichts zusammen. Passe ihn an, damit erhalten bleibt, worauf die Arbeit deines Agents beruht: Der Standard behält Absichten, Entscheidungen und offene Fäden, und das ist nicht dasselbe, was ein Support-Verlauf oder ein Code-Review braucht"
          },
-         "desktop" : {
-            "description" : "Wählen Sie, wo der Agent einen Desktop bedient. Die Anforderungen der gewählten Umgebung stehen unten.",
-            "title" : "Umgebung"
+         "context_window" : {
+            "title" : "Kontextfenster überschreiben",
+            "description" : "Das Fenster überschreiben, gegen das dies auslöst. Zugleich der Nenner der Kontextanzeige im Chat, sodass beide eine Obergrenze beschreiben. Setze es, wenn die ermittelte Zahl für deine Installation falsch ist - eine Beta oder ein Tarif kann weniger bekommen, als der Provider veröffentlicht - oder damit ein Agent früher komprimiert, als sein Modell verlangt"
          },
-         "max_actions" : {
-            "description" : "Wie viele Aktionen ein Lauf insgesamt ausführen darf.",
-            "title" : "Aktionen pro Lauf"
-         },
-         "max_actions_per_call" : {
-            "description" : "Wie viele Aktionen ein Aufruf senden darf.",
-            "title" : "Aktionen pro Aufruf"
-         },
-         "preview" : {
-            "description" : "Den Desktop live im Chat zeigen, während der Agent damit arbeitet.",
-            "title" : "Live-Vorschau"
-         },
-         "screen_height" : {
-            "description" : "Die größte Höhe eines Screenshots, den das Modell sieht.",
-            "title" : "Screenshot-Höhe"
-         },
-         "screen_width" : {
-            "description" : "Die größte Breite eines Screenshots, den das Modell sieht; größere Bildschirme werden passend verkleinert.",
-            "title" : "Screenshot-Breite"
+         "fallback_context_window" : {
+            "title" : "Ersatz-Kontextfenster",
+            "description" : "Angenommenes Fenster, wenn das des Modells nicht ermittelt werden kann"
          }
       },
       "context" : {
          "expose_read_tool" : {
-            "description" : "Ob Dateien im Link-Modus über ein Lese-Tool erreichbar sind. Aus bedeutet, dass nur eingefügte Dateien das Modell erreichen und nichts bei Bedarf gelesen wird.",
-            "title" : "Verlinkte Dateien öffnen lassen"
+            "title" : "Verlinkte Dateien öffnen lassen",
+            "description" : "Ob Dateien im Link-Modus über ein Lese-Tool erreichbar sind. Aus bedeutet, dass nur eingefügte Dateien das Modell erreichen und nichts bei Bedarf gelesen wird."
          },
          "file_settings" : {
-            "description" : "Modus und Verfügbarkeit angehängter Kontextdateien für diesen Agenten. Ohne Eintrag bleiben die bisherigen Dateivorgaben erhalten.",
-            "title" : "Verwendung je Datei"
+            "title" : "Verwendung je Datei",
+            "description" : "Modus und Verfügbarkeit angehängter Kontextdateien für diesen Agenten. Ohne Eintrag bleiben die bisherigen Dateivorgaben erhalten."
          }
       },
       "conversation_search" : {
          "max_results" : {
-            "description" : "Wie viele Gespräche eine Suche höchstens liefert. Jedes bringt einen kurzen Ausschnitt mit, eine hohe Zahl kostet also bei jeder Suche Kontext.",
-            "title" : "Gespräche pro Suche"
+            "title" : "Gespräche pro Suche",
+            "description" : "Wie viele Gespräche eine Suche höchstens liefert. Jedes bringt einen kurzen Ausschnitt mit, eine hohe Zahl kostet also bei jeder Suche Kontext."
          }
       },
       "council" : {
+         "members" : {
+            "title" : "Ratsmitglieder",
+            "description" : "Die Delegierten: je ein starkes Modell von drei verschiedenen Anbietern mit hohem Reasoning-Aufwand. Genau drei Mitglieder."
+         },
          "agreement_threshold" : {
-            "description" : "Die Punktzahl von 10, die jeder Delegierte erreichen muss, damit eine Runde den Rat zufriedenstellt. Eine Runde darunter heißt: beheben und erneut prüfen lassen.",
-            "title" : "Einigungsschwelle"
+            "title" : "Einigungsschwelle",
+            "description" : "Die Punktzahl von 10, die jeder Delegierte erreichen muss, damit eine Runde den Rat zufriedenstellt. Eine Runde darunter heißt: beheben und erneut prüfen lassen."
          },
          "max_rounds" : {
-            "description" : "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten.",
-            "title" : "Runden höchstens"
-         },
-         "members" : {
-            "description" : "Die Delegierten: je ein starkes Modell von drei verschiedenen Anbietern mit hohem Reasoning-Aufwand. Genau drei Mitglieder.",
-            "title" : "Ratsmitglieder"
-         }
-      },
-      "eval_tool_tuning" : {
-         "max_tuning_runs" : {
-            "description" : "Wie viele Tuning-Runs ein Run höchstens aufzeichnen darf. Ein neuer Tuning-Run nach Anwendung eines Vorschlags ist ein neuer Run, und die Obergrenze verhindert, dass wiederholtes Bewerten den Umfang ausweitet.",
-            "title" : "Tuning-Runs höchstens"
-         }
-      },
-      "follow_ups" : {
-         "model_profile_id" : {
-            "description" : "Ein separates Modellprofil erstellt Schaltflächen für nächste Schritte im Hintergrund, nachdem die Antwort gespeichert wurde. Es verzögert weder die Antwort noch die nächste Nachricht. Ein kleines, günstiges Modell reicht aus. Ohne Auswahl sind Vorschläge deaktiviert.",
-            "title" : "Modell für nächste Schritte"
+            "title" : "Runden höchstens",
+            "description" : "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten."
          }
       },
       "guardrails" : {
-         "blocked_keywords_args" : {
-            "description" : "Den Run blockieren, wenn die Argumente eines Tools einen dieser Begriffe enthalten (durch Komma oder Zeilenumbruch getrennt)",
-            "title" : "Gesperrte Wörter in Tool-Argumenten"
-         },
-         "blocked_keywords_in" : {
-            "description" : "Den Run blockieren, wenn der Prompt einen dieser Begriffe enthält (durch Komma oder Zeilenumbruch getrennt)",
-            "title" : "Gesperrte Wörter in der Frage"
-         },
-         "blocked_keywords_out" : {
-            "description" : "Den Run blockieren, wenn die Antwort einen dieser Begriffe enthält (durch Komma oder Zeilenumbruch getrennt)",
-            "title" : "Gesperrte Wörter in der Antwort"
-         },
-         "blocked_keywords_tool" : {
-            "description" : "Den Run blockieren, wenn ein Tool-Ergebnis einen dieser Begriffe enthält (durch Komma oder Zeilenumbruch getrennt)",
-            "title" : "Gesperrte Wörter in Tool-Ergebnissen"
-         },
-         "phone_regions" : {
-            "description" : "Länder, deren nationale Telefonformate das Verbergen von Personendaten erkennt, als zweistellige Codes (durch Komma oder Zeilenumbruch getrennt), höchstens 16 Regionen und 256 Zeichen. Eine mit + geschriebene Nummer wird unabhängig von der Liste verborgen",
-            "title" : "Länder der Telefonnummern"
-         },
-         "redact_pii_args" : {
-            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus Tool-Argumenten entfernen",
-            "title" : "Personendaten in Tool-Argumenten verbergen"
+         "redact_secrets_in" : {
+            "title" : "Geheimnisse in der Frage verbergen",
+            "description" : "API-Schlüssel und Tokens aus dem Prompt des Nutzers entfernen"
          },
          "redact_pii_in" : {
-            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus dem Prompt entfernen",
-            "title" : "Personendaten in der Frage verbergen"
+            "title" : "Personendaten in der Frage verbergen",
+            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus dem Prompt entfernen"
          },
-         "redact_pii_out" : {
-            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus der Antwort entfernen",
-            "title" : "Personendaten in der Antwort verbergen"
-         },
-         "redact_pii_tool" : {
-            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus Tool-Ergebnissen entfernen",
-            "title" : "Personendaten in Tool-Ergebnissen verbergen"
-         },
-         "redact_secrets_args" : {
-            "description" : "API-Schlüssel und Tokens aus den Argumenten entfernen, die der Agent an ein Tool übergibt",
-            "title" : "Geheimnisse in Tool-Argumenten verbergen"
-         },
-         "redact_secrets_in" : {
-            "description" : "API-Schlüssel und Tokens aus dem Prompt des Nutzers entfernen",
-            "title" : "Geheimnisse in der Frage verbergen"
+         "blocked_keywords_in" : {
+            "title" : "Gesperrte Wörter in der Frage",
+            "description" : "Den Run blockieren, wenn der Prompt einen dieser Begriffe enthält (durch Komma oder Zeilenumbruch getrennt)"
          },
          "redact_secrets_out" : {
-            "description" : "API-Schlüssel und Tokens aus der Antwort des Agents entfernen",
-            "title" : "Geheimnisse in der Antwort verbergen"
+            "title" : "Geheimnisse in der Antwort verbergen",
+            "description" : "API-Schlüssel und Tokens aus der Antwort des Agents entfernen"
+         },
+         "redact_pii_out" : {
+            "title" : "Personendaten in der Antwort verbergen",
+            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus der Antwort entfernen"
+         },
+         "blocked_keywords_out" : {
+            "title" : "Gesperrte Wörter in der Antwort",
+            "description" : "Den Run blockieren, wenn die Antwort einen dieser Begriffe enthält (durch Komma oder Zeilenumbruch getrennt)"
          },
          "redact_secrets_tool" : {
-            "description" : "API-Schlüssel und Tokens aus Tool-Ergebnissen entfernen, bevor das Modell sie liest",
-            "title" : "Geheimnisse in Tool-Ergebnissen verbergen"
-         }
-      },
-      "harness" : {
-         "access" : {
-            "description" : "Was der Harness in der Sandbox des Agent tun darf: nur Code lesen oder Code ändern und Befehle ausführen.",
-            "title" : "Zugriff"
+            "title" : "Geheimnisse in Tool-Ergebnissen verbergen",
+            "description" : "API-Schlüssel und Tokens aus Tool-Ergebnissen entfernen, bevor das Modell sie liest"
          },
-         "base_url" : {
-            "description" : "Nur Claude Code: ein Gateway, das die API von Anthropic spricht, etwa https://openrouter.ai/api; der Key im Vault ist dann der dieses Gateways. Leer ruft Anthropic direkt auf.",
-            "title" : "Anthropic-kompatibler Endpunkt"
+         "redact_pii_tool" : {
+            "title" : "Personendaten in Tool-Ergebnissen verbergen",
+            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus Tool-Ergebnissen entfernen"
          },
-         "harness" : {
-            "description" : "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code oder Codex.",
-            "title" : "Harness"
+         "blocked_keywords_tool" : {
+            "title" : "Gesperrte Wörter in Tool-Ergebnissen",
+            "description" : "Den Run blockieren, wenn ein Tool-Ergebnis einen dieser Begriffe enthält (durch Komma oder Zeilenumbruch getrennt)"
          },
-         "model" : {
-            "description" : "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex. Nicht gesetzt nimmt den Standard des Harness.",
-            "title" : "Modell"
+         "redact_secrets_args" : {
+            "title" : "Geheimnisse in Tool-Argumenten verbergen",
+            "description" : "API-Schlüssel und Tokens aus den Argumenten entfernen, die der Agent an ein Tool übergibt"
          },
-         "timeout_minutes" : {
-            "description" : "Wie lange ein Prompt laufen darf, bevor er gestoppt wird. Die Sitzung bleibt offen.",
-            "title" : "Prompt-Zeitlimit (Minuten)"
+         "redact_pii_args" : {
+            "title" : "Personendaten in Tool-Argumenten verbergen",
+            "description" : "E-Mail-Adressen, Telefonnummern, IBANs, Kartennummern und SSNs aus Tool-Argumenten entfernen"
+         },
+         "blocked_keywords_args" : {
+            "title" : "Gesperrte Wörter in Tool-Argumenten",
+            "description" : "Den Run blockieren, wenn die Argumente eines Tools einen dieser Begriffe enthalten (durch Komma oder Zeilenumbruch getrennt)"
+         },
+         "phone_regions" : {
+            "title" : "Länder der Telefonnummern",
+            "description" : "Länder, deren nationale Telefonformate das Verbergen von Personendaten erkennt, als zweistellige Codes (durch Komma oder Zeilenumbruch getrennt), höchstens 16 Regionen und 256 Zeichen. Eine mit + geschriebene Nummer wird unabhängig von der Liste verborgen"
          }
       },
       "image_generation" : {
-         "aspect_ratio" : {
-            "description" : "Seitenverhältnis, z. B. 16:9 oder 1:1.",
-            "title" : "Seitenverhältnis"
-         },
-         "background" : {
-            "description" : "Art des Hintergrunds; transparent erfordert png oder webp.",
-            "title" : "Hintergrund"
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Wessen Modell zeichnet. Angenommen werden nur Provider, deren Modellklasse das Bild-Tool unterstützt - heute drei - und welche das sind, wird das SDK gefragt, statt sie hier aufzulisten."
          },
          "model" : {
-            "description" : "Welches Bildmodell dieses Providers zeichnet, nach den IDs in `app/core/catalog/image_models.json`. Ein Modell außerhalb des Katalogs wird abgelehnt: Das Tool würde auf ein Modell, das nicht zeichnen kann, mit einem Fehler antworten, den sein Autor erst mitten im Run sieht.",
-            "title" : "Bildmodell"
-         },
-         "output_format" : {
-            "description" : "Dateiformat des Bildes.",
-            "title" : "Dateiformat"
-         },
-         "provider" : {
-            "description" : "Wessen Modell zeichnet. Angenommen werden nur Provider, deren Modellklasse das Bild-Tool unterstützt - heute drei - und welche das sind, wird das SDK gefragt, statt sie hier aufzulisten.",
-            "title" : "Provider"
+            "title" : "Bildmodell",
+            "description" : "Welches Bildmodell dieses Providers zeichnet, nach den IDs in `app/core/catalog/image_models.json`. Ein Modell außerhalb des Katalogs wird abgelehnt: Das Tool würde auf ein Modell, das nicht zeichnen kann, mit einem Fehler antworten, den sein Autor erst mitten im Run sieht."
          },
          "quality" : {
-            "description" : "Renderqualität; höher ist langsamer und teurer.",
-            "title" : "Qualität"
+            "title" : "Qualität",
+            "description" : "Renderqualität; höher ist langsamer und teurer."
          },
          "size" : {
-            "description" : "Ausgabegröße. OpenAI nutzt die Pixelwerte, Google die K-Werte.",
-            "title" : "Größe"
+            "title" : "Größe",
+            "description" : "Ausgabegröße. OpenAI nutzt die Pixelwerte, Google die K-Werte."
+         },
+         "background" : {
+            "title" : "Hintergrund",
+            "description" : "Art des Hintergrunds; transparent erfordert png oder webp."
+         },
+         "output_format" : {
+            "title" : "Dateiformat",
+            "description" : "Dateiformat des Bildes."
+         },
+         "aspect_ratio" : {
+            "title" : "Seitenverhältnis",
+            "description" : "Seitenverhältnis, z. B. 16:9 oder 1:1."
          }
       },
       "knowledge" : {
          "default_top_k" : {
-            "description" : "Zurückgegebene Passagen, wenn das Modell keine Anzahl nennt",
-            "title" : "Passagen pro Suche"
-         },
-         "parent_context" : {
-            "description" : "Small-to-big-Suche: Jeden gefundenen Abschnitt mit dem Text um ihn herum zurückgeben. Abgleich und Ranking laufen immer auf den kleinen Abschnitten, der gefundene Abschnitt wird nie gekürzt, und der zusätzliche Kontext ist begrenzt.",
-            "title" : "Umgebenden Text einbeziehen"
-         },
-         "query_analysis_max_variants" : {
-            "description" : "Wie viele Umformulierungen `multi_query` hinzufügen darf - begrenzt Verzweigung und Kosten. Von den anderen Modi ignoriert",
-            "title" : "Höchstens Umformulierungen"
-         },
-         "query_analysis_mode" : {
-            "description" : "Die Anfrage vor der Suche optional analysieren und erweitern, um bei kurzen oder unscharfen Fragen besser zu treffen. Standardmäßig aus. `multi_query` und `hyde` machen je einen zusätzlichen Modellaufruf",
-            "title" : "Anfrageerweiterung"
+            "title" : "Passagen pro Suche",
+            "description" : "Zurückgegebene Passagen, wenn das Modell keine Anzahl nennt"
          },
          "self_query_enabled" : {
-            "description" : "Geschäftsfilter nach FA-039 (Quelle, Dokumenttyp, Organisationseinheit, Zeitraum) per LLM aus der natürlichsprachigen Frage ableiten, wenn das Modell ohne eigene Filter sucht. Standardmäßig aus. Jede solche Suche ist eine zusätzliche Modellanfrage, die dem Run berechnet wird. Sie kann innerhalb der Organisation und der Collections des Agents nur einengen, nie erweitern.",
-            "title" : "Filter aus der Frage ableiten"
+            "title" : "Filter aus der Frage ableiten",
+            "description" : "Geschäftsfilter nach FA-039 (Quelle, Dokumenttyp, Organisationseinheit, Zeitraum) per LLM aus der natürlichsprachigen Frage ableiten, wenn das Modell ohne eigene Filter sucht. Standardmäßig aus. Jede solche Suche ist eine zusätzliche Modellanfrage, die dem Run berechnet wird. Sie kann innerhalb der Organisation und der Collections des Agents nur einengen, nie erweitern."
+         },
+         "query_analysis_mode" : {
+            "title" : "Anfrageerweiterung",
+            "description" : "Die Anfrage vor der Suche optional analysieren und erweitern, um bei kurzen oder unscharfen Fragen besser zu treffen. Standardmäßig aus. `multi_query` und `hyde` machen je einen zusätzlichen Modellaufruf"
+         },
+         "query_analysis_max_variants" : {
+            "title" : "Höchstens Umformulierungen",
+            "description" : "Wie viele Umformulierungen `multi_query` hinzufügen darf - begrenzt Verzweigung und Kosten. Von den anderen Modi ignoriert"
+         },
+         "parent_context" : {
+            "title" : "Umgebenden Text einbeziehen",
+            "description" : "Small-to-big-Suche: Jeden gefundenen Abschnitt mit dem Text um ihn herum zurückgeben. Abgleich und Ranking laufen immer auf den kleinen Abschnitten, der gefundene Abschnitt wird nie gekürzt, und der zusätzliche Kontext ist begrenzt."
          }
       },
       "media" : {
          "threshold_bytes" : {
-            "description" : "Binär- oder Textteile mindestens dieser Größe werden in den Speicher geschrieben und im gespeicherten Verlauf durch einen Verweis ersetzt.",
-            "title" : "Teile speichern ab (Bytes)"
+            "title" : "Teile speichern ab (Bytes)",
+            "description" : "Binär- oder Textteile mindestens dieser Größe werden in den Speicher geschrieben und im gespeicherten Verlauf durch einen Verweis ersetzt."
          }
       },
       "memory_files" : {
          "allow_personal" : {
-            "description" : "Ob der Agent private Notizen zu jeder Person führt, mit der er spricht, lesbar nur, wenn er mit ihr allein ist. Aus entfernt diesen Speicher vollständig, aus Compliance- oder Datenschutzgründen; Notizen aus Gruppenchats bleiben.",
-            "title" : "Private Notizen pro Person"
-         }
-      },
-      "mirage" : {
-         "allowed_commands" : {
-            "description" : "Nur diese Befehle ausführen, z. B. ls, cat, grep. Leer erlaubt virtuelle Befehle; direktes curl/wget ist deaktiviert.",
-            "title" : "Erlaubte Befehle"
-         },
-         "hidden_paths" : {
-            "description" : "Pfade, die der Agent gar nicht sieht, z. B. /drive/HR/.",
-            "title" : "Verborgene Pfade"
-         },
-         "mounts" : {
-            "description" : "Was das Terminal einbindet, jeweils als Ordner.",
-            "title" : "Ordner"
-         }
-      },
-      "phone_calls" : {
-         "endpoint_id" : {
-            "description" : "Der konfigurierte Twilio-Telefonendpunkt aus Kanälen. Nur ausdrückliche Mitgliedszustimmung und aktuelle Grenzen erlauben einen Anruf.",
-            "title" : "Telefonendpunkt"
+            "title" : "Private Notizen pro Person",
+            "description" : "Ob der Agent private Notizen zu jeder Person führt, mit der er spricht, lesbar nur, wenn er mit ihr allein ist. Aus entfernt diesen Speicher vollständig, aus Compliance- oder Datenschutzgründen; Notizen aus Gruppenchats bleiben."
          }
       },
       "planning" : {
-         "cache_ttl" : {
-            "description" : "Bleibt erhalten, damit bestehende Agent-Spezifikationen weiterhin geladen werden. Die Planung nutzt diesen Wert nicht mehr; konfigurieren Sie den Prompt-Cache über cache in den Modelleinstellungen.",
-            "title" : "Bisherige Prompt-Cache-Dauer"
-         },
          "enable_subtasks" : {
-            "description" : "Fügt Teilaufgaben und Abhängigkeiten hinzu: Ein Schritt wartet als blockiert, bis die Schritte davor fertig sind. Standardmäßig aus, weil für die meiste Arbeit eine flache Checkliste genügt.",
-            "title" : "Unteraufgaben und Abhängigkeiten"
+            "title" : "Unteraufgaben und Abhängigkeiten",
+            "description" : "Fügt Teilaufgaben und Abhängigkeiten hinzu: Ein Schritt wartet als blockiert, bis die Schritte davor fertig sind. Standardmäßig aus, weil für die meiste Arbeit eine flache Checkliste genügt."
+         },
+         "cache_ttl" : {
+            "title" : "Bisherige Prompt-Cache-Dauer",
+            "description" : "Bleibt erhalten, damit bestehende Agent-Spezifikationen weiterhin geladen werden. Die Planung nutzt diesen Wert nicht mehr; konfigurieren Sie den Prompt-Cache über cache in den Modelleinstellungen."
          }
       },
       "sandbox" : {
          "backend" : {
-            "description" : "state: nur Dateien, keine Shell, von der Plattform gespeichert — funktioniert ohne zusätzliche Dienste. service: ein Container oder eine Cloud-Sandbox auf einer Verbindung der Organisation. local: die Person wählt und genehmigt ihren eigenen Computer im Desktop-Chat; dieser Spec speichert weder Gerätepfade noch native Zustimmung.",
-            "title" : "Wo die Dateien liegen"
+            "title" : "Wo die Dateien liegen",
+            "description" : "state: nur Dateien, keine Shell, von der Plattform gespeichert — funktioniert ohne zusätzliche Dienste. service: ein Container oder eine Cloud-Sandbox auf einer Verbindung der Organisation. local: die Person wählt und genehmigt ihren eigenen Computer im Desktop-Chat; dieser Spec speichert weder Gerätepfade noch native Zustimmung."
          },
          "connection_id" : {
-            "description" : "Auf welcher registrierten Sandbox-Verbindung ausgeführt wird; leer nimmt die Standardverbindung der Organisation. Eine ID, nie eine Adresse oder ein Token - eine Spec wird in das Git-Repository eines Kunden exportiert und darf daher nur einen Verweis enthalten. Die Verbindung entscheidet, ob das ein Container auf deinem Host oder eine Sandbox in der Daytona-Cloud ist.",
-            "title" : "Sandbox-Verbindung"
-         },
-         "include_execute" : {
-            "description" : "Ob der Agent Shell-Befehle ausführen darf. Ausschalten lässt die Datei-Tools bestehen und entfernt die Shell vollständig, statt sie zu sperren.",
-            "title" : "Shell-Befehle erlauben"
-         },
-         "runtime" : {
-            "description" : "Welche Umgebung ein containerbasierter Workspace ausführt, aus der Liste, die der Dienst der Verbindung erlaubt. Leer nimmt die Standardumgebung der Verbindung. Ein Alias, nie ein Image.",
-            "title" : "Laufzeitumgebung"
+            "title" : "Sandbox-Verbindung",
+            "description" : "Auf welcher registrierten Sandbox-Verbindung ausgeführt wird; leer nimmt die Standardverbindung der Organisation. Eine ID, nie eine Adresse oder ein Token - eine Spec wird in das Git-Repository eines Kunden exportiert und darf daher nur einen Verweis enthalten. Die Verbindung entscheidet, ob das ein Container auf deinem Host oder eine Sandbox in der Daytona-Cloud ist."
          },
          "session_scope" : {
-            "description" : "Wer sich einen Workspace teilt: run (jede Runde ein neuer), conversation (alle im Chat oder Slack-Thread), channel (ein ganzer Slack-Kanal), user (eine Person über ihre Chats) oder agent (alle, die mit ihm sprechen).",
-            "title" : "Wer den Workspace teilt"
+            "title" : "Wer den Workspace teilt",
+            "description" : "Wer sich einen Workspace teilt: run (jede Runde ein neuer), conversation (alle im Chat oder Slack-Thread), channel (ein ganzer Slack-Kanal), user (eine Person über ihre Chats) oder agent (alle, die mit ihm sprechen)."
+         },
+         "runtime" : {
+            "title" : "Laufzeitumgebung",
+            "description" : "Welche Umgebung ein containerbasierter Workspace ausführt, aus der Liste, die der Dienst der Verbindung erlaubt. Leer nimmt die Standardumgebung der Verbindung. Ein Alias, nie ein Image."
+         },
+         "include_execute" : {
+            "title" : "Shell-Befehle erlauben",
+            "description" : "Ob der Agent Shell-Befehle ausführen darf. Ausschalten lässt die Datei-Tools bestehen und entfernt die Shell vollständig, statt sie zu sperren."
+         }
+      },
+      "eval_tool_tuning" : {
+         "max_tuning_runs" : {
+            "title" : "Tuning-Runs höchstens",
+            "description" : "Wie viele Tuning-Runs ein Run höchstens aufzeichnen darf. Ein neuer Tuning-Run nach Anwendung eines Vorschlags ist ein neuer Run, und die Obergrenze verhindert, dass wiederholtes Bewerten den Umfang ausweitet."
          }
       },
       "sol_loop" : {
-         "max_rounds" : {
-            "description" : "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten. Nur auf 5 ausweiten bei Sicherheit, Berechtigungen, Auth, Datenverlust oder Zustand und Nebenläufigkeit, solange ein Blocker oder Should offen ist - oder wenn der Nutzer darum bittet.",
-            "title" : "Runden höchstens"
-         },
          "reviewer" : {
-            "description" : "Der eine Prüfer, der die Arbeit beurteilt, auf seinem Sol-Modell.",
-            "title" : "Prüfer"
+            "title" : "Prüfer",
+            "description" : "Der eine Prüfer, der die Arbeit beurteilt, auf seinem Sol-Modell."
+         },
+         "max_rounds" : {
+            "title" : "Runden höchstens",
+            "description" : "Wie viele Prüfungsrunden ein Run höchstens verlangen darf. Eine neue Prüfung nach Korrekturen ist eine neue Runde, und die Obergrenze verhindert, dass wiederholte Prüfungen den Umfang ausweiten. Nur auf 5 ausweiten bei Sicherheit, Berechtigungen, Auth, Datenverlust oder Zustand und Nebenläufigkeit, solange ein Blocker oder Should offen ist - oder wenn der Nutzer darum bittet."
          }
       },
       "subagents" : {
-         "allow_any_agent" : {
-            "description" : "Bietet die aktuellen veröffentlichten Versionen anderer Agenten an, die diese Person in dieser Organisation ausführen darf, unter Slug-Namen mit dem Präfix agent-. Explizite Pins behalten ihre gewählten Versionen. Der Katalog wird zu Beginn jedes interaktiven Laufs aufgelöst; unbeaufsichtigte Arbeit bleibt auf geprüfte Pins begrenzt. Große Kataloge erhöhen Vorbereitungszeit und Kontext.",
-            "title" : "Andere zugängliche Agenten verwenden"
-         },
-         "allow_dynamic" : {
-            "description" : "Erlaubt diesem Agent, während des Runs eigene Spezialisten zu schreiben. Jeder besteht aus Anweisungen und einem Ihrer Modelle, ohne Werkzeuge oder Wissen, verbraucht das Budget dieses Runs und ist nach der Antwort weg. Stellen Sie `create_agent` hinter ein Gate, um jeden zuerst zu sehen.",
-            "title" : "Agent darf Spezialisten erstellen"
-         },
-         "allow_questions" : {
-            "description" : "Erlaubt einem Delegierten, der wartenden Person eine Frage zu stellen, statt zu raten. Gilt nur für eine sync-Delegation und nur für die Spezialisten, die dieser Agent bekommen hat. Eine Frage ist keine Freigabe und ersetzt keine.",
-            "title" : "Delegierte dürfen Fragen stellen"
-         },
          "inline" : {
-            "description" : "Innerhalb dieses Agents definierte Spezialisten, für Arbeit, die keinen eigenen veröffentlichten Agent rechtfertigt. Nicht versioniert: Eine Änderung dieses Agents ändert sie, und nichts anderes kann auf sie verweisen.",
-            "title" : "Eingebettete Spezialisten"
-         },
-         "max_depth" : {
-            "description" : "Wie viele Ebenen der Delegation erlaubt sind, diesen Agent mitgezählt. 1 erlaubt ihm zu delegieren, seinen Delegierten nicht; 2 erlaubt eine verschachtelte Ebene. Jede Ebene vervielfacht die Anfragen einer Runde.",
-            "title" : "Delegationstiefe"
-         },
-         "max_fanout" : {
-            "description" : "Wie viele Delegationen gleichzeitig laufen dürfen. Ist die Grenze erreicht, wird die nächste mit einer Meldung abgelehnt, auf die das Modell reagieren kann, statt mit einem Fehler. Das ist die Obergrenze dafür, dass eine Hintergrund-Delegation weitere startet, bis ein Dutzend Agents gegen ein Budget läuft.",
-            "title" : "Gleichzeitige Delegationen"
-         },
-         "max_result_chars" : {
-            "description" : "Wie viel der Antwort einer fertigen Delegation gezeigt wird, wenn mehrere auf einmal abgeholt werden. Eine gekürzte sagt das und verweist auf das Tool, das sie vollständig liefert, sodass nichts verloren geht - dies entscheidet nur, wie viel der Arbeit von fünf Spezialisten im Kontext einer Runde ankommt.",
-            "title" : "Angezeigte Antwortlänge pro Delegiertem"
+            "title" : "Eingebettete Spezialisten",
+            "description" : "Innerhalb dieses Agents definierte Spezialisten, für Arbeit, die keinen eigenen veröffentlichten Agent rechtfertigt. Nicht versioniert: Eine Änderung dieses Agents ändert sie, und nichts anderes kann auf sie verweisen."
          },
          "mode" : {
-            "description" : "Sync wartet auf die Antwort des Delegierten, async holt sie später ab, auto lässt das Modell je Aufgabe wählen. Eine Delegation im Hintergrund kann nicht auf eine Freigabe warten, also bleibt solche Arbeit auf sync.",
-            "title" : "Delegationsmodus"
+            "title" : "Delegationsmodus",
+            "description" : "Sync wartet auf die Antwort des Delegierten, async holt sie später ab, auto lässt das Modell je Aufgabe wählen. Eine Delegation im Hintergrund kann nicht auf eine Freigabe warten, also bleibt solche Arbeit auf sync."
+         },
+         "allow_questions" : {
+            "title" : "Delegierte dürfen Fragen stellen",
+            "description" : "Erlaubt einem Delegierten, der wartenden Person eine Frage zu stellen, statt zu raten. Gilt nur für eine sync-Delegation und nur für die Spezialisten, die dieser Agent bekommen hat. Eine Frage ist keine Freigabe und ersetzt keine."
+         },
+         "allow_dynamic" : {
+            "title" : "Agent darf Spezialisten erstellen",
+            "description" : "Erlaubt diesem Agent, während des Runs eigene Spezialisten zu schreiben. Jeder besteht aus Anweisungen und einem Ihrer Modelle, ohne Werkzeuge oder Wissen, verbraucht das Budget dieses Runs und ist nach der Antwort weg. Stellen Sie `create_agent` hinter ein Gate, um jeden zuerst zu sehen."
+         },
+         "max_depth" : {
+            "title" : "Delegationstiefe",
+            "description" : "Wie viele Ebenen der Delegation erlaubt sind, diesen Agent mitgezählt. 1 erlaubt ihm zu delegieren, seinen Delegierten nicht; 2 erlaubt eine verschachtelte Ebene. Jede Ebene vervielfacht die Anfragen einer Runde."
+         },
+         "max_fanout" : {
+            "title" : "Gleichzeitige Delegationen",
+            "description" : "Wie viele Delegationen gleichzeitig laufen dürfen. Ist die Grenze erreicht, wird die nächste mit einer Meldung abgelehnt, auf die das Modell reagieren kann, statt mit einem Fehler. Das ist die Obergrenze dafür, dass eine Hintergrund-Delegation weitere startet, bis ein Dutzend Agents gegen ein Budget läuft."
+         },
+         "max_result_chars" : {
+            "title" : "Angezeigte Antwortlänge pro Delegiertem",
+            "description" : "Wie viel der Antwort einer fertigen Delegation gezeigt wird, wenn mehrere auf einmal abgeholt werden. Eine gekürzte sagt das und verweist auf das Tool, das sie vollständig liefert, sodass nichts verloren geht - dies entscheidet nur, wie viel der Arbeit von fünf Spezialisten im Kontext einer Runde ankommt."
          },
          "share_with_delegates" : {
-            "description" : "Capabilities, die dieser Agent an seine Delegierten weitergibt, etwa einen gemeinsamen Workspace, damit einer eine Datei schreibt und ein anderer sie liest. Geteilt wird nur, was hier steht, die Delegation selbst nie.",
-            "title" : "Von Delegierten geerbte Capabilities"
+            "title" : "Von Delegierten geerbte Capabilities",
+            "description" : "Capabilities, die dieser Agent an seine Delegierten weitergibt, etwa einen gemeinsamen Workspace, damit einer eine Datei schreibt und ein anderer sie liest. Geteilt wird nur, was hier steht, die Delegation selbst nie."
+         },
+         "allow_any_agent" : {
+            "title" : "Andere zugängliche Agenten verwenden",
+            "description" : "Bietet die aktuellen veröffentlichten Versionen anderer Agenten an, die diese Person in dieser Organisation ausführen darf, unter Slug-Namen mit dem Präfix agent-. Explizite Pins behalten ihre gewählten Versionen. Der Katalog wird zu Beginn jedes interaktiven Laufs aufgelöst; unbeaufsichtigte Arbeit bleibt auf geprüfte Pins begrenzt. Große Kataloge erhöhen Vorbereitungszeit und Kontext."
          }
       },
       "system_reminders" : {
-         "cache_ttl" : {
-            "description" : "Cache-Lebensdauer des Punkts vor der abschließenden Erinnerung",
-            "title" : "Lebensdauer des Prompt-Caches"
+         "reminders" : {
+            "title" : "Feste Erinnerungen",
+            "description" : "Feste Zeilen, jede in ihrem eigenen Rhythmus wiederholt"
          },
          "goal_reanchor" : {
-            "description" : "Die ursprüngliche Anfrage in einem Rhythmus wiederholen, ohne Token-Kosten",
-            "title" : "Ursprüngliche Anfrage wiederholen"
+            "title" : "Ursprüngliche Anfrage wiederholen",
+            "description" : "Die ursprüngliche Anfrage in einem Rhythmus wiederholen, ohne Token-Kosten"
          },
          "llm_reminder" : {
-            "description" : "Eine vom Modell geschriebene Erinnerung in einem Rhythmus. Kostet bei jedem Auslösen einen zusätzlichen Aufruf",
-            "title" : "Vom Modell geschriebene Erinnerung"
+            "title" : "Vom Modell geschriebene Erinnerung",
+            "description" : "Eine vom Modell geschriebene Erinnerung in einem Rhythmus. Kostet bei jedem Auslösen einen zusätzlichen Aufruf"
          },
-         "reminders" : {
-            "description" : "Feste Zeilen, jede in ihrem eigenen Rhythmus wiederholt",
-            "title" : "Feste Erinnerungen"
-         }
-      },
-      "text_to_speech" : {
-         "max_characters" : {
-            "description" : "Der meiste Text, den ein Aufruf sprechen darf, was die Kosten eines einzelnen Aufrufs begrenzt.",
-            "title" : "Längster Text"
-         },
-         "model" : {
-            "description" : "Welches Sprachmodell dieses Anbieters spricht. Ein Modell außerhalb des Katalogs wird hier abgelehnt statt mitten im Lauf.",
-            "title" : "Sprachmodell"
-         },
-         "output_format" : {
-            "description" : "mp3 ist kleiner, wav unkomprimiert. Leer bedeutet das erste Format des Anbieters - Gemini liefert nur wav.",
-            "title" : "Dateiformat"
-         },
-         "provider" : {
-            "description" : "Wessen Stimmen sprechen. Zur Auswahl stehen die Provider aus `app/core/catalog/text_to_speech_models.json`, deren Schlüssel der Vault speichern kann.",
-            "title" : "Provider"
-         },
-         "voice" : {
-            "description" : "Die Stimme, die spricht, sofern der Agent keine andere wählt; leer bedeutet die erste Stimme des Modells. ElevenLabs-Stimmen gehören zu Ihrem Konto, also fügen Sie für ElevenLabs die Stimmen-ID aus Ihrer Stimmenbibliothek ein.",
-            "title" : "Stimme"
-         },
-         "voices" : {
-            "description" : "Die einzigen Stimmen, zu denen der Agent statt der obigen wechseln darf, für jeden Clip einzeln - für einen Dialog oder für Erzähler und Figur. Leer bedeutet, dass er jede Stimme des Modells wählen darf - bei ElevenLabs jede Stimmen-ID in Ihrem Konto.",
-            "title" : "Erlaubte Stimmen"
+         "cache_ttl" : {
+            "title" : "Lebensdauer des Prompt-Caches",
+            "description" : "Cache-Lebensdauer des Punkts vor der abschließenden Erinnerung"
          }
       },
       "thinking" : {
          "effort" : {
-            "description" : "Wie gründlich das Modell vor der Antwort nachdenkt. Leer lassen für den Standardaufwand des Providers; eine Stufe, die ein Provider nicht hat, wird auf die nächstliegende abgebildet.",
-            "title" : "Denkaufwand"
+            "title" : "Denkaufwand",
+            "description" : "Wie gründlich das Modell vor der Antwort nachdenkt. Leer lassen für den Standardaufwand des Providers; eine Stufe, die ein Provider nicht hat, wird auf die nächstliegende abgebildet."
          }
       },
       "tool_output_limits" : {
          "action" : {
-            "description" : "Was mit einem Ergebnis über dem Schwellenwert geschieht",
-            "title" : "Wenn ein Ergebnis zu lang ist"
-         },
-         "max_chars" : {
-            "description" : "Behaltene Zeichen, wenn ein Ergebnis gekürzt wird oder eine Auslagerung oder Zusammenfassung auf Kürzen zurückfällt. Ohne Angabe nie mehr als der Schwellenwert",
-            "title" : "Behaltene Zeichen"
-         },
-         "over_tokens" : {
-            "description" : "Den Schwellenwert in geschätzten Tokens statt in Zeichen messen",
-            "title" : "In Tokens messen"
-         },
-         "strip_ansi" : {
-            "description" : "Terminal-Farbcodes vor dem Messen und Reduzieren aus Textergebnissen entfernen",
-            "title" : "Terminalfarben entfernen"
-         },
-         "summary_prompt" : {
-            "description" : "Was das zusammenfassende Modell bei der Aktion 'summarize' erhält. Muss {output} enthalten, wo die vollständige Ausgabe des Tools eingefügt wird; {tool_name} steht ebenfalls zur Verfügung, für den Namen des Tools, das sie erzeugt hat",
-            "title" : "Zusammenfassungs-Prompt"
+            "title" : "Wenn ein Ergebnis zu lang ist",
+            "description" : "Was mit einem Ergebnis über dem Schwellenwert geschieht"
          },
          "threshold" : {
-            "description" : "Größe, ab der ein Ergebnis reduziert wird. Standardmäßig in Zeichen; in geschätzten Tokens, wenn „in Tokens messen“ gesetzt ist, dann standardmäßig 15.000",
-            "title" : "Größengrenze"
+            "title" : "Größengrenze",
+            "description" : "Größe, ab der ein Ergebnis reduziert wird. Standardmäßig in Zeichen; in geschätzten Tokens, wenn „in Tokens messen“ gesetzt ist, dann standardmäßig 15.000"
+         },
+         "over_tokens" : {
+            "title" : "In Tokens messen",
+            "description" : "Den Schwellenwert in geschätzten Tokens statt in Zeichen messen"
+         },
+         "max_chars" : {
+            "title" : "Behaltene Zeichen",
+            "description" : "Behaltene Zeichen, wenn ein Ergebnis gekürzt wird oder eine Auslagerung oder Zusammenfassung auf Kürzen zurückfällt. Ohne Angabe nie mehr als der Schwellenwert"
          },
          "truncation_strategy" : {
-            "description" : "Welches Ende (oder beide) eines zu langen Textes beim Kürzen erhalten bleibt",
-            "title" : "Welcher Teil bleibt"
+            "title" : "Welcher Teil bleibt",
+            "description" : "Welches Ende (oder beide) eines zu langen Textes beim Kürzen erhalten bleibt"
+         },
+         "strip_ansi" : {
+            "title" : "Terminalfarben entfernen",
+            "description" : "Terminal-Farbcodes vor dem Messen und Reduzieren aus Textergebnissen entfernen"
+         },
+         "summary_prompt" : {
+            "title" : "Zusammenfassungs-Prompt",
+            "description" : "Was das zusammenfassende Modell bei der Aktion 'summarize' erhält. Muss {output} enthalten, wo die vollständige Ausgabe des Tools eingefügt wird; {tool_name} steht ebenfalls zur Verfügung, für den Namen des Tools, das sie erzeugt hat"
          }
       },
       "tool_search" : {
-         "defer_capabilities" : {
-            "description" : "Geeignete Tools aktivierter Capabilities ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben Capability-Tools sichtbar.",
-            "title" : "Capability-Tools verzögert laden"
-         },
-         "defer_mcp_servers" : {
-            "description" : "Geeignete Tools gebundener MCP-Server ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben MCP-Tools sichtbar.",
-            "title" : "MCP-Tools verzögert laden"
-         },
-         "exclude_capabilities" : {
-            "description" : "Kommagetrennte Capability-IDs, deren Tools sichtbar bleiben, etwa knowledge oder visuals. Diese Capabilities müssen weiterhin aktiviert sein.",
-            "title" : "Immer sichtbare Capabilities"
-         },
-         "exclude_mcp_servers" : {
-            "description" : "Kommagetrennte Namensraum-Präfixe der MCP-Tools, die sichtbar bleiben, etwa github_work oder agenticos. Das Präfix vor dem Tool-Namen verwenden und Bindestriche durch Unterstriche ersetzen.",
-            "title" : "Immer sichtbare MCP-Server"
-         },
-         "exclude_tools" : {
-            "description" : "Kommagetrennte Tool-Namen, wie sie das Modell sieht, die sichtbar bleiben sollen. Umbenannte Capability-Tools und vollständige MCP-Tool-Namen mit Präfix verwenden, etwa github_work_list_issues.",
-            "title" : "Immer sichtbare Tools"
+         "strategy" : {
+            "title" : "Suchmethode",
+            "description" : "auto: native Tool-Suche bei einem Provider, der sie hat, sonst lokaler Stichwortabgleich. keywords: immer lokal, bei jedem Provider. local_bm25: lokale Rangfolge für Kennungen, Beschreibungen und Argumente bei jedem Provider. bm25 / regex: einen nativen Anthropic-Algorithmus erzwingen; Fehler bei einem Provider ohne native Tool-Suche."
          },
          "max_results" : {
-            "description" : "Wie viele Treffer die lokale Suche liefert; bei nativer Suche ignoriert.",
-            "title" : "Treffer pro Suche"
+            "title" : "Treffer pro Suche",
+            "description" : "Wie viele Treffer die lokale Suche liefert; bei nativer Suche ignoriert."
          },
-         "strategy" : {
-            "description" : "auto: native Tool-Suche bei einem Provider, der sie hat, sonst lokaler Stichwortabgleich. keywords: immer lokal, bei jedem Provider. local_bm25: lokale Rangfolge für Kennungen, Beschreibungen und Argumente bei jedem Provider. bm25 / regex: einen nativen Anthropic-Algorithmus erzwingen; Fehler bei einem Provider ohne native Tool-Suche.",
-            "title" : "Suchmethode"
-         }
-      },
-      "video_generation" : {
-         "alibaba_region" : {
-            "description" : "Nur Alibaba: die Region, in der der Workspace liegt.",
-            "title" : "Alibaba-Region"
+         "defer_capabilities" : {
+            "title" : "Capability-Tools verzögert laden",
+            "description" : "Geeignete Tools aktivierter Capabilities ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben Capability-Tools sichtbar."
          },
-         "alibaba_workspace" : {
-            "description" : "Nur Alibaba: die Workspace-ID in Model Studio, über die Wan 3.0 aufgerufen wird. Leer bleibt es beim gemeinsamen DashScope-Endpunkt, den Alibaba für bestehende Integrationen weiterführt.",
-            "title" : "Alibaba-Workspace"
+         "defer_mcp_servers" : {
+            "title" : "MCP-Tools verzögert laden",
+            "description" : "Geeignete Tools gebundener MCP-Server ausblenden, bis der Agent sie sucht. Ausgeschaltet bleiben MCP-Tools sichtbar."
          },
-         "aspect_ratio" : {
-            "description" : "Die Form eines Clips, sofern der Agent keine andere verlangt; leer bedeutet die erste des Modells.",
-            "title" : "Seitenverhältnis"
+         "exclude_capabilities" : {
+            "title" : "Immer sichtbare Capabilities",
+            "description" : "Kommagetrennte Capability-IDs, deren Tools sichtbar bleiben, etwa knowledge oder visuals. Diese Capabilities müssen weiterhin aktiviert sein."
          },
-         "audio" : {
-            "description" : "Ob Clips Ton haben, sofern der Agent nichts anderes verlangt, wo das Modell ihn optional macht; leer bedeutet die Voreinstellung des Providers.",
-            "title" : "Ton"
+         "exclude_mcp_servers" : {
+            "title" : "Immer sichtbare MCP-Server",
+            "description" : "Kommagetrennte Namensraum-Präfixe der MCP-Tools, die sichtbar bleiben, etwa github_work oder agenticos. Das Präfix vor dem Tool-Namen verwenden und Bindestriche durch Unterstriche ersetzen."
          },
-         "max_resolution" : {
-            "description" : "Die höchste Auflösung, die der Agent verlangen darf, mindestens die übliche; sie begrenzt die Kosten einer Sekunde. Leer bedeutet, dass der Agent jede Auflösung verlangen darf, die das Modell rendert.",
-            "title" : "Höchste Auflösung"
-         },
-         "max_seconds" : {
-            "description" : "Der längste Clip, den der Agent verlangen darf, was die Kosten eines Aufrufs begrenzt; leer bedeutet das eigene Limit des Modells. Nicht für ein Modell, das seine Länge selbst bestimmt.",
-            "title" : "Längster Clip"
-         },
-         "model" : {
-            "description" : "Welches Videomodell dieses Providers den Clip erzeugt. Ein Modell außerhalb des Katalogs wird hier abgelehnt statt mitten im Lauf.",
-            "title" : "Videomodell"
-         },
-         "provider" : {
-            "description" : "Wessen Modell das Video erzeugt. Zur Auswahl stehen die Provider aus `app/core/catalog/video_models.json`, deren Schlüssel der Vault speichern kann.",
-            "title" : "Provider"
-         },
-         "resolution" : {
-            "description" : "Die Auflösung, in der ein Clip entsteht, sofern der Agent keine andere verlangt; leer bedeutet die erste Auflösung des Modells. Höher kostet mehr pro Sekunde.",
-            "title" : "Auflösung"
-         },
-         "seconds" : {
-            "description" : "Wie viele Sekunden ein Clip läuft, sofern der Agent keine andere Länge verlangt; leer bedeutet fünf oder den nächsten Wert, den das Modell erzeugt. Nicht für ein Modell, das seine Länge selbst bestimmt.",
-            "title" : "Länge"
-         },
-         "timeout_seconds" : {
-            "description" : "Wie lange auf einen Clip gewartet wird, in Sekunden. Ein bis dahin nicht fertiger Job wird abgebrochen, wo der Provider es erlaubt, und mit seiner Schätzung gebucht.",
-            "title" : "Zeitlimit"
+         "exclude_tools" : {
+            "title" : "Immer sichtbare Tools",
+            "description" : "Kommagetrennte Tool-Namen, wie sie das Modell sieht, die sichtbar bleiben sollen. Umbenannte Capability-Tools und vollständige MCP-Tool-Namen mit Präfix verwenden, etwa github_work_list_issues."
          }
       },
       "web_fetch" : {
-         "allowed_domains" : {
-            "description" : "Reine Hostnamen, die der Agent abrufen darf, z. B. docs.example.com; leer bedeutet alle. Exakter Abgleich - keine Muster, keine Subdomains.",
-            "title" : "Erlaubte Domains"
-         },
-         "blocked_domains" : {
-            "description" : "Reine Hostnamen, die der Agent nie abrufen darf, exakter Abgleich.",
-            "title" : "Gesperrte Domains"
+         "method" : {
+            "title" : "Wie Seiten abgerufen werden",
+            "description" : "local: Wir rufen die Seite ab, auf jedem Modell gleich. native: Der Provider des Modells ruft sie ab, mit eigenem Netzwerkzugang und eigenen Zitaten (nur auf Modellen, die das unterstützen). auto: nativ, wo das Modell es hat, sonst unseres."
          },
          "max_content_chars" : {
-            "description" : "Wie viel einer Seite ein Abruf liefert, bevor gekürzt wird; etwa vier Zeichen pro Token. Bei nativem Abruf ignoriert, den der Provider selbst begrenzt.",
-            "title" : "Längengrenze pro Seite (Zeichen)"
+            "title" : "Längengrenze pro Seite (Zeichen)",
+            "description" : "Wie viel einer Seite ein Abruf liefert, bevor gekürzt wird; etwa vier Zeichen pro Token. Bei nativem Abruf ignoriert, den der Provider selbst begrenzt."
          },
-         "method" : {
-            "description" : "local: Wir rufen die Seite ab, auf jedem Modell gleich. native: Der Provider des Modells ruft sie ab, mit eigenem Netzwerkzugang und eigenen Zitaten (nur auf Modellen, die das unterstützen). auto: nativ, wo das Modell es hat, sonst unseres.",
-            "title" : "Wie Seiten abgerufen werden"
+         "allowed_domains" : {
+            "title" : "Erlaubte Domains",
+            "description" : "Reine Hostnamen, die der Agent abrufen darf, z. B. docs.example.com; leer bedeutet alle. Exakter Abgleich - keine Muster, keine Subdomains."
+         },
+         "blocked_domains" : {
+            "title" : "Gesperrte Domains",
+            "description" : "Reine Hostnamen, die der Agent nie abrufen darf, exakter Abgleich."
          }
       },
       "web_research" : {
-         "max_results" : {
-            "description" : "Wie viele Ergebnisse eine Suche liefert; bei nativer Suche ignoriert.",
-            "title" : "Ergebnisse pro Suche"
-         },
          "method" : {
-            "description" : "duckduckgo: kostenlos, ohne Konto, Ergebnisse als anklickbare Quellen. native: Der Provider des Modells sucht mit eigenem Index und Zitaten (nur auf Modellen, die das unterstützen). tavily: für ein Modell zusammengefasst. brave: ein eigener Index. exa: Suche nach Bedeutung statt nach Stichwörtern. keenable: ohne Konto; ein API-Schlüssel ist optional.",
-            "title" : "Suchmaschine"
+            "title" : "Suchmaschine",
+            "description" : "duckduckgo: kostenlos, ohne Konto, Ergebnisse als anklickbare Quellen. native: Der Provider des Modells sucht mit eigenem Index und Zitaten (nur auf Modellen, die das unterstützen). tavily: für ein Modell zusammengefasst. brave: ein eigener Index. exa: Suche nach Bedeutung statt nach Stichwörtern. keenable: ohne Konto; ein API-Schlüssel ist optional."
+         },
+         "max_results" : {
+            "title" : "Ergebnisse pro Suche",
+            "description" : "Wie viele Ergebnisse eine Suche liefert; bei nativer Suche ignoriert."
+         }
+      },
+      "coding_agent" : {
+         "harness" : {
+            "title" : "Coding Agent",
+            "description" : "Welcher Coding Agent die Arbeit erledigt: Claude Code mit einem Anthropic-Key oder einem Claude-Abo-Token, oder Codex mit einem OpenAI-Key oder einer ChatGPT-Anmeldung."
+         },
+         "access" : {
+            "title" : "Was er darf",
+            "description" : "Dateien ändern und Befehle ausführen, etwa Tests - oder nur den Code lesen und antworten. Setzen Sie in beiden Fällen Freigabe durch einen Menschen, damit vor jeder Aufgabe gefragt wird."
+         },
+         "model" : {
+            "title" : "Modell",
+            "description" : "Das Modell, mit dem der Coding Agent läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex. Nicht gesetzt nimmt den Standard des Coding Agent. Auf diesem Computer nicht verfügbar; dort nutzt der Agent seine eigene Einstellung."
+         },
+         "base_url" : {
+            "title" : "Anthropic-kompatibler Endpunkt",
+            "description" : "Nur Claude Code: ein Gateway, das die API von Anthropic spricht, etwa https://openrouter.ai/api; der Key im Vault ist dann der dieses Gateways. Leer ruft Anthropic direkt auf."
+         },
+         "timeout_minutes" : {
+            "title" : "Zeitlimit (Minuten)",
+            "description" : "Wie lange eine Aufgabe laufen darf, bevor sie gestoppt wird."
+         },
+         "runs_on" : {
+            "title" : "Wo es läuft",
+            "description" : "Die Sandbox des Agents mit ihrem konfigurierten Schlüssel, eine temporäre private Cloud-Aufgabe mit dem Profilkonto der startenden Person oder ein in der Desktop-App auf ihrem Computer gewählter Ordner, wo Claude Code und Codex die vorhandene Anmeldung nutzen und keinen Schlüssel brauchen."
+         }
+      },
+      "harness" : {
+         "harness" : {
+            "title" : "Harness",
+            "description" : "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code, Codex, OpenCode, Gemini CLI oder Pi."
+         },
+         "access" : {
+            "title" : "Zugriff",
+            "description" : "Was der Harness in der Sandbox des Agent tun darf: nur Code lesen oder Code ändern und Befehle ausführen."
+         },
+         "model" : {
+            "title" : "Modell",
+            "description" : "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex, ein Gemini-Modell für Gemini CLI oder ein beliebiges Modell dieser Anbieter für OpenCode oder Pi. Nicht gesetzt nimmt den Standard des Harness."
+         },
+         "base_url" : {
+            "title" : "Anthropic-kompatibler Endpunkt",
+            "description" : "Nur Claude Code: ein Gateway, das die API von Anthropic spricht, etwa https://openrouter.ai/api; der Key im Vault ist dann der dieses Gateways. Leer ruft Anthropic direkt auf."
+         },
+         "timeout_minutes" : {
+            "title" : "Prompt-Zeitlimit (Minuten)",
+            "description" : "Wie lange ein Prompt laufen darf, bevor er gestoppt wird. Die Sitzung bleibt offen."
          }
       },
       "workflows" : {
-         "wait_seconds" : {
-            "description" : "Wie lange run_workflow auf das Ende eines Runs wartet, bevor es seine ID zurückgibt, damit sie später gelesen wird.",
-            "title" : "Auf einen Run warten (Sekunden)"
-         },
          "workflow_ids" : {
-            "description" : "Veröffentlichte Workflows, die von Hand, über die API oder per Aufruf starten.",
-            "title" : "Workflows, die er starten darf"
+            "title" : "Workflows, die er starten darf",
+            "description" : "Veröffentlichte Workflows, die von Hand, über die API oder per Aufruf starten."
+         },
+         "wait_seconds" : {
+            "title" : "Auf einen Run warten (Sekunden)",
+            "description" : "Wie lange run_workflow auf das Ende eines Runs wartet, bevor es seine ID zurückgibt, damit sie später gelesen wird."
+         }
+      },
+      "artifacts" : {
+         "preview_screenshot" : {
+            "title" : "Dem Modell das Bild einer Seite zeigen",
+            "description" : "Gibt dem Modell das Bild einer Seite, wenn es sie in der Vorschau ansieht. Für ein Modell ausschalten, das keine Bilder lesen kann; der schriftliche Bericht kommt trotzdem zurück."
+         }
+      },
+      "text_to_speech" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Wessen Stimmen sprechen. Zur Auswahl stehen die Provider aus `app/core/catalog/text_to_speech_models.json`, deren Schlüssel der Vault speichern kann."
+         },
+         "model" : {
+            "title" : "Sprachmodell",
+            "description" : "Welches Sprachmodell dieses Anbieters spricht. Ein Modell außerhalb des Katalogs wird hier abgelehnt statt mitten im Lauf."
+         },
+         "voice" : {
+            "title" : "Stimme",
+            "description" : "Die Stimme, die spricht, sofern der Agent keine andere wählt; leer bedeutet die erste Stimme des Modells. ElevenLabs-Stimmen gehören zu Ihrem Konto, also fügen Sie für ElevenLabs die Stimmen-ID aus Ihrer Stimmenbibliothek ein."
+         },
+         "voices" : {
+            "title" : "Erlaubte Stimmen",
+            "description" : "Die einzigen Stimmen, zu denen der Agent statt der obigen wechseln darf, für jeden Clip einzeln - für einen Dialog oder für Erzähler und Figur. Leer bedeutet, dass er jede Stimme des Modells wählen darf - bei ElevenLabs jede Stimmen-ID in Ihrem Konto."
+         },
+         "output_format" : {
+            "title" : "Dateiformat",
+            "description" : "mp3 ist kleiner, wav unkomprimiert. Leer bedeutet das erste Format des Anbieters - Gemini liefert nur wav."
+         },
+         "max_characters" : {
+            "title" : "Längster Text",
+            "description" : "Der meiste Text, den ein Aufruf sprechen darf, was die Kosten eines einzelnen Aufrufs begrenzt."
+         }
+      },
+      "video_generation" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Wessen Modell das Video erzeugt. Zur Auswahl stehen die Provider aus `app/core/catalog/video_models.json`, deren Schlüssel der Vault speichern kann."
+         },
+         "model" : {
+            "title" : "Videomodell",
+            "description" : "Welches Videomodell dieses Providers den Clip erzeugt. Ein Modell außerhalb des Katalogs wird hier abgelehnt statt mitten im Lauf."
+         },
+         "resolution" : {
+            "title" : "Auflösung",
+            "description" : "Die Auflösung, in der ein Clip entsteht, sofern der Agent keine andere verlangt; leer bedeutet die erste Auflösung des Modells. Höher kostet mehr pro Sekunde."
+         },
+         "max_resolution" : {
+            "title" : "Höchste Auflösung",
+            "description" : "Die höchste Auflösung, die der Agent verlangen darf, mindestens die übliche; sie begrenzt die Kosten einer Sekunde. Leer bedeutet, dass der Agent jede Auflösung verlangen darf, die das Modell rendert."
+         },
+         "aspect_ratio" : {
+            "title" : "Seitenverhältnis",
+            "description" : "Die Form eines Clips, sofern der Agent keine andere verlangt; leer bedeutet die erste des Modells."
+         },
+         "seconds" : {
+            "title" : "Länge",
+            "description" : "Wie viele Sekunden ein Clip läuft, sofern der Agent keine andere Länge verlangt; leer bedeutet fünf oder den nächsten Wert, den das Modell erzeugt. Nicht für ein Modell, das seine Länge selbst bestimmt."
+         },
+         "max_seconds" : {
+            "title" : "Längster Clip",
+            "description" : "Der längste Clip, den der Agent verlangen darf, was die Kosten eines Aufrufs begrenzt; leer bedeutet das eigene Limit des Modells. Nicht für ein Modell, das seine Länge selbst bestimmt."
+         },
+         "audio" : {
+            "title" : "Ton",
+            "description" : "Ob Clips Ton haben, sofern der Agent nichts anderes verlangt, wo das Modell ihn optional macht; leer bedeutet die Voreinstellung des Providers."
+         },
+         "alibaba_workspace" : {
+            "title" : "Alibaba-Workspace",
+            "description" : "Nur Alibaba: die Workspace-ID in Model Studio, über die Wan 3.0 aufgerufen wird. Leer bleibt es beim gemeinsamen DashScope-Endpunkt, den Alibaba für bestehende Integrationen weiterführt."
+         },
+         "alibaba_region" : {
+            "title" : "Alibaba-Region",
+            "description" : "Nur Alibaba: die Region, in der der Workspace liegt."
+         },
+         "timeout_seconds" : {
+            "title" : "Zeitlimit",
+            "description" : "Wie lange auf einen Clip gewartet wird, in Sekunden. Ein bis dahin nicht fertiger Job wird abgebrochen, wo der Provider es erlaubt, und mit seiner Schätzung gebucht."
+         }
+      },
+      "follow_ups" : {
+         "model_profile_id" : {
+            "title" : "Modell für nächste Schritte",
+            "description" : "Ein separates Modellprofil erstellt Schaltflächen für nächste Schritte im Hintergrund, nachdem die Antwort gespeichert wurde. Es verzögert weder die Antwort noch die nächste Nachricht. Ein kleines, günstiges Modell reicht aus. Ohne Auswahl sind Vorschläge deaktiviert."
+         }
+      },
+      "computer_use" : {
+         "desktop" : {
+            "title" : "Umgebung",
+            "description" : "Wählen Sie, wo der Agent einen Desktop bedient. Die Anforderungen der gewählten Umgebung stehen unten."
+         },
+         "daemon_url" : {
+            "title" : "Daemon-URL",
+            "description" : "Der computerd-Endpunkt Ihres Desktops. Sein Host muss in COMPUTER_DAEMON_ALLOWED_HOSTS stehen."
+         },
+         "screen_width" : {
+            "title" : "Screenshot-Breite",
+            "description" : "Die größte Breite eines Screenshots, den das Modell sieht; größere Bildschirme werden passend verkleinert."
+         },
+         "screen_height" : {
+            "title" : "Screenshot-Höhe",
+            "description" : "Die größte Höhe eines Screenshots, den das Modell sieht."
+         },
+         "max_actions_per_call" : {
+            "title" : "Aktionen pro Aufruf",
+            "description" : "Wie viele Aktionen ein Aufruf senden darf."
+         },
+         "max_actions" : {
+            "title" : "Aktionen pro Lauf",
+            "description" : "Wie viele Aktionen ein Lauf insgesamt ausführen darf."
+         },
+         "preview" : {
+            "title" : "Live-Vorschau",
+            "description" : "Den Desktop live im Chat zeigen, während der Agent damit arbeitet."
+         }
+      },
+      "phone_calls" : {
+         "endpoint_id" : {
+            "title" : "Telefonendpunkt",
+            "description" : "Der konfigurierte Twilio-Telefonendpunkt aus Kanälen. Nur ausdrückliche Mitgliedszustimmung und aktuelle Grenzen erlauben einen Anruf."
+         }
+      },
+      "mirage" : {
+         "mounts" : {
+            "title" : "Ordner",
+            "description" : "Was das Terminal einbindet, jeweils als Ordner."
+         },
+         "allowed_commands" : {
+            "title" : "Erlaubte Befehle",
+            "description" : "Nur diese Befehle ausführen, z. B. ls, cat, grep. Leer erlaubt virtuelle Befehle; direktes curl/wget ist deaktiviert."
+         },
+         "hidden_paths" : {
+            "title" : "Verborgene Pfade",
+            "description" : "Pfade, die der Agent gar nicht sieht, z. B. /drive/HR/."
+         }
+      },
+      "agent_messages" : {
+         "max_message_chars" : {
+            "title" : "Längste Nachricht",
+            "description" : "Die längste Nachricht, die dieser Agent senden darf, in Zeichen. 16.000 ist auch die Obergrenze der Konsole, sodass ein Thema gleich liest, wie die Nachricht auch gesendet wurde; senken Sie sie für einen Agenten, der kurz schreiben soll."
+         },
+         "allow_attachments" : {
+            "title" : "Dateianhänge zulassen",
+            "description" : "Ob dieser Agent Dateien, die er bereits hochgeladen hat, zusammen mit seinen Nachrichten senden darf. Aus bedeutet nur Text; bereits angehängte Dateien bleiben lesbar."
+         }
+      },
+      "babysit_pr" : {
+         "poll_interval_seconds" : {
+            "title" : "Abfrageintervall",
+            "description" : "Sekunden zwischen den Prüfungen des Pull Requests. Mindestens 60, damit der Watcher nie in einer engen Schleife abfragt und das gemeinsame GitHub-Limit nicht verbraucht."
+         },
+         "max_watch_minutes" : {
+            "title" : "Höchstens beobachten",
+            "description" : "Minuten, die eine Beobachtung laufen darf, bevor sie stoppt und blockiert meldet. Eine Beobachtung, die ohne Grün darüber hinaus läuft, wurde nicht freigegeben — sie ist abgelaufen."
+         }
+      },
+      "burst" : {
+         "max_subtasks" : {
+            "title" : "Teilaufgaben höchstens",
+            "description" : "Wie viele Teilaufgaben ein Burst höchstens gleichzeitig ausführt. 3 ist der Standard von Subagents max_fanout und 10 sein Höchstwert: Ein Burst teilt diese Obergrenze, statt sie zu erhöhen. Bei Erreichen lehnt das Tool die übrigen Teile mit einer Meldung ab, auf die das Modell reagieren kann."
+         },
+         "max_bursts" : {
+            "title" : "Bursts höchstens",
+            "description" : "Wie viele Bursts ein Run höchstens verlangen darf. Ein neuer Burst nach Korrekturen ist ein neuer Burst, und die Obergrenze verhindert, dass wiederholte Bursts den Umfang ausweiten."
          }
       }
    },
@@ -4951,6 +4951,54 @@
       "workflowRun" : {
          "unnamed" : "Workflow",
          "viewSteps" : "Schritte ansehen"
+      },
+      "teamRoom" : {
+         "title" : "Teamraum",
+         "titleInProject" : "Teamraum · {name}",
+         "audience" : "Alle mit Zugriff auf dieses Projekt können diesen Raum lesen.",
+         "alone" : "Du bist gerade allein in diesem Raum.",
+         "here" : "{count, plural, =1 {{names} ist hier} other {# Teammitglieder sind hier}}",
+         "emptyTitle" : "Ein gemeinsames Gespräch für dein Team",
+         "emptyDescription" : "Teile Neuigkeiten, antworte einem Teammitglied oder wähle einen Agent zur Unterstützung. Nachrichten bleiben für alle mit Zugriff in diesem Projekt.",
+         "newRoom" : "Neuer Teamraum",
+         "defaultTitle" : "Teamraum",
+         "creating" : "Raum wird erstellt…",
+         "createFailed" : "Der Teamraum konnte nicht erstellt werden.",
+         "message" : "Nachricht an das Team",
+         "placeholder" : "Schreibe deinem Team…",
+         "responder" : "Wer soll antworten",
+         "chooseResponder" : "Wähle, wer antworten soll",
+         "humanOnly" : "Nur das Team",
+         "askAgent" : "@{name} fragen",
+         "responderHint" : "Nachrichten gehen an dein Team. Wähle einen Agent, wenn du eine KI-Antwort möchtest.",
+         "post" : "Nachricht senden",
+         "posting" : "Wird gesendet…",
+         "postFailed" : "Das Speichern deiner Nachricht konnte nicht bestätigt werden.",
+         "retryPost" : "Dieselbe Nachricht erneut senden",
+         "retryHint" : "Das Ergebnis ist unbestätigt. Ein erneuter Versuch sendet dieselbe Nachricht einmal, mit demselben Agent und Bezug.",
+         "checking" : "Raumzugriff wird geprüft…",
+         "readOnly" : "Du kannst diesen Raum lesen. Zum Schreiben brauchst du die Berechtigung, das Projekt zu nutzen.",
+         "loadFailed" : "Raumzugriff und Agent-Anfragen konnten nicht geladen werden.",
+         "retry" : "Erneut versuchen",
+         "queueTitle" : "Agent-Anfragen · {count, plural, =0 {keine aktiv} =1 {1 aktiv} other {# aktiv}}",
+         "requests" : "Agent-Anfragen",
+         "requestedBy" : "{name} hat @{agent} gefragt",
+         "you" : "Du",
+         "teammate" : "Ein Teammitglied",
+         "agent" : "Agent",
+         "viewRun" : "Run ansehen",
+         "cancel" : "Anfrage abbrechen",
+         "cancelFailed" : "Diese Anfrage konnte nicht abgebrochen werden.",
+         "status" : {
+            "queued" : "In der Warteschlange",
+            "running" : "In Arbeit",
+            "awaiting_approval" : "Wartet auf Freigabe",
+            "awaiting_answer" : "Wartet auf eine Antwort",
+            "completed" : "Abgeschlossen",
+            "failed" : "Fehlgeschlagen",
+            "cancelled" : "Abgebrochen",
+            "interrupted" : "Unterbrochen"
+         }
       }
    },
    "claudeSubscription" : {
@@ -11154,112 +11202,118 @@
          "workspaces-detail" : {
             "body" : "Die Dateien eines Agents, Ordner für Ordner. Sehen Sie eine Datei an oder laden Sie herunter, was ein Agent für Sie erstellt hat.",
             "title" : "In einem Ordner"
+         },
+         "chat-team-room" : {
+            "title" : "Der Raum deines Teams",
+            "body" : "Dieses Gespräch nutzt die Freigaben des Projekts. Sieh, wer hier ist, und prüfe oder verwalte mit Teilen den Teilnehmerkreis."
+         },
+         "chat-team-composer" : {
+            "title" : "Mit dem Team sprechen und bei Bedarf einen Agent fragen",
+            "body" : "Schreibe deinem Team, ohne einen Agent zu starten. Wähle einen Agent ausdrücklich für eine KI-Antwort; die Anfrage kommt in die gemeinsame Warteschlange."
          }
       }
    },
    "onboardingSetup" : {
-      "appsDescription" : "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
-      "appsTitle" : "Verbinde deine Apps",
-      "connectApps" : "Apps verbinden",
-      "continueToWorkspace" : "Weiter zum Workspace",
+      "title" : "Willkommen bei {appName}",
       "description" : "Starte in deinem eigenen Tempo. Verbinde jetzt eine App oder öffne direkt deinen Workspace.",
-      "opensNewTab" : "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
+      "appsTitle" : "Verbinde deine Apps",
       "optional" : "Optional",
-      "skipHint" : "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen.",
-      "title" : "Willkommen bei {appName}"
+      "appsDescription" : "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
+      "connectApps" : "Apps verbinden",
+      "opensNewTab" : "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
+      "skipHint" : "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen."
    },
    "onboardingTeam" : {
-      "addSpecialist" : "Spezialist hinzufügen",
-      "appsDescription" : "Autorisiere deine Tools über Composio. Du kannst sie auch später verbinden.",
-      "appsOptional" : "Optional",
+      "step1Title" : "Über dich & deine Arbeit",
+      "step1Subtitle" : "Erzähle uns kurz von deiner Rolle, damit wir dir die passenden Spezialisten empfehlen können.",
+      "roleLabel" : "Was ist deine Rolle?",
+      "industryLabel" : "In welcher Branche oder Domäne arbeitest du?",
+      "teamSizeLabel" : "Teamgröße",
+      "step2Title" : "Was soll dein KI-Team übernehmen?",
+      "step2Subtitle" : "Wähle die Arbeitsabläufe, die du delegieren, automatisieren oder beschleunigen möchtest.",
+      "goalsLabel" : "Schwerpunkte",
+      "detailsLabel" : "Erzähle uns mehr über deine Workflows (optional)",
+      "detailsPlaceholder" : "z.B. Wir erhalten viele Kundenanfragen und müssen wöchentliche Updates verfassen...",
+      "step3Title" : "Tools & Integrationen",
+      "step3Subtitle" : "Wähle die Tools, die dein Team täglich nutzt. Du kannst sie jetzt oder später verbinden.",
+      "toolsInStack" : "Tools in deinem Stack",
       "appsTitle" : "Apps & Tools verbinden",
-      "back" : "Zurück",
+      "appsOptional" : "Optional",
+      "appsDescription" : "Autorisiere deine Tools über Composio. Du kannst sie auch später verbinden.",
       "connectApps" : "Apps verbinden",
-      "continue" : "Weiter",
+      "opensNewTab" : "Öffnet einen neuen Tab.",
+      "skipHint" : "Die Verbindung von Apps ist optional.",
+      "step4Title" : "Dein empfohlenes KI-Team",
+      "step4Subtitle" : "Hier ist deine Teamstruktur. Dein Team Lead koordiniert Aufgaben und delegiert an Spezialisten.",
+      "leadBadge" : "Team Lead & Orchestrator",
+      "starterPromptsHeader" : "Beispiel-Prompts",
+      "specialistsTitle" : "Spezialisten-Agenten",
+      "addSpecialist" : "Spezialist hinzufügen",
+      "removeSpecialist" : "Entfernen",
+      "selectTemplate" : "Vorlage wählen",
       "deployTeam" : "Mein Team erstellen & bereitstellen",
+      "deployingTitle" : "Dein KI-Team wird zusammengestellt...",
+      "deployingSubtitle" : "Modelle, Delegationskanäle und Workspace werden eingerichtet...",
       "deployingStep1" : "Spezifikationen der Spezialisten werden erstellt...",
       "deployingStep2" : "Fähigkeiten und Tools werden verknüpft...",
       "deployingStep3" : "Delegationshierarchie wird eingerichtet...",
       "deployingStep4" : "Workspace im Chat wird geöffnet...",
-      "deployingSubtitle" : "Modelle, Delegationskanäle und Workspace werden eingerichtet...",
-      "deployingTitle" : "Dein KI-Team wird zusammengestellt...",
-      "detailsLabel" : "Erzähle uns mehr über deine Workflows (optional)",
-      "detailsPlaceholder" : "z.B. Wir erhalten viele Kundenanfragen und müssen wöchentliche Updates verfassen...",
       "errorTitle" : "Etwas ist schiefgelaufen",
+      "tryAgain" : "Erneut versuchen",
+      "teamMembersCreated" : "Erstellte Teammitglieder",
+      "successTitle" : "Dein KI-Team ist bereit!",
+      "successSubtitle" : "Dein Team Lead und deine Spezialisten wurden erfolgreich eingerichtet.",
+      "startChat" : "Chat mit Team Lead starten",
+      "viewAgents" : "Team unter Agenten ansehen",
+      "skip" : "Vorerst überspringen",
+      "back" : "Zurück",
+      "continue" : "Weiter",
       "generating" : "Wird generiert...",
       "generatingProposal" : "Profil wird analysiert und Team-Empfehlung wird erstellt...",
-      "goals" : {
-         "automation" : "Prozess- & Workflow-Automatisierung",
-         "content" : "Texterstellung & Produkttexte",
-         "contracts" : "Verträge & Richtlinienprüfung",
-         "data" : "Datenanalyse & Berichterstellung",
-         "docs" : "Dokumentation & Team-Wissen",
-         "incidents" : "Vorfallreaktion & Alarmdiagnose",
-         "meetings" : "Besprechungsnotizen & Protokolle",
-         "releases" : "Versionshinweise & Changelog",
-         "research" : "Recherche & Wettbewerbsanalyse",
-         "support" : "Kundensupport & Ticket-Triage"
+      "stepTracker" : "Schritt {step} von 4",
+      "stepProfile" : "Profil",
+      "stepGoals" : "Ziele",
+      "stepTools" : "Tools",
+      "stepTeam" : "Empfohlenes Team",
+      "roles" : {
+         "founder" : "Gründer / Führungskraft",
+         "engineering" : "Entwicklung / Technik",
+         "product" : "Produkt / PM",
+         "operations" : "Betrieb / Operations",
+         "support" : "Support & Erfolg",
+         "legal" : "Recht & Finanzen",
+         "other" : "Sonstiges"
       },
-      "goalsLabel" : "Schwerpunkte",
       "industries" : {
+         "software" : "Software & Technologie",
          "ecommerce" : "E-Commerce & Handel",
          "finance" : "Finanzen & Banken",
-         "general" : "Allgemein / Sonstiges",
          "healthcare" : "Gesundheitswesen",
          "legal" : "Rechtsberatung",
          "manufacturing" : "Produktion & Logistik",
          "publicSector" : "Öffentlicher Sektor",
-         "software" : "Software & Technologie"
+         "general" : "Allgemein / Sonstiges"
       },
-      "industryLabel" : "In welcher Branche oder Domäne arbeitest du?",
-      "leadBadge" : "Team Lead & Orchestrator",
-      "leadOrchestrationHint" : "Leitet Aufgaben an Spezialisten weiter und bündelt die Ergebnisse für dich.",
-      "opensNewTab" : "Öffnet einen neuen Tab.",
-      "removeSpecialist" : "Entfernen",
-      "roleLabel" : "Was ist deine Rolle?",
-      "roles" : {
-         "engineering" : "Entwicklung / Technik",
-         "founder" : "Gründer / Führungskraft",
-         "legal" : "Recht & Finanzen",
-         "operations" : "Betrieb / Operations",
-         "other" : "Sonstiges",
-         "product" : "Produkt / PM",
-         "support" : "Support & Erfolg"
-      },
-      "selectTemplate" : "Vorlage wählen",
-      "skip" : "Vorerst überspringen",
-      "skipHint" : "Die Verbindung von Apps ist optional.",
-      "specialistsTitle" : "Spezialisten-Agenten",
-      "startChat" : "Chat mit Team Lead starten",
-      "starterPromptsHeader" : "Beispiel-Prompts",
-      "step1Subtitle" : "Erzähle uns kurz von deiner Rolle, damit wir dir die passenden Spezialisten empfehlen können.",
-      "step1Title" : "Über dich & deine Arbeit",
-      "step2Subtitle" : "Wähle die Arbeitsabläufe, die du delegieren, automatisieren oder beschleunigen möchtest.",
-      "step2Title" : "Was soll dein KI-Team übernehmen?",
-      "step3Subtitle" : "Wähle die Tools, die dein Team täglich nutzt. Du kannst sie jetzt oder später verbinden.",
-      "step3Title" : "Tools & Integrationen",
-      "step4Subtitle" : "Hier ist deine Teamstruktur. Dein Team Lead koordiniert Aufgaben und delegiert an Spezialisten.",
-      "step4Title" : "Dein empfohlenes KI-Team",
-      "stepGoals" : "Ziele",
-      "stepProfile" : "Profil",
-      "stepTeam" : "Empfohlenes Team",
-      "stepTools" : "Tools",
-      "stepTracker" : "Schritt {step} von 4",
-      "successSubtitle" : "Dein Team Lead und deine Spezialisten wurden erfolgreich eingerichtet.",
-      "successTitle" : "Dein KI-Team ist bereit!",
-      "teamMembersCreated" : "Erstellte Teammitglieder",
-      "teamSizeLabel" : "Teamgröße",
       "teamSizes" : {
-         "company" : "Organisation",
-         "companyDesc" : "15+ Personen",
+         "solo" : "Solo",
+         "soloDesc" : "Nur ich",
          "small" : "Kleines Team",
          "smallDesc" : "2–15 Personen",
-         "solo" : "Solo",
-         "soloDesc" : "Nur ich"
+         "company" : "Organisation",
+         "companyDesc" : "15+ Personen"
       },
-      "toolsInStack" : "Tools in deinem Stack",
-      "tryAgain" : "Erneut versuchen",
-      "viewAgents" : "Team unter Agenten ansehen"
+      "goals" : {
+         "support" : "Kundensupport & Ticket-Triage",
+         "docs" : "Dokumentation & Team-Wissen",
+         "releases" : "Versionshinweise & Changelog",
+         "research" : "Recherche & Wettbewerbsanalyse",
+         "contracts" : "Verträge & Richtlinienprüfung",
+         "automation" : "Prozess- & Workflow-Automatisierung",
+         "incidents" : "Vorfallreaktion & Alarmdiagnose",
+         "content" : "Texterstellung & Produkttexte",
+         "data" : "Datenanalyse & Berichterstellung",
+         "meetings" : "Besprechungsnotizen & Protokolle"
+      }
    },
    "orgAssistant" : {
       "description" : "Der Assistent in der Ecke jeder Seite, für alle, die Agents ausführen dürfen. Er ist ein Agent wie jeder andere: Name, Modell und Wissen bearbeiten Sie im Agent Builder, und seine Kosten zählen wie die jedes Agents.",
@@ -12524,7 +12578,7 @@
          "evalCaseTitle" : "Ein Fall aus einem Eval-Run",
          "evalToolTuningCase" : "{name} · {classification}",
          "evalToolTuningDominantFailure" : "Häufigster Fehler: {failure}",
-         "evalToolTuningProposal" : "[{kind}] {title}",
+         "evalToolTuningProposal" : "{kind}: {title}",
          "evalToolTuningProposalEvidence" : "Belege: {evidence} · {status}",
          "evalToolTuningRun" : "{tool} · {passed}/{total} bestanden",
          "evalToolTuningRuns" : "{count, plural, =1 {1 Eval-Tool-Tuning-Run} other {# Eval-Tool-Tuning-Runs}}",
@@ -12633,7 +12687,7 @@
          "showingTheNewestOf" : "{shown, plural, =1 {Der neueste von {total} in diesem Zeitraum entschiedenen wird angezeigt} other {Die neuesten # von {total} in diesem Zeitraum entschiedenen werden angezeigt}}. Exportieren Sie die CSV für den ganzen Datensatz.",
          "skillVersion" : "{onFork, select, yes {{name} · {fork} v{version}} other {{name} · v{version}}}",
          "skillsUsed" : "Genutzte Skills:",
-         "solLoopFinding" : "{id} [{severity}] {location} — {claim}",
+         "solLoopFinding" : "{id} — {severity}: {location} — {claim}",
          "solLoopFix" : "Fix: {fix}",
          "solLoopOutcome" : "Ergebnis: {outcome}",
          "solLoopRound" : "Runde {round} · {scope} · {verdict}",

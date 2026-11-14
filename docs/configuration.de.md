@@ -1,5 +1,5 @@
 ---
-source_sha: "ddd8aae069e6"
+source_sha: "aa79e2a8a321"
 ---
 
 # Konfiguration { #configuration }
@@ -530,6 +530,7 @@ trägt jede Service-Definition ihre eigene.
 | --- | --- | --- |
 | `APPROVAL_EXPIRY_HOURS` | `72` | Wie lange ein geparkter Tool-Aufruf wartet, bevor der stündliche Durchlauf ihn per Timeout ablehnt |
 | `QUESTION_EXPIRY_HOURS` | `24` | Wie lange ein Run auf die Antwort auf eine Frage des Agents wartet, bevor derselbe Durchlauf ihn beendet |
+| `QUESTION_NUDGE_HOURS` | `12` | Wie lange nach dem Warten auf eine Antwort der Durchlauf einmal im Chat daran erinnert, dass noch eine Antwort benötigt wird |
 
 Drei Tage, weil es ein Wochenende überspannen muss: Die Freigabe, die am
 Freitagnachmittag eintrifft, ist die, über die niemand entscheidet, und sie am

@@ -25,10 +25,8 @@ from app.api.public_api import INTERNAL, PUBLIC
 from app.api.responses import csv_response
 from app.api.routes.v1._chat_file_bytes import chat_file_response
 from app.api.routes.v1._run_results import run_result
-from app.core.config import settings
 from app.core.permissions import Perm
 from app.db.models.agent_run import (
-    AgentRun,
     ApprovalStatus,
     RunOrder,
     RunRating,
@@ -63,36 +61,11 @@ from app.schemas.agent_run import (
 )
 from app.schemas.conversation import MessageList
 from app.schemas.run_manifest import RunManifestRead
-from app.services.agent_runner import parked_question_items, parked_secret_request_items
 from app.services.approvals import withhold
 from app.services.channels.handback import continues_in_chat
+from app.services.parked_runs import waiting_update
 
 router = APIRouter(dependencies=[PUBLIC])
-
-
-def waiting_update(run: AgentRun) -> dict[str, Any]:
-    """What a parked run is waiting on, for the run reads.
-
-    A pure read of the loaded row - no query, no service call. Only a run
-    parked on an answer carries anything: the text mapped from its parked
-    question calls, and the instant they expire, the park time plus
-    `QUESTION_EXPIRY_HOURS`, the same clock the expiry sweep reads. Anything
-    else returns nothing and the read keeps its defaults - an empty list and
-    no expiry - so a finished thread never looks as if it is still waiting.
-    """
-    if run.status != RunStatus.AWAITING_ANSWER or run.ended_at is None:
-        return {}
-    questions = [
-        question.question
-        for parked in parked_question_items(run.paused_state)
-        for question in parked.questions
-    ]
-    secret_requests = [item.secret_name for item in parked_secret_request_items(run.paused_state)]
-    return {
-        "waiting_questions": questions,
-        "waiting_secret_requests": secret_requests,
-        "waiting_expires_at": run.ended_at + timedelta(hours=settings.QUESTION_EXPIRY_HOURS),
-    }
 
 
 @router.get("/runs", response_model=AgentRunList, dependencies=[Depends(require(Perm.RUNS_VIEW))])

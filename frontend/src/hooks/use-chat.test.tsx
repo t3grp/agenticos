@@ -8,11 +8,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 
 import { useWorkOnStore } from "@/stores/work-on-store";
+import { ChatScope } from "@/stores/chat-scope";
 import { useChat } from "./use-chat";
 import type { AssistantPageContext } from "@/lib/assistant-page-context";
 import { useVisualImagesStore, useVisualStreamStore } from "@/stores/visual-stream-store";
 import { ApiError } from "@/lib/api-error";
 import { qk } from "@/lib/query-keys";
+import { onRoomChange } from "@/lib/room-events";
 import type { ResumedRun } from "@/types/runs";
 import type { AskUserAnswer } from "@/types/chat";
 import {
@@ -148,6 +150,81 @@ function receive(type: string, data: Record<string, unknown>): void {
 function frame(nth = 0): Record<string, unknown> {
   return sent.mock.calls[nth]![0] as Record<string, unknown>;
 }
+
+describe("room persistence events", () => {
+  it("announces only the selected room's message and request changes", () => {
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    const changed = vi.fn();
+    const unsubscribe = onRoomChange(changed);
+    receive("room_message", { conversation_id: "c-other", message_id: "other" });
+    expect(changed).not.toHaveBeenCalled();
+    receive("room_message", { conversation_id: "c-1", message_id: "saved-human" });
+    receive("room_request", { conversation_id: "c-1", request_id: "request" });
+    expect(changed).toHaveBeenCalledTimes(2);
+    expect(changed).toHaveBeenLastCalledWith({
+      conversationId: "c-1",
+      accountId: undefined,
+      organizationId: null,
+    });
+    unsubscribe();
+  });
+
+  it("reconciles a saved room prompt and streamed answer into one final answer", () => {
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    const prompt = {
+      id: "saved-human",
+      clientMessageId: "room-token",
+      role: "user" as const,
+      content: "Check the launch",
+      timestamp: new Date(),
+      conversationId: "c-1",
+    };
+    act(() => useChatStore.getState().rereadMessages([prompt]));
+    receive("turn_attached", { conversation_id: "c-1" });
+    receive("turn_prompt", {
+      conversation_id: "c-1",
+      message_id: "saved-human",
+      client_message_id: "room-token",
+      content: prompt.content,
+      agent_id: "writer",
+    });
+    receive("model_request_start", {});
+    receive("text_delta", { index: 0, content: "Checking" });
+    const temporary = streaming()?.id;
+    act(() => useChatStore.getState().rereadMessages([prompt]));
+    expect(streaming()?.id).toBe(temporary);
+    expect(streaming()?.content).toContain("Checking");
+    receive("final_result", { output: "Ready" });
+    receive("message_saved", {
+      message_id: "saved-answer",
+      run_id: "room-run",
+      run_status: "completed",
+    });
+    receive("complete", {});
+    receive("turn_followed_to_end", { conversation_id: "c-1" });
+    act(() =>
+      useChatStore.getState().rereadMessages([
+        prompt,
+        {
+          id: "saved-answer",
+          role: "assistant",
+          content: "Ready",
+          timestamp: new Date(),
+          conversationId: "c-1",
+          agentId: "writer",
+          runId: "room-run",
+        },
+      ]),
+    );
+    const messages = useChatStore.getState().messages;
+    expect(messages.filter((message) => message.role === "user")).toHaveLength(1);
+    expect(messages.filter((message) => message.role === "assistant")).toEqual([
+      expect.objectContaining({ id: "saved-answer", content: "Ready", renderKey: temporary }),
+    ]);
+  });
+});
 
 /** The assistant message being streamed. */
 function streaming() {
@@ -3227,6 +3304,33 @@ describe("useChat - the Builder's test panel", () => {
 });
 
 describe("useChat - leaving a conversation whose agent is still answering", () => {
+  it("detaches the loaded conversation before reopening its busy socket", () => {
+    useConversationStore.getState().setCurrentConversationId("c-a");
+    useChatStore.getState().rereadMessages([], {
+      conversationId: "c-a",
+      selectionVersion: useConversationStore.getState().selectionVersion,
+      accountId: null,
+      tenantId: null,
+    });
+    let conversationId = "c-a";
+    const { result, rerender } = renderHook(() => useChat({ conversationId }), { wrapper });
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-a" });
+    act(() => result.current.sendMessage("a long question"));
+    expect(result.current.isProcessing).toBe(true);
+
+    conversationId = "c-b";
+    act(() => useConversationStore.getState().setCurrentConversationId("c-b"));
+    rerender();
+
+    expect(sent.mock.calls.filter(([frame]) => frame.type === "attach")).toEqual([
+      [{ type: "attach", conversation_id: "c-a" }],
+      [{ type: "attach", conversation_id: null }],
+    ]);
+    expect(reopen).toHaveBeenCalledTimes(1);
+    expect(result.current.isProcessing).toBe(false);
+    expect(useWorkingStore.getState().handedOff["c-a"]).toBe(true);
+  });
+
   // The server serves one turn per socket and drops a message sent during it, so
   // a new chat opened mid-answer queued its first message behind an answer that
   // belonged to another conversation.
@@ -4801,7 +4905,12 @@ describe("useChat - a question its person came back to", () => {
       }),
     );
     useConversationStore.getState().setCurrentConversationId("c-1");
-    useChatStore.getState().addMessage(askedTurn());
+    useChatStore.getState().rereadMessages([askedTurn()], {
+      conversationId: "c-1",
+      selectionVersion: useConversationStore.getState().selectionVersion,
+      accountId: useAuthStore.getState().user?.id ?? null,
+      tenantId: useOrgStore.getState().activeOrgId,
+    });
     const { result } = renderHook(() => useChat(), { wrapper });
     await waitFor(() => expect(result.current.pendingQuestions).not.toBeNull());
     act(() => result.current.stopGeneration());
@@ -5261,16 +5370,151 @@ describe("useChat - adding to a running turn (#2087)", () => {
   });
 });
 
+describe("useChat - loaded transcript subscriptions", () => {
+  function identity(conversationId = "c-empty") {
+    return {
+      conversationId,
+      selectionVersion: useConversationStore.getState().selectionVersion,
+      accountId: useAuthStore.getState().user?.id ?? null,
+      tenantId: useOrgStore.getState().activeOrgId,
+    };
+  }
+
+  it("waits for a committed load, including when unprovenanced messages exist", () => {
+    useConversationStore.getState().setCurrentConversationId("c-empty");
+    renderHook(() => useChat(), { wrapper });
+    expect(sent).not.toHaveBeenCalled();
+    act(() =>
+      useChatStore.getState().addMessage({
+        id: "unloaded",
+        role: "user",
+        content: "Not a completed history request",
+        timestamp: new Date(),
+        conversationId: "c-empty",
+      }),
+    );
+    expect(sent).not.toHaveBeenCalled();
+    act(() => useChatStore.getState().rereadMessages([], identity()));
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-empty" });
+  });
+
+  it("reattaches a loaded empty room on reconnect and detaches on New chat", () => {
+    useConversationStore.getState().setCurrentConversationId("c-empty");
+    useChatStore.getState().rereadMessages([], identity());
+    const { rerender } = renderHook(() => useChat(), { wrapper });
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-empty" });
+    sent.mockClear();
+    socket.isConnected = false;
+    rerender();
+    socket.isConnected = true;
+    rerender();
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-empty" });
+    act(() => useConversationStore.getState().setCurrentConversationId(null));
+    expect(sent).toHaveBeenLastCalledWith({ type: "attach", conversation_id: null });
+  });
+
+  it("does not reuse a previous visit's readiness when selecting A, B, then A", () => {
+    useConversationStore.getState().setCurrentConversationId("c-empty");
+    useChatStore.getState().rereadMessages([], identity());
+    renderHook(() => useChat(), { wrapper });
+    sent.mockClear();
+    act(() => {
+      useConversationStore.getState().setCurrentConversationId("c-other");
+      useConversationStore.getState().setCurrentConversationId("c-empty");
+    });
+    expect(sent).not.toHaveBeenCalled();
+    act(() => useChatStore.getState().rereadMessages([], identity()));
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-empty" });
+  });
+
+  it("reattaches a conversation created by the live first turn without an HTTP load", () => {
+    const { rerender } = renderHook(() => useChat(), { wrapper });
+    receive("conversation_created", { conversation_id: "c-new" });
+    sent.mockClear();
+    socket.isConnected = false;
+    rerender();
+    socket.isConnected = true;
+    rerender();
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-new" });
+  });
+
+  it.each(["account", "organization"])(
+    "invalidates a scoped transcript across an %s switch and back",
+    (changed) => {
+      useAuthStore.setState({ user: { id: "me" } as never });
+      useOrgStore.setState({ activeOrgId: "org-a" });
+      const Wrapper = wrapper;
+      function scopedWrapper({ children }: { children: ReactNode }) {
+        return (
+          <Wrapper>
+            <ChatScope agentId={null}>{children}</ChatScope>
+          </Wrapper>
+        );
+      }
+      const { result, rerender } = renderHook(
+        () => {
+          const conversation = useConversationStore.useApi();
+          const chat = useChatStore.useApi();
+          useChat();
+          return { conversation, chat };
+        },
+        { wrapper: scopedWrapper },
+      );
+      const load = () => {
+        const { conversation, chat } = result.current;
+        chat.getState().rereadMessages([], {
+          conversationId: "c-empty",
+          selectionVersion: conversation.getState().selectionVersion,
+          accountId: "me",
+          tenantId: "org-a",
+        });
+      };
+      act(() => {
+        result.current.conversation.getState().setCurrentConversationId("c-empty");
+        load();
+      });
+      expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-empty" });
+      sent.mockClear();
+      act(() => {
+        if (changed === "account") useAuthStore.setState({ user: { id: "other" } as never });
+        else useOrgStore.setState({ activeOrgId: "org-b" });
+      });
+      act(() => {
+        if (changed === "account") useAuthStore.setState({ user: { id: "me" } as never });
+        else useOrgStore.setState({ activeOrgId: "org-a" });
+      });
+      socket.isConnected = false;
+      rerender();
+      socket.isConnected = true;
+      rerender();
+      expect(sent).not.toHaveBeenCalled();
+      expect(result.current.chat.getState().loadedTranscript).toBeNull();
+      act(load);
+      expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-empty" });
+    },
+  );
+});
+
 describe("useChat - coming back to a turn still being written", () => {
   function storedQuestion(conversationId = "c-1") {
     act(() =>
-      useChatStore.getState().addMessage({
-        id: "u-1",
-        role: "user",
-        content: "build a landing page",
-        timestamp: new Date(),
-        conversationId,
-      }),
+      useChatStore.getState().rereadMessages(
+        [
+          {
+            id: "u-1",
+            role: "user",
+            content: "build a landing page",
+            timestamp: new Date(),
+            conversationId,
+          },
+        ],
+        {
+          conversationId,
+          selectionVersion: useConversationStore.getState().selectionVersion,
+          accountId: useAuthStore.getState().user?.id ?? null,
+          tenantId: useOrgStore.getState().activeOrgId,
+        },
+      ),
     );
   }
 
@@ -6804,7 +7048,6 @@ it("does not restore approvals from stale transcript rows after a terminal recei
   await act(async () => {});
   expect(get).not.toHaveBeenCalledWith("/runs/r-1/parked");
 });
-
 
 describe("useChat - the floating assistant's submitted page and agent", () => {
   afterEach(() => vi.useRealTimers());

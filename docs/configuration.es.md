@@ -1,5 +1,5 @@
 ---
-source_sha: "ddd8aae069e6"
+source_sha: "aa79e2a8a321"
 ---
 
 # Configuración { #configuration }
@@ -522,6 +522,7 @@ servicio lleva la suya.
 | --- | --- | --- |
 | `APPROVAL_EXPIRY_HOURS` | `72` | Cuánto espera una llamada a herramienta aparcada antes de que el barrido horario la deniegue por tiempo |
 | `QUESTION_EXPIRY_HOURS` | `24` | Cuánto espera un run la respuesta a una pregunta del agent antes de que el mismo barrido lo termine |
+| `QUESTION_NUDGE_HOURS` | `12` | Cuánto tiempo después de quedar a la espera de una respuesta el barrido recuerda una vez en el chat que todavía hace falta contestar |
 
 Tres días porque tiene que abarcar un fin de semana: la aprobación que llega el
 viernes por la tarde es la que nadie decide, y caducarla el sábado sería caducarla

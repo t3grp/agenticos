@@ -183,6 +183,7 @@ describe("useOnboardingTour", () => {
       "assistant-widget",
       "assistant-agent-picker",
       "assistant-page-context",
+      "nav-pinned",
     ]);
   });
 

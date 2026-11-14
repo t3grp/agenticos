@@ -3425,9 +3425,7 @@ async def failure_group_samples(
     limit: int = 5,
 ) -> list[UUID]:
     """The newest run ids of one failure group, for a pattern's evidence."""
-    error_clause = (
-        AgentRun.error.is_(None) if error is None else AgentRun.error == error
-    )
+    error_clause = AgentRun.error.is_(None) if error is None else AgentRun.error == error
     model_clause = (
         AgentRun.model_label.is_(None)
         if model_label is None

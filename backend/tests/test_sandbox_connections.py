@@ -235,6 +235,7 @@ class TestRegistering:
 
         assert read.kind == "daytona"
 
+    @pytest.mark.security
     async def test_attaching_a_secret_the_caller_cannot_view_is_refused(self, monkeypatch):
         """A Builder holding `connections:manage` must not be able to name
         somebody else's private key and have the connection spend it for them."""
@@ -259,6 +260,7 @@ class TestRegistering:
 
         created.assert_not_awaited()
 
+    @pytest.mark.security
     async def test_attaching_a_secret_the_caller_may_view_is_allowed(self, monkeypatch):
         service = _service(monkeypatch)
         secret_id = uuid.uuid4()
@@ -350,6 +352,7 @@ class TestEditing:
 
         cleared.assert_awaited_once()
 
+    @pytest.mark.security
     async def test_changing_the_secret_to_one_the_caller_cannot_view_is_refused(self, monkeypatch):
         service = _service(monkeypatch)
         service.secrets.require_view = AsyncMock(
@@ -365,6 +368,7 @@ class TestEditing:
 
         updated.assert_not_awaited()
 
+    @pytest.mark.security
     async def test_detaching_the_secret_needs_no_view(self, monkeypatch):
         """Removing a credential is not spending one."""
         service = _service(monkeypatch)
@@ -1003,6 +1007,7 @@ class TestTestingAnAddressBeforeItIsSaved:
 
         assert "not an API key" in refused.value.message
 
+    @pytest.mark.security
     async def test_probing_with_a_secret_the_caller_cannot_view_is_refused(self, monkeypatch):
         """Naming a key to spend it is the same hole as attaching it: the token
         goes to an address the caller typed, so the check runs before it leaves."""

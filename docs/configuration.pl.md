@@ -1,5 +1,5 @@
 ---
-source_sha: "ddd8aae069e6"
+source_sha: "aa79e2a8a321"
 ---
 
 # Konfiguracja { #configuration }
@@ -509,6 +509,7 @@ alarmem dla drugiego, więc każda definicja usługi niesie własną.
 | --- | --- | --- |
 | `APPROVAL_EXPIRY_HOURS` | `72` | Jak długo zaparkowane wywołanie narzędzia czeka, zanim cogodzinne zamiatanie odrzuci je przez timeout |
 | `QUESTION_EXPIRY_HOURS` | `24` | Jak długo run czeka na odpowiedź na pytanie agenta, zanim to samo zamiatanie go zakończy |
+| `QUESTION_NUDGE_HOURS` | `12` | Po jakim czasie od wstrzymania na pytaniu przegląd przypomina raz na czacie, że nadal potrzebna jest odpowiedź |
 
 Trzy dni, bo musi objąć weekend: zatwierdzenie, które przychodzi w piątek po
 południu, jest tym, o którym nikt nie decyduje, a wygaszenie go w sobotę byłoby

@@ -330,6 +330,7 @@ CALLS: tuple[Call, ...] = (
         query="?started_from=2020-01-01T00:00:00&started_to=2020-01-02T00:00:00",
     ),
     Call("GET", "/runs/{run_id}", Perm.RUNS_VIEW),
+    Call("POST", "/runs/{run_id}/retry", Perm.RUNS_VIEW),
     Call("GET", "/runs/{run_id}/parked", Perm.APPROVALS_DECIDE),
     Call("POST", "/runs/{run_id}/resume", Perm.APPROVALS_DECIDE),
     Call("GET", "/approvals", Perm.APPROVALS_DECIDE),
@@ -1501,6 +1502,12 @@ class TestTheQueueNamesWhatItAsks:
         assert (item["tool_id"], item["capability_tool_id"]) == ("change_ticket", "update_record")
 
 
+@pytest.fixture
+def ordinary_run_without_room_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These HTTP contracts resume a regular run, outside a room delivery."""
+    monkeypatch.setattr("app.services.parked_runs.room_repo.for_run", AsyncMock(return_value=None))
+
+
 class TestResumeConveysAFailedContinuation:
     """A resume whose continuation raised is a 5xx that still names the run's status.
 
@@ -1512,7 +1519,10 @@ class TestResumeConveysAFailedContinuation:
     """
 
     async def test_a_failed_resume_answers_5xx_with_the_status_in_the_body(
-        self, as_role: ClientFactory, synthetic_roles: None
+        self,
+        as_role: ClientFactory,
+        synthetic_roles: None,
+        ordinary_run_without_room_request: None,
     ) -> None:
         run_id = uuid4()
 
@@ -1546,7 +1556,10 @@ class TestResumeAnswersWithWhatTheContinuationDid:
     """
 
     async def test_the_continuations_tool_calls_are_in_the_response(
-        self, as_role: ClientFactory, synthetic_roles: None
+        self,
+        as_role: ClientFactory,
+        synthetic_roles: None,
+        ordinary_run_without_room_request: None,
     ) -> None:
         run = MagicMock(
             id=uuid4(),
@@ -2017,6 +2030,9 @@ UNAUTHENTICATED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", f"{V1}/auth/password-reset/confirm"),
         ("POST", f"{V1}/auth/magic-link/request"),
         ("POST", f"{V1}/auth/magic-link/verify"),
+        # Completes sign-in using the short-lived first-factor challenge and a valid
+        # second factor; it cannot require the session it exists to issue.
+        ("POST", f"{V1}/auth/mfa/verify"),
         # A phone signing in by scanning the code a signed-in console shows
         # (#2097). The phone has no session yet - that is what it is getting -
         # and the single-use, one-minute code is the credential, as a magic
@@ -2424,7 +2440,10 @@ class TestAQuestionTheRunParkedOn:
         assert response.json()[0]["questions"][0]["header"] == "Tone"
 
     async def test_an_answer_continues_the_run_and_says_what_it_did(
-        self, as_role: ClientFactory, synthetic_roles: None
+        self,
+        as_role: ClientFactory,
+        synthetic_roles: None,
+        ordinary_run_without_room_request: None,
     ) -> None:
         run = self._run()
         service = MagicMock(

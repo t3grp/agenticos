@@ -156,6 +156,7 @@ def create_mfa_token(
     expires_delta: timedelta | None = None,
     *,
     return_to: str | None = None,
+    mailbox_proved: bool = False,
     jti: str | None = None,
 ) -> str:
     """The short-lived proof a password check passed, awaiting the second factor.
@@ -170,6 +171,9 @@ def create_mfa_token(
     `return_to` rides along only when the challenge came from a magic link:
     the link's destination was validated at mint, and the second step must
     not be what drops it.
+
+    `mailbox_proved` preserves the signed link's proof through the second factor
+    without putting the email address itself in the challenge.
     """
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=5))
     to_encode: dict[str, Any] = {
@@ -181,6 +185,8 @@ def create_mfa_token(
     }
     if return_to is not None:
         to_encode["rt"] = return_to
+    if mailbox_proved:
+        to_encode["mbp"] = True
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

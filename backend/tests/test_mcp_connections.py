@@ -65,9 +65,9 @@ from app.core.exceptions import (
     BadRequestError,
     NotFoundError,
 )
-from app.core.permissions import AuthContext, OrgRoleName
+from app.core.permissions import AuthContext, OrgRoleName, Perm
 from app.core.pinned_http import PinnedAsyncClient
-from app.core.secret_kinds import GithubOAuthAppSecret, SecretKind
+from app.core.secret_kinds import GithubOAuthAppSecret, GoogleOAuthAppSecret, SecretKind
 from app.core.vault import VaultScope, seal, unseal
 from app.db.models.mcp_connection import AUTHORIZATION_EXPIRED, McpConnection
 from app.schemas.mcp_connection import (
@@ -3946,7 +3946,7 @@ class TestMcpConnectionService:
 
     @pytest.mark.anyio
     async def test_oauth_start_refuses_a_client_the_server_will_not_authenticate(
-        self, service, monkeypatch
+        self, service, repo, monkeypatch
     ):
         """`exchange_code` and `refresh_tokens` only put the secret in the form
         body. A server that does not allow that is refused at start, not after
@@ -3976,6 +3976,9 @@ class TestMcpConnectionService:
                 client_secret=SecretStr("operators-secret"),
             )
         assert "client_secret_basic" in str(excinfo.value)
+        repo.get_by_name.assert_awaited_once()
+        repo.create.assert_not_awaited()
+        repo.update.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_a_server_that_names_no_auth_method_takes_the_static_client(
@@ -4356,6 +4359,66 @@ class TestMcpConnectionService:
         await service.oauth_callback(state="state-google", code="the-code")
 
         assert repo.update.call_args.kwargs["update_data"]["poll_cursor"] is None
+
+    @pytest.mark.anyio
+    @pytest.mark.security
+    @pytest.mark.parametrize("changed", ["removed", "replaced"])
+    async def test_an_authorized_org_callback_refuses_a_changed_google_client_before_exchange(
+        self, service, repo, monkeypatch, changed
+    ):
+        from app.services.portals import google_oauth
+
+        authority = AuthContext(user_id=uuid4(), organization_id=uuid4(), role=OrgRoleName.OWNER)
+        assert authority.has(Perm.MCP_MANAGE)
+        pending = _connection(
+            scope="org",
+            user_id=None,
+            organization_id=authority.organization_id,
+            created_by_user_id=authority.subject_id,
+            auth_type="oauth",
+            url="https://calendarmcp.googleapis.com/mcp/v1",
+            oauth_state="state-org-google",
+        )
+        pending.oauth_pending_payload = _seal_into(
+            pending,
+            _base_payload(
+                provider="google",
+                initiator_id=authority.subject_id,
+                client_org_id=authority.organization_id,
+                client_id="original-client",
+                client_secret=None,
+                authorization_endpoint=google_oauth.AUTHORIZE_ENDPOINT,
+                token_endpoint=google_oauth.TOKEN_ENDPOINT,
+            ).model_dump_json(),
+        )
+        repo.get_by_oauth_state = AsyncMock(return_value=pending)
+        decide = AsyncMock(return_value=authority)
+        monkeypatch.setattr(mcp_connection_service, "decider_context", decide)
+        identity = AsyncMock(
+            side_effect=NotFoundError() if changed == "removed" else None,
+            return_value=(
+                GoogleOAuthAppSecret(client_id="replacement-client", client_secret="org-secret"),
+                uuid4(),
+                uuid4(),
+            ),
+        )
+        monkeypatch.setattr(OrganizationSecretService, "oauth_app_identity_for_org", identity)
+        exchange = AsyncMock()
+        monkeypatch.setattr(google_oauth, "exchange_code", exchange)
+
+        with pytest.raises(mcp_oauth.OAuthError, match="organization's Google app changed"):
+            await service.oauth_callback(state="state-org-google", code="not-exchanged")
+
+        decide.assert_awaited_once_with(
+            service.db,
+            organization_id=authority.organization_id,
+            user_id=authority.subject_id,
+        )
+        identity.assert_awaited_once_with(
+            authority.organization_id, kind=SecretKind.GOOGLE_OAUTH_APP
+        )
+        exchange.assert_not_awaited()
+        repo.update.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_oauth_callback_exchanges_and_clears_state(self, service, repo, monkeypatch):
@@ -7267,6 +7330,7 @@ class TestGoogleMcpUsesTheOrganizationsGoogleApp:
 
         assert "client_id=typed-client" in url
         org_app.assert_not_called()
+
 
 @pytest.mark.anyio
 @pytest.mark.security

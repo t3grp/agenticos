@@ -67,6 +67,7 @@ def production() -> Handlers:
         proactive_tasks,
         rag_tasks,
         report_tasks,
+        room_tasks,
         run_tasks,
         skill_check_tasks,
         task_tasks,
@@ -104,6 +105,8 @@ def production() -> Handlers:
             Handler(jobs.GENERATE_CASES, case_generation_tasks.generate_cases),
             Handler(jobs.RUN_CONVERSATION_TASK, conversation_tasks.run_task),
             Handler(jobs.RETURN_CONVERSATION_TASK, conversation_tasks.return_task),
+            Handler(jobs.RUN_ROOM_REQUEST, room_tasks.run_request),
+            Handler(jobs.RECONCILE_ROOM_REQUESTS, _each_tick(room_tasks.reconcile_requests)),
             Handler(
                 jobs.RECONCILE_CONVERSATION_TASKS, _each_tick(conversation_tasks.reconcile_tasks)
             ),
@@ -187,16 +190,18 @@ def _settler[P: Payload](task: Task[P], settle: Callable[[P, str], Awaitable[Non
 
 @cache
 def _settlers() -> dict[str, Settler]:
-    from app.worker.tasks import (
+from app.worker.tasks import (
         authoring_tasks,
         case_generation_tasks,
         conversation_tasks,
         eval_tasks,
         project_tasks,
         rag_tasks,
+        room_tasks,
     )
 
     return {
+        jobs.RUN_ROOM_REQUEST.kind: _settler(jobs.RUN_ROOM_REQUEST, room_tasks.settle_lost_request),
         jobs.RUN_CONVERSATION_TASK.kind: _settler(
             jobs.RUN_CONVERSATION_TASK, conversation_tasks.settle_lost_task
         ),

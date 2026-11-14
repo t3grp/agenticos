@@ -2030,601 +2030,623 @@
       }
    },
    "capabilityConfig" : {
-      "artifacts" : {
-         "preview_screenshot" : {
-            "description" : "Model bir sayfayı önizlediğinde sayfanın görselini modele iletir. Görsel okuyamayan bir model için kapatın; yazılı rapor yine döner.",
-            "title" : "Sayfanın görselini modele göster"
-         }
-      },
       "browser_use" : {
-         "allowed_domains" : {
-            "description" : "İzin verilen browser host'ları. Kısıtlama olmadığında tüm domain'lere izin verilir; boş liste tümünü engeller. *.example.com gibi kalıplar desteklenir. Her adımda denetlenir.",
-            "title" : "İzin verilen domain'ler"
-         },
-         "candidate_cap" : {
-            "description" : "Bir adımda seçenek olarak sunulabilecek sayfa öğelerinin sayısı. Daha düşük değer daha ucuz ama daha kısıtlıdır; sayfa sınıra sığmıyorsa aşağı kaydırın.",
-            "title" : "Adım başına sunulan öğe"
-         },
          "cdp_url" : {
-            "description" : "Tarayıcıyı yönetmek için Chromium DevTools uç noktası - API container'ında çalışan bir süreç değil, operatörün çalıştırdığı bir browser service.",
-            "title" : "DevTools uç noktası"
+            "title" : "DevTools uç noktası",
+            "description" : "Tarayıcıyı yönetmek için Chromium DevTools uç noktası - API container'ında çalışan bir süreç değil, operatörün çalıştırdığı bir browser service."
          },
-         "connection" : {
-            "description" : "Yerleşik seçenek deployment'ın browser'ını ve adresini kullanır. Proxy, browse isteklerini kendi adresiniz üzerinden gönderir; siteler residential veya bölgesel adresleri daha az engeller. Hosted browser, ücretini ödediğiniz browser service üzerinde çalışır ve CDP üzerinden erişilir. Bu bilgisayar seçeneği eşleştirilmiş desktop ve bu chat için yerel browse seçilmesini gerektirir.",
-            "title" : "Browser web'e nasıl bağlanır"
-         },
-         "hosted_key_param" : {
-            "description" : "Hosted browser'ın adres query'sinde key için kullandığı ad.",
-            "title" : "Key için query parametresi"
-         },
-         "hosted_url" : {
-            "description" : "Service'in wss:// CDP adresi. Key'i aşağıdan seçilen Vault kaydı sağlar; browse bağlanırken adresin query kısmına eklenir.",
-            "title" : "Hosted browser adresi"
-         },
-         "locale" : {
-            "description" : "Accept-Language ve navigator.language olarak gönderilen pl-PL gibi bir dil etiketi.",
-            "title" : "Browser'ın bildirdiği dil"
+         "allowed_domains" : {
+            "title" : "İzin verilen domain'ler",
+            "description" : "İzin verilen browser host'ları. Kısıtlama olmadığında tüm domain'lere izin verilir; boş liste tümünü engeller. *.example.com gibi kalıplar desteklenir. Her adımda denetlenir."
          },
          "max_steps" : {
-            "description" : "Bir çağrının alabileceği adım sayısı; her adım bir model isteğidir. Daha fazlasını gerektiren görev sonraki çağrıda aynı sekmede sürer.",
-            "title" : "Çağrı başına en fazla adım"
-         },
-         "prefer_native_browser" : {
-            "description" : "Yerel DOM browse için gömülü bir native sekme kullanır. İzole Chromium uyumluluğu için kapatın. Vision ve dil/saat dilimi geçersiz kılmaları Chromium kullanır.",
-            "title" : "Yerel browser'ı kullan"
-         },
-         "preview" : {
-            "description" : "Browse sürerken görüntü alanını chat'e gönderir, böylece biri izleyebilir. Socket üzerinden adım başına bir JPEG gönderilir.",
-            "title" : "Canlı önizlemeyi göster"
-         },
-         "preview_width" : {
-            "description" : "Browser görüntü alanının piksel cinsinden genişliği; karelerin genişliğini de belirler. Agent'ın kaydırmadan neleri görebileceğini belirler.",
-            "title" : "Görüntü alanı genişliği (piksel)"
-         },
-         "proxy_url" : {
-            "description" : "Host ve portu içeren http://, https:// veya socks5:// adresi. Kullanıcı adı ve parolası aşağıdan seçilen Vault kaydına konur; Chromium SOCKS proxy'sinde oturum açamaz.",
-            "title" : "Proxy adresi"
-         },
-         "step_model_profile_id" : {
-            "description" : "Agent'ın kendi modeli yerine her adımda `browse_web` için istenen model profili. Adımlar browse süresinin ve maliyetinin çoğunu oluşturur; burada daha ucuz bir model uzun browse işlemini ucuzlatır, provider'ı hızlı yanıt veriyorsa hızlandırır da. Ölçerek karar verin: yavaş bir gateway üzerinden çalışan küçük model daha hızlı olmayabilir. Boş bırakılırsa Agent'ın modeli kullanılır. Agent'ın kendi browser tool'ları her zaman onu kullanır.",
-            "title" : "Her browse adımı için model"
-         },
-         "timezone" : {
-            "description" : "Europe/Warsaw gibi bir IANA saat dilimi. Proxy'nin bölgesiyle eşleştirin: saatiyle adresi uyuşmayan browser bot gibi görünür.",
-            "title" : "Browser'ın bildirdiği saat dilimi"
+            "title" : "Çağrı başına en fazla adım",
+            "description" : "Bir çağrının alabileceği adım sayısı; her adım bir model isteğidir. Daha fazlasını gerektiren görev sonraki çağrıda aynı sekmede sürer."
          },
          "vision" : {
-            "description" : "Her adımın ekran görüntüsünü sayfa öğelerine ek olarak modele gönderir. Görsel sayfalarda daha iyi sonuç verir, daha fazla token kullanır ve modelin görselleri okumasını gerektirir.",
-            "title" : "Ekran görüntülerini modele göster"
-         }
-      },
-      "channel_tools" : {
-         "default_limit" : {
-            "description" : "Model sayı istemediğinde döndürülecek üye, arama sonucu veya mesaj sayısı",
-            "title" : "Sayı belirtilmediğinde sonuç sayısı"
+            "title" : "Ekran görüntülerini modele göster",
+            "description" : "Her adımın ekran görüntüsünü sayfa öğelerine ek olarak modele gönderir. Görsel sayfalarda daha iyi sonuç verir, daha fazla token kullanır ve modelin görselleri okumasını gerektirir."
          },
-         "tools" : {
-            "description" : "Bu bağlantının tool id'lerine göre izin verdiği kanal aramaları. Boş değer hiçbirine izin vermez; bağlantı başlangıçta böyledir.",
-            "title" : "İzin verilen aramalar"
-         }
-      },
-      "clock" : {
-         "timezone" : {
-            "description" : "Agent'ın kullandığı IANA saat dilimi; ör. Europe/Warsaw",
-            "title" : "Saat dilimi"
-         }
-      },
-      "code_execution" : {
-         "max_memory_mb" : {
-            "description" : "Megabayt cinsinden bellek sınırı",
-            "title" : "Çağrı başına bellek sınırı (MB)"
-         },
-         "timeout_secs" : {
-            "description" : "Tek bir çağrı için saniye cinsinden gerçek zaman bütçesi",
-            "title" : "Çağrı başına süre sınırı (saniye)"
-         }
-      },
-      "coding_agent" : {
-         "access" : {
-            "description" : "Test gibi komutları çalıştırıp dosyaları değiştirebilir ya da yalnızca kodu okuyup yanıtlayabilir. Her durumda, her görevden önce sormak için Human approval'ı ayarlayın.",
-            "title" : "Neler yapabilir?"
-         },
-         "base_url" : {
-            "description" : "Yalnızca Claude Code için: https://openrouter.ai/api gibi Anthropic API'siyle konuşan bir gateway. Vault'taki key bu gateway'e ait olmalı. Boşsa doğrudan Anthropic'e istek gönderilir.",
-            "title" : "Anthropic uyumlu endpoint"
-         },
-         "harness" : {
-            "description" : "İşi hangi kodlama Agent'ının yapacağı: Anthropic key'i veya Claude abonelik token'ı kullanan Claude Code ya da OpenAI key'i veya ChatGPT oturumu kullanan Codex.",
-            "title" : "Kodlama Agent'ı"
-         },
-         "model" : {
-            "description" : "Kodlama Agent'ının çalıştırdığı model: Claude Code için Claude, Codex için OpenAI modeli. Boş bırakılırsa kodlama Agent'ının kendi varsayılanı kullanılır. Kendi ayarını kullandığı bu bilgisayarda kullanılamaz.",
-            "title" : "Model"
-         },
-         "runs_on" : {
-            "description" : "Burada saklanan key ile Agent'ın kendi sandbox'ında ya da kişinin desktop app'te kendi bilgisayarından seçtiği klasörde çalışır. İkinci durumda Claude Code ve Codex mevcut oturum açma bilgilerini kullanır, key gerekmez.",
-            "options" : {
-               "personal_sandbox" : {
-                  "description" : "Profil hesabını yalıtılmış bir konteynerde kullanır. İncelenecek fark ve sonuç arşivi döndürür; paylaşılan dosyalar değişmez.",
-                  "label" : "Hesabımla özel bulut görevi",
-                  "summary" : "Profil hesabını yalıtılmış bir konteynerde kullanır. İncelenecek fark ve sonuç arşivi döndürür; paylaşılan dosyalar değişmez."
-               }
-            },
-            "title" : "Nerede çalışır"
-         },
-         "timeout_minutes" : {
-            "description" : "Durdurulmadan önce tek bir görevin ne kadar çalışabileceği.",
-            "title" : "Süre sınırı (dakika)"
-         }
-      },
-      "compaction" : {
-         "context_window" : {
-            "description" : "Tetiklemenin esas alacağı pencereyi geçersiz kılar. Chat'in bağlam göstergesinin böldüğü değeri de belirler; böylece ikisi aynı sınırı gösterir. Çözümlenen sayı deployment'ınız için yanlışsa - beta veya katman provider'ın belirttiğinden daha düşük bir değer kullanabilir - ya da Agent'ın modelinin gerektirdiğinden daha erken sıkıştırma yapmasını istiyorsanız ayarlayın",
-            "title" : "Bağlam penceresi geçersiz kılması"
-         },
-         "fallback_context_window" : {
-            "description" : "Modelin kendi pencere boyutu belirlenemediğinde kullanılacak varsayılan değer",
-            "title" : "Yedek bağlam penceresi"
-         },
-         "keep_messages" : {
-            "description" : "Özet veya kayan pencere sonrasında tutulacak son mesaj sayısı",
-            "title" : "Tutulacak son mesajlar"
-         },
-         "keep_tool_pairs" : {
-            "description" : "Sonuçlar temizlenirken sonuçları tutulacak son tool çağrısı sayısı",
-            "title" : "Tutulacak son tool sonuçları"
-         },
-         "max_fraction" : {
-            "description" : "Sıkıştırmanın başlayacağı model bağlam penceresi oranı",
-            "title" : "Pencerenin bu oranında başlat"
-         },
-         "strategy" : {
-            "description" : "Geçmiş pencere sınırına yaklaşınca uygulanacak yöntem",
-            "title" : "Yöntem"
-         },
-         "summary_prompt" : {
-            "description" : "Özet çıkaran modele verilen talimat. `{messages}` yerine konuşmanın yenilenen bölümü eklenir ve bu alan zorunludur; bu alan olmadan prompt hiçbir şeyi özetlemez. Agent'ın işinin dayandığı bilgileri koruyacak şekilde düzenleyin. Varsayılan talimat amacı, kararları ve açık konuları korur; bunlar bir destek dökümü veya kod incelemesi için gerekenlerle aynı olmayabilir",
-            "title" : "Özet prompt'u"
-         }
-      },
-      "computer_use" : {
-         "daemon_url" : {
-            "description" : "Masaüstünüzün computerd endpoint'i. Host adı COMPUTER_DAEMON_ALLOWED_HOSTS içinde olmalıdır.",
-            "title" : "Daemon URL'si"
-         },
-         "desktop" : {
-            "description" : "Bu Agent'ın masaüstünü hangi ortamda kullanacağını seçin. Seçilen ortamın gereksinimleri aşağıda gösterilir.",
-            "title" : "Ortam"
-         },
-         "max_actions" : {
-            "description" : "Tek bir run'ın toplamda yapabileceği işlem sayısı.",
-            "title" : "Run başına işlem"
-         },
-         "max_actions_per_call" : {
-            "description" : "Tek bir çağrının gönderebileceği işlem sayısı.",
-            "title" : "Çağrı başına işlem"
+         "candidate_cap" : {
+            "title" : "Adım başına sunulan öğe",
+            "description" : "Bir adımda seçenek olarak sunulabilecek sayfa öğelerinin sayısı. Daha düşük değer daha ucuz ama daha kısıtlıdır; sayfa sınıra sığmıyorsa aşağı kaydırın."
          },
          "preview" : {
-            "description" : "Agent masaüstünde çalışırken görüntüyü chat'te canlı göster.",
-            "title" : "Canlı önizleme"
+            "title" : "Canlı önizlemeyi göster",
+            "description" : "Browse sürerken görüntü alanını chat'e gönderir, böylece biri izleyebilir. Socket üzerinden adım başına bir JPEG gönderilir."
          },
-         "screen_height" : {
-            "description" : "Modele gösterilen en yüksek ekran görüntüsü.",
-            "title" : "Ekran görüntüsü yüksekliği"
+         "preview_width" : {
+            "title" : "Görüntü alanı genişliği (piksel)",
+            "description" : "Browser görüntü alanının piksel cinsinden genişliği; karelerin genişliğini de belirler. Agent'ın kaydırmadan neleri görebileceğini belirler."
          },
-         "screen_width" : {
-            "description" : "Modele gösterilen en geniş ekran görüntüsü; daha geniş ekranlar sığacak şekilde küçültülür.",
-            "title" : "Ekran görüntüsü genişliği"
-         }
-      },
-      "context" : {
-         "expose_read_tool" : {
-            "description" : "Link modundaki dosyalara read tool ile erişilip erişilemeyeceği. Kapalıysa modele yalnızca eklenen dosyalar ulaşır; isteğe bağlı dosya okunmaz.",
-            "title" : "Agent'ın bağlantılı dosyaları açmasına izin ver"
+         "step_model_profile_id" : {
+            "title" : "Her browse adımı için model",
+            "description" : "Agent'ın kendi modeli yerine her adımda `browse_web` için istenen model profili. Adımlar browse süresinin ve maliyetinin çoğunu oluşturur; burada daha ucuz bir model uzun browse işlemini ucuzlatır, provider'ı hızlı yanıt veriyorsa hızlandırır da. Ölçerek karar verin: yavaş bir gateway üzerinden çalışan küçük model daha hızlı olmayabilir. Boş bırakılırsa Agent'ın modeli kullanılır. Agent'ın kendi browser tool'ları her zaman onu kullanır."
          },
-         "file_settings" : {
-            "description" : "Eklenmiş context dosyalarının Agent başına modu ve kullanılabilirliği. Bir kayıt yoksa dosyanın eski varsayılanı korunur.",
-            "title" : "Her dosyanın kullanım biçimi"
-         }
-      },
-      "conversation_search" : {
-         "max_results" : {
-            "description" : "Tek bir aramanın döndürebileceği en fazla konuşma sayısı. Her biri kısa bir pasaj içerir; yüksek sayı her aramada context kullanımını artırır.",
-            "title" : "Arama başına konuşma"
-         }
-      },
-      "follow_ups" : {
-         "model_profile_id" : {
-            "description" : "Yanıt kaydedildikten sonra arka planda sonraki adım düğmelerini yazan ayrı model profili. Yanıtı veya sonraki mesajı geciktirmez. Küçük ve ucuz bir model yeterlidir. Boş bırakılırsa sonraki adım önerileri kapanır.",
-            "title" : "Sonraki adımlar için model"
+         "connection" : {
+            "title" : "Browser web'e nasıl bağlanır",
+            "description" : "Yerleşik seçenek deployment'ın browser'ını ve adresini kullanır. Proxy, browse isteklerini kendi adresiniz üzerinden gönderir; siteler residential veya bölgesel adresleri daha az engeller. Hosted browser, ücretini ödediğiniz browser service üzerinde çalışır ve CDP üzerinden erişilir. Bu bilgisayar seçeneği eşleştirilmiş desktop ve bu chat için yerel browse seçilmesini gerektirir."
+         },
+         "proxy_url" : {
+            "title" : "Proxy adresi",
+            "description" : "Host ve portu içeren http://, https:// veya socks5:// adresi. Kullanıcı adı ve parolası aşağıdan seçilen Vault kaydına konur; Chromium SOCKS proxy'sinde oturum açamaz."
+         },
+         "hosted_url" : {
+            "title" : "Hosted browser adresi",
+            "description" : "Service'in wss:// CDP adresi. Key'i aşağıdan seçilen Vault kaydı sağlar; browse bağlanırken adresin query kısmına eklenir."
+         },
+         "hosted_key_param" : {
+            "title" : "Key için query parametresi",
+            "description" : "Hosted browser'ın adres query'sinde key için kullandığı ad."
+         },
+         "timezone" : {
+            "title" : "Browser'ın bildirdiği saat dilimi",
+            "description" : "Europe/Warsaw gibi bir IANA saat dilimi. Proxy'nin bölgesiyle eşleştirin: saatiyle adresi uyuşmayan browser bot gibi görünür."
+         },
+         "locale" : {
+            "title" : "Browser'ın bildirdiği dil",
+            "description" : "Accept-Language ve navigator.language olarak gönderilen pl-PL gibi bir dil etiketi."
+         },
+         "prefer_native_browser" : {
+            "title" : "Yerel browser'ı kullan",
+            "description" : "Yerel DOM browse için gömülü bir native sekme kullanır. İzole Chromium uyumluluğu için kapatın. Vision ve dil/saat dilimi geçersiz kılmaları Chromium kullanır."
          }
       },
       "guardrails" : {
-         "blocked_keywords_args" : {
-            "description" : "Tool argümanları virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle",
-            "title" : "Tool argümanlarında engellenecek sözcükler"
-         },
-         "blocked_keywords_in" : {
-            "description" : "Prompt virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle",
-            "title" : "Soruda engellenecek sözcükler"
-         },
-         "blocked_keywords_out" : {
-            "description" : "Yanıt virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle",
-            "title" : "Yanıtta engellenecek sözcükler"
-         },
-         "blocked_keywords_tool" : {
-            "description" : "Tool sonucu virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle",
-            "title" : "Tool sonuçlarında engellenecek sözcükler"
-         },
-         "phone_regions" : {
-            "description" : "PII sansürlemesinin ulusal telefon biçimlerini tanıyacağı ülkeleri iki harfli kodlarla belirtin (virgül veya satır sonuyla ayrılır); en fazla 16 bölge ve 256 karakter. + ile yazılan numara listeden bağımsız olarak sansürlenir",
-            "title" : "Telefon numarası ülkeleri"
-         },
-         "redact_pii_args" : {
-            "description" : "Tool argümanlarındaki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle",
-            "title" : "Tool argümanlarındaki kişisel verileri gizle"
+         "redact_secrets_in" : {
+            "title" : "Sorudaki gizli bilgileri gizle",
+            "description" : "Kullanıcının prompt'undaki API key'leri ve token'ları sansürle"
          },
          "redact_pii_in" : {
-            "description" : "Prompt'taki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle",
-            "title" : "Sorudaki kişisel verileri gizle"
+            "title" : "Sorudaki kişisel verileri gizle",
+            "description" : "Prompt'taki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle"
          },
-         "redact_pii_out" : {
-            "description" : "Yanıttaki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle",
-            "title" : "Yanıttaki kişisel verileri gizle"
-         },
-         "redact_pii_tool" : {
-            "description" : "Tool sonuçlarındaki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle",
-            "title" : "Tool sonuçlarındaki kişisel verileri gizle"
-         },
-         "redact_secrets_args" : {
-            "description" : "Agent'ın tool'a ilettiği argümanlardaki API key'leri ve token'ları sansürle",
-            "title" : "Tool argümanlarındaki gizli bilgileri gizle"
-         },
-         "redact_secrets_in" : {
-            "description" : "Kullanıcının prompt'undaki API key'leri ve token'ları sansürle",
-            "title" : "Sorudaki gizli bilgileri gizle"
+         "blocked_keywords_in" : {
+            "title" : "Soruda engellenecek sözcükler",
+            "description" : "Prompt virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle"
          },
          "redact_secrets_out" : {
-            "description" : "Agent yanıtındaki API key'leri ve token'ları sansürle",
-            "title" : "Yanıttaki gizli bilgileri gizle"
+            "title" : "Yanıttaki gizli bilgileri gizle",
+            "description" : "Agent yanıtındaki API key'leri ve token'ları sansürle"
+         },
+         "redact_pii_out" : {
+            "title" : "Yanıttaki kişisel verileri gizle",
+            "description" : "Yanıttaki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle"
+         },
+         "blocked_keywords_out" : {
+            "title" : "Yanıtta engellenecek sözcükler",
+            "description" : "Yanıt virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle"
          },
          "redact_secrets_tool" : {
-            "description" : "Model okumadan önce tool sonuçlarındaki API key'leri ve token'ları sansürle",
-            "title" : "Tool sonuçlarındaki gizli bilgileri gizle"
-         }
-      },
-      "image_generation" : {
-         "aspect_ratio" : {
-            "description" : "16:9 veya 1:1 gibi en-boy oranı.",
-            "title" : "En-boy oranı"
+            "title" : "Tool sonuçlarındaki gizli bilgileri gizle",
+            "description" : "Model okumadan önce tool sonuçlarındaki API key'leri ve token'ları sansürle"
          },
-         "background" : {
-            "description" : "Arka plan türü; saydam arka plan için png veya webp çıktısı gerekir.",
-            "title" : "Arka plan"
+         "redact_pii_tool" : {
+            "title" : "Tool sonuçlarındaki kişisel verileri gizle",
+            "description" : "Tool sonuçlarındaki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle"
          },
-         "model" : {
-            "description" : "Bu provider'ın hangi görsel modelinin kullanacağı; kimlikler `app/core/catalog/image_models.json` içindedir. Katalog dışındaki model reddedilir: çizemeyen bir modele tool verilirse yazar bunu ancak run sırasında hata olarak görür.",
-            "title" : "Görsel modeli"
+         "blocked_keywords_tool" : {
+            "title" : "Tool sonuçlarında engellenecek sözcükler",
+            "description" : "Tool sonucu virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle"
          },
-         "output_format" : {
-            "description" : "Görsel dosyasının biçimi.",
-            "title" : "Dosya biçimi"
+         "redact_secrets_args" : {
+            "title" : "Tool argümanlarındaki gizli bilgileri gizle",
+            "description" : "Agent'ın tool'a ilettiği argümanlardaki API key'leri ve token'ları sansürle"
          },
-         "provider" : {
-            "description" : "Görseli hangi provider'ın modelinin oluşturacağı. Yalnızca image tool'u desteklediği bilinen üç provider kabul edilir; hangileri oldukları burada listelenmek yerine SDK'ya sorulur.",
-            "title" : "Provider"
+         "redact_pii_args" : {
+            "title" : "Tool argümanlarındaki kişisel verileri gizle",
+            "description" : "Tool argümanlarındaki e-posta, telefon numarası, IBAN, kart numarası ve SSN'leri sansürle"
          },
-         "quality" : {
-            "description" : "Oluşturma kalitesi; yüksek değer daha yavaş ve pahalıdır.",
-            "title" : "Kalite"
+         "blocked_keywords_args" : {
+            "title" : "Tool argümanlarında engellenecek sözcükler",
+            "description" : "Tool argümanları virgül veya satır sonuyla ayrılmış bu terimlerden birini içeriyorsa run'ı engelle"
          },
-         "size" : {
-            "description" : "Çıktı boyutu. OpenAI piksel değerlerini, Google K değerlerini kullanır.",
-            "title" : "Boyut"
+         "phone_regions" : {
+            "title" : "Telefon numarası ülkeleri",
+            "description" : "PII sansürlemesinin ulusal telefon biçimlerini tanıyacağı ülkeleri iki harfli kodlarla belirtin (virgül veya satır sonuyla ayrılır); en fazla 16 bölge ve 256 karakter. + ile yazılan numara listeden bağımsız olarak sansürlenir"
          }
       },
       "knowledge" : {
          "default_top_k" : {
-            "description" : "Model sayı belirtmediğinde döndürülecek pasaj sayısı",
-            "title" : "Arama başına pasaj"
-         },
-         "parent_context" : {
-            "description" : "Küçükten büyüğe retrieval: eşleşen her chunk'ı çevresindeki metinle döndürür. Eşleştirme ve sıralama her zaman küçük chunk'larda yapılır; eşleşen chunk kısaltılmaz ve eklenen bağlam sınırlıdır.",
-            "title" : "Çevredeki metni dahil et"
-         },
-         "query_analysis_max_variants" : {
-            "description" : "`multi_query` yönteminin ekleyebileceği yeniden ifade sayısı; fan-out ve maliyeti sınırlar. Diğer yöntemlerde kullanılmaz",
-            "title" : "En fazla yeniden ifade"
-         },
-         "query_analysis_mode" : {
-            "description" : "Kısa veya belirsiz sorularda geri çağırmayı iyileştirmek için retrieval öncesinde sorguyu isteğe bağlı olarak analiz edip genişletir. Varsayılan olarak kapalıdır. `multi_query` ve `hyde` birer ek model çağrısı yapar",
-            "title" : "Sorguyu genişlet"
+            "title" : "Arama başına pasaj",
+            "description" : "Model sayı belirtmediğinde döndürülecek pasaj sayısı"
          },
          "self_query_enabled" : {
-            "description" : "Model filtre belirtmeden arama yaptığında, LLM ile doğal dil sorgusundan FA-039 iş filtrelerini (kaynak, belge türü, organizasyon birimi, tarih aralığı) çıkar. Varsayılan olarak kapalıdır. Her arama bir ek model isteği oluşturur ve run bütçesine yansır. Yalnızca Agent'ın tenant'ı ve koleksiyonları içinde daraltma yapabilir, kapsamı genişletemez.",
-            "title" : "Sorudan filtreleri çıkar"
+            "title" : "Sorudan filtreleri çıkar",
+            "description" : "Model filtre belirtmeden arama yaptığında, LLM ile doğal dil sorgusundan FA-039 iş filtrelerini (kaynak, belge türü, organizasyon birimi, tarih aralığı) çıkar. Varsayılan olarak kapalıdır. Her arama bir ek model isteği oluşturur ve run bütçesine yansır. Yalnızca Agent'ın tenant'ı ve koleksiyonları içinde daraltma yapabilir, kapsamı genişletemez."
+         },
+         "query_analysis_mode" : {
+            "title" : "Sorguyu genişlet",
+            "description" : "Kısa veya belirsiz sorularda geri çağırmayı iyileştirmek için retrieval öncesinde sorguyu isteğe bağlı olarak analiz edip genişletir. Varsayılan olarak kapalıdır. `multi_query` ve `hyde` birer ek model çağrısı yapar"
+         },
+         "query_analysis_max_variants" : {
+            "title" : "En fazla yeniden ifade",
+            "description" : "`multi_query` yönteminin ekleyebileceği yeniden ifade sayısı; fan-out ve maliyeti sınırlar. Diğer yöntemlerde kullanılmaz"
+         },
+         "parent_context" : {
+            "title" : "Çevredeki metni dahil et",
+            "description" : "Küçükten büyüğe retrieval: eşleşen her chunk'ı çevresindeki metinle döndürür. Eşleştirme ve sıralama her zaman küçük chunk'larda yapılır; eşleşen chunk kısaltılmaz ve eklenen bağlam sınırlıdır."
          }
       },
-      "media" : {
-         "threshold_bytes" : {
-            "description" : "Bu boyuttaki veya daha büyük ikili ya da metin parçaları depolamaya yazılır ve saklanan geçmişte yerlerine bir referans konur.",
-            "title" : "Şu boyuttan büyük parçaları sakla (bayt)"
-         }
-      },
-      "memory_files" : {
-         "allow_personal" : {
-            "description" : "Agent'ın konuştuğu her kişi için özel not tutup tutmayacağı; notlar yalnızca o kişiyle baş başayken okunabilir. Uyumluluk veya gizlilik için kapatmak bu depoyu tümüyle devre dışı bırakır; grup sohbetlerinde tutulan notlar kalır.",
-            "title" : "Kişi başına özel not tut"
-         }
-      },
-      "memory_mem0" : {
-         "allow_personal" : {
-            "description" : "Agent'ın konuştuğu her kişi için özel anı tutup tutmayacağı; yalnızca o kişiyle baş başayken okunabilir. Uyumluluk veya gizlilik için kapatmak bu depoyu devre dışı bırakır; grup sohbeti anıları kalır.",
-            "title" : "Kişi başına özel anı tut"
+      "compaction" : {
+         "strategy" : {
+            "title" : "Yöntem",
+            "description" : "Geçmiş pencere sınırına yaklaşınca uygulanacak yöntem"
          },
-         "base_url" : {
-            "description" : "Kendi barındırdığınız mem0'ın temel URL'si; mem0'ın yönetilen cloud hizmeti için boş bırakın.",
-            "title" : "Kendi barındırdığınız mem0 URL'si"
-         }
-      },
-      "planning" : {
-         "cache_ttl" : {
-            "description" : "Mevcut Agent spec'lerinin yüklenmeye devam etmesi için tutulur. Planning artık bu değeri kullanmaz; prompt cache ayarını model ayarlarında yapılandırın.",
-            "title" : "Eski prompt cache süresi"
+         "max_fraction" : {
+            "title" : "Pencerenin bu oranında başlat",
+            "description" : "Sıkıştırmanın başlayacağı model bağlam penceresi oranı"
          },
-         "enable_subtasks" : {
-            "description" : "Alt görevler ve bağımlılıklar ekler: önceki adımlar bitene kadar bir adım engellenmiş olarak bekler. Düz bir kontrol listesi çoğu iş için yeterli olduğundan varsayılan olarak kapalıdır.",
-            "title" : "Alt görevler ve bağımlılıklar"
-         }
-      },
-      "sandbox" : {
-         "backend" : {
-            "description" : "state: yalnızca dosyalar, shell yok; platformda saklanır ve ek service gerektirmeden her deployment'ta çalışır. service: kuruluşun kaydettiği bağlantılardan birindeki container veya cloud sandbox. local: kişi desktop chat'te kendi bilgisayarını seçip onaylar; bu spec'te makine yolu veya yerel onay saklanmaz.",
-            "title" : "Dosyaların konumu"
+         "keep_messages" : {
+            "title" : "Tutulacak son mesajlar",
+            "description" : "Özet veya kayan pencere sonrasında tutulacak son mesaj sayısı"
          },
-         "connection_id" : {
-            "description" : "Kullanılacak kayıtlı sandbox bağlantısı; boşsa kuruluşun varsayılanı alınır. Adres veya token değil, yalnızca bir id: spec müşterinin git repository'sine aktarılabileceğinden sadece referans taşıyabilir. Bağlantı, çalıştırdığınız host'taki container'ı mı yoksa Daytona cloud'daki sandbox'ı mı kullanacağını belirler.",
-            "title" : "Sandbox bağlantısı"
+         "keep_tool_pairs" : {
+            "title" : "Tutulacak son tool sonuçları",
+            "description" : "Sonuçlar temizlenirken sonuçları tutulacak son tool çağrısı sayısı"
          },
-         "include_execute" : {
-            "description" : "Agent'ın shell komutu çalıştırıp çalıştıramayacağı. Kapatmak file tool'larını bırakır ve shell'i koşula bağlamak yerine tamamen kaldırır.",
-            "title" : "Shell komutlarına izin ver"
+         "summary_prompt" : {
+            "title" : "Özet prompt'u",
+            "description" : "Özet çıkaran modele verilen talimat. `{messages}` yerine konuşmanın yenilenen bölümü eklenir ve bu alan zorunludur; bu alan olmadan prompt hiçbir şeyi özetlemez. Agent'ın işinin dayandığı bilgileri koruyacak şekilde düzenleyin. Varsayılan talimat amacı, kararları ve açık konuları korur; bunlar bir destek dökümü veya kod incelemesi için gerekenlerle aynı olmayabilir"
          },
-         "runtime" : {
-            "description" : "Container tabanlı workspace'in hangi ortamda çalışacağı; bağlantının service'inin izin verdiği listeden seçilir. Boşsa bağlantının varsayılanı kullanılır. Image değil, alias girin.",
-            "title" : "Runtime"
+         "context_window" : {
+            "title" : "Bağlam penceresi geçersiz kılması",
+            "description" : "Tetiklemenin esas alacağı pencereyi geçersiz kılar. Chat'in bağlam göstergesinin böldüğü değeri de belirler; böylece ikisi aynı sınırı gösterir. Çözümlenen sayı deployment'ınız için yanlışsa - beta veya katman provider'ın belirttiğinden daha düşük bir değer kullanabilir - ya da Agent'ın modelinin gerektirdiğinden daha erken sıkıştırma yapmasını istiyorsanız ayarlayın"
          },
-         "session_scope" : {
-            "description" : "Tek workspace'i kimlerin paylaşacağı: run (her turda yenisi), conversation (chat'teki veya Slack thread'indeki herkes), channel (tüm Slack kanalı), user (sohbetler arasında tek kişi) veya agent (onunla konuşan herkes).",
-            "title" : "Workspace'i kimlerle paylaş"
+         "fallback_context_window" : {
+            "title" : "Yedek bağlam penceresi",
+            "description" : "Modelin kendi pencere boyutu belirlenemediğinde kullanılacak varsayılan değer"
          }
       },
       "subagents" : {
-         "allow_dynamic" : {
-            "description" : "Agent'ın çalışırken kendi uzmanlarını yazmasına izin verir. Her uzman talimatlardan ve modellerinizden birinden oluşur; tool veya bilgiye sahip olmaz, bu run'ın budget'ını kullanır ve yanıt sonrasında silinir. Her birini önce görmek için `create_agent` onayını zorunlu tutun.",
-            "title" : "Agent'ın uzman oluşturmasına izin ver"
-         },
-         "allow_questions" : {
-            "description" : "Delegate'in tahmin yürütmek yerine bekleyen kişiye soru sormasını sağlar. Yalnızca sync delegation'da ve bu Agent'a verilmiş uzmanlarda çalışır. Soru onay değildir ve onay yetkisi veremez.",
-            "title" : "Delegate'lerin soru sormasına izin ver"
-         },
          "inline" : {
-            "description" : "Kendi Agent'ını yayınlamayı gerektirmeyen işler için bu Agent içinde tanımlanan uzmanlar. Sürüm yönetimi yoktur: Bu Agent'ı düzenlemek uzmanları da değiştirir ve başka hiçbir şey onlara başvuramaz.",
-            "title" : "Satır içi uzmanlar"
-         },
-         "max_depth" : {
-            "description" : "Bu Agent dahil izin verilen delegation katmanı sayısı. 1, Agent'ın delegation yapmasına ama delegate'lerinin yapmamasına izin verir; 2, bir iç içe katman açar. Her katman bir turun yapabileceği istek sayısını çarpar.",
-            "title" : "Delegation derinliği"
-         },
-         "max_fanout" : {
-            "description" : "Aynı anda çalışabilecek delegation sayısı. Sınıra ulaşıldığında sonraki istek hata yerine modelin işleyebileceği bir mesajla reddedilir. Bu sınır, arka plan delegation'larının yeni arka plan delegation'ları başlatıp tek budget üzerinden bir düzine Agent çalıştırmasını önler.",
-            "title" : "Aynı anda delegation sayısı"
-         },
-         "max_result_chars" : {
-            "description" : "Birden fazla yanıt birlikte toplandığında her tamamlanmış delegation yanıtının ne kadarının gösterileceği. Kısaltılan yanıt bunu belirtir ve tamamını döndüren tool'a yönlendirir; böylece hiçbir şey kaybolmaz. Bu yalnızca beş uzmanın çalışmasından ne kadarının tek turun bağlamına ekleneceğini belirler.",
-            "title" : "Delegate başına gösterilen yanıt uzunluğu"
+            "title" : "Satır içi uzmanlar",
+            "description" : "Kendi Agent'ını yayınlamayı gerektirmeyen işler için bu Agent içinde tanımlanan uzmanlar. Sürüm yönetimi yoktur: Bu Agent'ı düzenlemek uzmanları da değiştirir ve başka hiçbir şey onlara başvuramaz."
          },
          "mode" : {
-            "description" : "Sync, delegate'in yanıtını bekler; async yanıtı daha sonra toplar; auto ise modelin görev başına seçim yapmasını sağlar. Arka plan delegation'ı onay bekleyemez; onay gerektiren işleri sync olarak tutun.",
-            "title" : "Delegation modu"
+            "title" : "Delegation modu",
+            "description" : "Sync, delegate'in yanıtını bekler; async yanıtı daha sonra toplar; auto ise modelin görev başına seçim yapmasını sağlar. Arka plan delegation'ı onay bekleyemez; onay gerektiren işleri sync olarak tutun."
+         },
+         "allow_questions" : {
+            "title" : "Delegate'lerin soru sormasına izin ver",
+            "description" : "Delegate'in tahmin yürütmek yerine bekleyen kişiye soru sormasını sağlar. Yalnızca sync delegation'da ve bu Agent'a verilmiş uzmanlarda çalışır. Soru onay değildir ve onay yetkisi veremez."
+         },
+         "allow_dynamic" : {
+            "title" : "Agent'ın uzman oluşturmasına izin ver",
+            "description" : "Agent'ın çalışırken kendi uzmanlarını yazmasına izin verir. Her uzman talimatlardan ve modellerinizden birinden oluşur; tool veya bilgiye sahip olmaz, bu run'ın budget'ını kullanır ve yanıt sonrasında silinir. Her birini önce görmek için `create_agent` onayını zorunlu tutun."
+         },
+         "max_depth" : {
+            "title" : "Delegation derinliği",
+            "description" : "Bu Agent dahil izin verilen delegation katmanı sayısı. 1, Agent'ın delegation yapmasına ama delegate'lerinin yapmamasına izin verir; 2, bir iç içe katman açar. Her katman bir turun yapabileceği istek sayısını çarpar."
+         },
+         "max_fanout" : {
+            "title" : "Aynı anda delegation sayısı",
+            "description" : "Aynı anda çalışabilecek delegation sayısı. Sınıra ulaşıldığında sonraki istek hata yerine modelin işleyebileceği bir mesajla reddedilir. Bu sınır, arka plan delegation'larının yeni arka plan delegation'ları başlatıp tek budget üzerinden bir düzine Agent çalıştırmasını önler."
+         },
+         "max_result_chars" : {
+            "title" : "Delegate başına gösterilen yanıt uzunluğu",
+            "description" : "Birden fazla yanıt birlikte toplandığında her tamamlanmış delegation yanıtının ne kadarının gösterileceği. Kısaltılan yanıt bunu belirtir ve tamamını döndüren tool'a yönlendirir; böylece hiçbir şey kaybolmaz. Bu yalnızca beş uzmanın çalışmasından ne kadarının tek turun bağlamına ekleneceğini belirler."
          },
          "share_with_delegates" : {
-            "description" : "Bu Agent'ın delegate'lerine aktaracağı capability'ler; örneğin birinin dosya yazıp diğerinin okuyabilmesi için paylaşılan workspace. Burada belirtilmeyen hiçbir şey paylaşılmaz ve delegation'ın kendisi hiçbir zaman aktarılmaz.",
-            "title" : "Delegate'lere aktarılan capability'ler"
-         }
-      },
-      "system_reminders" : {
-         "cache_ttl" : {
-            "description" : "Son hatırlatmadan önce konan kesme noktasının cache süresi",
-            "title" : "Prompt cache süresi"
-         },
-         "goal_reanchor" : {
-            "description" : "İlk isteği belirli aralıklarla token maliyeti olmadan yeniden ifade et",
-            "title" : "İlk isteği yeniden belirt"
-         },
-         "llm_reminder" : {
-            "description" : "Belirli aralıklarla modelin yazdığı hatırlatma. Her gösterimde bir ek çağrı maliyeti oluşur",
-            "title" : "Modelin yazdığı hatırlatma"
-         },
-         "reminders" : {
-            "description" : "Belirlenen aralıklarla yinelenen sabit satırlar",
-            "title" : "Sabit hatırlatmalar"
-         }
-      },
-      "text_to_speech" : {
-         "max_characters" : {
-            "description" : "Tek çağrıda seslendirilebilecek en uzun metin; böylece tek çağrının maliyeti sınırlanır.",
-            "title" : "En uzun metin"
-         },
-         "model" : {
-            "description" : "Bu provider'ın sesi hangi modelinin oluşturacağı. Katalog dışındaki model run sırasında değil, burada reddedilir.",
-            "title" : "Konuşma modeli"
-         },
-         "output_format" : {
-            "description" : "mp3 daha küçüktür, wav sıkıştırılmamıştır. Boş bırakılırsa provider'ın ilk biçimi kullanılır; Gemini yalnızca wav döndürür.",
-            "title" : "Dosya biçimi"
-         },
-         "provider" : {
-            "description" : "Sesi hangi provider'ın üreteceği. Sunulanlar: key'i Vault'ta saklanabilen `app/core/catalog/text_to_speech_models.json` provider'ları.",
-            "title" : "Provider"
-         },
-         "voice" : {
-            "description" : "Agent başka bir ses seçmezse kullanılacak ses; boşsa modelin ilk sesi. ElevenLabs sesleri hesabınıza aittir; bu provider için voice library'deki voice id'yi yapıştırın.",
-            "title" : "Ses"
-         },
-         "voices" : {
-            "description" : "Agent'ın yukarıdaki ses yerine klip başına seçebileceği sesler; örneğin diyalogda anlatıcı ve karakter için. Boş bırakılırsa modelin sunduğu tüm sesleri seçebilir; ElevenLabs için hesabınızdaki her voice id kullanılabilir.",
-            "title" : "İzin verilen sesler"
-         }
-      },
-      "thinking" : {
-         "effort" : {
-            "description" : "Yanıtlamadan önce modelin ne kadar akıl yürüteceği. Provider'ın varsayılanını kullanmak için boş bırakın; provider'da bulunmayan bir düzey en yakın olana eşlenir.",
-            "title" : "Akıl yürütme düzeyi"
+            "title" : "Delegate'lere aktarılan capability'ler",
+            "description" : "Bu Agent'ın delegate'lerine aktaracağı capability'ler; örneğin birinin dosya yazıp diğerinin okuyabilmesi için paylaşılan workspace. Burada belirtilmeyen hiçbir şey paylaşılmaz ve delegation'ın kendisi hiçbir zaman aktarılmaz."
          }
       },
       "tool_output_limits" : {
          "action" : {
-            "description" : "Döndürülen içerik sınırı aştığında uygulanacak işlem",
-            "title" : "Sonuç çok uzunsa"
-         },
-         "max_chars" : {
-            "description" : "Sonuç kısaltılırken veya taşma ya da özet kısaltmaya dönüştüğünde tutulacak karakter sayısı. Ayarlanmazsa sınırı aşmaz",
-            "title" : "Tutulacak karakter sayısı"
-         },
-         "over_tokens" : {
-            "description" : "Sınırı karakter yerine tahmini token sayısıyla ölç",
-            "title" : "Token cinsinden ölç"
-         },
-         "strip_ansi" : {
-            "description" : "Ölçüp kısaltmadan önce metin sonuçlarındaki terminal renk kodlarını kaldır",
-            "title" : "Terminal renklerini kaldır"
-         },
-         "summary_prompt" : {
-            "description" : "'summarize' işlemi için özet çıkaran modele verilecek talimat. Tool'un tam çıktısının ekleneceği `{output}` alanını içermelidir; çıktıyı üreten tool'un adı için `{tool_name}` de kullanılabilir",
-            "title" : "Özet prompt'u"
+            "title" : "Sonuç çok uzunsa",
+            "description" : "Döndürülen içerik sınırı aştığında uygulanacak işlem"
          },
          "threshold" : {
-            "description" : "Üstüne çıkıldığında sonucun kısaltılacağı boyut. Varsayılan olarak karakter sayısıdır; 'token sınırı' açılırsa tahmini token sayısına göre ölçülür ve varsayılanı 15.000'dir",
-            "title" : "Boyut sınırı"
+            "title" : "Boyut sınırı",
+            "description" : "Üstüne çıkıldığında sonucun kısaltılacağı boyut. Varsayılan olarak karakter sayısıdır; 'token sınırı' açılırsa tahmini token sayısına göre ölçülür ve varsayılanı 15.000'dir"
+         },
+         "over_tokens" : {
+            "title" : "Token cinsinden ölç",
+            "description" : "Sınırı karakter yerine tahmini token sayısıyla ölç"
+         },
+         "max_chars" : {
+            "title" : "Tutulacak karakter sayısı",
+            "description" : "Sonuç kısaltılırken veya taşma ya da özet kısaltmaya dönüştüğünde tutulacak karakter sayısı. Ayarlanmazsa sınırı aşmaz"
          },
          "truncation_strategy" : {
-            "description" : "Kısaltırken uzun metnin hangi ucunun veya uçlarının tutulacağı",
-            "title" : "Tutulacak bölüm"
+            "title" : "Tutulacak bölüm",
+            "description" : "Kısaltırken uzun metnin hangi ucunun veya uçlarının tutulacağı"
+         },
+         "strip_ansi" : {
+            "title" : "Terminal renklerini kaldır",
+            "description" : "Ölçüp kısaltmadan önce metin sonuçlarındaki terminal renk kodlarını kaldır"
+         },
+         "summary_prompt" : {
+            "title" : "Özet prompt'u",
+            "description" : "'summarize' işlemi için özet çıkaran modele verilecek talimat. Tool'un tam çıktısının ekleneceği `{output}` alanını içermelidir; çıktıyı üreten tool'un adı için `{tool_name}` de kullanılabilir"
+         }
+      },
+      "channel_tools" : {
+         "tools" : {
+            "title" : "İzin verilen aramalar",
+            "description" : "Bu bağlantının tool id'lerine göre izin verdiği kanal aramaları. Boş değer hiçbirine izin vermez; bağlantı başlangıçta böyledir."
+         },
+         "default_limit" : {
+            "title" : "Sayı belirtilmediğinde sonuç sayısı",
+            "description" : "Model sayı istemediğinde döndürülecek üye, arama sonucu veya mesaj sayısı"
+         }
+      },
+      "clock" : {
+         "timezone" : {
+            "title" : "Saat dilimi",
+            "description" : "Agent'ın kullandığı IANA saat dilimi; ör. Europe/Warsaw"
+         }
+      },
+      "code_execution" : {
+         "timeout_secs" : {
+            "title" : "Çağrı başına süre sınırı (saniye)",
+            "description" : "Tek bir çağrı için saniye cinsinden gerçek zaman bütçesi"
+         },
+         "max_memory_mb" : {
+            "title" : "Çağrı başına bellek sınırı (MB)",
+            "description" : "Megabayt cinsinden bellek sınırı"
+         }
+      },
+      "context" : {
+         "expose_read_tool" : {
+            "title" : "Agent'ın bağlantılı dosyaları açmasına izin ver",
+            "description" : "Link modundaki dosyalara read tool ile erişilip erişilemeyeceği. Kapalıysa modele yalnızca eklenen dosyalar ulaşır; isteğe bağlı dosya okunmaz."
+         },
+         "file_settings" : {
+            "title" : "Her dosyanın kullanım biçimi",
+            "description" : "Eklenmiş context dosyalarının Agent başına modu ve kullanılabilirliği. Bir kayıt yoksa dosyanın eski varsayılanı korunur."
+         }
+      },
+      "conversation_search" : {
+         "max_results" : {
+            "title" : "Arama başına konuşma",
+            "description" : "Tek bir aramanın döndürebileceği en fazla konuşma sayısı. Her biri kısa bir pasaj içerir; yüksek sayı her aramada context kullanımını artırır."
+         }
+      },
+      "image_generation" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Görseli hangi provider'ın modelinin oluşturacağı. Yalnızca image tool'u desteklediği bilinen üç provider kabul edilir; hangileri oldukları burada listelenmek yerine SDK'ya sorulur."
+         },
+         "model" : {
+            "title" : "Görsel modeli",
+            "description" : "Bu provider'ın hangi görsel modelinin kullanacağı; kimlikler `app/core/catalog/image_models.json` içindedir. Katalog dışındaki model reddedilir: çizemeyen bir modele tool verilirse yazar bunu ancak run sırasında hata olarak görür."
+         },
+         "quality" : {
+            "title" : "Kalite",
+            "description" : "Oluşturma kalitesi; yüksek değer daha yavaş ve pahalıdır."
+         },
+         "size" : {
+            "title" : "Boyut",
+            "description" : "Çıktı boyutu. OpenAI piksel değerlerini, Google K değerlerini kullanır."
+         },
+         "background" : {
+            "title" : "Arka plan",
+            "description" : "Arka plan türü; saydam arka plan için png veya webp çıktısı gerekir."
+         },
+         "output_format" : {
+            "title" : "Dosya biçimi",
+            "description" : "Görsel dosyasının biçimi."
+         },
+         "aspect_ratio" : {
+            "title" : "En-boy oranı",
+            "description" : "16:9 veya 1:1 gibi en-boy oranı."
+         }
+      },
+      "media" : {
+         "threshold_bytes" : {
+            "title" : "Şu boyuttan büyük parçaları sakla (bayt)",
+            "description" : "Bu boyuttaki veya daha büyük ikili ya da metin parçaları depolamaya yazılır ve saklanan geçmişte yerlerine bir referans konur."
+         }
+      },
+      "memory_files" : {
+         "allow_personal" : {
+            "title" : "Kişi başına özel not tut",
+            "description" : "Agent'ın konuştuğu her kişi için özel not tutup tutmayacağı; notlar yalnızca o kişiyle baş başayken okunabilir. Uyumluluk veya gizlilik için kapatmak bu depoyu tümüyle devre dışı bırakır; grup sohbetlerinde tutulan notlar kalır."
+         }
+      },
+      "memory_mem0" : {
+         "base_url" : {
+            "title" : "Kendi barındırdığınız mem0 URL'si",
+            "description" : "Kendi barındırdığınız mem0'ın temel URL'si; mem0'ın yönetilen cloud hizmeti için boş bırakın."
+         },
+         "allow_personal" : {
+            "title" : "Kişi başına özel anı tut",
+            "description" : "Agent'ın konuştuğu her kişi için özel anı tutup tutmayacağı; yalnızca o kişiyle baş başayken okunabilir. Uyumluluk veya gizlilik için kapatmak bu depoyu devre dışı bırakır; grup sohbeti anıları kalır."
+         }
+      },
+      "planning" : {
+         "enable_subtasks" : {
+            "title" : "Alt görevler ve bağımlılıklar",
+            "description" : "Alt görevler ve bağımlılıklar ekler: önceki adımlar bitene kadar bir adım engellenmiş olarak bekler. Düz bir kontrol listesi çoğu iş için yeterli olduğundan varsayılan olarak kapalıdır."
+         },
+         "cache_ttl" : {
+            "title" : "Eski prompt cache süresi",
+            "description" : "Mevcut Agent spec'lerinin yüklenmeye devam etmesi için tutulur. Planning artık bu değeri kullanmaz; prompt cache ayarını model ayarlarında yapılandırın."
+         }
+      },
+      "sandbox" : {
+         "backend" : {
+            "title" : "Dosyaların konumu",
+            "description" : "state: yalnızca dosyalar, shell yok; platformda saklanır ve ek service gerektirmeden her deployment'ta çalışır. service: kuruluşun kaydettiği bağlantılardan birindeki container veya cloud sandbox. local: kişi desktop chat'te kendi bilgisayarını seçip onaylar; bu spec'te makine yolu veya yerel onay saklanmaz."
+         },
+         "connection_id" : {
+            "title" : "Sandbox bağlantısı",
+            "description" : "Kullanılacak kayıtlı sandbox bağlantısı; boşsa kuruluşun varsayılanı alınır. Adres veya token değil, yalnızca bir id: spec müşterinin git repository'sine aktarılabileceğinden sadece referans taşıyabilir. Bağlantı, çalıştırdığınız host'taki container'ı mı yoksa Daytona cloud'daki sandbox'ı mı kullanacağını belirler."
+         },
+         "session_scope" : {
+            "title" : "Workspace'i kimlerle paylaş",
+            "description" : "Tek workspace'i kimlerin paylaşacağı: run (her turda yenisi), conversation (chat'teki veya Slack thread'indeki herkes), channel (tüm Slack kanalı), user (sohbetler arasında tek kişi) veya agent (onunla konuşan herkes)."
+         },
+         "runtime" : {
+            "title" : "Runtime",
+            "description" : "Container tabanlı workspace'in hangi ortamda çalışacağı; bağlantının service'inin izin verdiği listeden seçilir. Boşsa bağlantının varsayılanı kullanılır. Image değil, alias girin."
+         },
+         "include_execute" : {
+            "title" : "Shell komutlarına izin ver",
+            "description" : "Agent'ın shell komutu çalıştırıp çalıştıramayacağı. Kapatmak file tool'larını bırakır ve shell'i koşula bağlamak yerine tamamen kaldırır."
+         }
+      },
+      "system_reminders" : {
+         "reminders" : {
+            "title" : "Sabit hatırlatmalar",
+            "description" : "Belirlenen aralıklarla yinelenen sabit satırlar"
+         },
+         "goal_reanchor" : {
+            "title" : "İlk isteği yeniden belirt",
+            "description" : "İlk isteği belirli aralıklarla token maliyeti olmadan yeniden ifade et"
+         },
+         "llm_reminder" : {
+            "title" : "Modelin yazdığı hatırlatma",
+            "description" : "Belirli aralıklarla modelin yazdığı hatırlatma. Her gösterimde bir ek çağrı maliyeti oluşur"
+         },
+         "cache_ttl" : {
+            "title" : "Prompt cache süresi",
+            "description" : "Son hatırlatmadan önce konan kesme noktasının cache süresi"
+         }
+      },
+      "thinking" : {
+         "effort" : {
+            "title" : "Akıl yürütme düzeyi",
+            "description" : "Yanıtlamadan önce modelin ne kadar akıl yürüteceği. Provider'ın varsayılanını kullanmak için boş bırakın; provider'da bulunmayan bir düzey en yakın olana eşlenir."
          }
       },
       "tool_search" : {
-         "defer_capabilities" : {
-            "description" : "Etkin capability’lerin uygun tool’larını agent arayana kadar gizler. Kapatıldığında capability tool’ları görünür kalır.",
-            "title" : "Capability tool’larını ertele"
-         },
-         "defer_mcp_servers" : {
-            "description" : "Bağlı MCP server’ların uygun tool’larını agent arayana kadar gizler. Kapatıldığında MCP tool’ları görünür kalır.",
-            "title" : "MCP tool’larını ertele"
-         },
-         "exclude_capabilities" : {
-            "description" : "Tool’ları görünür kalacak capability kimliklerini virgülle ayırın; ör. knowledge veya visuals. Bu capability’lerin yine de etkin olması gerekir.",
-            "title" : "Her zaman görünür capability’ler"
-         },
-         "exclude_mcp_servers" : {
-            "description" : "Tool’ları görünür kalacak MCP tool ad alanı öneklerini virgülle ayırın; ör. github_work veya agenticos. Tool adından önceki öneki kullanın ve kısa çizgileri alt çizgiyle değiştirin.",
-            "title" : "Her zaman görünür MCP server’lar"
-         },
-         "exclude_tools" : {
-            "description" : "Görünür kalacak tool’ların modelin gördüğü adlarını virgülle ayırın. Yeniden adlandırılan capability tool adlarını ve tam önekli MCP tool adlarını kullanın; ör. github_work_list_issues.",
-            "title" : "Her zaman görünür tool’lar"
+         "strategy" : {
+            "title" : "Arama yöntemi",
+            "description" : "auto: destekleyen provider'da native tool search, diğerlerinde yerel anahtar sözcük eşleştirmesi. keywords: tüm provider'larda daima yerel eşleştirme. bm25 / regex: Anthropic'e özgü algoritmayı zorlar; native tool search olmayan provider'da hata verir."
          },
          "max_results" : {
-            "description" : "Yerel aramanın döndüreceği eşleşme sayısı; native search'te kullanılmaz.",
-            "title" : "Arama başına eşleşme"
+            "title" : "Arama başına eşleşme",
+            "description" : "Yerel aramanın döndüreceği eşleşme sayısı; native search'te kullanılmaz."
          },
-         "strategy" : {
-            "description" : "auto: destekleyen provider'da native tool search, diğerlerinde yerel anahtar sözcük eşleştirmesi. keywords: tüm provider'larda daima yerel eşleştirme. bm25 / regex: Anthropic'e özgü algoritmayı zorlar; native tool search olmayan provider'da hata verir.",
-            "title" : "Arama yöntemi"
-         }
-      },
-      "video_generation" : {
-         "alibaba_region" : {
-            "description" : "Yalnızca Alibaba için: workspace'in bulunduğu bölge.",
-            "title" : "Alibaba bölgesi"
+         "defer_capabilities" : {
+            "title" : "Capability tool’larını ertele",
+            "description" : "Etkin capability’lerin uygun tool’larını agent arayana kadar gizler. Kapatıldığında capability tool’ları görünür kalır."
          },
-         "alibaba_workspace" : {
-            "description" : "Yalnızca Alibaba için: Wan 3.0'ın çağrıldığı Model Studio workspace id'si. Boş bırakılırsa Alibaba'nın mevcut entegrasyonlar için koruduğu paylaşılan DashScope endpoint'i kullanılır.",
-            "title" : "Alibaba workspace'i"
+         "defer_mcp_servers" : {
+            "title" : "MCP tool’larını ertele",
+            "description" : "Bağlı MCP server’ların uygun tool’larını agent arayana kadar gizler. Kapatıldığında MCP tool’ları görünür kalır."
          },
-         "aspect_ratio" : {
-            "description" : "Agent başka bir oran istemezse klibin biçimi; boşsa modelin ilk seçeneği.",
-            "title" : "En-boy oranı"
+         "exclude_capabilities" : {
+            "title" : "Her zaman görünür capability’ler",
+            "description" : "Tool’ları görünür kalacak capability kimliklerini virgülle ayırın; ör. knowledge veya visuals. Bu capability’lerin yine de etkin olması gerekir."
          },
-         "audio" : {
-            "description" : "Model seçeneği destekliyorsa Agent aksini istemedikçe klibin ses taşıyıp taşımayacağı; boşsa provider'ın varsayılanı.",
-            "title" : "Ses"
+         "exclude_mcp_servers" : {
+            "title" : "Her zaman görünür MCP server’lar",
+            "description" : "Tool’ları görünür kalacak MCP tool ad alanı öneklerini virgülle ayırın; ör. github_work veya agenticos. Tool adından önceki öneki kullanın ve kısa çizgileri alt çizgiyle değiştirin."
          },
-         "max_resolution" : {
-            "description" : "Agent'ın isteyebileceği en yüksek çözünürlük; en azından olağan çözünürlük kadar olmalıdır ve saniye başına maliyeti sınırlar. Boş bırakılırsa Agent modelin oluşturabildiği herhangi bir çözünürlüğü isteyebilir.",
-            "title" : "En yüksek çözünürlük"
-         },
-         "max_seconds" : {
-            "description" : "Agent'ın isteyebileceği en uzun klip; tek çağrının maliyetini sınırlar. Boş bırakılırsa modelin kendi sınırı kullanılır. Kendi uzunluğuna karar veren modellerde kullanılmaz.",
-            "title" : "En uzun klip"
-         },
-         "model" : {
-            "description" : "Bu provider'ın hangi video modelinin klibi oluşturacağı. Katalog dışındaki model run sırasında değil, burada reddedilir.",
-            "title" : "Video modeli"
-         },
-         "provider" : {
-            "description" : "Videoyu hangi provider'ın modelinin oluşturacağı. Sunulanlar: key'i Vault'ta saklanabilen `app/core/catalog/video_models.json` provider'ları.",
-            "title" : "Provider"
-         },
-         "resolution" : {
-            "description" : "Agent başka bir çözünürlük istemezse klibin oluşturulacağı çözünürlük; boşsa modelin ilk seçeneği. Yüksek çözünürlük saniye başına daha pahalıdır.",
-            "title" : "Çözünürlük"
-         },
-         "seconds" : {
-            "description" : "Agent başka bir uzunluk istemezse klibin saniye cinsinden uzunluğu; boşsa beş saniye veya modelin desteklediği en yakın değer. Kendi uzunluğuna karar veren modellerde kullanılmaz.",
-            "title" : "Uzunluk"
-         },
-         "timeout_seconds" : {
-            "description" : "Bir klip için saniye cinsinden beklenecek süre. O zamana kadar bitmeyen iş, provider izin veriyorsa iptal edilir ve tahmini maliyeti üzerinden hesaba katılır.",
-            "title" : "Süre sınırı"
+         "exclude_tools" : {
+            "title" : "Her zaman görünür tool’lar",
+            "description" : "Görünür kalacak tool’ların modelin gördüğü adlarını virgülle ayırın. Yeniden adlandırılan capability tool adlarını ve tam önekli MCP tool adlarını kullanın; ör. github_work_list_issues."
          }
       },
       "web_fetch" : {
-         "allowed_domains" : {
-            "description" : "Agent'ın fetch edebileceği yalın host adları; ör. docs.example.com. Boşsa tümüne izin verilir. Tam eşleşme aranır; wildcard ve alt domain kullanılmaz.",
-            "title" : "İzin verilen domain'ler"
-         },
-         "blocked_domains" : {
-            "description" : "Agent'ın hiçbir zaman fetch edemeyeceği yalın host adları; tam eşleşme aranır.",
-            "title" : "Engellenen domain'ler"
+         "method" : {
+            "title" : "Sayfalar nasıl getirilsin",
+            "description" : "local: her modelde aynı şekilde sayfayı biz getiririz. native: model provider'ı kendi çıkış bağlantısını ve kaynaklarını kullanarak getirir (yalnızca destekleyen modellerde). auto: model destekliyorsa native, aksi halde yerel yöntem."
          },
          "max_content_chars" : {
-            "description" : "Kısaltılmadan önce tek fetch çağrısının döndüreceği sayfa metni; yaklaşık token başına dört karakterdir. Provider'ın kendisinin sınırladığı native fetch'te kullanılmaz.",
-            "title" : "Sayfa uzunluğu sınırı (karakter)"
+            "title" : "Sayfa uzunluğu sınırı (karakter)",
+            "description" : "Kısaltılmadan önce tek fetch çağrısının döndüreceği sayfa metni; yaklaşık token başına dört karakterdir. Provider'ın kendisinin sınırladığı native fetch'te kullanılmaz."
          },
-         "method" : {
-            "description" : "local: her modelde aynı şekilde sayfayı biz getiririz. native: model provider'ı kendi çıkış bağlantısını ve kaynaklarını kullanarak getirir (yalnızca destekleyen modellerde). auto: model destekliyorsa native, aksi halde yerel yöntem.",
-            "title" : "Sayfalar nasıl getirilsin"
+         "allowed_domains" : {
+            "title" : "İzin verilen domain'ler",
+            "description" : "Agent'ın fetch edebileceği yalın host adları; ör. docs.example.com. Boşsa tümüne izin verilir. Tam eşleşme aranır; wildcard ve alt domain kullanılmaz."
+         },
+         "blocked_domains" : {
+            "title" : "Engellenen domain'ler",
+            "description" : "Agent'ın hiçbir zaman fetch edemeyeceği yalın host adları; tam eşleşme aranır."
          }
       },
       "web_research" : {
-         "max_results" : {
-            "description" : "Tek bir aramanın döndüreceği sonuç sayısı; native search'te kullanılmaz.",
-            "title" : "Arama başına sonuç"
-         },
          "method" : {
-            "description" : "duckduckgo: ücretsiz, hesap gerektirmez, sonuçlar tıklanabilir kaynaklar olarak gösterilir. native: model provider'ı kendi dizini ve kaynaklarıyla arar (yalnızca destekleyen modellerde). tavily: modelin okuyabilmesi için sonuçları özetler. brave: kendi dizinini kullanır. exa: anahtar sözcük yerine anlam üzerinden arar.",
-            "title" : "Arama motoru"
+            "title" : "Arama motoru",
+            "description" : "duckduckgo: ücretsiz, hesap gerektirmez, sonuçlar tıklanabilir kaynaklar olarak gösterilir. native: model provider'ı kendi dizini ve kaynaklarıyla arar (yalnızca destekleyen modellerde). tavily: modelin okuyabilmesi için sonuçları özetler. brave: kendi dizinini kullanır. exa: anahtar sözcük yerine anlam üzerinden arar."
+         },
+         "max_results" : {
+            "title" : "Arama başına sonuç",
+            "description" : "Tek bir aramanın döndüreceği sonuç sayısı; native search'te kullanılmaz."
+         }
+      },
+      "coding_agent" : {
+         "harness" : {
+            "title" : "Kodlama Agent'ı",
+            "description" : "İşi hangi kodlama Agent'ının yapacağı: Anthropic key'i veya Claude abonelik token'ı kullanan Claude Code ya da OpenAI key'i veya ChatGPT oturumu kullanan Codex."
+         },
+         "access" : {
+            "title" : "Neler yapabilir?",
+            "description" : "Test gibi komutları çalıştırıp dosyaları değiştirebilir ya da yalnızca kodu okuyup yanıtlayabilir. Her durumda, her görevden önce sormak için Human approval'ı ayarlayın."
+         },
+         "model" : {
+            "title" : "Model",
+            "description" : "Kodlama Agent'ının çalıştırdığı model: Claude Code için Claude, Codex için OpenAI modeli. Boş bırakılırsa kodlama Agent'ının kendi varsayılanı kullanılır. Kendi ayarını kullandığı bu bilgisayarda kullanılamaz."
+         },
+         "base_url" : {
+            "title" : "Anthropic uyumlu endpoint",
+            "description" : "Yalnızca Claude Code için: https://openrouter.ai/api gibi Anthropic API'siyle konuşan bir gateway. Vault'taki key bu gateway'e ait olmalı. Boşsa doğrudan Anthropic'e istek gönderilir."
+         },
+         "timeout_minutes" : {
+            "title" : "Süre sınırı (dakika)",
+            "description" : "Durdurulmadan önce tek bir görevin ne kadar çalışabileceği."
+         },
+         "runs_on" : {
+            "title" : "Nerede çalışır",
+            "description" : "Burada saklanan key ile Agent'ın kendi sandbox'ında ya da kişinin desktop app'te kendi bilgisayarından seçtiği klasörde çalışır. İkinci durumda Claude Code ve Codex mevcut oturum açma bilgilerini kullanır, key gerekmez.",
+            "options" : {
+               "personal_sandbox" : {
+                  "label" : "Hesabımla özel bulut görevi",
+                  "description" : "Profil hesabını yalıtılmış bir konteynerde kullanır. İncelenecek fark ve sonuç arşivi döndürür; paylaşılan dosyalar değişmez.",
+                  "summary" : "Profil hesabını yalıtılmış bir konteynerde kullanır. İncelenecek fark ve sonuç arşivi döndürür; paylaşılan dosyalar değişmez."
+               }
+            }
+         }
+      },
+      "harness" : {
+         "harness" : {
+            "title" : "Komut satırı aracı",
+            "description" : "Agent'ın işini yapan CLI oturumu: Claude Code, Codex, OpenCode, Gemini CLI veya Pi."
+         },
+         "access" : {
+            "title" : "Erişim",
+            "description" : "Aracın Agent'ın sandbox'ında yapabilecekleri: yalnızca kod okumak ya da kodu değiştirmek ve komut çalıştırmak."
+         },
+         "model" : {
+            "title" : "Model",
+            "description" : "Aracın kullandığı model: Claude Code için Claude, Codex için OpenAI, Gemini CLI için Gemini modeli; OpenCode veya Pi için ise bu sağlayıcılardan herhangi birinin modeli. Boş bırakılırsa aracın kendi varsayılan modeli kullanılır."
+         },
+         "base_url" : {
+            "title" : "Anthropic uyumlu endpoint",
+            "description" : "Yalnızca Claude Code için: https://openrouter.ai/api gibi Anthropic API'siyle konuşan bir gateway. Vault'taki key bu gateway'e ait olmalı. Boşsa doğrudan Anthropic'e istek gönderilir."
+         },
+         "timeout_minutes" : {
+            "title" : "Prompt süre sınırı (dakika)",
+            "description" : "Tek bir prompt'un durdurulmadan önce ne kadar çalışabileceği. Oturum açık kalır."
          }
       },
       "workflows" : {
-         "wait_seconds" : {
-            "description" : "run_workflow tamamlanmış bir run'ın id'sini daha sonra okunmak üzere döndürmeden önce ne kadar bekler.",
-            "title" : "Run için beklenecek süre (saniye)"
-         },
          "workflow_ids" : {
-            "description" : "Elle, API üzerinden veya bir çağrıyla başlatılabilen yayınlanmış workflow'lar.",
-            "title" : "Başlatabileceği workflow'lar"
+            "title" : "Başlatabileceği workflow'lar",
+            "description" : "Elle, API üzerinden veya bir çağrıyla başlatılabilen yayınlanmış workflow'lar."
+         },
+         "wait_seconds" : {
+            "title" : "Run için beklenecek süre (saniye)",
+            "description" : "run_workflow tamamlanmış bir run'ın id'sini daha sonra okunmak üzere döndürmeden önce ne kadar bekler."
+         }
+      },
+      "artifacts" : {
+         "preview_screenshot" : {
+            "title" : "Sayfanın görselini modele göster",
+            "description" : "Model bir sayfayı önizlediğinde sayfanın görselini modele iletir. Görsel okuyamayan bir model için kapatın; yazılı rapor yine döner."
+         }
+      },
+      "text_to_speech" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Sesi hangi provider'ın üreteceği. Sunulanlar: key'i Vault'ta saklanabilen `app/core/catalog/text_to_speech_models.json` provider'ları."
+         },
+         "model" : {
+            "title" : "Konuşma modeli",
+            "description" : "Bu provider'ın sesi hangi modelinin oluşturacağı. Katalog dışındaki model run sırasında değil, burada reddedilir."
+         },
+         "voice" : {
+            "title" : "Ses",
+            "description" : "Agent başka bir ses seçmezse kullanılacak ses; boşsa modelin ilk sesi. ElevenLabs sesleri hesabınıza aittir; bu provider için voice library'deki voice id'yi yapıştırın."
+         },
+         "voices" : {
+            "title" : "İzin verilen sesler",
+            "description" : "Agent'ın yukarıdaki ses yerine klip başına seçebileceği sesler; örneğin diyalogda anlatıcı ve karakter için. Boş bırakılırsa modelin sunduğu tüm sesleri seçebilir; ElevenLabs için hesabınızdaki her voice id kullanılabilir."
+         },
+         "output_format" : {
+            "title" : "Dosya biçimi",
+            "description" : "mp3 daha küçüktür, wav sıkıştırılmamıştır. Boş bırakılırsa provider'ın ilk biçimi kullanılır; Gemini yalnızca wav döndürür."
+         },
+         "max_characters" : {
+            "title" : "En uzun metin",
+            "description" : "Tek çağrıda seslendirilebilecek en uzun metin; böylece tek çağrının maliyeti sınırlanır."
+         }
+      },
+      "video_generation" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Videoyu hangi provider'ın modelinin oluşturacağı. Sunulanlar: key'i Vault'ta saklanabilen `app/core/catalog/video_models.json` provider'ları."
+         },
+         "model" : {
+            "title" : "Video modeli",
+            "description" : "Bu provider'ın hangi video modelinin klibi oluşturacağı. Katalog dışındaki model run sırasında değil, burada reddedilir."
+         },
+         "resolution" : {
+            "title" : "Çözünürlük",
+            "description" : "Agent başka bir çözünürlük istemezse klibin oluşturulacağı çözünürlük; boşsa modelin ilk seçeneği. Yüksek çözünürlük saniye başına daha pahalıdır."
+         },
+         "max_resolution" : {
+            "title" : "En yüksek çözünürlük",
+            "description" : "Agent'ın isteyebileceği en yüksek çözünürlük; en azından olağan çözünürlük kadar olmalıdır ve saniye başına maliyeti sınırlar. Boş bırakılırsa Agent modelin oluşturabildiği herhangi bir çözünürlüğü isteyebilir."
+         },
+         "aspect_ratio" : {
+            "title" : "En-boy oranı",
+            "description" : "Agent başka bir oran istemezse klibin biçimi; boşsa modelin ilk seçeneği."
+         },
+         "seconds" : {
+            "title" : "Uzunluk",
+            "description" : "Agent başka bir uzunluk istemezse klibin saniye cinsinden uzunluğu; boşsa beş saniye veya modelin desteklediği en yakın değer. Kendi uzunluğuna karar veren modellerde kullanılmaz."
+         },
+         "max_seconds" : {
+            "title" : "En uzun klip",
+            "description" : "Agent'ın isteyebileceği en uzun klip; tek çağrının maliyetini sınırlar. Boş bırakılırsa modelin kendi sınırı kullanılır. Kendi uzunluğuna karar veren modellerde kullanılmaz."
+         },
+         "audio" : {
+            "title" : "Ses",
+            "description" : "Model seçeneği destekliyorsa Agent aksini istemedikçe klibin ses taşıyıp taşımayacağı; boşsa provider'ın varsayılanı."
+         },
+         "alibaba_workspace" : {
+            "title" : "Alibaba workspace'i",
+            "description" : "Yalnızca Alibaba için: Wan 3.0'ın çağrıldığı Model Studio workspace id'si. Boş bırakılırsa Alibaba'nın mevcut entegrasyonlar için koruduğu paylaşılan DashScope endpoint'i kullanılır."
+         },
+         "alibaba_region" : {
+            "title" : "Alibaba bölgesi",
+            "description" : "Yalnızca Alibaba için: workspace'in bulunduğu bölge."
+         },
+         "timeout_seconds" : {
+            "title" : "Süre sınırı",
+            "description" : "Bir klip için saniye cinsinden beklenecek süre. O zamana kadar bitmeyen iş, provider izin veriyorsa iptal edilir ve tahmini maliyeti üzerinden hesaba katılır."
+         }
+      },
+      "follow_ups" : {
+         "model_profile_id" : {
+            "title" : "Sonraki adımlar için model",
+            "description" : "Yanıt kaydedildikten sonra arka planda sonraki adım düğmelerini yazan ayrı model profili. Yanıtı veya sonraki mesajı geciktirmez. Küçük ve ucuz bir model yeterlidir. Boş bırakılırsa sonraki adım önerileri kapanır."
+         }
+      },
+      "computer_use" : {
+         "desktop" : {
+            "title" : "Ortam",
+            "description" : "Bu Agent'ın masaüstünü hangi ortamda kullanacağını seçin. Seçilen ortamın gereksinimleri aşağıda gösterilir."
+         },
+         "daemon_url" : {
+            "title" : "Daemon URL'si",
+            "description" : "Masaüstünüzün computerd endpoint'i. Host adı COMPUTER_DAEMON_ALLOWED_HOSTS içinde olmalıdır."
+         },
+         "screen_width" : {
+            "title" : "Ekran görüntüsü genişliği",
+            "description" : "Modele gösterilen en geniş ekran görüntüsü; daha geniş ekranlar sığacak şekilde küçültülür."
+         },
+         "screen_height" : {
+            "title" : "Ekran görüntüsü yüksekliği",
+            "description" : "Modele gösterilen en yüksek ekran görüntüsü."
+         },
+         "max_actions_per_call" : {
+            "title" : "Çağrı başına işlem",
+            "description" : "Tek bir çağrının gönderebileceği işlem sayısı."
+         },
+         "max_actions" : {
+            "title" : "Run başına işlem",
+            "description" : "Tek bir run'ın toplamda yapabileceği işlem sayısı."
+         },
+         "preview" : {
+            "title" : "Canlı önizleme",
+            "description" : "Agent masaüstünde çalışırken görüntüyü chat'te canlı göster."
          }
       }
    },
@@ -8107,108 +8129,106 @@
       }
    },
    "onboardingSetup" : {
-      "appsDescription" : "Kullandığınız araçları Composio üzerinden bağlayın. Her uygulamayı seçin ve erişim izni vermeden önce istediği izinleri inceleyin.",
-      "appsTitle" : "Uygulamalarınızı bağlayın",
-      "connectApps" : "Uygulamaları bağla",
-      "continueToWorkspace" : "Workspace alanına geç",
+      "title" : "{appName} uygulamasına hoş geldiniz",
       "description" : "Kendi hızınızda başlayın. Şimdi bir uygulama bağlayın veya doğrudan workspace alanınıza geçin.",
-      "opensNewTab" : "Yeni bir sekmede açılır. Hazır olduğunuzda buraya dönün.",
+      "appsTitle" : "Uygulamalarınızı bağlayın",
       "optional" : "İsteğe bağlı",
-      "skipHint" : "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Bağlantılar → Uygulamalar bölümünden yapabilirsiniz.",
-      "title" : "{appName} uygulamasına hoş geldiniz"
+      "appsDescription" : "Kullandığınız araçları Composio üzerinden bağlayın. Her uygulamayı seçin ve erişim izni vermeden önce istediği izinleri inceleyin.",
+      "connectApps" : "Uygulamaları bağla",
+      "opensNewTab" : "Yeni bir sekmede açılır. Hazır olduğunuzda buraya dönün.",
+      "skipHint" : "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Bağlantılar → Uygulamalar bölümünden yapabilirsiniz."
    },
    "onboardingTeam" : {
-      "addSpecialist" : "Uzman ekle",
-      "appsDescription" : "Araçlarınızı Composio üzerinden yetkilendirin.",
-      "appsOptional" : "İsteğe bağlı",
+      "step1Title" : "Siz ve işiniz hakkında",
+      "step1Subtitle" : "Doğru uzman agent'ları önerebilmemiz için rolünüz hakkında biraz bilgi verin.",
+      "roleLabel" : "Rolünüz nedir?",
+      "industryLabel" : "Hangi sektörde veya alanda çalışıyorsunuz?",
+      "teamSizeLabel" : "Takım büyüklüğü",
+      "step2Title" : "Yapay zeka ekibiniz neleri üstlensin?",
+      "step2Subtitle" : "Devretmek veya hızlandırmak istediğiniz iş akışlarını seçin.",
+      "goalsLabel" : "Öncelikli alanlar",
+      "detailsLabel" : "İş akışınız hakkında daha fazla bilgi verin (isteğe bağlı)",
+      "detailsPlaceholder" : "ör. Çok sayıda müşteri sorusu alıyoruz ve haftalık bülten hazırlıyoruz...",
+      "step3Title" : "Araçlar ve entegrasyonlar",
+      "step3Subtitle" : "Ekibinizin her gün kullandığı araçları seçin. Şimdi veya daha sonra bağlayabilirsiniz.",
+      "toolsInStack" : "Kullandığınız araçlar",
       "appsTitle" : "Uygulama ve araçları bağla",
-      "back" : "Geri",
+      "appsOptional" : "İsteğe bağlı",
+      "appsDescription" : "Araçlarınızı Composio üzerinden yetkilendirin.",
       "connectApps" : "Uygulamaları bağla",
-      "continue" : "Devam et",
+      "opensNewTab" : "Yeni sekmede açılır.",
+      "skipHint" : "Uygulama bağlamak tamamen isteğe bağlıdır.",
+      "step4Title" : "Önerilen yapay zeka ekibiniz",
+      "step4Subtitle" : "İşte ekip yapınız. Takım lideriniz görevleri koordine eder ve uzmanlara devreder.",
+      "leadBadge" : "Takım Lideri ve Orkestratör",
+      "starterPromptsHeader" : "Örnek başlangıç soruları",
+      "specialistsTitle" : "Uzman agent'lar",
+      "addSpecialist" : "Uzman ekle",
+      "removeSpecialist" : "Kaldır",
+      "selectTemplate" : "Şablon seç",
       "deployTeam" : "Ekibimi oluştur ve dağıt",
+      "deployingTitle" : "Yapay zeka ekibiniz kuruluyor...",
+      "deployingSubtitle" : "Modeller, delegasyon kanalları ve çalışma alanı kuruluyor...",
       "deployingStep1" : "Uzman agent özellikleri hazırlanıyor...",
       "deployingStep2" : "Yetenekler ve araçlar bağlanıyor...",
       "deployingStep3" : "Delegasyon hiyerarşisi kuruluyor...",
       "deployingStep4" : "Sohbette ekip çalışma alanı açılıyor...",
-      "deployingSubtitle" : "Modeller, delegasyon kanalları ve çalışma alanı kuruluyor...",
-      "deployingTitle" : "Yapay zeka ekibiniz kuruluyor...",
-      "detailsLabel" : "İş akışınız hakkında daha fazla bilgi verin (isteğe bağlı)",
-      "detailsPlaceholder" : "ör. Çok sayıda müşteri sorusu alıyoruz ve haftalık bülten hazırlıyoruz...",
       "errorTitle" : "Bir sorun oluştu",
+      "tryAgain" : "Tekrar Dene",
+      "teamMembersCreated" : "Oluşturulan Ekip Üyeleri",
+      "successTitle" : "Yapay zeka ekibiniz hazır!",
+      "successSubtitle" : "Takım lideriniz ve uzmanlarınız oluşturuldu ve birbirine bağlandı.",
+      "startChat" : "Takım Lideri ile sohbet et",
+      "viewAgents" : "Ekibi Agent'lar sayfasında gör",
+      "skip" : "Şimdilik atla",
+      "back" : "Geri",
+      "continue" : "Devam et",
       "generating" : "Oluşturuluyor...",
       "generatingProposal" : "Profiliniz analiz ediliyor ve ekip önerisi oluşturuluyor...",
-      "goals" : {
-         "automation" : "Süreç ve İş Akışı Otomasyonu",
-         "content" : "İçerik Yazımı ve Ürün Metinleri",
-         "contracts" : "Sözleşme ve Politika İncelemesi",
-         "data" : "Veri Analizi ve Raporlama",
-         "docs" : "Dokümantasyon ve Bilgi Bankası",
-         "incidents" : "Olay Müdahalesi ve Teşhis",
-         "meetings" : "Toplantı Notları ve Kararları",
-         "releases" : "Sürüm Notları ve Değişiklik Günlüğü",
-         "research" : "Araştırma ve Rakip Analizi",
-         "support" : "Müşteri Desteği ve Talep Yönetimi"
+      "stepTracker" : "Adım {step} / 4",
+      "stepProfile" : "Profil",
+      "stepGoals" : "Hedefler",
+      "stepTools" : "Araçlar",
+      "stepTeam" : "Önerilen Ekip",
+      "roles" : {
+         "founder" : "Kurucu / Yönetici",
+         "engineering" : "Mühendislik / Yazılım",
+         "product" : "Ürün / PM",
+         "operations" : "Operasyon",
+         "support" : "Müşteri Desteği",
+         "legal" : "Hukuk ve Finans",
+         "other" : "Diğer"
       },
-      "goalsLabel" : "Öncelikli alanlar",
       "industries" : {
+         "software" : "Yazılım ve Teknoloji",
          "ecommerce" : "E-Ticaret ve Perakende",
          "finance" : "Finans ve Bankacılık",
-         "general" : "Genel / Diğer",
          "healthcare" : "Sağlık ve Yaşam Bilimleri",
          "legal" : "Hukuk Hizmetleri",
          "manufacturing" : "Üretim ve Lojistik",
          "publicSector" : "Kamu Sektörü",
-         "software" : "Yazılım ve Teknoloji"
+         "general" : "Genel / Diğer"
       },
-      "industryLabel" : "Hangi sektörde veya alanda çalışıyorsunuz?",
-      "leadBadge" : "Takım Lideri ve Orkestratör",
-      "leadOrchestrationHint" : "Görevleri uzmanlara yönlendirir ve sizin için sonuçları birleştirir.",
-      "opensNewTab" : "Yeni sekmede açılır.",
-      "removeSpecialist" : "Kaldır",
-      "roleLabel" : "Rolünüz nedir?",
-      "roles" : {
-         "engineering" : "Mühendislik / Yazılım",
-         "founder" : "Kurucu / Yönetici",
-         "legal" : "Hukuk ve Finans",
-         "operations" : "Operasyon",
-         "other" : "Diğer",
-         "product" : "Ürün / PM",
-         "support" : "Müşteri Desteği"
-      },
-      "selectTemplate" : "Şablon seç",
-      "skip" : "Şimdilik atla",
-      "skipHint" : "Uygulama bağlamak tamamen isteğe bağlıdır.",
-      "specialistsTitle" : "Uzman agent'lar",
-      "startChat" : "Takım Lideri ile sohbet et",
-      "starterPromptsHeader" : "Örnek başlangıç soruları",
-      "step1Subtitle" : "Doğru uzman agent'ları önerebilmemiz için rolünüz hakkında biraz bilgi verin.",
-      "step1Title" : "Siz ve işiniz hakkında",
-      "step2Subtitle" : "Devretmek veya hızlandırmak istediğiniz iş akışlarını seçin.",
-      "step2Title" : "Yapay zeka ekibiniz neleri üstlensin?",
-      "step3Subtitle" : "Ekibinizin her gün kullandığı araçları seçin. Şimdi veya daha sonra bağlayabilirsiniz.",
-      "step3Title" : "Araçlar ve entegrasyonlar",
-      "step4Subtitle" : "İşte ekip yapınız. Takım lideriniz görevleri koordine eder ve uzmanlara devreder.",
-      "step4Title" : "Önerilen yapay zeka ekibiniz",
-      "stepGoals" : "Hedefler",
-      "stepProfile" : "Profil",
-      "stepTeam" : "Önerilen Ekip",
-      "stepTools" : "Araçlar",
-      "stepTracker" : "Adım {step} / 4",
-      "successSubtitle" : "Takım lideriniz ve uzmanlarınız oluşturuldu ve birbirine bağlandı.",
-      "successTitle" : "Yapay zeka ekibiniz hazır!",
-      "teamMembersCreated" : "Oluşturulan Ekip Üyeleri",
-      "teamSizeLabel" : "Takım büyüklüğü",
       "teamSizes" : {
-         "company" : "Organizasyon",
-         "companyDesc" : "15+ kişi",
+         "solo" : "Bireysel",
+         "soloDesc" : "Sadece ben",
          "small" : "Küçük Ekip",
          "smallDesc" : "2–15 kişi",
-         "solo" : "Bireysel",
-         "soloDesc" : "Sadece ben"
+         "company" : "Organizasyon",
+         "companyDesc" : "15+ kişi"
       },
-      "toolsInStack" : "Kullandığınız araçlar",
-      "tryAgain" : "Tekrar Dene",
-      "viewAgents" : "Ekibi Agent'lar sayfasında gör"
+      "goals" : {
+         "support" : "Müşteri Desteği ve Talep Yönetimi",
+         "docs" : "Dokümantasyon ve Bilgi Bankası",
+         "releases" : "Sürüm Notları ve Değişiklik Günlüğü",
+         "research" : "Araştırma ve Rakip Analizi",
+         "contracts" : "Sözleşme ve Politika İncelemesi",
+         "automation" : "Süreç ve İş Akışı Otomasyonu",
+         "incidents" : "Olay Müdahalesi ve Teşhis",
+         "content" : "İçerik Yazımı ve Ürün Metinleri",
+         "data" : "Veri Analizi ve Raporlama",
+         "meetings" : "Toplantı Notları ve Kararları"
+      }
    },
    "orgAssistant" : {
       "description" : "Agent çalıştırma izni olan herkesin her sayfada gördüğü köşe asistanı. Diğer agentlar gibi, adı, modeli ve bilgisi Agent Builder’da düzenlenir; maliyeti de diğer agentlar gibi hesaplanır.",

@@ -1,5 +1,5 @@
 ---
-source_sha: "d8ab63f0a753"
+source_sha: "158c11621790"
 ---
 
 # API HTTP { #the-http-api }
@@ -48,8 +48,10 @@ Klucz jest pokazywany **raz**, w odpowiedzi, która go tworzy. Przechowywany jes
 wyłącznie jego SHA-256 i nigdy nie trafia do linii logu, wpisu audytu ani treści
 błędu. Listy pokazują jego prefiks (`aos_1a2b3c4d`) — i tak samo wpis audytu
 nazywa klucz, który zadziałał: każdy wpis zapisany w trakcie żądania
-uwierzytelnionego kluczem niesie w szczegółach `via_api_key`. Klucz domyślnie
-wygasa po 90 dniach; można wybrać wcześniejszą datę, ale nie późniejszą niż za
+uwierzytelnionego kluczem niesie w szczegółach `via_api_key`.
+
+Klucz domyślnie wygasa po 90 dniach; można wybrać wcześniejszą datę, ale nie
+późniejszą niż za
 90 dni. Podczas rotacji starszego klucza późniejsza data wygaśnięcia nowego
 klucza zostaje ograniczona do 90 dni. Unieważnienie
 (`DELETE /api/v1/api-keys/{id}`) działa od następnego żądania.
@@ -176,7 +178,9 @@ ma włączone, zatrzymuje się na wyzwaniu zamiast sesji: odpowiedź zawiera
 `mfa_required`, `mfa_token` i `expires_in` (pięć minut), a ciasteczka nie są
 ustawiane. Klient kończy je w `POST /api/v1/auth/mfa/verify` tokenem i kodem,
 a odpowiedzią jest para tokenów - plus miejsce docelowe linku magic-link, gdy
-wyzwanie pochodzi od niego. Token wyzwania dowodzi kroku hasła i niczego
+wyzwanie pochodzi od niego.
+
+Token wyzwania dowodzi kroku hasła i niczego
 więcej: nie może wywoływać API jako sesja, a zmiana hasła od jego wystawienia
 go unieważnia. Kod odzyskiwania również kończy krok i jest przy tym zużywany;
 zużycie jest audytowane, więc właściciel konta widzi, że kod został użyty.

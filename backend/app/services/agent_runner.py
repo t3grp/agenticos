@@ -93,7 +93,7 @@ from pydantic_ai.realtime import (
     WebRTCAnswer,
 )
 from pydantic_ai.run import AgentRun as AgentIteration
-from pydantic_ai.run import AgentRunResult
+from pydantic_ai.run import AgentRunResult as PydanticAgentRunResult
 from pydantic_ai.tools import DeferredToolRequests, DeferredToolResults, ToolApproved
 from pydantic_ai.toolsets import AbstractToolset
 from pydantic_ai.usage import UsageLimits
@@ -2007,7 +2007,7 @@ class PreparedRun:
         *,
         message_history: Sequence[ModelMessage] | None,
         deferred_tool_results: DeferredToolResults | None,
-    ) -> AgentRunResult[AgentOutput]:
+    ) -> PydanticAgentRunResult[AgentOutput]:
         """Run the agent to an answer, metered.
 
         The non-streaming half of :meth:`iterate`, and it exists for the same
@@ -2152,7 +2152,7 @@ class PreparedRun:
 
 def _outcome(
     agent_run: AgentIteration[AgentDeps, AgentOutput],
-) -> AgentRunResult[AgentOutput]:
+) -> PydanticAgentRunResult[AgentOutput]:
     """What the iterated run ended with.
 
     Raises:
@@ -2235,7 +2235,7 @@ def parked_secret_request_items(paused_state: dict[str, Any] | None) -> list[Par
 
 
 def _classify_output(
-    result: AgentRunResult[AgentOutput],
+    result: PydanticAgentRunResult[AgentOutput],
     *,
     parked: dict[str, str],
     history_revision: int | None = None,
@@ -7855,6 +7855,26 @@ class AgentRunnerService:
                 details={"run_id": str(run_id)},
             )
         state = PausedRunState.model_validate(run.paused_state)
+        execution_ctx = ctx
+        if state.admitted_as.audience_room_key == f"room:project:{run.conversation_id}":
+            from app.services.room_submission import RoomSubmissionService
+
+            room_ctx = await RoomSubmissionService(self.db).resume_authority(
+                run_id, ctx.organization_id, required=True
+            )
+            assert room_ctx is not None, "required room authority supplies its requester"
+            execution_ctx = room_ctx
+            prior_check = check_model_request
+
+            async def check_room_authority(db: AsyncSession) -> None:
+                await RoomSubmissionService(db).resume_authority(
+                    run_id, ctx.organization_id, required=True
+                )
+                if prior_check is not None:
+                    await prior_check(db)
+
+            check_model_request = check_room_authority
+
         can_ask = state.admitted_as.can_ask_questions or (
             "can_ask_questions" not in state.admitted_as.model_fields_set
             and run.surface == RunSurface.WEB.value
@@ -7916,7 +7936,7 @@ class AgentRunnerService:
             # the approval releases the run, like a question in the same step.
             plan.results.calls[request] = secret_given.get(request, SECRET_DECLINED_RESULT)
 
-        agent, spec = await self._parked_spec(ctx, run)
+        agent, spec = await self._parked_spec(execution_ctx, run)
         # The continuation traces where the original did: the environment that
         # routed the run still owns its observability.
         spec = await self._with_environment_observability(
@@ -7949,7 +7969,7 @@ class AgentRunnerService:
         if state.output_schema is not None:
             spec = spec.model_copy(update={"output_schema": state.output_schema})
         prepared = await self._assemble(
-            ctx,
+            execution_ctx,
             agent=agent,
             spec=spec,
             existing_run=run,
@@ -8284,6 +8304,16 @@ class AgentRunnerService:
                 message="This run has no conversation to retry from",
                 details={"run_id": run_id},
             )
+        from app.repositories import room_submission as room_repo
+
+        if (
+            await room_repo.for_run(self.db, run_id, organization_id=ctx.organization_id)
+            is not None
+        ):
+            raise BadRequestError(
+                message="Request another answer from the project room to keep its queue and shared context",
+                details={"run_id": run_id},
+            )
         _, turns, _ = await self.get_run_transcript(ctx, run_id, limit=100)
         prompt_message = next((turn for turn in turns if turn.role == "user"), None)
         if prompt_message is None:
@@ -8293,6 +8323,11 @@ class AgentRunnerService:
             )
         conversations = ConversationService(self.db)
         conversation = await conversations.find_conversation(run.conversation_id)
+        if conversation is None:
+            raise NotFoundError(
+                message="Conversation not found",
+                details={"conversation_id": str(run.conversation_id)},
+            )
         prompt = await conversations.model_text(prompt_message, conversation)
         history = await conversations.model_history(
             run.conversation_id,
@@ -8838,7 +8873,7 @@ class AgentRunnerService:
         message_history: Sequence[ModelMessage] | None,
         deferred_tool_results: DeferredToolResults | None,
         stream: RunStream | None,
-    ) -> AgentRunResult[Any]:
+    ) -> PydanticAgentRunResult[Any]:
         """One turn, streamed if the surface can show one arriving.
 
         Both halves settle through the same `_run` around this call - the same

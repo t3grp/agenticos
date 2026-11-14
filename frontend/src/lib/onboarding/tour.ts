@@ -365,8 +365,16 @@ export const TOUR_STEPS: readonly TourStep[] = [
 
   { id: "workspace-background", page: ROUTES.WORK, target: "workspace-background" },
   { id: "chat-start", page: ROUTES.CHAT, target: "chat-start", inTour: true },
-  { id: "chat-agent-picker", page: ROUTES.CHAT, target: "chat-agent-picker", inTour: true },
-  { id: "chat-composer", page: ROUTES.CHAT, target: "chat-composer" },
+  {
+    id: "chat-agent-picker",
+    page: ROUTES.CHAT,
+    target: "chat-agent-picker",
+    inTour: true,
+    optional: true,
+  },
+  { id: "chat-composer", page: ROUTES.CHAT, target: "chat-composer", optional: true },
+  { id: "chat-team-room", page: ROUTES.CHAT, target: "chat-team-room", optional: true },
+  { id: "chat-team-composer", page: ROUTES.CHAT, target: "chat-team-composer", optional: true },
   {
     id: "chat-local-skills",
     page: ROUTES.CHAT,
@@ -417,6 +425,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     id: "chat-model-picker",
     page: ROUTES.CHAT,
     target: "chat-model-picker",
+    optional: true,
     activate: ["chat-settings", "chat-settings-model"],
   },
   // The call button sits in the composer whenever an agent is selected - offered

@@ -1,5 +1,5 @@
 ---
-source_sha: "07f6be53fe17"
+source_sha: "144975623fb4"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -159,6 +159,7 @@ contabilidad. El modo de código mantiene esas paradas al cruzar el límite del 
 | `proof_scenario` | Escenario de prueba | analysis | `proof_scenario_record`, `proof_scenario_verdict` | — | — | delegada |
 | `subagents` | Subagents | reasoning | `task`, `check_task`, `wait_tasks`, `list_active_tasks`, `answer_subagent`, `send_message_to_subagent`, `soft_cancel_task`, `hard_cancel_task`, `create_agent`, `delegate` | `agents:delegate` | — | delegada |
 | `background_tasks` | Temas en segundo plano | reasoning | `start_background_task`, `list_background_tasks`, `stop_background_task` | — | — | delegado |
+| `agent_messages` | Mensajes de agentes | reasoning | `agent_send_message`, `agent_read_messages`, `agent_list_threads`, `agent_react` | `agents:message` | — | sin cambios |
 | `planning` | Planificación | reasoning | `write_plan`, `read_plan`, `add_task`, `update_task_status`, `update_task_statuses`, `remove_task`, `add_subtask`, `set_dependency`, `get_available_tasks` | — | — | tal cual |
 | `thinking` | Razonamiento | reasoning | ninguna, a propósito | — | — | mapeada |
 | `system_reminders` | Recordatorio de instrucciones | reasoning | ninguna, a propósito | — | — | sin efecto |
@@ -619,6 +620,17 @@ puede hacerlo por otra; ambos borran las notas de aquí y los claims registrados
 ## Temas en segundo plano { #background-tasks }
 
 Trabajo explícito en un tema nuevo que dura más que la respuesta de origen. El agente original resume el resultado con el historial actual, sin herramientas. [Temas en segundo plano](../console.es.md#background-topics) explica límites, aprobaciones, detención e interrupciones. Es independiente de `background_tools` y los subagentes asíncronos temporales de una ejecución.
+
+## Mensajes de agentes { #agent-messages }
+
+Mensajes directos entre dos agents, en un hilo que muestra la consola. Hay un
+hilo por pareja de agents dentro de una organización; el mensaje se guarda,
+nunca se entrega como un run. Enviar requiere `agents:run` sobre ambos agents;
+leer, sobre al menos uno, y ambos deben estar publicados. Consulta [Mensajes de
+agentes](../agent-messages.md) para respuestas, reacciones, archivos y límites.
+Es la forma abierta de delegación: una delegación oculta el intercambio dentro
+del padre, mientras que cualquiera que pueda ejecutar uno de los agents puede
+leer el hilo.
 
 ## Conversaciones anteriores { #conversation-search }
 
@@ -1904,8 +1916,9 @@ fallida, agotado su tiempo o detenida.
 `harness_stop` — *Cierra una sesión de harness con nombre.*
 `harness_sessions` — *Lista las sesiones de harness que esta conversación tiene abiertas.*
 
-Un agente respaldado por una sesión de **Claude Code** o **Codex** en su propio
-[sandbox](../sandbox.md), mantenida abierta a lo largo de los turnos: el agente inicia una sesión
+Un agente respaldado por una sesión de **Claude Code**, **Codex**, **OpenCode**,
+**Gemini CLI** o **Pi** en su propio [sandbox](../sandbox.md), mantenida abierta
+a lo largo de los turnos: el agente inicia una sesión
 por línea de trabajo y le envía prompts a medida que avanza el trabajo, en lugar de entregar una
 tarea a un harness e informar. La sesión es del CLI: recuerda lo que sus prompts anteriores leyeron y cambiaron, y una persona ve en el chat cómo
 trabaja cada prompt. Otro agente llega a un agente respaldado por harness mediante
@@ -1913,9 +1926,9 @@ trabaja cada prompt. Otro agente llega a un agente respaldado por harness median
 
 | Configuración | Por defecto | Valores |
 |---|---|---|
-| `harness` | `claude_code` | `claude_code` (una clave API de Anthropic o un token de suscripción de Claude), `codex` (una clave API de OpenAI) |
+| `harness` | `claude_code` | `claude_code` (una clave API de Anthropic o un token de suscripción de Claude), `codex` (una clave API de OpenAI), `opencode` (la clave del modelo elegido), `gemini` (una clave API de Gemini), `pi` (la clave del modelo elegido) |
 | `access` | `read_only` | `read_only` lee el código y responde; `edit` cambia archivos y ejecuta comandos |
-| `model` | el modelo por defecto del harness | Claude Opus, Sonnet o Haiku 5.5 para Claude Code; GPT-5.6 Sol, Terra, Luna o GPT-5.3 Codex para Codex |
+| `model` | el modelo por defecto del harness | Claude Opus, Sonnet o Haiku 5.5 para Claude Code; GPT-5.6 Sol, Terra, Luna o GPT-5.3 Codex para Codex; `provider/model` para OpenCode y Pi (hay que elegir un modelo para determinar el proveedor de la clave); Gemini CLI conserva el valor predeterminado del harness (`auto`) |
 | `base_url` | Anthropic directamente | Solo Claude Code: un gateway que habla la API de Anthropic, como `https://openrouter.ai/api`, cuya clave guarda entonces el vault. Se descarta cuando se elige Codex |
 | `timeout_minutes` | 30 | 1–60, para un prompt. La sesión se mantiene abierta |
 
@@ -1927,7 +1940,12 @@ documentados. Con `read_only`, Claude Code corre en modo plan sin ninguna herram
 que escriba —sin sus herramientas de edición ni la shell— y lee con Read, Grep y Glob;
 se le dice que nada más puede aprobarse. Codex en un contenedor no tiene `read_only`: su modo de solo lectura es
 un sandbox propio, que no puede arrancar dentro del contenedor del agente, y la publicación
-rechaza la combinación. Que una persona diga que sí antes de cada prompt es la
+rechaza la combinación.
+
+Con `read_only`, OpenCode usa su agente de planificación, que deniega las
+ediciones; Gemini CLI usa su modo de aprobación de planes. Pi ejecuta solo sus
+herramientas de lectura (`read,grep,find,ls`), porque nunca pide aprobación.
+Que una persona diga que sí antes de cada prompt es la
 **Aprobación humana** de la capability —como cada gate, está apagada
 hasta que alguien la enciende. No hay pestaña de Herramientas: las cuatro herramientas son la capability.
 
@@ -1940,9 +1958,10 @@ chat nunca continúa la sesión de otro en un sandbox compartido por varios, en 
 de una persona o un agente. Una sesión que el sandbox ya no guarda empieza de nuevo por sí sola, una vez.
 
 **La persona ve cómo trabaja.** Un prompt corre como una tarea del coding agent: el harness se inicia separado en el sandbox,
-`claude -p --output-format stream-json` o `codex exec --json`, y su archivo de eventos
+`claude -p --output-format stream-json`, `codex exec --json`, `opencode run --format json`,
+`gemini -p --output-format stream-json` o `pi --mode json`, y su archivo de eventos
 se lee cada segundo y medio. Cada paso llega al chat cuando ocurre, en un
-panel propio bajo la marca de Claude Code o Codex, como los pasos de una delegación:
+panel propio bajo la marca del harness, como los pasos de una delegación:
 el archivo que lee, la edición, el comando que ejecuta, lo que dice entre ellos. Cuando
 termina, el resultado de la llamada contiene la respuesta, cada paso y los archivos que
 cambió. Un prompt pasado `timeout_minutes`, y uno que la persona detiene, termina con todo
@@ -1950,7 +1969,9 @@ su grupo de procesos detenido.
 
 **Lo que necesita.** La capability `sandbox` en el backend `service` con los comandos de shell
 activados —la publicación rechaza cualquier otra cosa— y un runtime con el harness
-instalado: el runtime `workbench` fija Claude Code 2.1.288 y Codex 0.160.0. La
+instalado: el runtime `workbench` fija Claude Code 2.1.288 y Codex 0.160.0.
+No se ha establecido si incluye OpenCode, Gemini CLI o Pi; un harness que no
+esté instalado informa del fallo en lugar de afirmar lo contrario. La
 credencial viene del vault a través del `secret_id` del binding y llega al
 comando por su entorno, nunca en su línea de comandos. En un [proyecto](../projects.md)
 que guarda sus archivos sin contenedor no hay shell, así que el harness queda
@@ -1959,21 +1980,32 @@ fuera de los runs allí y al agente se le dice por qué.
 **Una clave, no un inicio de sesión.** Claude Code acepta una clave API de Anthropic, o el token
 que imprime `claude setup-token` para una suscripción Claude Pro o Max, guardado como clave —
 se distingue por su prefijo `sk-ant-oat`, y solo inicia sesión en Anthropic, no
-en un gateway. Codex acepta una clave API de OpenAI. Un inicio de sesión con ChatGPT aún no se acepta aquí: el flujo de inicio de sesión del coding agent —un home aislado, una comprobación de visibilidad, rotación de tokens leída de vuelta desde el sandbox— no está conectado en esta capability, así que el selector solo ofrece claves API. Una clave API es del agente, como el token de un bot en Slack, así que
+en un gateway. Codex acepta una clave API de OpenAI. OpenCode y Pi aceptan la
+clave del modelo elegido, por lo que el binding debe seleccionar un modelo;
+Gemini CLI siempre acepta una clave API de Gemini.
+
+Un inicio de sesión con ChatGPT aún no se acepta aquí: el flujo de inicio de
+sesión del coding agent —un home aislado, una comprobación de visibilidad y
+rotación de tokens leída de vuelta desde el sandbox— no está conectado en esta
+capability, así que el selector solo ofrece claves API.
+
+Una clave API es del agente, como el token de un bot en Slack, así que
 cada run la usa, pregunte quien pregunte —y cualquier cosa que ejecute un prompt puede leerla. Vincula
 una clave que puedan compartir todos los que puedan ejecutar el agente.
 Usar una suscripción personal está sujeto a los términos de Anthropic para
 esos planes, que pueden no permitirlo en un deployment compartido.
 
 **La clave encaja con el harness.** El selector ofrece a Claude Code solo claves guardadas para
-Anthropic, y a Codex solo claves de OpenAI. Una clave guardada para
-`custom` encaja con ambos, igual que la clave ya vinculada. La publicación rechaza una clave
+Anthropic, y a Codex solo claves de OpenAI. OpenCode y Pi ofrecen solo la clave
+del proveedor del modelo, y Gemini CLI solo claves de Gemini. Una clave guardada
+para `custom` encaja con cualquier harness, igual que la clave ya vinculada.
+La publicación rechaza una clave
 guardada para otro proveedor y nombra las que acepta el harness: una clave de OpenAI
 vinculada a Claude Code se publicaría y luego fallaría en cada prompt. Con `base_url`
 fijado, la clave es la del gateway —OpenRouter, LiteLLM u otro— así que Claude Code
 acepta entonces cualquier clave.
 
-**Su gasto se mide.** Ambos harness informan de sus tokens por modelo, que se
+**Su gasto se mide.** Los harness informan de sus tokens por modelo, que se
 apuntan en el ledger del run como cualquier petición de modelo, y el presupuesto se comprueba antes
 de cada prompt. Codex no nombra ningún modelo en sus eventos, así que sin `model` fijado su uso se
 apunta sin precio y el coste del run se marca parcial. Un prompt que termina antes de que su
@@ -3515,7 +3547,7 @@ comprobados cuando se ensambla el agent:
 | `code:execute` | `code_execution` |
 | `sandbox:execute` | `sandbox` |
 | `agents:delegate` | `subagents` |
-| `tables:read` | `virtual_tables` y cada [nodo de workflow para tablas](workflow-nodes.md#virtual-tables) |
+| `tables:read` | Cada [nodo de workflow para tablas](workflow-nodes.md#virtual-tables) |
 | `tables:write` | los nodos de workflow para tablas que escriben |
 | `workflows:run` | `workflows` |
 | `computer:use` | `computer_use` |

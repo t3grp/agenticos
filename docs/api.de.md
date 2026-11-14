@@ -1,5 +1,5 @@
 ---
-source_sha: "d8ab63f0a753"
+source_sha: "158c11621790"
 ---
 
 # Die HTTP-API { #the-http-api }
@@ -53,8 +53,10 @@ Gespeichert wird nur sein SHA-256, und er erscheint nie in einer Logzeile, einem
 Audit-Eintrag oder einem Fehlertext. Listen zeigen sein Präfix (`aos_1a2b3c4d`),
 und so nennt auch ein Audit-Eintrag den Schlüssel, der gehandelt hat — jeder
 Eintrag, der während einer mit einem Schlüssel authentifizierten Anfrage
-geschrieben wird, trägt `via_api_key` in seinen Details. Standardmäßig läuft ein
-Schlüssel nach 90 Tagen ab; ein früheres Ablaufdatum ist möglich, aber keines,
+geschrieben wird, trägt `via_api_key` in seinen Details.
+
+Standardmäßig läuft ein Schlüssel nach 90 Tagen ab; ein früheres Ablaufdatum ist
+möglich, aber keines,
 das mehr als 90 Tage entfernt liegt. Bei der Rotation eines älteren Schlüssels
 wird ein späteres Ablaufdatum des Ersatzschlüssels auf 90 Tage begrenzt. Sein
 Widerruf (`DELETE /api/v1/api-keys/{id}`) wirkt ab
@@ -192,7 +194,9 @@ enthält `mfa_required`, ein `mfa_token` und `expires_in` (fünf Minuten), und
 es werden keine Cookies gesetzt. Der Client schliesst sie mit
 `POST /api/v1/auth/mfa/verify` mit dem Token und dem Code ab, und die Antwort
 ist das Tokenpaar - plus das Ziel des Magic-Links, wenn die Herausforderung
-von einem kam. Das Herausforderungstoken beweist den Passwortschritt und
+von einem kam.
+
+Das Herausforderungstoken beweist den Passwortschritt und
 nichts weiter: Es kann die API nicht als Sitzung aufrufen, und eine
 Passwortänderung seit seiner Ausstellung macht es ungültig. Ein
 Wiederherstellungscode schliesst den Schritt ebenfalls ab und wird dabei

@@ -23,7 +23,6 @@ from app.api.deps import (
 from app.api.public_api import PUBLIC
 from app.core.exceptions import NotFoundError
 from app.core.permissions import AuthContext, Perm
-from app.services.mcp_connection import is_google_mcp
 from app.schemas.mcp_connection import (
     McpConnectionCreate,
     McpConnectionList,
@@ -38,6 +37,7 @@ from app.schemas.mcp_connection import (
     McpSignInProbeResult,
     McpToolRead,
 )
+from app.services.mcp_connection import is_google_mcp
 
 router = APIRouter()
 

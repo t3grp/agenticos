@@ -21,11 +21,12 @@ name: CI
 # `concurrency` group is keyed on `github.ref`, so a stacked branch cancels its own
 # superseded runs like any other.
 #
-# The `push` trigger stays pinned to `main`: a branch push is already covered by its
-# pull request, and widening it would run everything twice.
+# The `push` trigger covers the upstream branches and the fork's `t3` branch. Other
+# branch pushes are already covered by their pull requests, and widening it would
+# run those checks twice.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, t3]
   pull_request:
 
 # One run per branch. `AGENTS.md` asks for a commit and a push per finished piece,
@@ -723,12 +724,6 @@ jobs:
             > "$RUNNER_TEMP/backend.log" 2>&1 &
           echo "$!" > "$RUNNER_TEMP/backend.pid"
 
-      - name: Start background work for evals, ingestion and workflows
-        run: |
-          uv run --directory backend python -m app.worker --pools agent,eval,system,ingest,workflow \
-            > "$RUNNER_TEMP/eval-worker.log" 2>&1 &
-          echo "$!" > "$RUNNER_TEMP/eval-worker.pid"
-
       - name: Wait for the backend to be healthy
         # Polled, not slept. A fixed wait is either too short on a cold runner
         # or wasted on a warm one, and the failure it produces is a browser
@@ -809,6 +804,36 @@ jobs:
         timeout-minutes: 10
         working-directory: frontend
 
+      - name: Start the CI worker pools
+        # One worker serves agent, room reconciliation, eval, ingestion and
+        # workflow jobs so the E2E job has every required handler without
+        # starting overlapping worker processes.
+        timeout-minutes: 3
+        working-directory: backend
+        env:
+          WORKER_HEALTH_FILE: ${{ runner.temp }}/worker-alive
+        run: |
+          rm -f "$WORKER_HEALTH_FILE"
+          .venv/bin/python -m app.worker --pools agent,eval,system,ingest,workflow \
+            > "$RUNNER_TEMP/worker.log" 2>&1 &
+          worker_pid=$!
+          echo "$worker_pid" > "$RUNNER_TEMP/worker.pid"
+          for attempt in $(seq 1 120); do
+            if ! kill -0 "$worker_pid" 2>/dev/null; then
+              echo "worker exited during startup"
+              cat "$RUNNER_TEMP/worker.log"
+              exit 1
+            fi
+            if [ -f "$WORKER_HEALTH_FILE" ] && .venv/bin/python -c 'import os, sys, time; sys.exit(time.time() - os.stat(os.environ["WORKER_HEALTH_FILE"]).st_mtime > 90)'; then
+              echo "worker healthy after ${attempt}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "worker did not become healthy"
+          cat "$RUNNER_TEMP/worker.log"
+          exit 1
+
       - name: Run E2E tests
         # `webServer` in playwright.config.ts starts `next start` and waits for
         # it. This job used to run with no frontend at all: `webServer` was
@@ -822,6 +847,21 @@ jobs:
           # Playwright starts beside the app - so the one spec covering the seams
           # runs on every push instead of skipping itself in every environment
           # that had no key, which was all of them including this one.
+
+      - name: Stop the CI worker pools
+        if: always()
+        timeout-minutes: 2
+        run: |
+          if [ ! -f "$RUNNER_TEMP/worker.pid" ]; then exit 0; fi
+          worker_pid=$(cat "$RUNNER_TEMP/worker.pid")
+          if ! kill -TERM "$worker_pid" 2>/dev/null; then exit 0; fi
+          # Match compose's 45s grace period, longer than the worker's 30s drain.
+          for attempt in $(seq 1 45); do
+            if ! kill -0 "$worker_pid" 2>/dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "worker did not stop within 45s; forcing shutdown"
+          kill -KILL "$worker_pid" 2>/dev/null || true
 
       - name: Upload the Playwright report when a journey fails
         if: failure()
@@ -853,17 +893,16 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/backend.log"
 
-      # Kept as a file too, and on every outcome: a backend that dies mid-suite
-      # takes the rest of the specs down until the job times out, and a
-      # cancelled job never reaches the step above.
-      - name: Upload the backend log
+      # Keep backend and worker logs even when cancellation or a stall prevents the
+      # failure-only log step from running.
+      - name: Upload backend and worker logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: backend-log-${{ matrix.shard }}
+          name: backend-and-worker-log-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/backend.log
-            ${{ runner.temp }}/eval-worker.log
+            ${{ runner.temp }}/worker.log
           retention-days: 7
           if-no-files-found: ignore
 

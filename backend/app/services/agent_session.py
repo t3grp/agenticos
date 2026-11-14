@@ -681,7 +681,9 @@ class AgentSession:
                     if run.model_label is not None
                     else []
                 )
-                await admission.enter_async_context(claim(conversation_id, background=False))
+                await admission.enter_async_context(
+                    claim(conversation_id, background=False, resume_run_id=request.run_id)
+                )
                 async with get_db_context() as db:
                     ctx = await self._chat_context(db)
                     runner = AgentRunnerService(db)
@@ -1887,6 +1889,13 @@ class AgentSession:
                 )
             elif event["type"] == chat_room.TYPING:
                 await self._send_typing(conversation_id, event.get("by"))
+            elif event["type"] in (chat_room.ROOM_MESSAGE, chat_room.ROOM_REQUEST):
+                field = "message_id" if event["type"] == chat_room.ROOM_MESSAGE else "request_id"
+                await send_event(
+                    self.websocket,
+                    event["type"],
+                    {"conversation_id": conversation_id, field: event[field]},
+                )
             else:
                 await self._follow_if_running(conversation_id)
 

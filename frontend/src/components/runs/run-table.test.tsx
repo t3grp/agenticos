@@ -134,7 +134,9 @@ describe("a run history row", () => {
     // carries the full rendering.
     render(
       <RunTable
-        runs={[run({ status: "failed", error: "The run did not finish (ModelHTTPError, HTTP 400)" })]}
+        runs={[
+          run({ status: "failed", error: "The run did not finish (ModelHTTPError, HTTP 400)" }),
+        ]}
       />,
     );
 
@@ -182,6 +184,45 @@ describe("a run history row", () => {
     render(<RunTable runs={[run({ status: "completed" })]} />);
 
     expect(within(row()).queryByText(/Expires in/)).toBeNull();
+  });
+
+  it.each([
+    { questions: [], first: "Needs secret: Vendor API key", title: "Needs secret: Vendor API key" },
+    {
+      questions: ["Which calendar?"],
+      first: "Which calendar?",
+      title: "Which calendar? Needs secret: Vendor API key",
+    },
+  ])(
+    "shows the pending secret alongside $questions without making up an expiry",
+    ({ questions, first, title }) => {
+      render(
+        <RunTable
+          runs={[
+            run({
+              status: "awaiting_answer",
+              waiting_questions: questions,
+              waiting_secret_requests: ["Vendor API key"],
+              waiting_expires_at: null,
+            }),
+          ]}
+        />,
+      );
+      const summary = within(row()).getByTitle(title);
+      expect(summary).toHaveTextContent(first);
+      expect(within(row()).queryByText(/Expires in/)).not.toBeInTheDocument();
+    },
+  );
+
+  it("omits the waiting summary until at least one pending question or secret is known", () => {
+    render(
+      <RunTable
+        runs={[
+          run({ status: "awaiting_answer", waiting_questions: [], waiting_secret_requests: [] }),
+        ]}
+      />,
+    );
+    expect(within(row()).queryByText(/Needs secret:|Expires in/)).not.toBeInTheDocument();
   });
 
   it("still marks an orphaned delegation, without a handle it cannot honour", () => {
@@ -407,6 +448,24 @@ describe("who ran it, and which agent", () => {
     );
 
     expect(within(row()).getAllByText("-").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("uses a known member's email when no name was supplied and leaves an unattributed run unnamed", () => {
+    render(
+      <RunTable
+        runs={[run(), run({ id: "unattributed", user_id: null })]}
+        membersById={
+          new Map([["user-1", { user_id: "user-1", email: "kim@acme.test", full_name: "" }]])
+        }
+      />,
+    );
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    const named = rows[1];
+    const unattributed = rows[2];
+    if (!named || !unattributed) throw new Error("Expected both run rows");
+    expect(within(named).getByText("kim@acme.test")).toBeVisible();
+    expect(within(unattributed).queryByText("kim@acme.test")).not.toBeInTheDocument();
+    expect(within(unattributed).getAllByText("-").length).toBeGreaterThan(0);
   });
 
   it("withholds the Agent column entirely when the names cannot be resolved", () => {

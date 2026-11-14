@@ -2537,690 +2537,690 @@
       }
    },
    "capabilityConfig" : {
-      "agent_messages" : {
-         "allow_attachments" : {
-            "description" : "Whether this agent may send files it already uploaded along with its messages. Off means text only; files already attached stay readable.",
-            "title" : "Allow file attachments"
-         },
-         "max_message_chars" : {
-            "description" : "The longest message this agent may send, in characters. 16,000 is the console's ceiling as well, so a thread reads the same however the message was sent; lower it for an agent that should keep its messages short.",
-            "title" : "Longest message"
-         }
-      },
-      "artifacts" : {
-         "preview_screenshot" : {
-            "description" : "Hand the model the picture of a page when it previews one. Turn off for a model that cannot read images; the written report still comes back.",
-            "title" : "Show the model a page's picture"
-         }
-      },
-      "babysit_pr" : {
-         "max_watch_minutes" : {
-            "description" : "Minutes one watch may run before it stops and reports blocked. A watch that runs past this without green has not been approved — it has expired.",
-            "title" : "Watch at most"
-         },
-         "poll_interval_seconds" : {
-            "description" : "Seconds between checks of the pull request. At least 60, so the watcher never polls in a tight loop and never burns the shared GitHub rate limit.",
-            "title" : "Poll interval"
-         }
-      },
       "browser_use" : {
-         "allowed_domains" : {
-            "description" : "Allowed browser hosts. No restriction allows any domain; an empty domain list blocks all. Patterns such as *.example.com are supported. Checked on every step.",
-            "title" : "Allowed domains"
-         },
-         "candidate_cap" : {
-            "description" : "How many of the page's elements may be offered as choices in one step. Lower is cheaper and blinder; the answer to a page too dense for the cap is to scroll.",
-            "title" : "Elements offered per step"
-         },
          "cdp_url" : {
-            "description" : "Chromium DevTools endpoint to drive - a browser service the operator runs, not a process in the API container.",
-            "title" : "DevTools endpoint"
+            "title" : "DevTools endpoint",
+            "description" : "Chromium DevTools endpoint to drive - a browser service the operator runs, not a process in the API container."
          },
-         "connection" : {
-            "description" : "Built in uses the deployment's browser and its address. A proxy sends the browses through an address of your own - a residential or regional one sites block less. A hosted browser runs them in a browser service you pay for, reached over CDP. This computer requires a paired desktop and local browsing selected for this chat.",
-            "title" : "How the browser reaches the web"
-         },
-         "hosted_key_param" : {
-            "description" : "What the hosted browser calls its key in the address's query.",
-            "title" : "Query parameter for the key"
-         },
-         "hosted_url" : {
-            "description" : "The service's wss:// CDP address. Its key goes in the vault, picked below, and is added to the address's query when the browse connects.",
-            "title" : "Hosted browser address"
-         },
-         "locale" : {
-            "description" : "A language tag such as pl-PL, sent as Accept-Language and navigator.language.",
-            "title" : "Language the browser reports"
+         "allowed_domains" : {
+            "title" : "Allowed domains",
+            "description" : "Allowed browser hosts. No restriction allows any domain; an empty domain list blocks all. Patterns such as *.example.com are supported. Checked on every step."
          },
          "max_steps" : {
-            "description" : "How many steps one call may take; each step is one model request. A task that needs more continues in the same tab on the next call.",
-            "title" : "Steps per call at most"
-         },
-         "prefer_native_browser" : {
-            "description" : "Use an embedded native tab for local DOM browsing. Disable for isolated Chromium compatibility. Vision and language/time-zone overrides use Chromium.",
-            "title" : "Use the native local browser"
-         },
-         "preview" : {
-            "description" : "Send the viewport to the chat while the browse runs, so a person can watch it. Costs one JPEG per step on the socket.",
-            "title" : "Show a live preview"
-         },
-         "preview_width" : {
-            "description" : "The browser's viewport width in pixels, which is also how wide the frames are. It decides what the agent can see without scrolling.",
-            "title" : "Viewport width (pixels)"
-         },
-         "proxy_url" : {
-            "description" : "http://, https:// or socks5:// with the host and port. Its username:password goes in the vault, picked below; Chromium cannot sign in to a SOCKS proxy.",
-            "title" : "Proxy address"
-         },
-         "step_model_profile_id" : {
-            "description" : "A model profile `browse_web` asks for each step instead of the agent's own. Steps are most of a browse's time and cost, so a cheaper model here makes a long browse cheaper, and quicker where its provider answers quickly - measure it, since a small model through a slow gateway is no faster. Empty uses the agent's model. The agent's own browser tools always use it.",
-            "title" : "Model for each browse step"
-         },
-         "timezone" : {
-            "description" : "An IANA time zone such as Europe/Warsaw. Set it to match the proxy's region: a browser whose clock and address disagree reads as a bot.",
-            "title" : "Time zone the browser reports"
+            "title" : "Steps per call at most",
+            "description" : "How many steps one call may take; each step is one model request. A task that needs more continues in the same tab on the next call."
          },
          "vision" : {
-            "description" : "Send each step's screenshot to the model as well as the page's elements. Better on visual pages, more tokens, and the model has to read images.",
-            "title" : "Show the model screenshots"
-         }
-      },
-      "burst" : {
-         "max_bursts" : {
-            "description" : "How many bursts one run may ask for. A fresh burst after fixes is a new burst, and the cap is what stops repeated bursts turning into scope creep.",
-            "title" : "Bursts at most"
+            "title" : "Show the model screenshots",
+            "description" : "Send each step's screenshot to the model as well as the page's elements. Better on visual pages, more tokens, and the model has to read images."
          },
-         "max_subtasks" : {
-            "description" : "How many subtasks one burst runs at once. 3 is the subagents max_fanout default and 10 its hard max: a burst shares that ceiling rather than raising it. Reached, the tool refuses the extra parts with a message the model can act on.",
-            "title" : "Subtasks at most"
+         "candidate_cap" : {
+            "title" : "Elements offered per step",
+            "description" : "How many of the page's elements may be offered as choices in one step. Lower is cheaper and blinder; the answer to a page too dense for the cap is to scroll."
+         },
+         "preview" : {
+            "title" : "Show a live preview",
+            "description" : "Send the viewport to the chat while the browse runs, so a person can watch it. Costs one JPEG per step on the socket."
+         },
+         "preview_width" : {
+            "title" : "Viewport width (pixels)",
+            "description" : "The browser's viewport width in pixels, which is also how wide the frames are. It decides what the agent can see without scrolling."
+         },
+         "step_model_profile_id" : {
+            "title" : "Model for each browse step",
+            "description" : "A model profile `browse_web` asks for each step instead of the agent's own. Steps are most of a browse's time and cost, so a cheaper model here makes a long browse cheaper, and quicker where its provider answers quickly - measure it, since a small model through a slow gateway is no faster. Empty uses the agent's model. The agent's own browser tools always use it."
+         },
+         "connection" : {
+            "title" : "How the browser reaches the web",
+            "description" : "Built in uses the deployment's browser and its address. A proxy sends the browses through an address of your own - a residential or regional one sites block less. A hosted browser runs them in a browser service you pay for, reached over CDP. This computer requires a paired desktop and local browsing selected for this chat."
+         },
+         "proxy_url" : {
+            "title" : "Proxy address",
+            "description" : "http://, https:// or socks5:// with the host and port. Its username:password goes in the vault, picked below; Chromium cannot sign in to a SOCKS proxy."
+         },
+         "hosted_url" : {
+            "title" : "Hosted browser address",
+            "description" : "The service's wss:// CDP address. Its key goes in the vault, picked below, and is added to the address's query when the browse connects."
+         },
+         "hosted_key_param" : {
+            "title" : "Query parameter for the key",
+            "description" : "What the hosted browser calls its key in the address's query."
+         },
+         "timezone" : {
+            "title" : "Time zone the browser reports",
+            "description" : "An IANA time zone such as Europe/Warsaw. Set it to match the proxy's region: a browser whose clock and address disagree reads as a bot."
+         },
+         "locale" : {
+            "title" : "Language the browser reports",
+            "description" : "A language tag such as pl-PL, sent as Accept-Language and navigator.language."
+         },
+         "prefer_native_browser" : {
+            "title" : "Use the native local browser",
+            "description" : "Use an embedded native tab for local DOM browsing. Disable for isolated Chromium compatibility. Vision and language/time-zone overrides use Chromium."
          }
       },
       "channel_tools" : {
-         "default_limit" : {
-            "description" : "Members, search results or messages returned when the model does not ask for a number",
-            "title" : "Results when no number is asked for"
-         },
          "tools" : {
-            "description" : "Which channel lookups this binding allows, by tool id. Empty means none, which is what a binding starts as.",
-            "title" : "Allowed lookups"
+            "title" : "Allowed lookups",
+            "description" : "Which channel lookups this binding allows, by tool id. Empty means none, which is what a binding starts as."
+         },
+         "default_limit" : {
+            "title" : "Results when no number is asked for",
+            "description" : "Members, search results or messages returned when the model does not ask for a number"
          }
       },
       "clock" : {
          "timezone" : {
-            "description" : "IANA timezone the agent thinks in, e.g. Europe/Warsaw",
-            "title" : "Time zone"
+            "title" : "Time zone",
+            "description" : "IANA timezone the agent thinks in, e.g. Europe/Warsaw"
          }
       },
       "code_execution" : {
-         "max_memory_mb" : {
-            "description" : "Memory cap for one call, in megabytes",
-            "title" : "Memory limit per call (MB)"
-         },
          "timeout_secs" : {
-            "description" : "Wall-clock budget for one call, in seconds",
-            "title" : "Time limit per call (seconds)"
-         }
-      },
-      "coding_agent" : {
-         "access" : {
-            "description" : "Change files and run commands, such as tests - or only read the code and answer. Set Human approval to ask before each task either way.",
-            "title" : "What it may do"
+            "title" : "Time limit per call (seconds)",
+            "description" : "Wall-clock budget for one call, in seconds"
          },
-         "base_url" : {
-            "description" : "Claude Code only: a gateway that speaks Anthropic's API, such as https://openrouter.ai/api, with the key in the vault being that gateway's. Empty calls Anthropic directly.",
-            "title" : "Anthropic-compatible endpoint"
-         },
-         "harness" : {
-            "description" : "Which coding agent does the work: Claude Code, on an Anthropic key or a Claude subscription token, or Codex, on an OpenAI key or a ChatGPT sign-in.",
-            "title" : "Coding agent"
-         },
-         "model" : {
-            "description" : "The model the coding agent runs: a Claude model for Claude Code, an OpenAI one for Codex. Not set takes the coding agent's own default. Not available on this computer, where the agent uses its own setting.",
-            "title" : "Model"
-         },
-         "runs_on" : {
-            "description" : "The agent's sandbox with its configured key, a disposable private cloud task using the initiating person's profile account, or the folder a person chooses on their own computer in the desktop app, where Claude Code and Codex use the sign-in they already have and need no key.",
-            "title" : "Where it runs"
-         },
-         "timeout_minutes" : {
-            "description" : "How long one task may run before it is stopped.",
-            "title" : "Time limit (minutes)"
+         "max_memory_mb" : {
+            "title" : "Memory limit per call (MB)",
+            "description" : "Memory cap for one call, in megabytes"
          }
       },
       "compaction" : {
-         "context_window" : {
-            "description" : "Override the window this triggers against. Also what the chat's context gauge divides by, so the two describe one ceiling. Set it when the resolved number is wrong for your deployment - a beta or a tier can be given less than the provider publishes - or to make an agent compact earlier than its model would require",
-            "title" : "Context window override"
-         },
-         "fallback_context_window" : {
-            "description" : "Window to assume when the model's own cannot be resolved",
-            "title" : "Fallback context window"
-         },
-         "keep_messages" : {
-            "description" : "How many recent messages survive a summary or a sliding window",
-            "title" : "Recent messages kept"
-         },
-         "keep_tool_pairs" : {
-            "description" : "How many recent tool calls keep their results when results are cleared",
-            "title" : "Recent tool results kept"
+         "strategy" : {
+            "title" : "Strategy",
+            "description" : "Which strategy to apply when the history approaches the window"
          },
          "max_fraction" : {
-            "description" : "Fraction of the model's context window at which compaction starts",
-            "title" : "Start at this share of the window"
+            "title" : "Start at this share of the window",
+            "description" : "Fraction of the model's context window at which compaction starts"
          },
-         "strategy" : {
-            "description" : "Which strategy to apply when the history approaches the window",
-            "title" : "Strategy"
+         "keep_messages" : {
+            "title" : "Recent messages kept",
+            "description" : "How many recent messages survive a summary or a sliding window"
+         },
+         "keep_tool_pairs" : {
+            "title" : "Recent tool results kept",
+            "description" : "How many recent tool calls keep their results when results are cleared"
          },
          "summary_prompt" : {
-            "description" : "What the summarising model is told. `{messages}` is where the conversation being replaced is inserted, and it is required - a prompt without it summarises nothing. Edit it to keep what your agent's work depends on: the default keeps intent, decisions and open threads, which is not the same as what a support transcript or a code review needs",
-            "title" : "Summary prompt"
-         }
-      },
-      "computer_use" : {
-         "daemon_url" : {
-            "description" : "The computerd endpoint of your desktop. Its host must be on COMPUTER_DAEMON_ALLOWED_HOSTS.",
-            "title" : "Daemon URL"
+            "title" : "Summary prompt",
+            "description" : "What the summarising model is told. `{messages}` is where the conversation being replaced is inserted, and it is required - a prompt without it summarises nothing. Edit it to keep what your agent's work depends on: the default keeps intent, decisions and open threads, which is not the same as what a support transcript or a code review needs"
          },
-         "desktop" : {
-            "description" : "Choose where this agent operates a desktop. The selected environment's requirements are shown below.",
-            "title" : "Environment"
+         "context_window" : {
+            "title" : "Context window override",
+            "description" : "Override the window this triggers against. Also what the chat's context gauge divides by, so the two describe one ceiling. Set it when the resolved number is wrong for your deployment - a beta or a tier can be given less than the provider publishes - or to make an agent compact earlier than its model would require"
          },
-         "max_actions" : {
-            "description" : "How many actions one run may take in total.",
-            "title" : "Actions per run"
-         },
-         "max_actions_per_call" : {
-            "description" : "How many actions one call may send.",
-            "title" : "Actions per call"
-         },
-         "preview" : {
-            "description" : "Show the desktop live in the chat while the agent works it.",
-            "title" : "Live preview"
-         },
-         "screen_height" : {
-            "description" : "The tallest screenshot the model is shown.",
-            "title" : "Screenshot height"
-         },
-         "screen_width" : {
-            "description" : "The widest screenshot the model is shown; larger screens are scaled down to fit.",
-            "title" : "Screenshot width"
+         "fallback_context_window" : {
+            "title" : "Fallback context window",
+            "description" : "Window to assume when the model's own cannot be resolved"
          }
       },
       "context" : {
          "expose_read_tool" : {
-            "description" : "Whether link-mode files are reachable through a read tool. Off means only injected files reach the model, and nothing is read on demand.",
-            "title" : "Let the agent open linked files"
+            "title" : "Let the agent open linked files",
+            "description" : "Whether link-mode files are reachable through a read tool. Off means only injected files reach the model, and nothing is read on demand."
          },
          "file_settings" : {
-            "description" : "Per-agent mode and availability for attached context files. An absent entry preserves the file's legacy defaults.",
-            "title" : "How each file is used"
+            "title" : "How each file is used",
+            "description" : "Per-agent mode and availability for attached context files. An absent entry preserves the file's legacy defaults."
          }
       },
       "conversation_search" : {
          "max_results" : {
-            "description" : "How many conversations one search returns at most. Each brings back a short passage, so a high number costs context on every search.",
-            "title" : "Conversations per search"
+            "title" : "Conversations per search",
+            "description" : "How many conversations one search returns at most. Each brings back a short passage, so a high number costs context on every search."
          }
       },
       "council" : {
+         "members" : {
+            "title" : "Council members",
+            "description" : "The delegates, one strong model from each of three different providers at high reasoning effort. Exactly three members."
+         },
          "agreement_threshold" : {
-            "description" : "The score out of 10 every delegate must reach for a round to satisfy the council. A round below it means fix and review again.",
-            "title" : "Agreement threshold"
+            "title" : "Agreement threshold",
+            "description" : "The score out of 10 every delegate must reach for a round to satisfy the council. A round below it means fix and review again."
          },
          "max_rounds" : {
-            "description" : "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep.",
-            "title" : "Rounds at most"
-         },
-         "members" : {
-            "description" : "The delegates, one strong model from each of three different providers at high reasoning effort. Exactly three members.",
-            "title" : "Council members"
-         }
-      },
-      "eval_tool_tuning" : {
-         "max_tuning_runs" : {
-            "description" : "How many tuning runs one run may record. A fresh tuning run after a proposal is applied is a new run, and the cap is what stops repeated scoring turning into scope creep.",
-            "title" : "Tuning runs at most"
-         }
-      },
-      "follow_ups" : {
-         "model_profile_id" : {
-            "description" : "A separate model profile that writes next-step buttons in the background after the answer is saved. It never delays the answer or the next message. A small, cheap model is enough. Empty disables next-step suggestions.",
-            "title" : "Model for next steps"
+            "title" : "Rounds at most",
+            "description" : "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep."
          }
       },
       "guardrails" : {
-         "blocked_keywords_args" : {
-            "description" : "Block the run if a tool's arguments contain any of these terms (comma or newline separated)",
-            "title" : "Blocked words in tool arguments"
-         },
-         "blocked_keywords_in" : {
-            "description" : "Block the run if the prompt contains any of these terms (comma or newline separated)",
-            "title" : "Blocked words in the question"
-         },
-         "blocked_keywords_out" : {
-            "description" : "Block the run if the answer contains any of these terms (comma or newline separated)",
-            "title" : "Blocked words in the answer"
-         },
-         "blocked_keywords_tool" : {
-            "description" : "Block the run if a tool result contains any of these terms (comma or newline separated)",
-            "title" : "Blocked words in tool results"
-         },
-         "phone_regions" : {
-            "description" : "Countries whose national phone formats PII redaction reads, as two-letter codes (comma or newline separated), at most 16 regions and 256 characters. A number written with + is redacted whatever is listed",
-            "title" : "Phone number countries"
-         },
-         "redact_pii_args" : {
-            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from tool arguments",
-            "title" : "Hide personal data in tool arguments"
+         "redact_secrets_in" : {
+            "title" : "Hide secrets in the question",
+            "description" : "Redact API keys and tokens from the user's prompt"
          },
          "redact_pii_in" : {
-            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from the prompt",
-            "title" : "Hide personal data in the question"
+            "title" : "Hide personal data in the question",
+            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from the prompt"
          },
-         "redact_pii_out" : {
-            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from the answer",
-            "title" : "Hide personal data in the answer"
-         },
-         "redact_pii_tool" : {
-            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from tool results",
-            "title" : "Hide personal data in tool results"
-         },
-         "redact_secrets_args" : {
-            "description" : "Redact API keys and tokens from the arguments the agent passes a tool",
-            "title" : "Hide secrets in tool arguments"
-         },
-         "redact_secrets_in" : {
-            "description" : "Redact API keys and tokens from the user's prompt",
-            "title" : "Hide secrets in the question"
+         "blocked_keywords_in" : {
+            "title" : "Blocked words in the question",
+            "description" : "Block the run if the prompt contains any of these terms (comma or newline separated)"
          },
          "redact_secrets_out" : {
-            "description" : "Redact API keys and tokens from the agent's answer",
-            "title" : "Hide secrets in the answer"
+            "title" : "Hide secrets in the answer",
+            "description" : "Redact API keys and tokens from the agent's answer"
+         },
+         "redact_pii_out" : {
+            "title" : "Hide personal data in the answer",
+            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from the answer"
+         },
+         "blocked_keywords_out" : {
+            "title" : "Blocked words in the answer",
+            "description" : "Block the run if the answer contains any of these terms (comma or newline separated)"
          },
          "redact_secrets_tool" : {
-            "description" : "Redact API keys and tokens from tool results before the model reads them",
-            "title" : "Hide secrets in tool results"
-         }
-      },
-      "harness" : {
-         "access" : {
-            "description" : "What the harness may do in the agent's sandbox: only read code, or change code and run commands.",
-            "title" : "Access"
+            "title" : "Hide secrets in tool results",
+            "description" : "Redact API keys and tokens from tool results before the model reads them"
          },
-         "base_url" : {
-            "description" : "Claude Code only: a gateway that speaks Anthropic's API, such as https://openrouter.ai/api, with the key in the vault being that gateway's. Empty calls Anthropic directly.",
-            "title" : "Anthropic-compatible endpoint"
+         "redact_pii_tool" : {
+            "title" : "Hide personal data in tool results",
+            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from tool results"
          },
-         "harness" : {
-            "description" : "The CLI session that does the agent's work: Claude Code or Codex.",
-            "title" : "Harness"
+         "blocked_keywords_tool" : {
+            "title" : "Blocked words in tool results",
+            "description" : "Block the run if a tool result contains any of these terms (comma or newline separated)"
          },
-         "model" : {
-            "description" : "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex. Not set takes the harness's own default.",
-            "title" : "Model"
+         "redact_secrets_args" : {
+            "title" : "Hide secrets in tool arguments",
+            "description" : "Redact API keys and tokens from the arguments the agent passes a tool"
          },
-         "timeout_minutes" : {
-            "description" : "How long one prompt may run before it is stopped. The session stays open.",
-            "title" : "Prompt timeout (minutes)"
+         "redact_pii_args" : {
+            "title" : "Hide personal data in tool arguments",
+            "description" : "Redact emails, phone numbers, IBANs, cards and SSNs from tool arguments"
+         },
+         "blocked_keywords_args" : {
+            "title" : "Blocked words in tool arguments",
+            "description" : "Block the run if a tool's arguments contain any of these terms (comma or newline separated)"
+         },
+         "phone_regions" : {
+            "title" : "Phone number countries",
+            "description" : "Countries whose national phone formats PII redaction reads, as two-letter codes (comma or newline separated), at most 16 regions and 256 characters. A number written with + is redacted whatever is listed"
          }
       },
       "image_generation" : {
-         "aspect_ratio" : {
-            "description" : "Aspect ratio, e.g. 16:9 or 1:1.",
-            "title" : "Aspect ratio"
-         },
-         "background" : {
-            "description" : "Background type; transparent needs a png or webp output.",
-            "title" : "Background"
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Whose model draws. Only providers whose model class honours the image tool are accepted - three today - and which those are is asked of the SDK rather than listed here."
          },
          "model" : {
-            "description" : "Which of that provider's image models draws, by the ids in `app/core/catalog/image_models.json`. A model outside the catalog is refused: the tool answers a model that cannot draw with an error its author only sees mid-run.",
-            "title" : "Image model"
-         },
-         "output_format" : {
-            "description" : "Image file format.",
-            "title" : "File format"
-         },
-         "provider" : {
-            "description" : "Whose model draws. Only providers whose model class honours the image tool are accepted - three today - and which those are is asked of the SDK rather than listed here.",
-            "title" : "Provider"
+            "title" : "Image model",
+            "description" : "Which of that provider's image models draws, by the ids in `app/core/catalog/image_models.json`. A model outside the catalog is refused: the tool answers a model that cannot draw with an error its author only sees mid-run."
          },
          "quality" : {
-            "description" : "Rendering quality; higher is slower and dearer.",
-            "title" : "Quality"
+            "title" : "Quality",
+            "description" : "Rendering quality; higher is slower and dearer."
          },
          "size" : {
-            "description" : "Output size. OpenAI uses the pixel values, Google the K values.",
-            "title" : "Size"
+            "title" : "Size",
+            "description" : "Output size. OpenAI uses the pixel values, Google the K values."
+         },
+         "background" : {
+            "title" : "Background",
+            "description" : "Background type; transparent needs a png or webp output."
+         },
+         "output_format" : {
+            "title" : "File format",
+            "description" : "Image file format."
+         },
+         "aspect_ratio" : {
+            "title" : "Aspect ratio",
+            "description" : "Aspect ratio, e.g. 16:9 or 1:1."
          }
       },
       "knowledge" : {
          "default_top_k" : {
-            "description" : "Passages returned when the model does not ask for a number",
-            "title" : "Passages per search"
-         },
-         "parent_context" : {
-            "description" : "Small-to-big retrieval: return each matched chunk with the text around it. Matching and ranking always run on the small chunks, the matched chunk is never shortened, and the added context is bounded.",
-            "title" : "Include the surrounding text"
-         },
-         "query_analysis_max_variants" : {
-            "description" : "How many rephrasings `multi_query` may add, bounding its fan-out and cost. Ignored by the other modes",
-            "title" : "Rephrasings at most"
-         },
-         "query_analysis_mode" : {
-            "description" : "Optionally analyse and expand the query before retrieval to improve recall on short or fuzzy questions. Off by default. `multi_query` and `hyde` each make one extra model call",
-            "title" : "Query expansion"
+            "title" : "Passages per search",
+            "description" : "Passages returned when the model does not ask for a number"
          },
          "self_query_enabled" : {
-            "description" : "Infer FA-039 business filters (source, document type, organizational unit, date range) from the natural-language query with an LLM when the model searches without naming any filter itself. Off by default. Each such search makes one extra model request, billed to the run. It can only narrow within the agent's tenant and collections, never widen.",
-            "title" : "Infer filters from the question"
+            "title" : "Infer filters from the question",
+            "description" : "Infer FA-039 business filters (source, document type, organizational unit, date range) from the natural-language query with an LLM when the model searches without naming any filter itself. Off by default. Each such search makes one extra model request, billed to the run. It can only narrow within the agent's tenant and collections, never widen."
+         },
+         "query_analysis_mode" : {
+            "title" : "Query expansion",
+            "description" : "Optionally analyse and expand the query before retrieval to improve recall on short or fuzzy questions. Off by default. `multi_query` and `hyde` each make one extra model call"
+         },
+         "query_analysis_max_variants" : {
+            "title" : "Rephrasings at most",
+            "description" : "How many rephrasings `multi_query` may add, bounding its fan-out and cost. Ignored by the other modes"
+         },
+         "parent_context" : {
+            "title" : "Include the surrounding text",
+            "description" : "Small-to-big retrieval: return each matched chunk with the text around it. Matching and ranking always run on the small chunks, the matched chunk is never shortened, and the added context is bounded."
          }
       },
       "media" : {
          "threshold_bytes" : {
-            "description" : "Binary or text parts at least this large are written to storage and replaced with a reference in the stored history.",
-            "title" : "Store parts larger than (bytes)"
+            "title" : "Store parts larger than (bytes)",
+            "description" : "Binary or text parts at least this large are written to storage and replaced with a reference in the stored history."
          }
       },
       "memory_files" : {
          "allow_personal" : {
-            "description" : "Whether the agent keeps private notes for each person it talks to, readable only when it is alone with them. Off drops that store entirely, for compliance or privacy; the notes it keeps in group chats stay.",
-            "title" : "Keep private notes per person"
-         }
-      },
-      "mirage" : {
-         "allowed_commands" : {
-            "description" : "Only these commands run, e.g. ls, cat, grep. Empty allows virtual commands; direct curl/wget are disabled.",
-            "title" : "Allowed commands"
-         },
-         "hidden_paths" : {
-            "description" : "Paths the agent cannot see at all, e.g. /drive/HR/.",
-            "title" : "Hidden paths"
-         },
-         "mounts" : {
-            "description" : "What the terminal mounts, each as a folder.",
-            "title" : "Folders"
-         }
-      },
-      "phone_calls" : {
-         "endpoint_id" : {
-            "description" : "The configured Twilio telephone endpoint from Channels. Only explicit member consent and current limits authorize a call.",
-            "title" : "Telephone endpoint"
+            "title" : "Keep private notes per person",
+            "description" : "Whether the agent keeps private notes for each person it talks to, readable only when it is alone with them. Off drops that store entirely, for compliance or privacy; the notes it keeps in group chats stay."
          }
       },
       "planning" : {
-         "cache_ttl" : {
-            "description" : "Kept so existing agent specs still load. Planning no longer uses this value; configure prompt caching through cache in the model settings.",
-            "title" : "Legacy prompt cache lifetime"
-         },
          "enable_subtasks" : {
-            "description" : "Adds subtasks and dependencies: a step waits as blocked until the steps before it finish. Off by default, because a flat checklist is enough for most work.",
-            "title" : "Subtasks and dependencies"
+            "title" : "Subtasks and dependencies",
+            "description" : "Adds subtasks and dependencies: a step waits as blocked until the steps before it finish. Off by default, because a flat checklist is enough for most work."
+         },
+         "cache_ttl" : {
+            "title" : "Legacy prompt cache lifetime",
+            "description" : "Kept so existing agent specs still load. Planning no longer uses this value; configure prompt caching through cache in the model settings."
          }
       },
       "sandbox" : {
          "backend" : {
-            "description" : "state: files only, no shell, stored by the platform - works on every deployment with no extra services. service: a container or cloud sandbox, on one of the connections this organization has registered. local: the person selects and approves their own computer in desktop chat; no machine path or native consent is stored in this spec.",
-            "title" : "Where files live"
+            "title" : "Where files live",
+            "description" : "state: files only, no shell, stored by the platform - works on every deployment with no extra services. service: a container or cloud sandbox, on one of the connections this organization has registered. local: the person selects and approves their own computer in desktop chat; no machine path or native consent is stored in this spec."
          },
          "connection_id" : {
-            "description" : "Which registered sandbox connection to run on; empty takes the organization's default. An id, never an address or a token - a spec is exported to a client's git repository, so the only thing it may carry is a reference. The connection decides whether that is a container on a host you run or a sandbox in Daytona's cloud.",
-            "title" : "Sandbox connection"
-         },
-         "include_execute" : {
-            "description" : "Whether the agent may run shell commands. Turning it off leaves the file tools and removes the shell entirely, rather than gating it.",
-            "title" : "Allow shell commands"
-         },
-         "runtime" : {
-            "description" : "Which environment a container-backed workspace runs, named from the list the connection's service allows. Empty takes the connection's default. An alias, never an image.",
-            "title" : "Runtime"
+            "title" : "Sandbox connection",
+            "description" : "Which registered sandbox connection to run on; empty takes the organization's default. An id, never an address or a token - a spec is exported to a client's git repository, so the only thing it may carry is a reference. The connection decides whether that is a container on a host you run or a sandbox in Daytona's cloud."
          },
          "session_scope" : {
-            "description" : "Who shares one workspace: run (a fresh one every turn), conversation (everyone in the chat or Slack thread), channel (a whole Slack channel), user (one person across chats) or agent (everyone who talks to it).",
-            "title" : "Who shares the workspace"
+            "title" : "Who shares the workspace",
+            "description" : "Who shares one workspace: run (a fresh one every turn), conversation (everyone in the chat or Slack thread), channel (a whole Slack channel), user (one person across chats) or agent (everyone who talks to it)."
+         },
+         "runtime" : {
+            "title" : "Runtime",
+            "description" : "Which environment a container-backed workspace runs, named from the list the connection's service allows. Empty takes the connection's default. An alias, never an image."
+         },
+         "include_execute" : {
+            "title" : "Allow shell commands",
+            "description" : "Whether the agent may run shell commands. Turning it off leaves the file tools and removes the shell entirely, rather than gating it."
+         }
+      },
+      "eval_tool_tuning" : {
+         "max_tuning_runs" : {
+            "title" : "Tuning runs at most",
+            "description" : "How many tuning runs one run may record. A fresh tuning run after a proposal is applied is a new run, and the cap is what stops repeated scoring turning into scope creep."
          }
       },
       "sol_loop" : {
-         "max_rounds" : {
-            "description" : "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep. Extend to 5 only for security, permissions, auth, data loss, or state and concurrency, while a blocker or should stays open - or when the user asks.",
-            "title" : "Rounds at most"
-         },
          "reviewer" : {
-            "description" : "The one reviewer that judges the work, on its Sol model.",
-            "title" : "Reviewer"
+            "title" : "Reviewer",
+            "description" : "The one reviewer that judges the work, on its Sol model."
+         },
+         "max_rounds" : {
+            "title" : "Rounds at most",
+            "description" : "How many review rounds one run may ask for. A fresh review after fixes is a new round, and the cap is what stops repeated reviews turning into scope creep. Extend to 5 only for security, permissions, auth, data loss, or state and concurrency, while a blocker or should stays open - or when the user asks."
          }
       },
       "subagents" : {
-         "allow_any_agent" : {
-            "description" : "Offer the current published versions of other agents this person may run in this organization, under agent-prefixed slug handles. Explicit pins keep their selected versions. The catalog is resolved at the start of each interactive run; unattended work stays limited to reviewed pins. Large catalogs increase setup time and context.",
-            "title" : "Use other accessible agents"
-         },
-         "allow_dynamic" : {
-            "description" : "Lets this agent write its own specialists while it runs. Each is instructions and one of your models, with no tools or knowledge, spends from this run's budget and is gone after the reply. Gate `create_agent` to see each one first.",
-            "title" : "Let the agent create specialists"
-         },
-         "allow_questions" : {
-            "description" : "Lets a delegate ask the person waiting a question instead of guessing. Works only for a sync delegation, and only for the specialists this agent was given. A question is not an approval and cannot grant one.",
-            "title" : "Let delegates ask questions"
-         },
          "inline" : {
-            "description" : "Specialists defined inside this agent, for work that does not justify publishing an agent of its own. Not versioned: editing this agent changes them, and nothing else can reference them.",
-            "title" : "Inline specialists"
-         },
-         "max_depth" : {
-            "description" : "How many levels of delegation are allowed, counting this agent. 1 lets it delegate but not its delegates; 2 allows one nested level. Each level multiplies the requests one turn can make.",
-            "title" : "Delegation depth"
-         },
-         "max_fanout" : {
-            "description" : "How many delegations may run at once. Reached, the next one is refused with a message the model can act on rather than an error. This is the ceiling on a background delegation launching a background delegation until a dozen agents are running against one budget.",
-            "title" : "Delegations at once"
-         },
-         "max_result_chars" : {
-            "description" : "How much of a finished delegation's answer is shown when several are collected at once. A truncated one says so and points at the tool that returns it in full, so nothing is lost - this only decides how much of five specialists' work arrives in one turn's context.",
-            "title" : "Answer length shown per delegate"
+            "title" : "Inline specialists",
+            "description" : "Specialists defined inside this agent, for work that does not justify publishing an agent of its own. Not versioned: editing this agent changes them, and nothing else can reference them."
          },
          "mode" : {
-            "description" : "Sync waits for the delegate's answer, async collects it later, auto lets the model choose per task. A background delegation cannot wait for an approval, so keep work that needs one on sync.",
-            "title" : "Delegation mode"
+            "title" : "Delegation mode",
+            "description" : "Sync waits for the delegate's answer, async collects it later, auto lets the model choose per task. A background delegation cannot wait for an approval, so keep work that needs one on sync."
+         },
+         "allow_questions" : {
+            "title" : "Let delegates ask questions",
+            "description" : "Lets a delegate ask the person waiting a question instead of guessing. Works only for a sync delegation, and only for the specialists this agent was given. A question is not an approval and cannot grant one."
+         },
+         "allow_dynamic" : {
+            "title" : "Let the agent create specialists",
+            "description" : "Lets this agent write its own specialists while it runs. Each is instructions and one of your models, with no tools or knowledge, spends from this run's budget and is gone after the reply. Gate `create_agent` to see each one first."
+         },
+         "max_depth" : {
+            "title" : "Delegation depth",
+            "description" : "How many levels of delegation are allowed, counting this agent. 1 lets it delegate but not its delegates; 2 allows one nested level. Each level multiplies the requests one turn can make."
+         },
+         "max_fanout" : {
+            "title" : "Delegations at once",
+            "description" : "How many delegations may run at once. Reached, the next one is refused with a message the model can act on rather than an error. This is the ceiling on a background delegation launching a background delegation until a dozen agents are running against one budget."
+         },
+         "max_result_chars" : {
+            "title" : "Answer length shown per delegate",
+            "description" : "How much of a finished delegation's answer is shown when several are collected at once. A truncated one says so and points at the tool that returns it in full, so nothing is lost - this only decides how much of five specialists' work arrives in one turn's context."
          },
          "share_with_delegates" : {
-            "description" : "Capabilities this agent passes on to its delegates, such as a shared workspace so one writes a file and another reads it. Nothing is shared unless named here, and delegation itself never is.",
-            "title" : "Capabilities delegates inherit"
+            "title" : "Capabilities delegates inherit",
+            "description" : "Capabilities this agent passes on to its delegates, such as a shared workspace so one writes a file and another reads it. Nothing is shared unless named here, and delegation itself never is."
+         },
+         "allow_any_agent" : {
+            "title" : "Use other accessible agents",
+            "description" : "Offer the current published versions of other agents this person may run in this organization, under agent-prefixed slug handles. Explicit pins keep their selected versions. The catalog is resolved at the start of each interactive run; unattended work stays limited to reviewed pins. Large catalogs increase setup time and context."
          }
       },
       "system_reminders" : {
-         "cache_ttl" : {
-            "description" : "Cache lifetime of the breakpoint placed before the tail reminder",
-            "title" : "Prompt cache lifetime"
+         "reminders" : {
+            "title" : "Fixed reminders",
+            "description" : "Fixed lines re-stated on their own cadences"
          },
          "goal_reanchor" : {
-            "description" : "Re-state the original request on a cadence, at no token cost",
-            "title" : "Restate the original request"
+            "title" : "Restate the original request",
+            "description" : "Re-state the original request on a cadence, at no token cost"
          },
          "llm_reminder" : {
-            "description" : "A model-written reminder on a cadence. Costs one extra call each fire",
-            "title" : "Model-written reminder"
+            "title" : "Model-written reminder",
+            "description" : "A model-written reminder on a cadence. Costs one extra call each fire"
          },
-         "reminders" : {
-            "description" : "Fixed lines re-stated on their own cadences",
-            "title" : "Fixed reminders"
-         }
-      },
-      "text_to_speech" : {
-         "max_characters" : {
-            "description" : "The most text one call may speak, which caps what a single call can cost.",
-            "title" : "Longest text"
-         },
-         "model" : {
-            "description" : "Which of that provider's speech models speaks. A model outside the catalog is refused here rather than mid-run.",
-            "title" : "Speech model"
-         },
-         "output_format" : {
-            "description" : "mp3 is smaller, wav is uncompressed. Left empty, the provider's first format - Gemini returns wav only.",
-            "title" : "File format"
-         },
-         "provider" : {
-            "description" : "Whose voices speak. Offered: the providers in `app/core/catalog/text_to_speech_models.json` whose key the vault can hold.",
-            "title" : "Provider"
-         },
-         "voice" : {
-            "description" : "The voice that speaks unless the agent chooses another; left empty, the model's first. ElevenLabs voices belong to your account, so for ElevenLabs paste the voice id from your voice library.",
-            "title" : "Voice"
-         },
-         "voices" : {
-            "description" : "The only voices the agent may switch to instead of the one above, per clip - for a dialogue, or a narrator and a character. Left empty, it may choose any voice the model offers - for ElevenLabs, any voice id in your account.",
-            "title" : "Allowed voices"
+         "cache_ttl" : {
+            "title" : "Prompt cache lifetime",
+            "description" : "Cache lifetime of the breakpoint placed before the tail reminder"
          }
       },
       "thinking" : {
          "effort" : {
-            "description" : "How hard the model reasons before answering. Leave unset for the provider's own default effort; a level a provider does not have maps to its closest one.",
-            "title" : "Reasoning effort"
+            "title" : "Reasoning effort",
+            "description" : "How hard the model reasons before answering. Leave unset for the provider's own default effort; a level a provider does not have maps to its closest one."
          }
       },
       "tool_output_limits" : {
          "action" : {
-            "description" : "What to do with a return once it is over the threshold",
-            "title" : "When a result is too long"
-         },
-         "max_chars" : {
-            "description" : "Characters kept when a return is truncated, or when a spill or summary falls back to truncation. Left unset, never more than the threshold",
-            "title" : "Characters kept"
-         },
-         "over_tokens" : {
-            "description" : "Measure the threshold in estimated tokens rather than characters",
-            "title" : "Measure in tokens"
-         },
-         "strip_ansi" : {
-            "description" : "Strip terminal colour codes from text returns before measuring and reducing",
-            "title" : "Strip terminal colours"
-         },
-         "summary_prompt" : {
-            "description" : "What the summarising model is told, for the 'summarize' action. Must contain {output}, where the tool's full output is inserted; {tool_name} is available too, for the name of the tool that produced it",
-            "title" : "Summary prompt"
+            "title" : "When a result is too long",
+            "description" : "What to do with a return once it is over the threshold"
          },
          "threshold" : {
-            "description" : "Size at or above which a return is reduced. Characters by default; estimated tokens when 'over tokens' is set, where it defaults to 15,000",
-            "title" : "Size limit"
+            "title" : "Size limit",
+            "description" : "Size at or above which a return is reduced. Characters by default; estimated tokens when 'over tokens' is set, where it defaults to 15,000"
+         },
+         "over_tokens" : {
+            "title" : "Measure in tokens",
+            "description" : "Measure the threshold in estimated tokens rather than characters"
+         },
+         "max_chars" : {
+            "title" : "Characters kept",
+            "description" : "Characters kept when a return is truncated, or when a spill or summary falls back to truncation. Left unset, never more than the threshold"
          },
          "truncation_strategy" : {
-            "description" : "Which end(s) of an oversized text to keep when truncating",
-            "title" : "Which part to keep"
+            "title" : "Which part to keep",
+            "description" : "Which end(s) of an oversized text to keep when truncating"
+         },
+         "strip_ansi" : {
+            "title" : "Strip terminal colours",
+            "description" : "Strip terminal colour codes from text returns before measuring and reducing"
+         },
+         "summary_prompt" : {
+            "title" : "Summary prompt",
+            "description" : "What the summarising model is told, for the 'summarize' action. Must contain {output}, where the tool's full output is inserted; {tool_name} is available too, for the name of the tool that produced it"
          }
       },
       "tool_search" : {
-         "defer_capabilities" : {
-            "description" : "Hide eligible tools from enabled capabilities until the agent searches for them. Off keeps capability tools visible.",
-            "title" : "Defer capability tools"
-         },
-         "defer_mcp_servers" : {
-            "description" : "Hide eligible tools from bound MCP servers until the agent searches for them. Off keeps MCP tools visible.",
-            "title" : "Defer MCP tools"
-         },
-         "exclude_capabilities" : {
-            "description" : "Comma-separated capability IDs whose tools stay visible, such as knowledge or visuals. These capabilities must still be enabled.",
-            "title" : "Always-visible capabilities"
-         },
-         "exclude_mcp_servers" : {
-            "description" : "Comma-separated MCP tool namespace prefixes whose tools stay visible, such as github_work or agenticos. Use the prefix before the tool name, with hyphens replaced by underscores.",
-            "title" : "Always-visible MCP servers"
-         },
-         "exclude_tools" : {
-            "description" : "Comma-separated model-facing tool names to keep visible. Use renamed capability tool names and fully prefixed MCP tool names, such as github_work_list_issues.",
-            "title" : "Always-visible tools"
+         "strategy" : {
+            "title" : "Search method",
+            "description" : "auto: native tool search on a provider that supports it, local keyword matching elsewhere. keywords: always match locally, on any provider. local_bm25: rank identifiers, descriptions and arguments locally on any provider. bm25 / regex: force an Anthropic-native algorithm; errors on a provider that has no native tool search."
          },
          "max_results" : {
-            "description" : "How many matches the local search returns; ignored for native search.",
-            "title" : "Matches per search"
+            "title" : "Matches per search",
+            "description" : "How many matches the local search returns; ignored for native search."
          },
-         "strategy" : {
-            "description" : "auto: native tool search on a provider that supports it, local keyword matching elsewhere. keywords: always match locally, on any provider. local_bm25: rank identifiers, descriptions and arguments locally on any provider. bm25 / regex: force an Anthropic-native algorithm; errors on a provider that has no native tool search.",
-            "title" : "Search method"
-         }
-      },
-      "video_generation" : {
-         "alibaba_region" : {
-            "description" : "Alibaba only: the region the workspace is in.",
-            "title" : "Alibaba region"
+         "defer_capabilities" : {
+            "title" : "Defer capability tools",
+            "description" : "Hide eligible tools from enabled capabilities until the agent searches for them. Off keeps capability tools visible."
          },
-         "alibaba_workspace" : {
-            "description" : "Alibaba only: the Model Studio workspace id, which Wan 3.0 is called through. Left empty, the shared DashScope endpoint, which Alibaba keeps for existing integrations.",
-            "title" : "Alibaba workspace"
+         "defer_mcp_servers" : {
+            "title" : "Defer MCP tools",
+            "description" : "Hide eligible tools from bound MCP servers until the agent searches for them. Off keeps MCP tools visible."
          },
-         "aspect_ratio" : {
-            "description" : "The shape a clip takes unless the agent asks for another; left empty, the model's first.",
-            "title" : "Aspect ratio"
+         "exclude_capabilities" : {
+            "title" : "Always-visible capabilities",
+            "description" : "Comma-separated capability IDs whose tools stay visible, such as knowledge or visuals. These capabilities must still be enabled."
          },
-         "audio" : {
-            "description" : "Whether clips carry sound unless the agent asks otherwise, where the model makes it optional; left empty, the provider's default.",
-            "title" : "Sound"
+         "exclude_mcp_servers" : {
+            "title" : "Always-visible MCP servers",
+            "description" : "Comma-separated MCP tool namespace prefixes whose tools stay visible, such as github_work or agenticos. Use the prefix before the tool name, with hyphens replaced by underscores."
          },
-         "max_resolution" : {
-            "description" : "The highest resolution the agent may ask for, at least the usual one; it caps what a second can cost. Left empty, the agent may ask for any resolution the model renders.",
-            "title" : "Highest resolution"
-         },
-         "max_seconds" : {
-            "description" : "The longest clip the agent may ask for, which caps what one call can cost; left empty, the model's own limit. Not for a model that decides its own length.",
-            "title" : "Longest clip"
-         },
-         "model" : {
-            "description" : "Which of that provider's video models makes the clip. A model outside the catalog is refused here rather than mid-run.",
-            "title" : "Video model"
-         },
-         "provider" : {
-            "description" : "Whose model makes the video. Offered: the providers in `app/core/catalog/video_models.json` whose key the vault can hold.",
-            "title" : "Provider"
-         },
-         "resolution" : {
-            "description" : "The resolution a clip is made at unless the agent asks for another; left empty, the model's first. Higher costs more per second.",
-            "title" : "Resolution"
-         },
-         "seconds" : {
-            "description" : "Seconds a clip runs unless the agent asks for another length; left empty, five, or the nearest the model makes. Not for a model that decides its own length.",
-            "title" : "Length"
-         },
-         "timeout_seconds" : {
-            "description" : "How long to wait for a clip, in seconds. A job not finished by then is cancelled where the provider allows it and booked at its estimate.",
-            "title" : "Time limit"
+         "exclude_tools" : {
+            "title" : "Always-visible tools",
+            "description" : "Comma-separated model-facing tool names to keep visible. Use renamed capability tool names and fully prefixed MCP tool names, such as github_work_list_issues."
          }
       },
       "web_fetch" : {
-         "allowed_domains" : {
-            "description" : "Bare hostnames the agent may fetch, e.g. docs.example.com; empty means any. Matched exactly - no wildcards, no subdomains.",
-            "title" : "Allowed domains"
-         },
-         "blocked_domains" : {
-            "description" : "Bare hostnames the agent may never fetch, matched exactly.",
-            "title" : "Blocked domains"
+         "method" : {
+            "title" : "How pages are fetched",
+            "description" : "local: we fetch the page, identically on every model. native: the model provider fetches it with its own egress and citations (only on models that support it). auto: native where the model has it, ours everywhere else."
          },
          "max_content_chars" : {
-            "description" : "How much of a page one fetch returns before it is truncated; roughly four characters per token. Ignored under native fetch, which the provider bounds itself.",
-            "title" : "Page length limit (characters)"
+            "title" : "Page length limit (characters)",
+            "description" : "How much of a page one fetch returns before it is truncated; roughly four characters per token. Ignored under native fetch, which the provider bounds itself."
          },
-         "method" : {
-            "description" : "local: we fetch the page, identically on every model. native: the model provider fetches it with its own egress and citations (only on models that support it). auto: native where the model has it, ours everywhere else.",
-            "title" : "How pages are fetched"
+         "allowed_domains" : {
+            "title" : "Allowed domains",
+            "description" : "Bare hostnames the agent may fetch, e.g. docs.example.com; empty means any. Matched exactly - no wildcards, no subdomains."
+         },
+         "blocked_domains" : {
+            "title" : "Blocked domains",
+            "description" : "Bare hostnames the agent may never fetch, matched exactly."
          }
       },
       "web_research" : {
-         "max_results" : {
-            "description" : "How many results one search returns; ignored for native search.",
-            "title" : "Results per search"
-         },
          "method" : {
-            "description" : "duckduckgo: free, no account, results rendered as clickable sources. native: the model provider searches with its own index and citations (only on models that support it). tavily: summarised for a model to read. brave: an index of its own. exa: search by meaning rather than keywords. keenable: no account needed; an API key is optional.",
-            "title" : "Search engine"
+            "title" : "Search engine",
+            "description" : "duckduckgo: free, no account, results rendered as clickable sources. native: the model provider searches with its own index and citations (only on models that support it). tavily: summarised for a model to read. brave: an index of its own. exa: search by meaning rather than keywords. keenable: no account needed; an API key is optional."
+         },
+         "max_results" : {
+            "title" : "Results per search",
+            "description" : "How many results one search returns; ignored for native search."
+         }
+      },
+      "coding_agent" : {
+         "harness" : {
+            "title" : "Coding agent",
+            "description" : "Which coding agent does the work: Claude Code, on an Anthropic key or a Claude subscription token, or Codex, on an OpenAI key or a ChatGPT sign-in."
+         },
+         "access" : {
+            "title" : "What it may do",
+            "description" : "Change files and run commands, such as tests - or only read the code and answer. Set Human approval to ask before each task either way."
+         },
+         "model" : {
+            "title" : "Model",
+            "description" : "The model the coding agent runs: a Claude model for Claude Code, an OpenAI one for Codex. Not set takes the coding agent's own default. Not available on this computer, where the agent uses its own setting."
+         },
+         "base_url" : {
+            "title" : "Anthropic-compatible endpoint",
+            "description" : "Claude Code only: a gateway that speaks Anthropic's API, such as https://openrouter.ai/api, with the key in the vault being that gateway's. Empty calls Anthropic directly."
+         },
+         "timeout_minutes" : {
+            "title" : "Time limit (minutes)",
+            "description" : "How long one task may run before it is stopped."
+         },
+         "runs_on" : {
+            "title" : "Where it runs",
+            "description" : "The agent's sandbox with its configured key, a disposable private cloud task using the initiating person's profile account, or the folder a person chooses on their own computer in the desktop app, where Claude Code and Codex use the sign-in they already have and need no key."
+         }
+      },
+      "harness" : {
+         "harness" : {
+            "title" : "Harness",
+            "description" : "The CLI session that does the agent's work: Claude Code, Codex, OpenCode, Gemini CLI or Pi."
+         },
+         "access" : {
+            "title" : "Access",
+            "description" : "What the harness may do in the agent's sandbox: only read code, or change code and run commands."
+         },
+         "model" : {
+            "title" : "Model",
+            "description" : "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex, a Gemini one for Gemini CLI, or any of those vendors' models for OpenCode or Pi. Not set takes the harness's own default."
+         },
+         "base_url" : {
+            "title" : "Anthropic-compatible endpoint",
+            "description" : "Claude Code only: a gateway that speaks Anthropic's API, such as https://openrouter.ai/api, with the key in the vault being that gateway's. Empty calls Anthropic directly."
+         },
+         "timeout_minutes" : {
+            "title" : "Prompt timeout (minutes)",
+            "description" : "How long one prompt may run before it is stopped. The session stays open."
          }
       },
       "workflows" : {
-         "wait_seconds" : {
-            "description" : "How long run_workflow waits for a run to finish before handing back its id to read later.",
-            "title" : "Wait for a run (seconds)"
-         },
          "workflow_ids" : {
-            "description" : "Published workflows that start by hand, by the API or by a call.",
-            "title" : "Workflows it may start"
+            "title" : "Workflows it may start",
+            "description" : "Published workflows that start by hand, by the API or by a call."
+         },
+         "wait_seconds" : {
+            "title" : "Wait for a run (seconds)",
+            "description" : "How long run_workflow waits for a run to finish before handing back its id to read later."
+         }
+      },
+      "artifacts" : {
+         "preview_screenshot" : {
+            "title" : "Show the model a page's picture",
+            "description" : "Hand the model the picture of a page when it previews one. Turn off for a model that cannot read images; the written report still comes back."
+         }
+      },
+      "text_to_speech" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Whose voices speak. Offered: the providers in `app/core/catalog/text_to_speech_models.json` whose key the vault can hold."
+         },
+         "model" : {
+            "title" : "Speech model",
+            "description" : "Which of that provider's speech models speaks. A model outside the catalog is refused here rather than mid-run."
+         },
+         "voice" : {
+            "title" : "Voice",
+            "description" : "The voice that speaks unless the agent chooses another; left empty, the model's first. ElevenLabs voices belong to your account, so for ElevenLabs paste the voice id from your voice library."
+         },
+         "voices" : {
+            "title" : "Allowed voices",
+            "description" : "The only voices the agent may switch to instead of the one above, per clip - for a dialogue, or a narrator and a character. Left empty, it may choose any voice the model offers - for ElevenLabs, any voice id in your account."
+         },
+         "output_format" : {
+            "title" : "File format",
+            "description" : "mp3 is smaller, wav is uncompressed. Left empty, the provider's first format - Gemini returns wav only."
+         },
+         "max_characters" : {
+            "title" : "Longest text",
+            "description" : "The most text one call may speak, which caps what a single call can cost."
+         }
+      },
+      "video_generation" : {
+         "provider" : {
+            "title" : "Provider",
+            "description" : "Whose model makes the video. Offered: the providers in `app/core/catalog/video_models.json` whose key the vault can hold."
+         },
+         "model" : {
+            "title" : "Video model",
+            "description" : "Which of that provider's video models makes the clip. A model outside the catalog is refused here rather than mid-run."
+         },
+         "resolution" : {
+            "title" : "Resolution",
+            "description" : "The resolution a clip is made at unless the agent asks for another; left empty, the model's first. Higher costs more per second."
+         },
+         "max_resolution" : {
+            "title" : "Highest resolution",
+            "description" : "The highest resolution the agent may ask for, at least the usual one; it caps what a second can cost. Left empty, the agent may ask for any resolution the model renders."
+         },
+         "aspect_ratio" : {
+            "title" : "Aspect ratio",
+            "description" : "The shape a clip takes unless the agent asks for another; left empty, the model's first."
+         },
+         "seconds" : {
+            "title" : "Length",
+            "description" : "Seconds a clip runs unless the agent asks for another length; left empty, five, or the nearest the model makes. Not for a model that decides its own length."
+         },
+         "max_seconds" : {
+            "title" : "Longest clip",
+            "description" : "The longest clip the agent may ask for, which caps what one call can cost; left empty, the model's own limit. Not for a model that decides its own length."
+         },
+         "audio" : {
+            "title" : "Sound",
+            "description" : "Whether clips carry sound unless the agent asks otherwise, where the model makes it optional; left empty, the provider's default."
+         },
+         "alibaba_workspace" : {
+            "title" : "Alibaba workspace",
+            "description" : "Alibaba only: the Model Studio workspace id, which Wan 3.0 is called through. Left empty, the shared DashScope endpoint, which Alibaba keeps for existing integrations."
+         },
+         "alibaba_region" : {
+            "title" : "Alibaba region",
+            "description" : "Alibaba only: the region the workspace is in."
+         },
+         "timeout_seconds" : {
+            "title" : "Time limit",
+            "description" : "How long to wait for a clip, in seconds. A job not finished by then is cancelled where the provider allows it and booked at its estimate."
+         }
+      },
+      "follow_ups" : {
+         "model_profile_id" : {
+            "title" : "Model for next steps",
+            "description" : "A separate model profile that writes next-step buttons in the background after the answer is saved. It never delays the answer or the next message. A small, cheap model is enough. Empty disables next-step suggestions."
+         }
+      },
+      "computer_use" : {
+         "desktop" : {
+            "title" : "Environment",
+            "description" : "Choose where this agent operates a desktop. The selected environment's requirements are shown below."
+         },
+         "daemon_url" : {
+            "title" : "Daemon URL",
+            "description" : "The computerd endpoint of your desktop. Its host must be on COMPUTER_DAEMON_ALLOWED_HOSTS."
+         },
+         "screen_width" : {
+            "title" : "Screenshot width",
+            "description" : "The widest screenshot the model is shown; larger screens are scaled down to fit."
+         },
+         "screen_height" : {
+            "title" : "Screenshot height",
+            "description" : "The tallest screenshot the model is shown."
+         },
+         "max_actions_per_call" : {
+            "title" : "Actions per call",
+            "description" : "How many actions one call may send."
+         },
+         "max_actions" : {
+            "title" : "Actions per run",
+            "description" : "How many actions one run may take in total."
+         },
+         "preview" : {
+            "title" : "Live preview",
+            "description" : "Show the desktop live in the chat while the agent works it."
+         }
+      },
+      "phone_calls" : {
+         "endpoint_id" : {
+            "title" : "Telephone endpoint",
+            "description" : "The configured Twilio telephone endpoint from Channels. Only explicit member consent and current limits authorize a call."
+         }
+      },
+      "mirage" : {
+         "mounts" : {
+            "title" : "Folders",
+            "description" : "What the terminal mounts, each as a folder."
+         },
+         "allowed_commands" : {
+            "title" : "Allowed commands",
+            "description" : "Only these commands run, e.g. ls, cat, grep. Empty allows virtual commands; direct curl/wget are disabled."
+         },
+         "hidden_paths" : {
+            "title" : "Hidden paths",
+            "description" : "Paths the agent cannot see at all, e.g. /drive/HR/."
+         }
+      },
+      "agent_messages" : {
+         "max_message_chars" : {
+            "title" : "Longest message",
+            "description" : "The longest message this agent may send, in characters. 16,000 is the console's ceiling as well, so a thread reads the same however the message was sent; lower it for an agent that should keep its messages short."
+         },
+         "allow_attachments" : {
+            "title" : "Allow file attachments",
+            "description" : "Whether this agent may send files it already uploaded along with its messages. Off means text only; files already attached stay readable."
+         }
+      },
+      "babysit_pr" : {
+         "poll_interval_seconds" : {
+            "title" : "Poll interval",
+            "description" : "Seconds between checks of the pull request. At least 60, so the watcher never polls in a tight loop and never burns the shared GitHub rate limit."
+         },
+         "max_watch_minutes" : {
+            "title" : "Watch at most",
+            "description" : "Minutes one watch may run before it stops and reports blocked. A watch that runs past this without green has not been approved — it has expired."
+         }
+      },
+      "burst" : {
+         "max_subtasks" : {
+            "title" : "Subtasks at most",
+            "description" : "How many subtasks one burst runs at once. 3 is the subagents max_fanout default and 10 its hard max: a burst shares that ceiling rather than raising it. Reached, the tool refuses the extra parts with a message the model can act on."
+         },
+         "max_bursts" : {
+            "title" : "Bursts at most",
+            "description" : "How many bursts one run may ask for. A fresh burst after fixes is a new burst, and the cap is what stops repeated bursts turning into scope creep."
          }
       }
    },
@@ -4969,6 +4969,54 @@
       "workflowRun" : {
          "unnamed" : "Workflow",
          "viewSteps" : "View its steps"
+      },
+      "teamRoom" : {
+         "title" : "Team room",
+         "titleInProject" : "Team room · {name}",
+         "audience" : "Everyone with access to this project can read this room.",
+         "alone" : "You're the only person here right now.",
+         "here" : "{count, plural, =1 {{names} is here} other {# teammates are here}}",
+         "emptyTitle" : "A shared conversation for your team",
+         "emptyDescription" : "Post an update, reply to a teammate, or choose an agent to help. Messages stay in this project for everyone with access.",
+         "newRoom" : "New team room",
+         "defaultTitle" : "Team room",
+         "creating" : "Creating room…",
+         "createFailed" : "Couldn't create the team room.",
+         "message" : "Message to the team",
+         "placeholder" : "Write to your team…",
+         "responder" : "Who should answer",
+         "chooseResponder" : "Choose who should answer",
+         "humanOnly" : "Team only",
+         "askAgent" : "Ask @{name}",
+         "responderHint" : "Messages go to your team. Choose an agent only when you want an AI answer.",
+         "post" : "Post message",
+         "posting" : "Posting…",
+         "postFailed" : "Couldn't confirm that your message was saved.",
+         "retryPost" : "Retry same message",
+         "retryHint" : "The result is unconfirmed. Retrying sends the same message once, with the same agent and reply.",
+         "checking" : "Checking room access…",
+         "readOnly" : "You can read this room. Posting requires permission to use its project.",
+         "loadFailed" : "Couldn't load room access and agent requests.",
+         "retry" : "Try again",
+         "queueTitle" : "Agent requests · {count, plural, =0 {none active} =1 {1 active} other {# active}}",
+         "requests" : "Agent requests",
+         "requestedBy" : "{name} asked @{agent}",
+         "you" : "You",
+         "teammate" : "A teammate",
+         "agent" : "agent",
+         "viewRun" : "View run",
+         "cancel" : "Cancel request",
+         "cancelFailed" : "Couldn't cancel this request.",
+         "status" : {
+            "queued" : "Queued",
+            "running" : "Working",
+            "awaiting_approval" : "Waiting for approval",
+            "awaiting_answer" : "Waiting for an answer",
+            "completed" : "Completed",
+            "failed" : "Failed",
+            "cancelled" : "Cancelled",
+            "interrupted" : "Interrupted"
+         }
       }
    },
    "claudeSubscription" : {
@@ -11622,112 +11670,118 @@
          "workspaces-detail" : {
             "body" : "One agent's files, folder by folder. Preview a file, or download whatever an agent produced for you.",
             "title" : "Inside a folder"
+         },
+         "chat-team-room" : {
+            "title" : "Your team's room",
+            "body" : "This conversation follows the project's sharing permissions. See who is here and use Share to check or manage its audience."
+         },
+         "chat-team-composer" : {
+            "title" : "Talk first, ask an agent when needed",
+            "body" : "Post to your teammates without starting an agent. Choose an agent explicitly for an AI answer; its request joins the shared queue."
          }
       }
    },
    "onboardingSetup" : {
-      "appsDescription" : "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
-      "appsTitle" : "Connect your apps",
-      "connectApps" : "Connect apps",
-      "continueToWorkspace" : "Continue to workspace",
+      "title" : "Welcome to {appName}",
       "description" : "Get started at your own pace. Connect an app now, or head straight into your workspace.",
-      "opensNewTab" : "Opens in a new tab. Return here when you're ready.",
+      "appsTitle" : "Connect your apps",
       "optional" : "Optional",
-      "skipHint" : "No app connection is required. You can connect later from Connections → Apps.",
-      "title" : "Welcome to {appName}"
+      "appsDescription" : "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
+      "connectApps" : "Connect apps",
+      "opensNewTab" : "Opens in a new tab. Return here when you're ready.",
+      "skipHint" : "No app connection is required. You can connect later from Connections → Apps."
    },
    "onboardingTeam" : {
-      "addSpecialist" : "Add specialist",
-      "appsDescription" : "Authorize your tools through Composio with verified permissions. You can also connect them later.",
-      "appsOptional" : "Optional",
+      "step1Title" : "About you & your work",
+      "step1Subtitle" : "Tell us a bit about what you do so we can recommend the right specialist agents.",
+      "roleLabel" : "What is your role?",
+      "industryLabel" : "What industry or domain are you in?",
+      "teamSizeLabel" : "Team size",
+      "step2Title" : "What should your AI team handle?",
+      "step2Subtitle" : "Select the workflows you want to delegate, automate, or accelerate.",
+      "goalsLabel" : "Priority areas",
+      "detailsLabel" : "Tell us more about your workflow (optional)",
+      "detailsPlaceholder" : "e.g. We get lots of customer inquiries, write weekly updates, and need help drafting documentation without spending hours on it...",
+      "step3Title" : "Tools & integrations",
+      "step3Subtitle" : "Choose the tools your team relies on daily. You can connect them now or anytime later from Connectors.",
+      "toolsInStack" : "Tools in your stack",
       "appsTitle" : "Connect apps & tools",
-      "back" : "Back",
+      "appsOptional" : "Optional",
+      "appsDescription" : "Authorize your tools through Composio with verified permissions. You can also connect them later.",
       "connectApps" : "Connect apps",
-      "continue" : "Continue",
+      "opensNewTab" : "Opens in a new tab. Return here when ready.",
+      "skipHint" : "Connecting apps is completely optional. You can connect anytime later.",
+      "step4Title" : "Your recommended AI team",
+      "step4Subtitle" : "Here is your team structure. Your Team Lead coordinates incoming requests and delegates work to your specialists.",
+      "leadBadge" : "Team Lead & Orchestrator",
+      "starterPromptsHeader" : "Example starter prompts",
+      "specialistsTitle" : "Specialist agents",
+      "addSpecialist" : "Add specialist",
+      "removeSpecialist" : "Remove",
+      "selectTemplate" : "Pick a specialist template",
       "deployTeam" : "Build & deploy my team",
+      "deployingTitle" : "Assembling your AI team...",
+      "deployingSubtitle" : "Setting up models, delegation channels, and workspace...",
       "deployingStep1" : "Configuring specialist agent specifications...",
       "deployingStep2" : "Binding skills, tools, and capabilities...",
       "deployingStep3" : "Wiring delegation hierarchy and orchestrator routing...",
       "deployingStep4" : "Opening team workspace in chat...",
-      "deployingSubtitle" : "Setting up models, delegation channels, and workspace...",
-      "deployingTitle" : "Assembling your AI team...",
-      "detailsLabel" : "Tell us more about your workflow (optional)",
-      "detailsPlaceholder" : "e.g. We get lots of customer inquiries, write weekly updates, and need help drafting documentation without spending hours on it...",
       "errorTitle" : "Something went wrong",
+      "tryAgain" : "Try Again",
+      "teamMembersCreated" : "Team Members Created",
+      "successTitle" : "Your AI team is ready!",
+      "successSubtitle" : "Your Lead Agent and specialists have been created and wired together.",
+      "startChat" : "Chat with your Team Lead",
+      "viewAgents" : "View team in Agents",
+      "skip" : "Skip for now",
+      "back" : "Back",
+      "continue" : "Continue",
       "generating" : "Generating...",
       "generatingProposal" : "Analyzing your profile and generating team recommendation...",
-      "goals" : {
-         "automation" : "Process & Workflow Automation",
-         "content" : "Content Writing & Product Copy",
-         "contracts" : "Contracts, Invoices & Policy Review",
-         "data" : "Data Analysis, Metrics & Reporting",
-         "docs" : "Documentation & Team Knowledge Q&A",
-         "incidents" : "Incident Response & Alert Diagnostics",
-         "meetings" : "Meeting Notes, Action Items & Minutes",
-         "releases" : "Release Notes & Changelog Writing",
-         "research" : "Research, Citations & Competitive Intel",
-         "support" : "Customer Support & Ticket Triage"
+      "stepTracker" : "Step {step} of 4",
+      "stepProfile" : "Profile",
+      "stepGoals" : "Goals",
+      "stepTools" : "Tools",
+      "stepTeam" : "Recommended Team",
+      "roles" : {
+         "founder" : "Founder / Executive",
+         "engineering" : "Engineering / Tech",
+         "product" : "Product / PM",
+         "operations" : "Operations",
+         "support" : "Support & Success",
+         "legal" : "Legal & Finance",
+         "other" : "Other"
       },
-      "goalsLabel" : "Priority areas",
       "industries" : {
+         "software" : "Software & Technology",
          "ecommerce" : "E-Commerce & Retail",
          "finance" : "Finance & Banking",
-         "general" : "General / Other",
          "healthcare" : "Healthcare & Life Sciences",
          "legal" : "Legal Services",
          "manufacturing" : "Manufacturing & Logistics",
          "publicSector" : "Public Sector & Gov",
-         "software" : "Software & Technology"
+         "general" : "General / Other"
       },
-      "industryLabel" : "What industry or domain are you in?",
-      "leadBadge" : "Team Lead & Orchestrator",
-      "leadOrchestrationHint" : "Routes tasks to specialists and synthesizes unified answers for you.",
-      "opensNewTab" : "Opens in a new tab. Return here when ready.",
-      "removeSpecialist" : "Remove",
-      "roleLabel" : "What is your role?",
-      "roles" : {
-         "engineering" : "Engineering / Tech",
-         "founder" : "Founder / Executive",
-         "legal" : "Legal & Finance",
-         "operations" : "Operations",
-         "other" : "Other",
-         "product" : "Product / PM",
-         "support" : "Support & Success"
-      },
-      "selectTemplate" : "Pick a specialist template",
-      "skip" : "Skip for now",
-      "skipHint" : "Connecting apps is completely optional. You can connect anytime later.",
-      "specialistsTitle" : "Specialist agents",
-      "startChat" : "Chat with your Team Lead",
-      "starterPromptsHeader" : "Example starter prompts",
-      "step1Subtitle" : "Tell us a bit about what you do so we can recommend the right specialist agents.",
-      "step1Title" : "About you & your work",
-      "step2Subtitle" : "Select the workflows you want to delegate, automate, or accelerate.",
-      "step2Title" : "What should your AI team handle?",
-      "step3Subtitle" : "Choose the tools your team relies on daily. You can connect them now or anytime later from Connectors.",
-      "step3Title" : "Tools & integrations",
-      "step4Subtitle" : "Here is your team structure. Your Team Lead coordinates incoming requests and delegates work to your specialists.",
-      "step4Title" : "Your recommended AI team",
-      "stepGoals" : "Goals",
-      "stepProfile" : "Profile",
-      "stepTeam" : "Recommended Team",
-      "stepTools" : "Tools",
-      "stepTracker" : "Step {step} of 4",
-      "successSubtitle" : "Your Lead Agent and specialists have been created and wired together.",
-      "successTitle" : "Your AI team is ready!",
-      "teamMembersCreated" : "Team Members Created",
-      "teamSizeLabel" : "Team size",
       "teamSizes" : {
-         "company" : "Organization",
-         "companyDesc" : "15+ people",
+         "solo" : "Solo",
+         "soloDesc" : "Just me",
          "small" : "Small Team",
          "smallDesc" : "2–15 people",
-         "solo" : "Solo",
-         "soloDesc" : "Just me"
+         "company" : "Organization",
+         "companyDesc" : "15+ people"
       },
-      "toolsInStack" : "Tools in your stack",
-      "tryAgain" : "Try Again",
-      "viewAgents" : "View team in Agents"
+      "goals" : {
+         "support" : "Customer Support & Ticket Triage",
+         "docs" : "Documentation & Team Knowledge Q&A",
+         "releases" : "Release Notes & Changelog Writing",
+         "research" : "Research, Citations & Competitive Intel",
+         "contracts" : "Contracts, Invoices & Policy Review",
+         "automation" : "Process & Workflow Automation",
+         "incidents" : "Incident Response & Alert Diagnostics",
+         "content" : "Content Writing & Product Copy",
+         "data" : "Data Analysis, Metrics & Reporting",
+         "meetings" : "Meeting Notes, Action Items & Minutes"
+      }
    },
    "orgAssistant" : {
       "description" : "The assistant in the corner of every page, for everyone who may run agents. It is an agent like any other: its name, model and knowledge are edited in the Agent Builder, and its cost counts like any agent's.",
@@ -12993,7 +13047,7 @@
          "evalCaseTitle" : "A case from an eval run",
          "evalToolTuningCase" : "{name} · {classification}",
          "evalToolTuningDominantFailure" : "Most common failure: {failure}",
-         "evalToolTuningProposal" : "[{kind}] {title}",
+         "evalToolTuningProposal" : "{kind}: {title}",
          "evalToolTuningProposalEvidence" : "Evidence: {evidence} · {status}",
          "evalToolTuningRun" : "{tool} · {passed}/{total} passed",
          "evalToolTuningRuns" : "{count, plural, =1 {1 eval tool-tuning run} other {# eval tool-tuning runs}}",
@@ -13104,7 +13158,7 @@
          "showingTheNewestOf" : "{shown, plural, =1 {Showing the newest of {total} decided in this window} other {Showing the newest # of {total} decided in this window}}. Export the CSV for the whole record.",
          "skillVersion" : "{onFork, select, yes {{name} · {fork} v{version}} other {{name} · v{version}}}",
          "skillsUsed" : "Skills used:",
-         "solLoopFinding" : "{id} [{severity}] {location} — {claim}",
+         "solLoopFinding" : "{id} — {severity}: {location} — {claim}",
          "solLoopFix" : "Fix: {fix}",
          "solLoopOutcome" : "Outcome: {outcome}",
          "solLoopRound" : "Round {round} · {scope} · {verdict}",

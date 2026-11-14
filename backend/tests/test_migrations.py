@@ -45,7 +45,6 @@ from sqlalchemy.orm import Session as DatabaseSession
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError
 from app.db.models.session import Session
-from app.db.models.user import User
 from app.services.session import SessionService, hash_token
 
 # Owned by this module alone, and by this run of it. Not the integration suite's
@@ -1105,12 +1104,20 @@ class TestLegacyCookieSessionRevocation:
         factory = async_sessionmaker(engine, expire_on_commit=False)
         try:
             async with factory() as db:
-                user = User(email=f"cookie-migration-{uuid4()}@example.com")
-                admin = User(email=f"cookie-admin-{uuid4()}@example.com")
-                db.add_all([user, admin])
-                await db.flush()
+                user_id, admin_id = uuid4(), uuid4()
+                # Today's User model includes columns that do not exist at 0172.
+                await db.execute(
+                    text(
+                        "INSERT INTO users (id, email, is_active, is_app_admin, credential_version) "
+                        "VALUES (:id, :email, TRUE, FALSE, 0)"
+                    ),
+                    [
+                        {"id": user_id, "email": f"cookie-migration-{uuid4()}@example.com"},
+                        {"id": admin_id, "email": f"cookie-admin-{uuid4()}@example.com"},
+                    ],
+                )
                 now = datetime.now(UTC)
-                old_id, impersonation_id, ended_id, user_id = uuid4(), uuid4(), uuid4(), user.id
+                old_id, impersonation_id, ended_id = uuid4(), uuid4(), uuid4()
                 # Seed the historical schema without today's app/push columns.
                 await db.execute(
                     text(
@@ -1119,7 +1126,7 @@ class TestLegacyCookieSessionRevocation:
                     [
                         {
                             "id": old_id,
-                            "user": user.id,
+                            "user": user_id,
                             "impersonator": None,
                             "current": hash_token("legacy-current"),
                             "previous": hash_token("legacy-spent"),
@@ -1129,8 +1136,8 @@ class TestLegacyCookieSessionRevocation:
                         },
                         {
                             "id": impersonation_id,
-                            "user": user.id,
-                            "impersonator": admin.id,
+                            "user": user_id,
+                            "impersonator": admin_id,
                             "current": hash_token("legacy-impersonation"),
                             "previous": None,
                             "rotated": None,
@@ -1139,7 +1146,7 @@ class TestLegacyCookieSessionRevocation:
                         },
                         {
                             "id": ended_id,
-                            "user": user.id,
+                            "user": user_id,
                             "impersonator": None,
                             "current": hash_token("legacy-ended"),
                             "previous": None,

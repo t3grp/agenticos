@@ -705,9 +705,7 @@ function MessageBody({
           <span className="bg-foreground/[0.04] inline-flex items-center gap-1.5 rounded-full py-1 pr-3.5 pl-1.5">
             <ThinkingOrb state="breathing" size={20} className="h-7 w-7" />
             <span className="text-muted-foreground text-xs">
-              {stalledFor === null
-                ? t("thinking")
-                : tSteps("stalledFor", { duration: stalledFor })}
+              {stalledFor === null ? t("thinking") : tSteps("stalledFor", { duration: stalledFor })}
             </span>
           </span>
         </div>

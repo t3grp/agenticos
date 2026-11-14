@@ -334,9 +334,8 @@ class SharingService:
         details = {
             "subject_group_id": str(group.id),
             "level": level.value,
+            "expires_at": expires_at.isoformat(),
         }
-        if expires_at is not None:
-            details["expires_at"] = expires_at.isoformat()
         await record_audit(
             self.db,
             actor_user_id=ctx.subject_id,

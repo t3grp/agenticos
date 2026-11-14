@@ -1,5 +1,5 @@
 ---
-source_sha: "1d738a8f00d6"
+source_sha: "1488eff9ea76"
 ---
 
 # Die Konsole { #the-console }
@@ -397,9 +397,22 @@ Auf einem Smartphone gibt es keine Sprechblase - sie würde die Seite verdecken,
 Freigaben, die sie schon genannt hat, bleiben für den Rest des Browser-Tabs
 genannt, auch wenn ein Link die Konsole neu lädt.
 
-Sein Fenster ist der Chat der Konsole selbst, keine Seite in der Seite, und öffnet
-sich mit vier Kacheln, sodass die erste Nachricht ein Klick ist; es führt einen
-eigenen Verlauf. Auf dem Telefon füllt es den Bildschirm.
+Sein Fenster nutzt den Chat der Konsole und startet mit dem ausgewählten
+Hauptassistenten. Über die Agent-Auswahl in der Kopfzeile wählen Sie einen
+veröffentlichten Agent, den Sie ausführen dürfen. Beim Wechsel bleibt das
+aktuelle Gespräch erhalten; Kopfzeile und Gesprächsverlauf folgen der Auswahl.
+Die Begrüßungskacheln des Architekten erscheinen nur beim Hauptassistenten.
+Auf dem Telefon füllt das Fenster den Bildschirm.
+
+Jede neue Frage enthält frischen, strukturierten Kontext zur aktuellen
+Konsolenseite, solange der Seitenkontext aktiviert ist. Das Fenster zeigt,
+welche Seite geteilt wird, und lässt Sie die Freigabe ausschalten.
+
+Eine Frage in der Warteschlange oder ein erneuter Versuch nach einer abgelehnten
+Übermittlung behält den Seitenkontext und den beim Absenden gewählten Agent.
+Eine neue Frage oder eine neu erzeugte Antwort nutzt die aktuelle Seite und den
+aktuellen Agent. Ein Wechsel des Kontos oder der Organisation setzt das Gespräch,
+die Agent-Auswahl und die Seitenkontexteinstellung des Fensters zurück.
 
 Nennt er eine Seite, öffnet der Link sie in der Konsole hinter dem Fenster und
 zeigt auf das gemeinte Bedienelement — die Schaltfläche, die einen Agent anlegt,
@@ -407,7 +420,7 @@ den Reiter mit den Freigaben. Die Kamera in seiner Kopfzeile zeigt ihm die Seite
 auf der Sie sind: Der Browser fragt, welchen Tab Sie teilen, und ein Bild hängt
 an Ihrer nächsten Nachricht.
 
-Längere Aufgaben plant er als Checkliste, die Sie
+Der Architekt plant längere Aufgaben als Checkliste, die Sie
 verfolgen können, er merkt sich Notizen über Sie zwischen Unterhaltungen, sagt
 Ihnen, was Ihre Agents kosten, und löscht nur einen versehentlich angelegten
 Agent-Entwurf und eine Routine, deren Entfernen Sie verlangen. Neben Freigaben und einer leeren
