@@ -247,6 +247,29 @@ class TestVerifyChallenge:
 
         assert await mfa.verify_challenge(user, codes[0].replace("-", "").lower()) is True
 
+    @pytest.mark.security
+    async def test_a_concurrently_spent_recovery_code_cannot_complete_the_challenge(self, service):
+        mfa, _, audit = service
+        user = _user()
+        codes = await _enrolled(mfa, user)
+        spent = codes[0]
+        audit.reset_mock()
+
+        # This request's user snapshot still includes the hash, but another
+        # request won the repository's atomic consume before this one arrived.
+        with (
+            patch(
+                "app.services.mfa.user_repo.consume_totp_recovery_hash",
+                new=AsyncMock(return_value=None),
+            ) as consume,
+            patch("app.services.mfa.user_repo.claim_totp_counter", new=AsyncMock()) as claim,
+        ):
+            assert await mfa.verify_challenge(user, spent) is False
+
+        consume.assert_awaited_once_with(mfa.db, user.id, hash_recovery_code(spent))
+        claim.assert_not_awaited()
+        audit.assert_not_awaited()
+
     async def test_a_challenge_for_an_account_without_it_fails(self, service):
         mfa, _, _ = service
         assert await mfa.verify_challenge(_user(), "123456") is False
