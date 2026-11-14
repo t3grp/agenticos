@@ -22,6 +22,7 @@ from app.schemas.skill import SkillUpdate
 from app.services.agent_registry import AgentRegistryService
 from app.services.skills import SkillService
 
+
 def _sha256(content: str) -> str:
     """The content hash, the same digest #32 records as its base."""
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
