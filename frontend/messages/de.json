@@ -12269,7 +12269,7 @@
     "harness": {
       "harness": {
         "title": "Harness",
-        "description": "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code oder Codex."
+        "description": "Die CLI-Sitzung, die die Arbeit des Agent erledigt: Claude Code, Codex, OpenCode, Gemini CLI oder Pi."
       },
       "access": {
         "title": "Zugriff",
@@ -12277,7 +12277,7 @@
       },
       "model": {
         "title": "Modell",
-        "description": "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex. Nicht gesetzt nimmt den Standard des Harness."
+        "description": "Das Modell, mit dem der Harness läuft: ein Claude-Modell für Claude Code, ein OpenAI-Modell für Codex, ein Gemini-Modell für Gemini CLI oder ein beliebiges Modell dieser Anbieter für OpenCode oder Pi. Nicht gesetzt nimmt den Standard des Harness."
       },
       "base_url": {
         "title": "Anthropic-kompatibler Endpunkt",
