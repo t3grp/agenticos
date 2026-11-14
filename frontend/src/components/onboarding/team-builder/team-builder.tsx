@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client";
 import { ROUTES } from "@/lib/constants";
 import { createOnboardingTeam, fetchTeamProposal } from "@/lib/onboarding/team-api";
 import { useAuthStore } from "@/stores";
+import type { User } from "@/types/auth";
 import type { OnboardingTeamProposal, OnboardingTeamResult, ProposedSpecialist } from "@/types/onboarding";
 
 import { StepAbout } from "./step-about";
@@ -44,10 +45,10 @@ export function TeamBuilder() {
   const handleSkip = async () => {
     try {
       if (user && !user.onboarding_completed_at) {
-        const updated = await apiClient.patch("/users/me", {
+        const updated = await apiClient.patch<User>("/users/me", {
           onboarding_completed_at: new Date().toISOString(),
         });
-        if (updated) setUser(updated as any);
+        if (updated) setUser(updated);
       }
     } catch {
       // non-blocking
@@ -118,7 +119,7 @@ export function TeamBuilder() {
 
   const handleBack = () => {
     if (step > 1 && step < 5) {
-      setStep((prev) => (prev - 1) as any);
+      setStep((prev) => prev - 1);
     }
   };
 
@@ -140,8 +141,10 @@ export function TeamBuilder() {
           onboarding_completed_at: new Date().toISOString(),
         });
       }
-    } catch (err: any) {
-      setDeployError(err?.message || "Failed to assemble your team. Please try again."); // i18n-exempt: error fallback
+    } catch (err: unknown) {
+      setDeployError(
+        err instanceof Error ? err.message : "Failed to assemble your team. Please try again.",
+      ); // i18n-exempt: error fallback
     } finally {
       setIsDeploying(false);
     }

@@ -126,7 +126,7 @@ export function StepTeam({
                   key={i}
                   className="bg-muted text-muted-foreground inline-block rounded-md px-2.5 py-1 text-xs"
                 >
-                  "{starter}"
+                  &quot;{starter}&quot;
                 </span>
               ))}
             </div>
