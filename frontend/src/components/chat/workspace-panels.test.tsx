@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentProps, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { BrowserPanel } from "./browser-panel";
 import { WorkspacePanels } from "./workspace-panels";
 import type { Browse } from "@/lib/browse";
 import { apiClient } from "@/lib/api-client";
@@ -16,6 +17,10 @@ import { useSourcesPanelStore } from "@/stores/sources-panel-store";
 import { ChatScope } from "@/stores/chat-scope";
 
 const live = vi.hoisted(() => ({ calls: [] as [string, string, boolean | undefined][] }));
+vi.mock("./browser-panel", async (original) => {
+  const actual = await original<typeof import("./browser-panel")>();
+  return { ...actual, BrowserPanel: vi.fn(actual.BrowserPanel) };
+});
 vi.mock("@/hooks/use-live-browse", () => ({
   useLiveBrowse: (run: string, call: string, enabled?: boolean) => {
     live.calls.push([run, call, enabled]);
@@ -165,6 +170,61 @@ describe("manual workspace launchers", () => {
       expect(props.onSend).not.toHaveBeenCalled();
     },
   );
+
+  it("resumes the saved browser session through the normal conversation send action", async () => {
+    const props = defaults();
+    render(
+      <WorkspacePanels
+        {...props}
+        browses={[
+          view("saved-page", {
+            navigable: true,
+            tabId: "saved-tab",
+            title: "Docs",
+            url: "https://example.test/docs",
+            outcome: "done",
+            resumable: true,
+          }),
+        ]}
+      />,
+      { wrapper },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open Browser" }));
+    expect(screen.getByRole("tab", { name: "Docs" })).toHaveAttribute("aria-selected", "true");
+    expect(props.onSend).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Resume session" }));
+
+    expect(props.onSend).toHaveBeenCalledExactlyOnceWith(
+      "Resume the browser session. Read the current page again before continuing.",
+    );
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("refuses a child launch callback when the conversation cannot run", () => {
+    const props = { ...defaults(), canRun: false };
+    render(<WorkspacePanels {...props} />, { wrapper });
+    // The real child disables its action; the parent must also reject the callback.
+    const start = vi.mocked(BrowserPanel).mock.lastCall![0].onStart!;
+
+    act(() => start("computer"));
+
+    expect(props.onSend).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
+    expect(useBrowserPanelStore.getState().surface).toBeNull();
+  });
+
+  it("opens the browser destination form without sending when a child supplies no URL", () => {
+    const props = defaults();
+    render(<WorkspacePanels {...props} />, { wrapper });
+    const start = vi.mocked(BrowserPanel).mock.lastCall![0].onStart!;
+
+    act(() => start("browser"));
+
+    expect(screen.getByRole("textbox", { name: "Website address" })).toHaveValue("");
+    expect(props.onSend).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
 
   it.each([
     [{ hostedCapabilities: null }, /configuration is not available/],
