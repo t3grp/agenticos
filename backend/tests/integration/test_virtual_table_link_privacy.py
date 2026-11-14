@@ -1,5 +1,7 @@
 """Link predicates, counts and projections cannot reveal an unreadable destination."""
 
+import csv
+from io import StringIO
 from uuid import UUID, uuid4
 
 import pytest
@@ -92,6 +94,9 @@ async def test_link_filters_agree_across_lists_counts_exports_and_bound_reads(db
         ],
     )
     all_ids = set(identifiers)
+    names_by_id = dict(
+        zip(identifiers, ("visible", "hidden", "both", "empty", "missing", "dangling"))
+    )
     visible_sources = {identifiers[0], identifiers[2]}
     for operation, value, expected in (
         ("contains", str(visible), visible_sources),
@@ -109,9 +114,11 @@ async def test_link_filters_agree_across_lists_counts_exports_and_bound_reads(db
         exported = await service.export_records(
             reader, source.id, RecordExportQuery(filters=filters, include_metadata=True)
         )
-        csv = "".join([line async for line in exported.lines])
-        assert str(hidden) not in csv and "Private label" not in csv
-        assert {identifier for identifier in all_ids if str(identifier) in csv} == expected
+        exported_csv = "".join([line async for line in exported.lines])
+        assert str(hidden) not in exported_csv and "Private label" not in exported_csv
+        exported_rows = list(csv.DictReader(StringIO(exported_csv.lstrip("\ufeff"))))
+        assert {row["Name"] for row in exported_rows} == {names_by_id[item] for item in expected}
+        assert len(exported_rows) == len(expected)
         bound = await service.read_bound(
             reader,
             table_id=source.id,
@@ -126,6 +133,21 @@ async def test_link_filters_agree_across_lists_counts_exports_and_bound_reads(db
         )
         assert {UUID(item["id"]) for item in bound.records} == expected
         assert str(hidden) not in str(bound.records)
+
+    # Several predicates on one destination must reuse its authorization while
+    # preserving conjunction semantics and the hidden-target refusal.
+    for destination, expected in ((visible, visible_sources), (hidden, set())):
+        page = await service.list_records(
+            reader,
+            source.id,
+            RecordQuery(
+                filters=[
+                    RecordFilter(column_id=UUID(link), op="is_null", value=False),
+                    RecordFilter(column_id=UUID(link), op="contains", value=str(destination)),
+                ]
+            ),
+        )
+        assert {item.id for item in page.items} == expected
 
 
 @pytest.mark.parametrize("invalid", [False, True])

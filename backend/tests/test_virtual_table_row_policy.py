@@ -362,9 +362,10 @@ async def test_a_bounded_project_lookup_refreshes_the_timeout_and_stops_on_expir
         events.append(("schema", None))
         return SimpleNamespace(columns=[MEMBERS_COL.model_dump(mode="json")])
 
-    async def records(session, *, table_id, organization_id, filters):
+    async def records(session, *, table_id, organization_id, filters, extra):
         assert session is db and table_id == PROJECTS_TABLE and organization_id == ORG
         assert len(filters) == 1 and filters[0].value == str(MEMBER)
+        assert extra is None
         events.append(("records", None))
         return [PROJECT_A]
 
@@ -423,7 +424,10 @@ async def test_the_project_lookup_honours_the_projects_table_own_policy(monkeypa
 
     assert await visible_project_ids(SimpleNamespace(), _ctx(MEMBER), PROJECT_POLICY) == [PROJECT_A]
     filters = listed.await_args.kwargs["filters"]
-    assert [clause.column_id for clause in filters] == [MEMBERS, ASSIGNEE]
+    assert [clause.column_id for clause in filters] == [MEMBERS]
+    extra = listed.await_args.kwargs["extra"]
+    assert "resource_grants" in _sql(extra) and "->>" in _sql(extra)
+    assert str(ASSIGNEE) in extra.compile().params.values()
 
 
 # -- one row, through the service helpers -------------------------------------
@@ -433,8 +437,13 @@ async def test_a_bypass_caller_and_a_table_without_a_policy_see_every_row():
     table = _table(None)
     assert await may_view_row(SimpleNamespace(), _ctx(MEMBER, "builder"), table, [], {}) is True
     assert (
-        await may_view_row(SimpleNamespace(), _ctx(OWNER, "member"), _table(POLICY), [], {}) is True
+        await may_view_row(
+            SimpleNamespace(), _ctx(OWNER, "member"), _table(POLICY), [ASSIGNEE_COL], {}
+        )
+        is True
     )
+    # Even an owner cannot bypass policy columns that can no longer be evaluated.
+    assert not await may_view_row(SimpleNamespace(), _ctx(OWNER), _table(POLICY), [], {})
     assert await may_edit_row(SimpleNamespace(), _ctx(MEMBER, "member"), table, [], {}) is True
 
 
@@ -596,6 +605,7 @@ from app.schemas.virtual_table import (
     RecordUpdate,
     RecordUpsert,
 )
+from app.services.virtual_tables import record_access as record_access_module
 from app.services.virtual_tables import records as records_module
 from app.services.virtual_tables.exceptions import InvalidRecordError
 from app.services.virtual_tables.records import RecordOperations
@@ -640,7 +650,9 @@ def ops(monkeypatch):
     service = RecordOperations(db=MagicMock(spec=AsyncSession))
     ctx = _ctx(MEMBER, "member")
 
-    async def load(ctx, table_id, perm, *, lock=False, share=False, deadline=None):
+    async def load(
+        ctx, table_id, perm, *, lock=False, share=False, deadline=None, alternative_perm=None
+    ):
         return table
 
     async def columns(table):
@@ -660,6 +672,10 @@ def ops(monkeypatch):
     monkeypatch.setattr(service, "_columns", columns)
     monkeypatch.setattr(records_module, "run_once", passthrough)
     monkeypatch.setattr(records_module, "resolve_access", AsyncMock(return_value=True))
+    monkeypatch.setattr(record_access_module, "resolve_access", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        record_access_module.resource_grant_repo, "record_levels", AsyncMock(return_value={})
+    )
     monkeypatch.setattr(records_module, "principal_problems", AsyncMock(return_value=[]))
     monkeypatch.setattr(records_module.quotas, "enforce_record_size", within_quota)
     monkeypatch.setattr(records_module.quotas, "enforce_record_count", within_quota)

@@ -37,7 +37,7 @@ def test_the_skill_offers_every_copied_page_by_name(gen) -> None:
     assert skill is not None
     names = {resource.name for resource in skill.resources}
     for page in gen.PAGES:
-        relative = str(gen.target(page).relative_to(gen.SKILL))
+        relative = gen.target(page).relative_to(gen.SKILL).as_posix()
         assert relative in names
         # The map in SKILL.md points at the file the skill actually holds.
         assert f"`{relative}`" in skill.content

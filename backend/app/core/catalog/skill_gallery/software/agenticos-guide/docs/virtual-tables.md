@@ -133,7 +133,9 @@ What a lookup shows goes no further than its reader may: a linked table the
 reader cannot see leaves the links and every lookup and rollup through them
 empty. The destination's row policy also applies: both raw link IDs in `values`
 and labels in `links` contain only readable records. Archived link fields are
-omitted from returned values. A link keeps its table for life. A lookup reads a column holding
+omitted from returned values.
+
+A link keeps its table for life. A lookup reads a column holding
 values, not another link or lookup, and archiving a link column is refused
 while a lookup or rollup still reads through it. An export writes a link by the
 names of its records, and a lookup by what it read.
@@ -768,6 +770,12 @@ membership fields used by another table. Grid cells, the record sheet and kanban
 use these answers. Record lists, catalog counts, exports and linked labels use the same
 read rule. An idempotent write replay checks current authority again, so a saved receipt
 cannot retain a revoked Write permission.
+
+Workflow triggers recheck the publisher's current Read permission on the source row.
+Their filters and run inputs use only readable linked records, including both the
+current and previous values. An update that changes only hidden links does not start
+a workflow. Invalid destination policies expose no linked IDs; an invalid source
+policy filters the event. The original stored event and history remain unchanged.
 
 ## Errors { #errors }
 

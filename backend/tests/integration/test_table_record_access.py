@@ -13,7 +13,7 @@ from app.core.permissions import AuthContext, Perm
 from app.db.models.group import Group, GroupMember
 from app.db.models.organization import OrganizationMember
 from app.db.models.resource_grant import GrantLevel
-from app.repositories import resource_grant_repo
+from app.repositories import resource_grant_repo, virtual_table_repo
 from app.schemas.table_record_access import RecordGrantUpdate
 from app.schemas.virtual_table import (
     ColumnInput,
@@ -29,6 +29,7 @@ from app.schemas.virtual_table import (
     TableUpdate,
 )
 from app.services.virtual_tables import VirtualTableService
+from app.services.virtual_tables.exceptions import InvalidRowPolicyError
 from tests.integration.virtual_table_support import ctx_for, make_org, make_user
 
 pytestmark = pytest.mark.anyio
@@ -351,7 +352,7 @@ async def test_a_writer_cannot_change_access_fields_or_parent_membership(db, row
     assert changed.record.values[title] == "Renamed"
 
 
-async def test_linked_records_and_lookups_follow_the_destination_row_grants(rows):
+async def test_linked_records_follow_the_destination_row_grants(rows):
     service, owner, reader = rows.service, rows.owner, rows.reader
     source = await service.create_table(
         owner,
@@ -373,6 +374,7 @@ async def test_linked_records_and_lookups_follow_the_destination_row_grants(rows
     await grant(rows, "read")
     visible = await service.get_record(reader, source.id, record.id)
     assert [linked.id for linked in visible.links[link]] == [rows.first.id]
+    assert visible.values[link] == [str(rows.first.id)]
     await service.set_record_grant(
         owner,
         source.id,
@@ -383,7 +385,9 @@ async def test_linked_records_and_lookups_follow_the_destination_row_grants(rows
 
 
 async def test_explicit_null_clears_person_expiry_and_delete_removes_all_row_grants(db, rows):
-    await grant(rows, "read", expires_at=datetime.now(UTC) + timedelta(days=1))
+    original = await grant(rows, "read", expires_at=datetime.now(UTC) + timedelta(days=1))
+    preserved = await grant(rows, "write")
+    assert preserved.grants[0].expires_at == original.grants[0].expires_at
     updated = await grant(rows, "write", expires_at=None)
     assert updated.grants[0].expires_at is None
     await rows.service.delete_record(rows.owner, rows.table.id, rows.first.id, expected_revision=1)
@@ -396,3 +400,32 @@ async def test_explicit_null_clears_person_expiry_and_delete_removes_all_row_gra
         )
         == []
     )
+
+
+async def test_a_malformed_policy_blocks_grants_and_owners_until_repaired(db, rows):
+    await grant(rows, "write")
+    table = await virtual_table_repo.get_table(
+        db, rows.table.id, organization_id=rows.owner.organization_id
+    )
+    assert table is not None
+    table.row_policy = {"rule": "unknown"}
+    await db.flush()
+
+    for caller in (rows.reader, rows.owner):
+        with pytest.raises(InvalidRowPolicyError):
+            await rows.service.get_record(caller, table.id, rows.first.id)
+        with pytest.raises(InvalidRowPolicyError):
+            await rows.service.count_records(caller, table.id, RecordCountQuery())
+        with pytest.raises(InvalidRowPolicyError):
+            await rows.service.update_record(
+                caller, table.id, rows.first.id, RecordUpdate(expected_revision=1, values={})
+            )
+        catalog = await rows.service.list_tables(caller)
+        assert next(item.record_count for item in catalog.items if item.id == table.id) == 0
+
+    metadata = await rows.service.describe_table(rows.owner, table.id)
+    assert metadata.row_policy is None and metadata.row_policy_valid is False
+    assert metadata.can_manage_row_access
+    await rows.service.set_row_policy(rows.owner, table.id, RowPolicyUpdate(rule="grants"))
+    repaired = await rows.service.get_record(rows.reader, table.id, rows.first.id)
+    assert repaired.access == "write" and not repaired.can_manage_access

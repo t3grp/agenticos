@@ -1,5 +1,5 @@
 ---
-source_sha: "97721edb5d9f"
+source_sha: "9669b329ffaf"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -141,7 +141,9 @@ Lo que muestra una búsqueda no llega más allá de lo que su lector puede ver: 
 tabla enlazada que el lector no ve deja vacíos los enlaces, las búsquedas y los
 resúmenes. También se aplica la política de filas del destino: los IDs en `values`
 y los nombres en `links` incluyen solo registros legibles. Los campos de enlace
-archivados se omiten de los valores devueltos. Un enlace conserva su tabla para siempre.
+archivados se omiten de los valores devueltos.
+
+Un enlace conserva su tabla para siempre.
 Una búsqueda lee una columna con valores, no otro enlace ni otra búsqueda, y
 archivar una columna de enlace se rechaza mientras algo lea a través de ella. Una
 exportación escribe un enlace con los nombres de sus registros y una búsqueda con
@@ -812,6 +814,13 @@ del proyecto usados por otra tabla. Las celdas, el panel de registro y los movim
 kanban usan estas respuestas. Las listas, contadores del catálogo, exportaciones y etiquetas
 enlazadas aplican la misma regla de lectura. Repetir una escritura idempotente comprueba
 los derechos actuales para que un recibo guardado no conserve un permiso Write revocado.
+
+Los triggers de workflow vuelven a comprobar el permiso Read actual de quien publicó
+el workflow sobre la fila de origen. Sus filtros y entradas incluyen solo registros
+enlazados que esa persona puede leer, tanto en los valores actuales como en los
+anteriores. Una actualización que solo cambia enlaces ocultos no inicia un workflow.
+Una política de destino inválida no revela IDs enlazados; una política de origen
+inválida filtra el evento. El evento y el historial guardados permanecen intactos.
 
 ## Errores { #errors }
 

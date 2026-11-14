@@ -1,5 +1,5 @@
 ---
-source_sha: "97721edb5d9f"
+source_sha: "9669b329ffaf"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -144,8 +144,9 @@ Was ein Nachschlagen zeigt, reicht nicht weiter als der Leser darf: Eine
 verknüpfte Tabelle, die der Leser nicht sieht, lässt die Verknüpfungen sowie
 jedes Nachschlagen und jede Zusammenfassung darüber leer. Auch die Zeilenrichtlinie
 des Ziels gilt: IDs in `values` und Namen in `links` enthalten nur lesbare
-Datensätze. Archivierte Verknüpfungsspalten fehlen in den zurückgegebenen Werten. Eine
-Verknüpfung behält ihre Tabelle für immer. Ein Nachschlagen liest eine Spalte
+Datensätze. Archivierte Verknüpfungsspalten fehlen in den zurückgegebenen Werten.
+
+Eine Verknüpfung behält ihre Tabelle für immer. Ein Nachschlagen liest eine Spalte
 mit Werten, keine andere Verknüpfung und kein Nachschlagen, und das Archivieren
 einer Verknüpfungsspalte wird abgelehnt, solange etwas über sie liest. Ein
 Export schreibt eine Verknüpfung mit den Namen ihrer Datensätze und ein
@@ -860,6 +861,13 @@ die eine andere Tabelle verwendet. Rasterzellen, Datensatzpanel und Kanban-Versc
 verwenden diese Antworten. Datensatzlisten, Katalogzähler, Exporte und verknüpfte Beschriftungen
 verwenden dieselbe Leseregel. Die Wiederholung eines idempotenten Schreibzugriffs prüft
 die aktuellen Rechte erneut, damit ein gespeicherter Beleg kein entzogenes Schreibrecht bewahrt.
+
+Workflow-Trigger prüfen das aktuelle Leserecht der veröffentlichenden Person für die
+Quellzeile erneut. Filter und Eingaben des Laufs enthalten nur lesbare verknüpfte
+Datensätze, sowohl in den aktuellen als auch in den vorherigen Werten. Eine Änderung
+ausschließlich verborgener Verknüpfungen startet keinen Workflow. Eine ungültige
+Zielrichtlinie zeigt keine verknüpften IDs; eine ungültige Quellrichtlinie filtert das
+Ereignis heraus. Gespeichertes Ereignis und Verlauf bleiben unverändert.
 
 ## Fehler { #errors }
 
