@@ -35,6 +35,7 @@ from app.db.models.virtual_table import VirtualTable
 from app.repositories import virtual_table_repo
 from app.repositories.virtual_table import FilterClause, SqlKind, policy_expression
 from app.schemas.virtual_table import ColumnDef, RowPolicy
+from app.services.virtual_tables.deadline import ReadDeadline, arm_if_set
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,11 @@ def _assignee_clause(
 
 
 async def visible_project_ids(
-    db: AsyncSession, ctx: AuthContext, policy: RowPolicy | None
+    db: AsyncSession,
+    ctx: AuthContext,
+    policy: RowPolicy | None,
+    *,
+    deadline: ReadDeadline | None = None,
 ) -> list[UUID]:
     """The projects `ctx` belongs to, for the project half of viewing.
 
@@ -120,6 +125,7 @@ async def visible_project_ids(
         or policy.view_project_members_column_id is None
     ):
         return []
+    await arm_if_set(db, deadline)
     projects = await virtual_table_repo.get_table(
         db, policy.view_projects_table_id, organization_id=ctx.organization_id
     )
@@ -130,6 +136,7 @@ async def visible_project_ids(
             policy.view_projects_table_id,
         )
         return []
+    await arm_if_set(db, deadline)
     version = await virtual_table_repo.get_schema_version(
         db, table_id=projects.id, version=projects.schema_version
     )
@@ -159,6 +166,7 @@ async def visible_project_ids(
         if own_clause is None:
             return []
         filters.append(own_clause)
+    await arm_if_set(db, deadline)
     return await virtual_table_repo.list_record_ids(
         db,
         table_id=projects.id,
@@ -256,6 +264,8 @@ async def view_expression(
     ctx: AuthContext,
     table: VirtualTable,
     columns: list[ColumnDef],
+    *,
+    deadline: ReadDeadline | None = None,
 ) -> ColumnElement[bool] | None:
     """The SQL predicate for what `ctx` may see of `table`, or `None` when unfiltered.
 
@@ -273,7 +283,7 @@ async def view_expression(
     clause = _assignee_clause(policy, columns, subject, kind="view")
     if clause is None:
         return false()
-    project_ids = await visible_project_ids(db, ctx, policy)
+    project_ids = await visible_project_ids(db, ctx, policy, deadline=deadline)
     return policy_expression(
         clause,
         link_column_id=policy.view_project_link_column_id,

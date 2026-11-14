@@ -41,6 +41,7 @@ class _User:
         self.full_name = "Kacper"
         self.is_active = True
         self.credential_version = 0
+        self.totp_enabled = False
 
 
 @pytest.fixture

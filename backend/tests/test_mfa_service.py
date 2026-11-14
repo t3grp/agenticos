@@ -105,6 +105,7 @@ async def _enrolled(service, user):
 
 
 class TestBeginSetup:
+    @pytest.mark.security
     async def test_setup_seals_a_secret_and_shows_how_to_enrol_it(self, service):
         mfa, update, _ = service
         user = _user()
@@ -119,6 +120,7 @@ class TestBeginSetup:
         assert user.totp_recovery_hashes is None
         update.assert_awaited_once()
 
+    @pytest.mark.security
     async def test_setup_again_replaces_a_pending_secret(self, service):
         mfa, _, _ = service
         user = _user()
@@ -249,6 +251,7 @@ class TestVerifyChallenge:
         mfa, _, _ = service
         assert await mfa.verify_challenge(_user(), "123456") is False
 
+    @pytest.mark.security
     async def test_a_challenge_with_no_secret_on_an_enabled_account_fails(self, service):
         mfa, _, _ = service
         user = _user(totp_enabled=True, totp_secret_encrypted=None)
