@@ -61,6 +61,10 @@ else:
         sys.exit(1)
     if prompt == "invalid":
         print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": "no structured response"}))
+    elif prompt == "json-array":
+        print(json.dumps(["private provider error"]))
+    elif prompt == "json-scalar":
+        print(json.dumps("private provider error"))
     elif prompt == "overflow":
         print("x" * 100000)
     else:

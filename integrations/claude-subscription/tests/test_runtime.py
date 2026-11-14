@@ -192,7 +192,12 @@ async def test_api_key_authentication_is_not_a_subscription(
 
 @pytest.mark.parametrize(
     "prompt,code",
-    [("invalid", "CLAUDE_OUTPUT_INVALID"), ("error", "CLAUDE_REQUEST_FAILED")],
+    [
+        ("invalid", "CLAUDE_OUTPUT_INVALID"),
+        ("error", "CLAUDE_REQUEST_FAILED"),
+        ("json-array", "CLAUDE_OUTPUT_INVALID"),
+        ("json-scalar", "CLAUDE_OUTPUT_INVALID"),
+    ],
 )
 async def test_invalid_native_results_fail_without_raw_output(
     native_runtime: ClaudeRuntime, owner: Owner, prompt: str, code: str
