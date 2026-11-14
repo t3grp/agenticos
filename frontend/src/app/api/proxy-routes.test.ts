@@ -13,10 +13,12 @@ import * as adminRatingsSummary from "./admin/ratings/summary/route";
 import * as adminSettings from "./admin/settings/[[...path]]/route";
 import * as adminStats from "./admin/stats/route";
 import * as adminSystem from "./admin/system/route";
+import * as adminUpdates from "./admin/updates/[[...path]]/route";
 import * as adminUserDetail from "./admin/users/[userId]/detail/route";
 import * as adminUser from "./admin/users/[userId]/route";
 import * as adminUsers from "./admin/users/route";
 import * as agent from "./agent/[[...path]]/route";
+import * as agentMessages from "./agent-messages/[[...path]]/route";
 import * as agents from "./agents/[[...path]]/route";
 import * as apiKeys from "./api-keys/[[...path]]/route";
 import * as assistant from "./assistant/[[...path]]/route";
@@ -27,6 +29,7 @@ import * as catalog from "./catalog/[[...path]]/route";
 import * as phone from "./phone/[[...path]]/route";
 import * as channels from "./channels/[[...path]]/route";
 import * as codingAccounts from "./coding-accounts/[[...path]]/route";
+import * as connectedAccounts from "./connected-accounts/[[...path]]/route";
 import * as context from "./context/[[...path]]/route";
 import * as conversations from "./conversations/[[...path]]/route";
 import * as externalAgents from "./external-agents/[[...path]]/route";
@@ -47,6 +50,8 @@ import * as permissions from "./me/permissions/route";
 import * as dashboardLayout from "./me/dashboard-layout/route";
 import * as dashboardPresets from "./me/dashboard-layout/presets/route";
 import * as dashboardPreset from "./me/dashboard-layout/presets/[presetId]/route";
+import * as meAppConnections from "./me/app-connections/[[...path]]/route";
+import * as meConnectedAccounts from "./me/connected-accounts/[[...path]]/route";
 import * as myMcpConnections from "./me/mcp-connections/route";
 import * as myMcpConnection from "./me/mcp-connections/[id]/route";
 import * as myMcpConnectionTest from "./me/mcp-connections/[id]/test/route";
@@ -70,6 +75,7 @@ import * as orgGroupShares from "./orgs/[id]/groups/[groupId]/shares/route";
 import * as orgGroupSpendCsv from "./orgs/[id]/groups/[groupId]/spend.csv/route";
 import * as orgDirectoryMappings from "./orgs/[id]/directory-mappings/route";
 import * as orgDirectoryMapping from "./orgs/[id]/directory-mappings/[mappingId]/route";
+import * as onboarding from "./onboarding/[[...path]]/route";
 import * as providers from "./providers/[[...path]]/route";
 import * as personalSubscriptions from "./personal-subscriptions/[[...path]]/route";
 import * as rag from "./rag/[[...path]]/route";
@@ -119,10 +125,12 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["admin/settings", adminSettings],
   ["admin/stats", adminStats],
   ["admin/system", adminSystem],
+  ["admin/updates", adminUpdates],
   ["admin/users", adminUsers],
   ["admin/users/[userId]", adminUser],
   ["admin/users/[userId]/detail", adminUserDetail],
   ["agent", agent],
+  ["agent-messages", agentMessages],
   ["agents", agents],
   ["api-keys", apiKeys],
   ["assistant", assistant],
@@ -132,6 +140,7 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["browser-sign-ins", browserSignIns],
   ["catalog", catalog],
   ["channels", channels],
+  ["connected-accounts", connectedAccounts],
   ["context", context],
   ["conversations", conversations],
   ["external-agents", externalAgents],
@@ -145,6 +154,8 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["system-agents", systemAgents],
   ["ml/calls", mlCalls],
   ["me/channel-link", channelLink],
+  ["me/app-connections", meAppConnections],
+  ["me/connected-accounts", meConnectedAccounts],
   ["me/mcp-connections", myMcpConnections],
   ["me/mcp-connections/[id]", myMcpConnection],
   ["me/mcp-connections/[id]/test", myMcpConnectionTest],
@@ -170,6 +181,7 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["orgs/[id]/groups/[groupId]/spend.csv", orgGroupSpendCsv],
   ["orgs/[id]/directory-mappings", orgDirectoryMappings],
   ["orgs/[id]/directory-mappings/[mappingId]", orgDirectoryMapping],
+  ["onboarding", onboarding],
   ["providers", providers],
   ["personal-subscriptions", personalSubscriptions],
   ["rag", rag],
