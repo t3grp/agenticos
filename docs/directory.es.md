@@ -292,6 +292,7 @@ Kerberos deja entonces de hacer falta. Esta es también la respuesta para la
 autenticación multifactor. Si tu despliegue exige MFA, aplícala en el proveedor
 de identidad. AgenticOS no comprueba `amr`, `acr` ni otra afirmación de MFA en
 OIDC, así que no puede rechazar un inicio de sesión si el proveedor no la incluye.
+
 Kerberos tiene la misma limitación; exige MFA en la política Kerberos del
 proveedor. El inicio de sesión por contraseña LDAP puede usar el autenticador de
 AgenticOS de la cuenta.

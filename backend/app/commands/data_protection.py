@@ -168,6 +168,9 @@ CAPABILITIES_STAYING_INSIDE = frozenset(
         # the child model and tools, which this inventory already lists.
         "background_tasks",
         "channel_tools",
+        "proof_scenario",
+        "secret_request",
+        "sol_loop",
         "charts",
         "clock",
         "code_execution",

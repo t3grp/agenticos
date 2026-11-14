@@ -1948,7 +1948,6 @@ describe("opening a saved chat", () => {
   });
 });
 
-
 describe("the floating assistant's context submission boundary", () => {
   const page = (): AssistantPageContext => ({
     path: "/tables/orders",
@@ -1969,11 +1968,15 @@ describe("the floating assistant's context submission boundary", () => {
     await userEvent.type(editor, "Explain this page");
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
 
-    await waitFor(() => expect(socket.send).toHaveBeenCalledWith(expect.objectContaining({
-      message: "Explain this page",
-      agent_id: "agent-1",
-      page_context: current,
-    })));
+    await waitFor(() =>
+      expect(socket.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Explain this page",
+          agent_id: "agent-1",
+          page_context: current,
+        }),
+      ),
+    );
   });
 
   it("keeps the submitted page and agent while a draft save holds the question", async () => {
@@ -1988,7 +1991,9 @@ describe("the floating assistant's context submission boundary", () => {
           holdSending={holdSending}
           pageContext={() => current}
           emptyState={(onPick) => (
-            <button type="button" onClick={() => onPick("Explain this page")}>pick page</button>
+            <button type="button" onClick={() => onPick("Explain this page")}>
+              pick page
+            </button>
           )}
         />
       </QueryClientProvider>
@@ -2004,11 +2009,15 @@ describe("the floating assistant's context submission boundary", () => {
     expect(socket.send.mock.calls.filter(([frame]) => frame.message)).toHaveLength(0);
     act(() => useAgentSelectionStore.getState().select("agent-1"));
 
-    await waitFor(() => expect(socket.send).toHaveBeenCalledWith(expect.objectContaining({
-      message: "Explain this page",
-      agent_id: "agent-1",
-      page_context: original,
-    })));
+    await waitFor(() =>
+      expect(socket.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Explain this page",
+          agent_id: "agent-1",
+          page_context: original,
+        }),
+      ),
+    );
   });
 
   it("disables submission for an unavailable agent without secretly holding the question", async () => {
@@ -2020,7 +2029,9 @@ describe("the floating assistant's context submission boundary", () => {
           sendDisabled={sendDisabled}
           pageContext={page}
           emptyState={(onPick) => (
-            <button type="button" onClick={() => onPick("Do not defer this")}>pick page</button>
+            <button type="button" onClick={() => onPick("Do not defer this")}>
+              pick page
+            </button>
           )}
         />
       </QueryClientProvider>

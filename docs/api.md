@@ -42,6 +42,7 @@ authority, narrowed twice:
 
 The key is shown **once**, in the response that creates it. Only a SHA-256 of it
 is stored, and it never appears in a log line, an audit entry or an error body.
+
 Lists show its prefix (`aos_1a2b3c4d`), which is also how an audit entry names
 the key that acted — every entry recorded during a key-authenticated request
 carries `via_api_key` in its details. A key expires 90 days after it is issued
@@ -155,7 +156,9 @@ factor that protects the next sign-in.
 A password, directory, or magic-link sign-in for an account with it enabled
 stops at a challenge instead of a session: the response carries
 `mfa_required`, a `mfa_token` and `expires_in` (five minutes), and no
-cookies are set. The client completes it at `POST /api/v1/auth/mfa/verify`
+cookies are set.
+
+The client completes it at `POST /api/v1/auth/mfa/verify`
 with the token and the code, and the answer is the token pair - plus the
 magic link's destination, when the challenge came from one. The challenge
 token proves the password step and nothing else: it cannot call the API as

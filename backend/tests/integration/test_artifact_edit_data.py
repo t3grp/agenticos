@@ -491,7 +491,7 @@ class TestItDropsWhenTheOwnerGoes:
         self, db: AsyncSession, storage: LocalFileStorage
     ) -> None:
         world = await _world(db)
-        bea, _cal, _group = await self._two_grants(world)
+        bea, cal, _group = await self._two_grants(world)
         new_owner = await world.member(reads_table=True)
         await world.service.change_owner(
             world.olga,
@@ -507,7 +507,7 @@ class TestItDropsWhenTheOwnerGoes:
         self, db: AsyncSession, storage: LocalFileStorage
     ) -> None:
         world = await _world(db)
-        bea, _cal, _group = await self._two_grants(world)
+        bea, cal, _group = await self._two_grants(world)
         other = Artifact(
             organization_id=world.org.id,
             owner_user_id=bea.user_id,
@@ -521,7 +521,7 @@ class TestItDropsWhenTheOwnerGoes:
         await resource_grant_repo.upsert(
             db,
             organization_id=world.org.id,
-            subject_user_id=world.olga.user_id,  # type: ignore[arg-type]
+            subject_user_id=cal.user_id,  # type: ignore[arg-type]
             resource_type="artifact",
             resource_id=other.id,
             level=GrantLevel.EDIT_DATA,
@@ -534,7 +534,7 @@ class TestItDropsWhenTheOwnerGoes:
         kept = await resource_grant_repo.get_level(
             db,
             organization_id=world.org.id,
-            subject_user_id=world.olga.user_id,  # type: ignore[arg-type]
+            subject_user_id=cal.user_id,  # type: ignore[arg-type]
             resource_type="artifact",
             resource_id=other.id,
         )

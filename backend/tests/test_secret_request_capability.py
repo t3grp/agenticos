@@ -27,7 +27,7 @@ from app.agents.deps import AgentDeps
 from app.agents.secret_request import SECRET_REQUEST_TOOL, secret_request_result
 from app.services.agent_runner import PausedRunState, _classify_output
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 SENTINEL = "sk-test-SENTINEL-VALUE-7f3a9c"
 

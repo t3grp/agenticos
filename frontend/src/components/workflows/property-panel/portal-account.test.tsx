@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { Perm } from "@/types/permissions";
 import { portalConnectUrl } from "@/lib/portal-connect";
+import { ROUTES } from "@/lib/constants";
 
 import { ACCOUNT_TRIGGERS, PortalAccount } from "./portal-account";
 
@@ -220,7 +221,10 @@ describe("PortalAccount", () => {
     state.items = [gmail("connect", "oauth_app_secret")];
     render(<PortalAccount account={ACCOUNT_TRIGGERS["trigger.gmail"]!} />);
     expect(screen.getByText(/Gmail OAuth app credentials/)).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open the vault" })).toHaveAttribute("href", "/vault");
+    expect(screen.getByRole("link", { name: "Open the vault" })).toHaveAttribute(
+      "href",
+      ROUTES.VAULT,
+    );
   });
 
   it("stores the missing OAuth app from the step and refreshes its connection prerequisites", async () => {

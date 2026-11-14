@@ -47,6 +47,11 @@ async def test_personal_account_keeps_the_issuing_tenant_and_current_client(monk
     )
     monkeypatch.setattr(mcp_connection, "decider_context", member)
     monkeypatch.setattr(organization_secret_repo, "authorization_generation", generation)
+    monkeypatch.setattr(
+        McpConnectionService,
+        "_refresh_client_secret",
+        AsyncMock(return_value=payload.client_secret),
+    )
     result = await McpConnectionService(AsyncMock()).account_grant(
         account, organization_id=uuid4() if changed == "tenant" else SOURCE_ORG
     )

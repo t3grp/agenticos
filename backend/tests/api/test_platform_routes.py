@@ -328,6 +328,7 @@ CALLS: tuple[Call, ...] = (
         query="?started_from=2020-01-01T00:00:00&started_to=2020-01-02T00:00:00",
     ),
     Call("GET", "/runs/{run_id}", Perm.RUNS_VIEW),
+    Call("POST", "/runs/{run_id}/retry", Perm.RUNS_VIEW),
     Call("GET", "/runs/{run_id}/parked", Perm.APPROVALS_DECIDE),
     Call("POST", "/runs/{run_id}/resume", Perm.APPROVALS_DECIDE),
     Call("GET", "/approvals", Perm.APPROVALS_DECIDE),
@@ -1903,6 +1904,9 @@ UNAUTHENTICATED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", f"{V1}/auth/password-reset/confirm"),
         ("POST", f"{V1}/auth/magic-link/request"),
         ("POST", f"{V1}/auth/magic-link/verify"),
+        # The caller proves possession of the short-lived MFA challenge token in
+        # the request body; a session is the result of this route, not its input.
+        ("POST", f"{V1}/auth/mfa/verify"),
         # A phone signing in by scanning the code a signed-in console shows
         # (#2097). The phone has no session yet - that is what it is getting -
         # and the single-use, one-minute code is the credential, as a magic

@@ -42,7 +42,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic_ai.messages import ModelRequest, ModelResponse, ToolCallPart, ToolReturnPart
+from pydantic_ai import Agent, PartStartEvent
+from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.usage import RequestUsage
 
 from app.agents.capabilities.budget import SpendLedger, record_ambient_usage
@@ -103,29 +104,48 @@ def _searched_then_answered(output: str) -> MagicMock:
 class _Iteration:
     """A run to iterate, standing in for the library's own.
 
-    It yields no nodes. Which frames a surface sends is pinned in
-    `tests/test_agent_session.py` and `tests/test_embed_frames.py`; what these
-    tests are about is the rows a turn leaves behind. The outcome is awaited on
-    the first step so that a model which raises does so where the real one would -
-    inside the loop, with the settle path around it.
+    It yields one model-request node with a text event, followed by its end
+    node. Which frames a surface sends is pinned in `tests/test_agent_session.py`
+    and `tests/test_embed_frames.py`; these tests need a realistic non-empty
+    stream because the production runner rejects a run with no model events.
+    The outcome is awaited on the first step so a model which raises does so
+    where the real one would - inside the loop, with the settle path around it.
     """
 
     def __init__(self, outcome: AsyncMock) -> None:
         self._outcome = outcome
-        self._started = False
+        self._step = 0
         self.result: Any = None
         # The run's own deps, which a hosted page reads its stored files from.
-        self.ctx = SimpleNamespace(deps=SimpleNamespace(user_deps=AgentDeps()))
+        self.ctx = SimpleNamespace(
+            deps=SimpleNamespace(user_deps=AgentDeps()),
+            state=SimpleNamespace(message_history=[]),
+        )
 
     def __aiter__(self) -> _Iteration:
         return self
 
     async def __anext__(self) -> Any:
-        if self._started:
-            raise StopAsyncIteration
-        self._started = True
-        self.result = await self._outcome()
+        if self._step == 0:
+            self._step = 1
+            self.result = await self._outcome()
+            return _ModelRequestNode(str(self.result.output))
+        if self._step == 1:
+            self._step = 2
+            return SimpleNamespace()
         raise StopAsyncIteration
+
+
+class _ModelRequestNode:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    @asynccontextmanager
+    async def stream(self, _ctx: Any) -> AsyncIterator[Any]:
+        async def events() -> AsyncIterator[Any]:
+            yield PartStartEvent(index=0, part=TextPart(content=self._text))
+
+        yield events()
 
 
 @asynccontextmanager
@@ -179,6 +199,11 @@ def _run_yielding(agent_run: AsyncMock) -> Iterator[tuple[dict[str, PreparedRun]
         patch.object(AgentRunnerService, "prepare", new=AsyncMock(side_effect=prepare)),
         patch("app.services.agent_runner.agent_run_repo.finish_run", new=AsyncMock()),
         patch("app.services.transcript.conversation_repo") as conversations,
+        patch.object(
+            Agent,
+            "is_model_request_node",
+            side_effect=lambda node: isinstance(node, _ModelRequestNode),
+        ),
     ):
         conversations.create_message = AsyncMock(return_value=MagicMock(id=uuid.uuid4()))
         # What this run's earlier turns already claim of its cost, subtracted so a

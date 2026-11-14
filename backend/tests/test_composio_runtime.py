@@ -26,7 +26,7 @@ from app.schemas.mcp_connection import McpConnectionCreate
 from app.services import agent_registry, mcp_connection
 from app.services.app_connections import composio_user_id, runtime
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 _READ = "GMAIL_FETCH_EMAILS"
 _DETAIL = "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"

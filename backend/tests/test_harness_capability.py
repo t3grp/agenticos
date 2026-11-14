@@ -393,16 +393,12 @@ class TestASession:
             await _call(_Shell(), "harness_start", session="Bad Name")
 
     @pytest.mark.parametrize("invalid", ["../x", "a/b", ""])
-    async def test_stopping_with_an_invalid_name_is_rejected(
-        self, invalid: str
-    ) -> None:
+    async def test_stopping_with_an_invalid_name_is_rejected(self, invalid: str) -> None:
         with pytest.raises(ModelRetry, match="lower case letters"):
             await _call(_Shell(), "harness_stop", session=invalid)
 
     @pytest.mark.parametrize("invalid", ["../x", "a/b", ""])
-    async def test_prompting_with_an_invalid_name_is_rejected(
-        self, invalid: str
-    ) -> None:
+    async def test_prompting_with_an_invalid_name_is_rejected(self, invalid: str) -> None:
         with pytest.raises(ModelRetry, match="lower case letters"):
             await _call(_Shell(), "harness_prompt", session=invalid)
 

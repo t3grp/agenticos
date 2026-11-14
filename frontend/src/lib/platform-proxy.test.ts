@@ -312,6 +312,7 @@ const ORG_SCOPED_BACKEND_PREFIXES = [
   "/api/v1/audit",
   "/api/v1/channels",
   "/api/v1/conversations",
+  "/api/v1/failure-learning",
   "/api/v1/kb",
   "/api/v1/mcp-connections",
   "/api/v1/me/permissions",

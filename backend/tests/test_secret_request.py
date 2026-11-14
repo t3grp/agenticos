@@ -24,7 +24,7 @@ from app.agents.secret_request import (
     secret_request_result,
 )
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 SENTINEL = "sk-test-SENTINEL-VALUE-7f3a9c"
 

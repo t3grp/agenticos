@@ -41,6 +41,11 @@ KEYWORDS = ("tenant", "permission", "budget", "approval", "secret", "plaintext")
 # honest by `TestNoStaleExemptions`, which fails if an entry no longer exists or
 # no longer matches the net.
 EXEMPT: dict[str, str] = {
+    "tests/test_email_templates.py::TestCompiledEmailContract::test_live_workflow_and_approval_content_keeps_escaped_multiline_values": "approval appears in email copy; this is an escaping check, not an authorization refusal",
+    "tests/test_run_waiting.py::test_a_run_parked_on_an_approval_alone_reports_nothing_to_answer": "approval names the run's waiting state; this checks response shaping, not an authorization refusal",
+    "tests/test_sol_loop.py::TestStopReason::test_budget_end_is_not_approval": "budget means the review round cap, not a spend or permission refusal",
+    "tests/test_sol_loop.py::TestRunSolLoopRound::test_a_budget_cap_skip_is_unavailable_not_approval": "budget means the review round cap, not a spend or permission refusal",
+    "tests/test_sol_loop.py::TestSolLoopTool::test_a_budget_cap_skip_is_recorded_as_unavailable": "budget means the review round cap, not a spend or permission refusal",
     "tests/test_workflow_execution_approval_wake.py::TestWakeAfterApprovalDecision::test_an_answered_or_ended_question_wakes_its_owning_step": "'approval' names the wake module; an accepted question continuation, not an authorization refusal",
     "tests/test_workflow_run_status.py::test_a_question_is_visible_beside_running_approval_and_retry_siblings": "'approval' names a waiting status; severity reporting, not an authorization refusal",
     "tests/integration/test_artifact_log_bindings.py::TestReading::test_the_lines_are_cut_to_the_pages_byte_budget": "'budget' names the page's byte allowance for log lines, a size cut, not a spend cap or a refusal",

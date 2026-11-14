@@ -111,6 +111,7 @@ async def test_real_agent_executes_an_application_tool_and_sends_its_result(stre
     assert result.usage.cache_write_tokens == 4
 
 
+@pytest.mark.security
 async def test_factory_approval_parks_then_resumes_the_real_tool_once():
     load_builtins()
     owner = _owner()

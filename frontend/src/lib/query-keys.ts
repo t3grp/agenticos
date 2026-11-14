@@ -478,14 +478,14 @@ export const qk = {
         ? (["failure-learning", "agents", agentId, "ledger"] as const)
         : (["failure-learning", "agents", agentId, "ledger", status] as const),
     ledgerEntry: (agentId: string, entryId: string) =>
-      ["failure-learning", "agents", agentId, "ledger", entryId] as const,
+      ["failure-learning", "agents", agentId, "ledger", "entry", entryId] as const,
     cases: (agentId: string) => ["failure-learning", "agents", agentId, "cases"] as const,
     proposals: (agentId: string, status?: string) =>
       status === undefined
         ? (["failure-learning", "agents", agentId, "proposals"] as const)
         : (["failure-learning", "agents", agentId, "proposals", status] as const),
     proposal: (agentId: string, proposalId: string) =>
-      ["failure-learning", "agents", agentId, "proposals", proposalId] as const,
+      ["failure-learning", "agents", agentId, "proposals", "proposal", proposalId] as const,
     try: (agentId: string, tryId: string) =>
       ["failure-learning", "agents", agentId, "tries", tryId] as const,
   },

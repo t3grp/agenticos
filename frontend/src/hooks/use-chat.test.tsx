@@ -6803,7 +6803,6 @@ it("does not restore approvals from stale transcript rows after a terminal recei
   expect(get).not.toHaveBeenCalledWith("/runs/r-1/parked");
 });
 
-
 describe("useChat - the floating assistant's submitted page and agent", () => {
   afterEach(() => vi.useRealTimers());
 

@@ -46,7 +46,11 @@ def test_the_work_iq_applications_are_gone_and_work_iq_stays() -> None:
 def test_every_catalog_entry_has_a_check_and_no_check_names_a_removed_entry() -> None:
     rows = json.loads((catalog._DIR / mcp_audit.SNAPSHOT).read_text())
     checked = {row["key"] for row in rows if row["source"] == "catalog"}
-    assert checked == {entry.key for entry in CATALOG}
+    # Hosted Composio toolkits have no public MCP URL to probe here. The
+    # bundled checks cover only entries whose URL this service can reach.
+    probeable = {entry.key for entry in CATALOG if entry.url}
+    assert checked == probeable
+    assert checked <= {entry.key for entry in CATALOG}
 
 
 def test_official_workspace_apps_have_independent_hosted_oauth_connections() -> None:

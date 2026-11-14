@@ -130,6 +130,20 @@ _DOCUMENTATION_STUB: dict[str, Any] = {
 _DOCUMENTATION_CONFIGS: dict[str, dict[str, Any]] = {
     "phone_calls": {"endpoint_id": str(UUID(int=0))},
     "mirage": {"mounts": [{"path": "/scratch/", "backend": "ram"}]},
+    "council": {
+        "members": [
+            {"name": "Reviewer A", "provider": "openai", "model_profile_id": str(UUID(int=1))},
+            {"name": "Reviewer B", "provider": "anthropic", "model_profile_id": str(UUID(int=2))},
+            {"name": "Reviewer C", "provider": "google", "model_profile_id": str(UUID(int=3))},
+        ]
+    },
+    "sol_loop": {
+        "reviewer": {
+            "name": "Reviewer",
+            "provider": "openai",
+            "model_profile_id": str(UUID(int=4)),
+        }
+    },
     "channel_tools": {"tools": sorted(get("channel_tools").tool_ids)},
     # Granted no table, it builds only to create one; that is the widest list.
     # Granted no workflow, it builds nothing; one id the prober never starts.

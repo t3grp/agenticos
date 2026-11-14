@@ -127,10 +127,7 @@ class OnboardingTeamService:
         )
 
         catalog_templates = [
-            t
-            for ind in agent_templates.catalog()
-            if ind.id == ind_key
-            for t in ind.templates
+            t for ind in agent_templates.catalog() if ind.id == ind_key for t in ind.templates
         ]
 
         specialists: list[ProposedSpecialist] = []
@@ -142,7 +139,9 @@ class OnboardingTeamService:
                         name=t.name,
                         role=t.name,
                         description=t.description,
-                        capabilities=[b["id"] for b in t.capabilities if isinstance(b, dict) and "id" in b],
+                        capabilities=[
+                            b["id"] for b in t.capabilities if isinstance(b, dict) and "id" in b
+                        ],
                         recommended=True,
                     )
                 )
@@ -220,7 +219,9 @@ class OnboardingTeamService:
             agent = None
             if s.key and agent_templates.get(s.key) is not None:
                 try:
-                    result = await self.registry.install_template(ctx, s.key, visibility=Visibility.ORG)
+                    result = await self.registry.install_template(
+                        ctx, s.key, visibility=Visibility.ORG
+                    )
                     agent = await self.registry.get(ctx, result.agent_id)
                 except Exception:
                     logger.warning("Could not install template %s; creating custom agent", s.key)
@@ -261,7 +262,7 @@ class OnboardingTeamService:
         ]
 
         specialist_bullet_instructions = "\n".join(
-            f"- {ag.name}: {ag.description} (delegate using `task(description=..., subagent_type=\"{ag.slug}\")`)"
+            f'- {ag.name}: {ag.description} (delegate using `task(description=..., subagent_type="{ag.slug}")`)'
             for ag, _ in created_specialists
         )
 

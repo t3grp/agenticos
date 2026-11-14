@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SandboxConnectionPicker } from "./sandbox-connection-picker";
+import { ROUTES } from "@/lib/constants";
 
 const connections = vi.fn();
 const mayView = vi.fn(() => true);
@@ -55,7 +56,7 @@ describe("SandboxConnectionPicker", () => {
     connections.mockReturnValue({ connections: [], isLoading: false });
     const { rerender } = render(<SandboxConnectionPicker value={null} onChange={vi.fn()} />);
     expect(screen.getByRole("link", { name: "Connect one" }).getAttribute("href")).toBe(
-      "/sandboxes",
+      ROUTES.SANDBOXES,
     );
 
     rerender(<SandboxConnectionPicker value="gone" onChange={vi.fn()} error="Pick a host" />);

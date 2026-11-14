@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MirageSection } from "./mirage-section";
+import { ROUTES } from "@/lib/constants";
 import type { CapabilityBindingSpec, CapabilityCatalogEntry } from "@/types/agents";
 import type { MirageBackend } from "@/types/mirage";
 
@@ -351,7 +352,7 @@ describe("how a folder signs in", () => {
     secrets.mockReturnValue({ secrets: [], isLoading: false });
     mount({ mounts: [{ path: "/files/", backend: "onedrive" }] });
 
-    expect(screen.getByRole("link", { name: "vault" })).toHaveAttribute("href", "/vault");
+    expect(screen.getByRole("link", { name: "vault" })).toHaveAttribute("href", ROUTES.VAULT);
   });
 
   it("signs a Microsoft service in as an Entra app", async () => {

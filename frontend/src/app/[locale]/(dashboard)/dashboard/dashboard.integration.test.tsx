@@ -62,6 +62,8 @@ vi.mock("next/navigation", () => ({
   },
   // The header's "?" reads the path to decide whether this page has tips.
   usePathname: () => "/dashboard",
+  redirect: vi.fn(),
+  permanentRedirect: vi.fn(),
 }));
 
 // Next.js makes native history writes observable through useSearchParams.

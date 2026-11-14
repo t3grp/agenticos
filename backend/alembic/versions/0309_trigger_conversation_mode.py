@@ -46,7 +46,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "routine_device_waits",
-        sa.Column("event_payload", JSONB(), nullable=True),
+        sa.Column("event_payload", JSONB(none_as_null=True), nullable=True),
     )
     op.drop_constraint("ck_routine_device_wait_redacted", "routine_device_waits", type_="check")
     op.create_check_constraint(

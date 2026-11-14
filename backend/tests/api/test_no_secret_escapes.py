@@ -159,6 +159,17 @@ _PATTERN_ALLOWED: dict[str, str] = {
     "cache_write_tokens": "the prompt tokens a turn wrote to that cache",
 }
 
+# Response fields that deliberately carry a short-lived or one-time credential,
+# or a safe reference to a vault row. Keep these qualified by schema so a new
+# field named `secret` does not inherit an unrelated exception.
+_SCHEMA_FIELD_ALLOWED: dict[str, str] = {
+    "MfaSetupRead.secret": "one-time authenticator enrollment secret for the signed-in user",
+    "MfaRequired.mfa_token": "short-lived MFA challenge token, exchanged only for a session",
+    "AgentRunRead.waiting_secret_requests": "names of credentials the paused run is waiting for",
+    "SecretRequestRead.fulfilled_secret_id": "vault row id, never its credential value",
+    "SecretRequestRead.secret_name": "display name of a vault row, never its credential value",
+}
+
 # A property whose type is one of these cannot be carrying a credential
 # whatever it is called: a secret is a string, masked with `format: "password"`.
 _HARMLESS_TYPES = frozenset({"boolean", "integer", "number"})
@@ -252,6 +263,7 @@ class TestNoSecretShapeIsReturned:
             f"{name}.{field}"
             for name in _response_schema_names(document)
             for field in _string_properties(components.get(name, {})) & _SECRET_FIELDS
+            if f"{name}.{field}" not in _SCHEMA_FIELD_ALLOWED
         )
         assert not offenders, f"response schemas exposing a credential field: {offenders}"
 
@@ -267,7 +279,9 @@ class TestNoSecretShapeIsReturned:
             f"{name}.{field}"
             for name in _response_schema_names(document)
             for field in _string_properties(components.get(name, {}))
-            if _SECRET_WORDS.search(field) and field not in _PATTERN_ALLOWED
+            if _SECRET_WORDS.search(field)
+            and field not in _PATTERN_ALLOWED
+            and f"{name}.{field}" not in _SCHEMA_FIELD_ALLOWED
         )
         assert not offenders, f"response schemas exposing a credential field: {offenders}"
 
@@ -275,8 +289,14 @@ class TestNoSecretShapeIsReturned:
         """A stale allowance is a hole waiting for the name to be reused."""
         components: dict[str, Any] = document.get("components", {}).get("schemas", {})
         named = {field for schema in components.values() for field in _properties(schema)}
+        qualified = {
+            f"{name}.{field}"
+            for name, schema in components.items()
+            for field in _properties(schema)
+        }
 
         assert set(_PATTERN_ALLOWED) <= named
+        assert set(_SCHEMA_FIELD_ALLOWED) <= qualified
 
     def test_the_sweep_reaches_the_schemas_it_claims_to(self, document: dict[str, Any]) -> None:
         """A sweep that resolves nothing passes for the wrong reason.

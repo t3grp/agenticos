@@ -2433,6 +2433,24 @@ class McpConnectionService:
             scopes=frozenset(account.granted_scopes or ()),
         )
 
+    async def google_drive_picker_grant(
+        self, account_id: UUID, *, organization_id: UUID
+    ) -> AccountGrant:
+        """Resolve an organization's Google account for the Drive folder picker."""
+        account = await mcp_connection_repo.get_account(self.db, account_id)
+        if (
+            account is None
+            or account.scope != "org"
+            or account.organization_id != organization_id
+            or account.catalog_key != "google"
+            or account.oauth_payload is None
+        ):
+            raise NotFoundError(message="Google account not found")
+        grant = await self.account_grant(account, organization_id=organization_id)
+        if grant is None or not google_oauth.DRIVE_GRANT_SCOPES.intersection(grant.scopes):
+            raise NotFoundError(message="Google account not found")
+        return grant
+
     async def oauth_callback(
         self,
         *,

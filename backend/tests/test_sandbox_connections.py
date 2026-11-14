@@ -57,7 +57,7 @@ from app.services.sandbox_connection import (
 )
 from app.services.sandbox_runtimes import CATALOG
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 
 def _ctx() -> AuthContext:

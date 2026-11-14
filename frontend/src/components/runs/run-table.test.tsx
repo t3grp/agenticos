@@ -76,7 +76,9 @@ describe("a run history row", () => {
     // carries the full rendering.
     render(
       <RunTable
-        runs={[run({ status: "failed", error: "The run did not finish (ModelHTTPError, HTTP 400)" })]}
+        runs={[
+          run({ status: "failed", error: "The run did not finish (ModelHTTPError, HTTP 400)" }),
+        ]}
       />,
     );
 

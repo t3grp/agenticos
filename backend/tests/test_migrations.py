@@ -39,7 +39,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError
 from app.db.models.session import Session
-from app.db.models.user import User
 from app.services.session import SessionService, hash_token
 
 # Owned by this module alone, and by this run of it. Not the integration suite's
@@ -560,12 +559,27 @@ class TestLegacyCookieSessionRevocation:
         factory = async_sessionmaker(engine, expire_on_commit=False)
         try:
             async with factory() as db:
-                user = User(email=f"cookie-migration-{uuid4()}@example.com")
-                admin = User(email=f"cookie-admin-{uuid4()}@example.com")
-                db.add_all([user, admin])
-                await db.flush()
+                user_id, admin_id = uuid4(), uuid4()
+                await db.execute(
+                    text(
+                        "INSERT INTO users (id, email, is_active, is_app_admin) "
+                        "VALUES (:id, :email, true, :is_admin)"
+                    ),
+                    [
+                        {
+                            "id": user_id,
+                            "email": f"cookie-migration-{user_id}@example.com",
+                            "is_admin": False,
+                        },
+                        {
+                            "id": admin_id,
+                            "email": f"cookie-admin-{admin_id}@example.com",
+                            "is_admin": True,
+                        },
+                    ],
+                )
                 now = datetime.now(UTC)
-                old_id, impersonation_id, ended_id, user_id = uuid4(), uuid4(), uuid4(), user.id
+                old_id, impersonation_id, ended_id = uuid4(), uuid4(), uuid4()
                 # Seed the historical schema without today's app/push columns.
                 await db.execute(
                     text(
@@ -585,7 +599,7 @@ class TestLegacyCookieSessionRevocation:
                         {
                             "id": impersonation_id,
                             "user": user.id,
-                            "impersonator": admin.id,
+                            "impersonator": admin_id,
                             "current": hash_token("legacy-impersonation"),
                             "previous": None,
                             "rotated": None,

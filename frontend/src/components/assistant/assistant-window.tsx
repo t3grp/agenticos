@@ -143,7 +143,10 @@ export function AssistantWindow({
       className={cn(WINDOW_CLASSES, !open && "hidden")}
     >
       <header className="border-border flex min-w-0 items-center gap-2 border-b px-3 py-2">
-        <div data-tour="assistant-agent-picker" className="flex min-w-0 flex-1 [&>button]:max-w-full">
+        <div
+          data-tour="assistant-agent-picker"
+          className="flex min-w-0 flex-1 [&>button]:max-w-full"
+        >
           <AgentPicker
             followUrl={false}
             includeWorkflows={false}
@@ -183,11 +186,7 @@ export function AssistantWindow({
           <X className="h-4 w-4" />
         </HeaderButton>
       </header>
-      <AssistantPageContextBar
-        page={page}
-        enabled={includePage}
-        onEnabledChange={setIncludePage}
-      />
+      <AssistantPageContextBar page={page} enabled={includePage} onEnabledChange={setIncludePage} />
       <div className="relative flex min-h-0 flex-1" onClickCapture={onClickCapture}>
         {showHistory && selectedAgentId && (
           <AssistantHistory

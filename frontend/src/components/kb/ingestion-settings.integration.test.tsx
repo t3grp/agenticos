@@ -191,17 +191,16 @@ describe("the model that describes the images", () => {
     expect(screen.getByText(/permission you do not hold/)).toBeInTheDocument();
   });
 
-  it("stores no key while the dialog that holds it is frozen", async () => {
-    // The form disables its submit on `disabled` and used to stop there, which
-    // was harmless while this panel was a list of radios. It is not now: the
-    // key field writes an organization-wide vault secret, and a dialog mid-save
-    // did not mean "except the vault".
+  it("does not offer provider or key changes while disabled", async () => {
+    // The provider picker starts the profile/key flow. A frozen ingestion form
+    // must disable that entry point as well as the remaining controls.
     show(null, true);
 
-    await userEvent.click(await screen.findByLabelText("Provider"));
-    await userEvent.click(screen.getByRole("option", { name: /OpenAI/ }));
-
-    expect(screen.getByRole("button", { name: "Add a key: OpenAI" })).toBeDisabled();
+    const provider = await screen.findByLabelText("Provider");
+    expect(provider).toBeDisabled();
+    await userEvent.click(provider);
+    expect(screen.queryByRole("option", { name: /OpenAI/ })).toBeNull();
+    expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("says the chosen model has no key, which is what decides whether ingestion runs", async () => {

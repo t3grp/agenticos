@@ -475,6 +475,7 @@ class TestSecretRequestRepository:
         mock_session.refresh.assert_awaited_once_with(request)
 
     @pytest.mark.anyio
+    @pytest.mark.security
     async def test_mark_decided_without_a_secret_leaves_the_link_empty(self, mock_session):
         from uuid import uuid4
 

@@ -12,9 +12,9 @@ from pydantic import SecretStr
 
 from app.api import deps
 from app.core.config import settings
+from app.core.exceptions import NotFoundError
 from app.core.permissions import AuthContext, OrgRoleName
 from app.main import app
-from app.repositories import mcp_connection as mcp_connection_repo
 from app.services.rag.drive_api import DRIVE_API, DriveClient
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
@@ -48,18 +48,18 @@ def _client(monkeypatch, *, organization_id, account, handler):
     )
     service = MagicMock()
     service.db = MagicMock()
-    service.account_grant = AsyncMock(
+    service.google_drive_picker_grant = AsyncMock(
+        side_effect=(
+            NotFoundError(message="Google account not found")
+            if account.organization_id != organization_id
+            else None
+        ),
         return_value=SimpleNamespace(
             client_id="client-id",
             client_secret=SecretStr("client-secret"),
             refresh_token=SecretStr("refresh-token"),
             scopes=frozenset({_DRIVE_READONLY}),
         )
-    )
-    monkeypatch.setattr(
-        mcp_connection_repo,
-        "get_account",
-        AsyncMock(return_value=account),
     )
 
     def make_drive(cls, **kwargs):

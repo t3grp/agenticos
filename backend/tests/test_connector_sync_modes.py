@@ -120,6 +120,7 @@ async def _syncing(
         sync_mode=mode,
         organization_id=uuid.uuid4(),
         secret_id=None,
+        connected_account_id=None,
     )
     sources = MagicMock(
         get_source=AsyncMock(return_value=source),

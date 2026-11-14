@@ -43,11 +43,13 @@ def _paused_state(*questions: str) -> dict[str, object]:
         ToolCallPart(
             "ask_user_question",
             {
-                "questions": [{
-                    "header": f"Question {index}",
-                    "question": question,
-                    "options": [{"label": "A"}, {"label": "B"}],
-                }]
+                "questions": [
+                    {
+                        "header": f"Question {index}",
+                        "question": question,
+                        "options": [{"label": "A"}, {"label": "B"}],
+                    }
+                ]
             },
             tool_call_id=f"ask-{index}",
         )

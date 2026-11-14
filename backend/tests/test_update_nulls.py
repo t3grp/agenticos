@@ -47,6 +47,7 @@ from app.db.models.conversation_share import ConversationShare
 from app.db.models.credential import ModelProfile
 from app.db.models.dashboard_layout import DashboardLayout
 from app.db.models.deployment_settings import DeploymentSettings
+from app.db.models.failure_learning import AgentFailureLedger
 from app.db.models.group import Group, GroupMember
 from app.db.models.knowledge_base import KnowledgeBase
 from app.db.models.local_service import LocalService
@@ -91,6 +92,7 @@ from app.schemas.conversation import ConversationUpdate
 from app.schemas.conversation_share import ConversationShareUpdate
 from app.schemas.dashboard_layout import DashboardLayoutUpdate
 from app.schemas.deployment_settings import DeploymentSettingsUpdate
+from app.schemas.failure_learning import LedgerEntryUpdate
 from app.schemas.group import GroupLeadUpdate, GroupUpdate
 from app.schemas.knowledge_base import KnowledgeBaseUpdate
 from app.schemas.local_service import LocalServiceUpdate
@@ -118,7 +120,7 @@ from app.schemas.table_view import TableViewUpdate
 from app.schemas.task import TaskUpdate
 from app.schemas.user import UserUpdate
 from app.schemas.user_slash_command import UserSlashCommandUpdate
-from app.schemas.virtual_table import RecordUpdate, SchemaUpdate, TableUpdate
+from app.schemas.virtual_table import RecordUpdate, RowPolicyUpdate, SchemaUpdate, TableUpdate
 from app.schemas.virtual_table_trigger import TableTriggerUpdate
 from app.schemas.watch import WatchUpdate
 from app.schemas.workflow import WorkflowActiveUpdate, WorkflowDraftUpdate, WorkflowUpdate
@@ -160,6 +162,7 @@ UPDATE_TARGETS: dict[type[BaseModel], type[DeclarativeBase] | None] = {
     ConversationShareUpdate: ConversationShare,
     DashboardLayoutUpdate: DashboardLayout,
     DeploymentSettingsUpdate: DeploymentSettings,
+    LedgerEntryUpdate: AgentFailureLedger,
     EmbedUpdate: AgentEmbed,
     EnvironmentUpdate: AgentEnvironment,
     ExposureUpdate: AgentExposure,
@@ -178,6 +181,7 @@ UPDATE_TARGETS: dict[type[BaseModel], type[DeclarativeBase] | None] = {
     PortalPollIntervalUpdate: McpConnection,
     ProjectUpdate: Project,
     RecordUpdate: None,
+    RowPolicyUpdate: VirtualTable,
     # Both patch keys within Session.push_preferences JSONB, not columns by name.
     PushFocusUpdate: None,
     PushPreferencesUpdate: None,

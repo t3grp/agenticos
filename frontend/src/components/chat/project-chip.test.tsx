@@ -141,7 +141,11 @@ describe("ProjectChip", () => {
       <QueryClientProvider
         client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
       >
-        <ProjectChip conversationId="c-1" pickerOpen={false} onPickerOpenChange={onPickerOpenChange} />
+        <ProjectChip
+          conversationId="c-1"
+          pickerOpen={false}
+          onPickerOpenChange={onPickerOpenChange}
+        />
       </QueryClientProvider>,
     );
     await userEvent.click(await screen.findByRole("button", { name: "Change project" }));

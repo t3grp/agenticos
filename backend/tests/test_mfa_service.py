@@ -19,7 +19,7 @@ from app.core.totp import code_now, hash_recovery_code
 from app.core.vault import SealedSecret
 from app.services.mfa import MfaService
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 
 def _next_code(secret):

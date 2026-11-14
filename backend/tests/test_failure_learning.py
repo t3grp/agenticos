@@ -1069,7 +1069,9 @@ class TestTries:
         skill_id = uuid4()
         spec = AgentSpec(name="Support", model_profile_id=uuid4()).model_dump(mode="json")
         spec["skill_ids"] = [str(skill_id)]
-        monkeypatch.setattr(agent_repo, "get_version", AsyncMock(return_value=SimpleNamespace(spec=spec)))
+        monkeypatch.setattr(
+            agent_repo, "get_version", AsyncMock(return_value=SimpleNamespace(spec=spec))
+        )
         skill = SimpleNamespace(id=skill_id, content="Current skill text.")
         service.skills.get = AsyncMock(return_value=skill)
         proposal = _proposal_row(
@@ -1082,7 +1084,9 @@ class TestTries:
         monkeypatch.setattr(failure_learning_repo, "get_proposal", AsyncMock(return_value=proposal))
         old_run, new_run = SimpleNamespace(id=uuid4()), SimpleNamespace(id=uuid4())
         service.runner.execute = AsyncMock(side_effect=[("old", old_run), ("new", new_run)])
-        monkeypatch.setattr(failure_learning_repo, "create_run", AsyncMock(side_effect=_created_run))
+        monkeypatch.setattr(
+            failure_learning_repo, "create_run", AsyncMock(side_effect=_created_run)
+        )
         linked = AsyncMock()
         monkeypatch.setattr(failure_learning_repo, "update_proposal", linked)
         monkeypatch.setattr(
@@ -2351,9 +2355,7 @@ class TestApply:
                 )
             ),
         )
-        monkeypatch.setattr(
-            "app.services.failure_learning.record_audit", AsyncMock()
-        )
+        monkeypatch.setattr("app.services.failure_learning.record_audit", AsyncMock())
 
         read = await service.revert_proposal(_ctx(), agent.id, proposal.id)
 

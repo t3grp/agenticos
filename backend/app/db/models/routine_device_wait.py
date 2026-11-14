@@ -45,7 +45,9 @@ class RoutineDeviceWait(Base, TimestampMixin):
     # for its computer still hands the run the whole payload when it wakes -
     # the job queue carries it on the direct path, this row on the waiting one.
     # Null on a scheduled wait and on any event whose source sends none.
-    event_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    event_payload: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="waiting", server_default="waiting"
     )

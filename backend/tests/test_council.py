@@ -470,8 +470,16 @@ class TestFactoryWiring:
                                 "provider": "anthropic",
                                 "model_profile_id": str(profile_id),
                             },
-                            {"name": "GPT", "provider": "openai", "model_profile_id": str(uuid.uuid4())},
-                            {"name": "Gemini", "provider": "google", "model_profile_id": str(uuid.uuid4())},
+                            {
+                                "name": "GPT",
+                                "provider": "openai",
+                                "model_profile_id": str(uuid.uuid4()),
+                            },
+                            {
+                                "name": "Gemini",
+                                "provider": "google",
+                                "model_profile_id": str(uuid.uuid4()),
+                            },
                         ],
                         "agreement_threshold": 8,
                         "max_rounds": 3,

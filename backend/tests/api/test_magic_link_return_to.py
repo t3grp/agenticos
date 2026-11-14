@@ -40,6 +40,7 @@ class _User:
         self.email = "kacper@example.com"
         self.full_name = "Kacper"
         self.is_active = True
+        self.totp_enabled = False
         self.credential_version = 0
 
 

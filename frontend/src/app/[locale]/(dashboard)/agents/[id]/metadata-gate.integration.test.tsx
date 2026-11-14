@@ -114,6 +114,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/agents/a1",
+  redirect: vi.fn(),
+  permanentRedirect: vi.fn(),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 

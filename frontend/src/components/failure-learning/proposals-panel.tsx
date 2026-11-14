@@ -64,7 +64,7 @@ export function ProposalsPanel({
   const selected = shown.find((proposal) => proposal.id === selectedId) ?? null;
   const creatingWithPrefill = creating || prefill !== null;
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading) return <LoadingState variant="skeleton-cards" />;
   if (error) return <ErrorState />;
   return (
     <div className="space-y-3">

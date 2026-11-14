@@ -58,6 +58,7 @@ def _row(**overrides) -> SimpleNamespace:
         "collection_name": "legal",
         "config": dict(_CONFIG),
         "secret_id": _SECRET,
+        "connected_account_id": None,
         "organizational_unit": None,
         "sync_mode": "new_only",
         "schedule_minutes": None,
@@ -82,7 +83,12 @@ def _service(monkeypatch: pytest.MonkeyPatch, *, stored=None, updated=None) -> A
         sync_source_module.organization_secret_repo,
         "get",
         AsyncMock(
-            return_value=SimpleNamespace(id=_SECRET, kind="gcp_service_account", hint="9f3c")
+        return_value=SimpleNamespace(
+            id=_SECRET,
+            kind="gcp_service_account",
+            hint="9f3c",
+            usage_scope="organization",
+        )
         ),
     )
     monkeypatch.setattr(

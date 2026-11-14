@@ -3,14 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SetupProposals } from "./setup-proposals";
+import { ROUTES } from "@/lib/constants";
 import type { SetupProposal } from "@/lib/turn-extras";
 import { useArchitectAskStore } from "@/stores/architect-ask-store";
 import type { TriggerTemplate } from "@/types/trigger-templates";
 
 /**
  * What a welcome interview ends with (#2301): each proposal a card acted on in
- * one click - a routine dialog filled in, a question to the Architect, the MCP
- * servers page at its add button.
+ * one click - a routine dialog filled in, a question to the Architect, the
+ * connectors page at its add button.
  */
 
 const push = vi.hoisted(() => vi.fn());
@@ -175,8 +176,8 @@ describe("SetupProposals", () => {
 
     await take("Connect Gmail");
 
-    expect(push).toHaveBeenCalledWith("/mcp-servers");
-    expect(pointAt).toHaveBeenCalledWith("mcp-add", "/mcp-servers");
+    expect(push).toHaveBeenCalledWith(ROUTES.MCP_SERVERS);
+    expect(pointAt).toHaveBeenCalledWith("mcp-add", ROUTES.MCP_SERVERS);
   });
 
   describe("a connection naming its server", () => {
@@ -228,7 +229,7 @@ describe("SetupProposals", () => {
 
       await take("Connect Gmail");
 
-      expect(push).toHaveBeenCalledWith("/mcp-servers");
+      expect(push).toHaveBeenCalledWith(ROUTES.MCP_SERVERS);
     });
   });
 });

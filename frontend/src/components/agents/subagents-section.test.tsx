@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SubagentsSection } from "./subagents-section";
 import { DEFAULT_SUBAGENTS_CONFIG, newSpecialist } from "@/lib/agent-spec";
+import { ROUTES } from "@/lib/constants";
 import type {
   Agent,
   CapabilityBindingSpec,
@@ -216,7 +217,7 @@ describe("remote delegates", () => {
 
     expect(screen.getByRole("link", { name: "Register one" })).toHaveAttribute(
       "href",
-      "/remote-agents",
+      ROUTES.REMOTE_AGENTS,
     );
     expect(screen.getByRole("button", { name: "Add a remote agent" })).toBeDisabled();
   });

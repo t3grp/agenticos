@@ -10,12 +10,10 @@ from httpx import HTTPStatusError
 from app.api.deps import Auth, McpConnectionSvc, require
 from app.core.exceptions import AuthorizationError, ExternalServiceError, NotFoundError
 from app.core.permissions import Perm
-from app.repositories import mcp_connection as mcp_connection_repo
 from app.schemas.gdrive_folder import (
     GoogleDriveFolderPickerResponse,
     GoogleDrivePickerItem,
 )
-from app.services.portals.google_oauth import DRIVE
 from app.services.rag.drive_api import DriveClient
 from app.services.rag.remote_names import checked_drive_folder_id
 
@@ -23,7 +21,6 @@ router = APIRouter(
     dependencies=[Depends(require(Perm.CONNECTIONS_VIEW))],
 )
 _FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
-_DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly"
 
 
 def _folders(
@@ -80,19 +77,7 @@ async def list_google_drive_folders(
     parent: str = Query("root"),
 ) -> GoogleDriveFolderPickerResponse:
     """List Shared Drives and My Drive folders for an org account."""
-    account_row = await mcp_connection_repo.get_account(service.db, account)
-    if (
-        account_row is None
-        or account_row.scope != "org"
-        or account_row.organization_id != ctx.organization_id
-        or account_row.catalog_key != "google"
-        or account_row.oauth_payload is None
-    ):
-        raise NotFoundError(message="Google account not found")
-
-    grant = await service.account_grant(account_row, organization_id=ctx.organization_id)
-    if grant is None or not {DRIVE, _DRIVE_READONLY}.intersection(grant.scopes):
-        raise NotFoundError(message="Google account not found")
+    grant = await service.google_drive_picker_grant(account, organization_id=ctx.organization_id)
 
     shared_drive_id: str | None = None
     if parent == "root":

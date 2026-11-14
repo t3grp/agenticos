@@ -26,7 +26,7 @@ from app.db.models.agent_run import ApprovalStatus, RunStatus
 from app.schemas.agent import SecretRequestFulfil
 from app.services.secret_requests import SecretRequestService
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 SENTINEL = "sk-test-SENTINEL-VALUE-7f3a9c"
 

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WatchesCard, useCanWatch } from "./watches-card";
+import { ROUTES } from "@/lib/constants";
 import type { Watch } from "@/lib/watches-api";
 
 /**
@@ -180,7 +181,7 @@ describe("WatchesCard", () => {
     state.connections = [];
     const { unmount } = render(<WatchesCard onNew={onNew} />);
     await userEvent.click(screen.getByRole("button", { name: "Open MCP servers" }));
-    expect(state.push).toHaveBeenCalledWith("/mcp-servers");
+    expect(state.push).toHaveBeenCalledWith(ROUTES.MCP_SERVERS);
     unmount();
 
     state.connections = [{ id: "c-gh", authorized: true }];

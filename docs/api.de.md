@@ -50,7 +50,9 @@ eingeschränkt:
 
 Der Schlüssel wird **einmal** angezeigt, in der Antwort, die ihn erstellt.
 Gespeichert wird nur sein SHA-256, und er erscheint nie in einer Logzeile, einem
-Audit-Eintrag oder einem Fehlertext. Listen zeigen sein Präfix (`aos_1a2b3c4d`),
+Audit-Eintrag oder einem Fehlertext.
+
+Listen zeigen sein Präfix (`aos_1a2b3c4d`),
 und so nennt auch ein Audit-Eintrag den Schlüssel, der gehandelt hat — jeder
 Eintrag, der während einer mit einem Schlüssel authentifizierten Anfrage
 geschrieben wird, trägt `via_api_key` in seinen Details. Standardmäßig läuft ein
@@ -177,7 +179,9 @@ nächsten Anmeldung nicht entfernen kann.
 Eine Passwort-, Verzeichnis- oder Magic-Link-Anmeldung für ein Konto, bei dem
 sie aktiviert ist, hält stattdessen an einer Herausforderung an: Die Antwort
 enthält `mfa_required`, ein `mfa_token` und `expires_in` (fünf Minuten), und
-es werden keine Cookies gesetzt. Der Client schliesst sie mit
+es werden keine Cookies gesetzt.
+
+Der Client schliesst sie mit
 `POST /api/v1/auth/mfa/verify` mit dem Token und dem Code ab, und die Antwort
 ist das Tokenpaar - plus das Ziel des Magic-Links, wenn die Herausforderung
 von einem kam. Das Herausforderungstoken beweist den Passwortschritt und

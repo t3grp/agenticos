@@ -3610,7 +3610,7 @@ class TestMcpConnectionService:
 
     @pytest.mark.anyio
     async def test_oauth_start_refuses_a_client_the_server_will_not_authenticate(
-        self, service, monkeypatch
+        self, service, repo, monkeypatch
     ):
         """`exchange_code` and `refresh_tokens` only put the secret in the form
         body. A server that does not allow that is refused at start, not after
@@ -5755,6 +5755,91 @@ class TestPortalGrantLookup:
         }
 
 
+class TestGoogleDrivePickerGrant:
+    @pytest.mark.anyio
+    async def test_the_orgs_google_drive_grant_is_returned(self, monkeypatch):
+        organization_id, account_id = uuid4(), uuid4()
+        account = SimpleNamespace(
+            scope="org",
+            organization_id=organization_id,
+            catalog_key="google",
+            oauth_payload="sealed-account-grant",
+        )
+        grant = SimpleNamespace(
+            scopes=frozenset({"https://www.googleapis.com/auth/drive.readonly"})
+        )
+        lookup = AsyncMock(return_value=account)
+        monkeypatch.setattr(mcp_connection_service.mcp_connection_repo, "get_account", lookup)
+        service = McpConnectionService(AsyncMock())
+        resolve = AsyncMock(return_value=grant)
+        monkeypatch.setattr(service, "account_grant", resolve)
+
+        assert await service.google_drive_picker_grant(
+            account_id, organization_id=organization_id
+        ) is grant
+        lookup.assert_awaited_once_with(service.db, account_id)
+        resolve.assert_awaited_once_with(account, organization_id=organization_id)
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "invalid", ["missing", "scope", "organization", "catalog", "payload"]
+    )
+    async def test_a_non_org_google_account_is_hidden(self, monkeypatch, invalid):
+        organization_id, account_id = uuid4(), uuid4()
+        account = None
+        if invalid != "missing":
+            account = SimpleNamespace(
+                scope="org",
+                organization_id=organization_id,
+                catalog_key="google",
+                oauth_payload="sealed-account-grant",
+            )
+            if invalid == "scope":
+                account.scope = "user"
+            elif invalid == "organization":
+                account.organization_id = uuid4()
+            elif invalid == "catalog":
+                account.catalog_key = "github"
+            elif invalid == "payload":
+                account.oauth_payload = None
+        monkeypatch.setattr(
+            mcp_connection_service.mcp_connection_repo,
+            "get_account",
+            AsyncMock(return_value=account),
+        )
+        service = McpConnectionService(AsyncMock())
+        resolve = AsyncMock()
+        monkeypatch.setattr(service, "account_grant", resolve)
+
+        with pytest.raises(NotFoundError, match="Google account not found"):
+            await service.google_drive_picker_grant(account_id, organization_id=organization_id)
+        resolve.assert_not_awaited()
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("scopes", [None, frozenset({"openid"})])
+    async def test_a_grant_without_drive_scope_is_hidden(self, monkeypatch, scopes):
+        organization_id, account_id = uuid4(), uuid4()
+        account = SimpleNamespace(
+            scope="org",
+            organization_id=organization_id,
+            catalog_key="google",
+            oauth_payload="sealed-account-grant",
+        )
+        grant = None if scopes is None else SimpleNamespace(scopes=scopes)
+        monkeypatch.setattr(
+            mcp_connection_service.mcp_connection_repo,
+            "get_account",
+            AsyncMock(return_value=account),
+        )
+        service = McpConnectionService(AsyncMock())
+        resolve = AsyncMock(return_value=grant)
+        monkeypatch.setattr(service, "account_grant", resolve)
+
+        with pytest.raises(NotFoundError, match="Google account not found"):
+            await service.google_drive_picker_grant(account_id, organization_id=organization_id)
+        resolve.assert_awaited_once_with(account, organization_id=organization_id)
+
+
 class TestPortalGrantById:
     @pytest.mark.anyio
     async def test_the_orgs_own_grant_is_returned(self, monkeypatch):
@@ -6886,6 +6971,7 @@ class TestGoogleMcpUsesTheOrganizationsGoogleApp:
 
         assert "client_id=typed-client" in url
         org_app.assert_not_called()
+
 
 @pytest.mark.anyio
 @pytest.mark.security

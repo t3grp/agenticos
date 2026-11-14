@@ -123,7 +123,9 @@ export function StepAbout({ role, industry, teamSize, onChange }: StepAboutProps
                 >
                   <item.icon className="size-4" />
                 </div>
-                <span className="text-foreground text-xs font-medium">{t(`industries.${key}`)}</span>
+                <span className="text-foreground text-xs font-medium">
+                  {t(`industries.${key}`)}
+                </span>
               </button>
             );
           })}

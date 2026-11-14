@@ -101,6 +101,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Route MFA management and failure-learning API calls through the shared BFF proxy, and separate list/detail cache keys for failure-learning records.
 - Preserve existing personal API and Claude subscription connections when
   deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
   the personal-model, Google Drive OAuth, and Composio migration branches without

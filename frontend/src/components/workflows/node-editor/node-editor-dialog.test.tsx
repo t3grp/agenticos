@@ -11,6 +11,7 @@ import type { NodeInstance, WorkflowGraph } from "@/lib/workflows/types";
 import { useWorkflowEditorStore } from "@/stores/workflow-editor-store";
 
 import { WORKFLOW_APPS } from "@/components/workflows/apps";
+import { ROUTES } from "@/lib/constants";
 import type { McpAppStep } from "@/components/workflows/use-app-connections";
 import type { OrgMcpConnectionRecord } from "@/lib/org-mcp-connections-api";
 
@@ -102,7 +103,7 @@ describe("NodeEditorDialog", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the connection" })).toHaveAttribute(
       "href",
-      "/mcp-servers?server=google-workspace",
+      `${ROUTES.MCP_SERVERS}?server=google-workspace`,
     );
     unmount();
 

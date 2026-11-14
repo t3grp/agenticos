@@ -277,9 +277,9 @@ async def list_visible(
             )
             .scalar_subquery()
         )
-        # Favourites take the place of the former pinned-app list. Preserve its
-        # stable pin order: the first app a person starred stays at the top.
-        ordering = [favourite_at.asc(), Artifact.id.asc()]
+        # Show the most recently starred items first; id breaks ties
+        # deterministically when timestamps have the same precision.
+        ordering = [favourite_at.desc(), Artifact.id.asc()]
     else:
         ordering = [Artifact.published_at.desc(), Artifact.name.asc(), Artifact.id.asc()]
     items = await db.execute(

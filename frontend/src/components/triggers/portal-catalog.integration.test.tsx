@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PortalCatalog } from "./portal-catalog";
+import { ROUTES } from "@/lib/constants";
 import { apiClient } from "@/lib/api-client";
 import { startGithubOrgOAuth, startMcpOAuth } from "@/lib/mcp-connections-api";
 import type { OrgMcpConnectionRecord } from "@/lib/org-mcp-connections-api";
@@ -389,7 +390,10 @@ describe("PortalCatalog", () => {
     const card = within(screen.getByRole("group", { name: "GitHub" }));
 
     expect(card.queryByRole("button", { name: /Add credentials/ })).toBeNull();
-    expect(card.getByRole("link", { name: "Open the vault" })).toHaveAttribute("href", "/vault");
+    expect(card.getByRole("link", { name: "Open the vault" })).toHaveAttribute(
+      "href",
+      ROUTES.VAULT,
+    );
   });
 
   it("names the missing OAuth App on the card instead of after the click", async () => {

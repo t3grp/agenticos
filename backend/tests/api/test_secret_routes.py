@@ -45,6 +45,7 @@ def _row(**overrides: Any) -> MagicMock:
     # so a route test has to carry them.
     row.purpose = "openai"
     row.visibility = "org"
+    row.usage_scope = "organization"
     row.owner_user_id = None
     row.owner_email = None
     row.created_at = datetime.now(UTC)

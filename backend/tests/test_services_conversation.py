@@ -2699,9 +2699,7 @@ class TestTheThreadAModelIsGivenBack:
         monkeypatch.setattr(
             conversation_repo, "messages_by_id", AsyncMock(return_value={prompt.id: prompt})
         )
-        window = AsyncMock(
-            return_value=[self._row("user", "hi"), self._row("assistant", "hello")]
-        )
+        window = AsyncMock(return_value=[self._row("user", "hi"), self._row("assistant", "hello")])
         monkeypatch.setattr(conversation_repo, "get_messages_by_conversation", window)
 
         history = await ConversationService(AsyncMock()).model_history(
@@ -2715,9 +2713,7 @@ class TestTheThreadAModelIsGivenBack:
         assert window.await_args.kwargs["before"] == prompt.id
         assert window.await_args.kwargs["latest"] is True
 
-    async def test_a_retry_after_a_summary_keeps_only_what_preceded_the_turn(
-        self, monkeypatch
-    ):
+    async def test_a_retry_after_a_summary_keeps_only_what_preceded_the_turn(self, monkeypatch):
         """The summary half is older than the turn, so it stands; the rows since
         it are cut at the turn, dropping the question and its failed answer."""
         conversation = MockConversation()

@@ -21,6 +21,7 @@ import { POST as setOwnAvatar } from "./users/me/avatar/route";
 import { backendFetch } from "@/lib/server-api";
 import { ACCESS_TOKEN_COOKIE } from "@/lib/session-cookie";
 import { ACCOUNT_OAUTH_COOKIE } from "@/lib/connected-account-oauth";
+import { ROUTES } from "@/lib/constants";
 
 vi.mock("@/lib/server-api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/server-api")>("@/lib/server-api");
@@ -762,7 +763,7 @@ describe("finishing an MCP OAuth flow", () => {
       body: JSON.stringify({ code: "abc", state: "xyz" }),
     });
     expect(redirected(response)).toMatchObject({
-      path: "/mcp-servers",
+      path: ROUTES.MCP_SERVERS,
       status: "success",
       name: "Linear",
     });
@@ -978,7 +979,7 @@ describe("coming back from an MCP OAuth consent to where it started", () => {
     const raw = response.headers.get("location")!;
     expect(raw).not.toMatch(/^https?:\/\//);
     expect(raw).not.toContain("0.0.0.0");
-    expect(raw.startsWith("/mcp-servers?")).toBe(true);
+    expect(raw.startsWith(`${ROUTES.MCP_SERVERS}?`)).toBe(true);
   });
 
   it("ignores a return target that is not this app's own", async () => {
@@ -987,7 +988,7 @@ describe("coming back from an MCP OAuth consent to where it started", () => {
     const response = await callback(callbackWithReturn("//evil.example/steal"));
 
     expect(new URL(response.headers.get("location")!, "https://agenticos.example").pathname).toBe(
-      "/mcp-servers",
+      ROUTES.MCP_SERVERS,
     );
   });
 });

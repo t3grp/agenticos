@@ -46,9 +46,7 @@ def test_the_subagent_frame_names_the_same_five_harnesses() -> None:
     """`SubagentStarted.harness` spells the literal out - see its comment."""
     field = SubagentStarted.model_fields["harness"].annotation
     literals = [arg for arg in get_args(field) if get_args(arg)]
-    assert {value for literal in literals for value in get_args(literal)} == set(
-        get_args(Harness)
-    )
+    assert {value for literal in literals for value in get_args(literal)} == set(get_args(Harness))
 
 
 def _opencode_stream() -> list[dict[str, Any]]:
@@ -163,6 +161,7 @@ class TestInvocation:
         ]
         assert command.env["ANTHROPIC_API_KEY"] == "sk-x"
 
+    @pytest.mark.security
     def test_opencode_read_only_uses_the_plan_agent_not_a_permission_flag(self) -> None:
         command = invocation(
             "opencode",
@@ -293,13 +292,21 @@ class TestInvocation:
     def test_an_unknown_harness_is_refused_rather_than_run_as_codex(self) -> None:
         with pytest.raises(UserError, match="Unknown harness"):
             invocation(
-                "aider", "edit", "Fix it", api_key="sk-x", model=None, session_id=None, base_url=None
+                "aider",
+                "edit",
+                "Fix it",
+                api_key="sk-x",
+                model=None,
+                session_id=None,
+                base_url=None,
             )  # type: ignore[arg-type]
 
 
 class TestReports:
     def test_opencode_completes_when_it_said_something(self) -> None:
-        report, usage = opencode_report(_opencode_stream(), access="edit", model="claude-sonnet-5-5")
+        report, usage = opencode_report(
+            _opencode_stream(), access="edit", model="claude-sonnet-5-5"
+        )
         assert report.harness == "opencode"
         assert report.outcome == "completed"
         assert report.answer == "It adds."
@@ -314,17 +321,23 @@ class TestReports:
         assert spent.output_tokens == 120
 
     def test_opencode_read_only_reports_no_files_changed(self) -> None:
-        report, _ = opencode_report(_opencode_stream(), access="read_only", model="claude-sonnet-5-5")
+        report, _ = opencode_report(
+            _opencode_stream(), access="read_only", model="claude-sonnet-5-5"
+        )
         assert report.outcome == "completed"
         assert report.files_changed == []
 
     def test_opencode_with_no_text_is_a_session_that_stopped(self) -> None:
-        report, _ = opencode_report(_opencode_stream()[:3], access="edit", model="claude-sonnet-5-5")
+        report, _ = opencode_report(
+            _opencode_stream()[:3], access="edit", model="claude-sonnet-5-5"
+        )
         assert report.outcome == "failed"
         assert "stopped before it finished" in report.answer
 
     def test_gemini_completes_on_its_result_event(self) -> None:
-        report, usage = gemini_report(_gemini_stream(), access="read_only", model="gemini-2.5-flash")
+        report, usage = gemini_report(
+            _gemini_stream(), access="read_only", model="gemini-2.5-flash"
+        )
         assert report.harness == "gemini"
         assert report.outcome == "completed"
         assert report.answer == "Looking.\n\nDone."
@@ -387,10 +400,13 @@ class TestLiveItems:
             {"type": "message", "message": {"role": "assistant", "content": "Done."}},
         )
         assert said == [Said("Done.")]
-        assert live_items(
-            "gemini",
-            {"type": "message", "message": {"role": "user", "content": "Do it."}},
-        ) == []
+        assert (
+            live_items(
+                "gemini",
+                {"type": "message", "message": {"role": "user", "content": "Do it."}},
+            )
+            == []
+        )
 
     def test_pi_opens_and_closes_a_tool_call_by_its_id(self) -> None:
         opened = live_items(
@@ -412,10 +428,13 @@ class TestLiveItems:
         assert closed[0].key == "c1" and closed[0].failed is False
 
     def test_pi_shows_only_the_final_message_not_its_deltas(self) -> None:
-        assert live_items(
-            "pi",
-            {"type": "message_update", "usage": {"input": 100, "output": 1}},
-        ) == []
+        assert (
+            live_items(
+                "pi",
+                {"type": "message_update", "usage": {"input": 100, "output": 1}},
+            )
+            == []
+        )
         assert live_items(
             "pi",
             {
@@ -432,7 +451,10 @@ class TestConfig:
             ("gemini", "google:gemini-2.5-flash"),
             ("pi", "openai:gpt-5.6-sol"),
         ):
-            assert HarnessConfig(harness=harness, access="read_only", model=model).access == "read_only"
+            assert (
+                HarnessConfig(harness=harness, access="read_only", model=model).access
+                == "read_only"
+            )
 
     def test_a_model_of_another_vendor_is_refused_for_the_new_harnesses(self) -> None:
         with pytest.raises(ValidationError, match="Gemini CLI runs Gemini models"):
@@ -516,9 +538,7 @@ class TestASession:
 
     async def test_start_opens_a_gemini_session(self) -> None:
         shell = _Shell(events=_lines(_gemini_stream()))
-        raw = await _call(
-            shell, "harness_start", harness="gemini", model="gemini-2.5-flash"
-        )
+        raw = await _call(shell, "harness_start", harness="gemini", model="gemini-2.5-flash")
         report = HarnessReport.model_validate_json(raw)
         assert report.outcome == "completed"
         assert report.session_id == "s-9"

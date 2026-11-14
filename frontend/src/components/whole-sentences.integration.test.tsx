@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import NotFound from "@/app/not-found";
@@ -44,13 +46,23 @@ vi.mock("@/lib/api-client", () => ({
   ApiError: class extends Error {},
 }));
 
+function renderWithProviders(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+  return render(ui, { wrapper: Wrapper });
+}
+
 describe("a heading is one message", () => {
   it.each([
     [LoginForm, "Sign in to your workspace."],
     [RegisterForm, "Create your workspace."],
     [ForgotPasswordForm, "Happens to the best of us."],
   ])("renders it whole, emphasis included", (Form, sentence) => {
-    render(<Form />);
+    renderWithProviders(<Form />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(sentence);
   });
@@ -71,7 +83,7 @@ describe("a contact line is one message", () => {
     [() => <CookiesBodyEn />, "Questions: privacy@example.com"],
     [() => <CookiesBodyPl />, "Pytania: privacy@example.com"],
   ])("keeps the words and the link in one sentence", (Body, sentence) => {
-    const { container } = render(<Body />);
+    const { container } = renderWithProviders(<Body />);
 
     // Normalised because the anchor and the words around it are separate nodes,
     // and `textContent` runs them together exactly as a reader sees them.
@@ -81,7 +93,7 @@ describe("a contact line is one message", () => {
 
 describe("the 404 page", () => {
   it("says what is missing rather than naming its own message keys", () => {
-    render(<NotFound />);
+    renderWithProviders(<NotFound />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Page not found");
     expect(screen.getByText(/doesn't exist or has been moved/)).toBeInTheDocument();

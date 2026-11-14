@@ -113,6 +113,7 @@ class TestValidationEnvelope:
         assert "detail" not in response.json()
 
     @pytest.mark.anyio
+    @pytest.mark.security
     async def test_secret_fulfil_422_does_not_echo_the_submitted_value(self):
         secret = "submitted-secret-value-should-not-appear"
         with pytest.raises(ValidationError) as raised:
