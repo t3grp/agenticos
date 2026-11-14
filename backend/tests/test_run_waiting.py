@@ -10,6 +10,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import pytest
 from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelResponse, ToolCallPart
 
 from app.api.routes.v1.runs import waiting_update
@@ -43,11 +44,13 @@ def _paused_state(*questions: str) -> dict[str, object]:
         ToolCallPart(
             "ask_user_question",
             {
-                "questions": [{
-                    "header": f"Question {index}",
-                    "question": question,
-                    "options": [{"label": "A"}, {"label": "B"}],
-                }]
+                "questions": [
+                    {
+                        "header": f"Question {index}",
+                        "question": question,
+                        "options": [{"label": "A"}, {"label": "B"}],
+                    }
+                ]
             },
             tool_call_id=f"ask-{index}",
         )
@@ -79,6 +82,7 @@ def test_a_run_parked_on_an_answer_reports_its_questions_and_their_expiry() -> N
     )
 
 
+@pytest.mark.security
 def test_a_run_parked_on_an_approval_alone_reports_nothing_to_answer() -> None:
     """Approvals are the approvals tab's business; this read says what a run is
     waiting to be *asked*, and an approval-only park asked nothing."""

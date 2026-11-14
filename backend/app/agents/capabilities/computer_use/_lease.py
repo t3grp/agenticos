@@ -120,8 +120,7 @@ class LeasedComputer:
             )
         try:
             with anyio.fail_after(REDIS_TIMEOUT):
-                # redis-py's stubs union sync and async EVAL; this client is async.
-                renewed = await self._redis.raw.eval(  # ty: ignore[invalid-await]
+                renewed = await self._redis.raw.eval(
                     _RENEW, 1, self._key, self._holder, LEASE_SECONDS
                 )
         except _UNAVAILABLE as exc:

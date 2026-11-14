@@ -9,8 +9,12 @@ from app.schemas.base import BaseSchema
 
 class OnboardingProfileRequest(BaseSchema):
     role: str = Field(default="general", description="User's primary role or title")
-    industry: str = Field(default="general", description="Industry key, matching catalog or general")
-    team_size: str = Field(default="small", description="Team size description, e.g. solo, small, company")
+    industry: str = Field(
+        default="general", description="Industry key, matching catalog or general"
+    )
+    team_size: str = Field(
+        default="small", description="Team size description, e.g. solo, small, company"
+    )
     goals: list[str] = Field(default_factory=list, description="Primary goals or pain points")
     details: str | None = Field(default=None, description="Optional extra details on workflows")
     tools: list[str] = Field(default_factory=list, description="Tools or software used")

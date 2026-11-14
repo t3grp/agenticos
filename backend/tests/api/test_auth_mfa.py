@@ -341,9 +341,7 @@ async def test_setup_rejects_an_access_token_without_recent_authentication(
     app.dependency_overrides.pop(require_recent_authentication)
     token = create_access_token(subject=str(uuid4()))
 
-    response = await client.post(
-        _mfa_url("/setup"), headers={"Authorization": f"Bearer {token}"}
-    )
+    response = await client.post(_mfa_url("/setup"), headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 401
     mock_mfa_service.begin_setup.assert_not_awaited()
@@ -353,13 +351,9 @@ async def test_mfa_status_accepts_a_recently_authenticated_access_token(
     client: AsyncClient, mock_mfa_service: MagicMock
 ) -> None:
     app.dependency_overrides.pop(require_recent_authentication)
-    token = create_access_token(
-        subject=str(uuid4()), auth_time=int(datetime.now(UTC).timestamp())
-    )
+    token = create_access_token(subject=str(uuid4()), auth_time=int(datetime.now(UTC).timestamp()))
 
-    response = await client.get(
-        _mfa_url("/status"), headers={"Authorization": f"Bearer {token}"}
-    )
+    response = await client.get(_mfa_url("/status"), headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
 
@@ -373,13 +367,12 @@ async def test_mfa_status_rejects_an_old_authentication(
         auth_time=int((datetime.now(UTC) - timedelta(minutes=6)).timestamp()),
     )
 
-    response = await client.get(
-        _mfa_url("/status"), headers={"Authorization": f"Bearer {token}"}
-    )
+    response = await client.get(_mfa_url("/status"), headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 401
 
 
+@pytest.mark.security
 async def test_setup_answers_with_the_provisioning_uri_and_the_secret_once(
     client: AsyncClient, mock_user: MockUser, monkeypatch: pytest.MonkeyPatch
 ) -> None:
