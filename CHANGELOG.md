@@ -104,6 +104,8 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Table links expose only readable destination IDs and labels, including exports and projected reads. Link filters and counts use the same visible destinations, and legacy array replacements retain hidden existing links. Invalid stored row policies block record access with a repairable `ROW_POLICY_INVALID` error instead of disabling restrictions.
+
 - Keep parked secret requests in their original conversation, account and organization.
   Leaving that context clears the card and ignores delayed reads or decisions;
   an ordinary access-token refresh preserves the current request.

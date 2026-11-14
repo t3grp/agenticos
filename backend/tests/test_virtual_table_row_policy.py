@@ -23,7 +23,7 @@ from app.schemas.virtual_table import ColumnDef, RowPolicy, RowPolicyUpdate, Tab
 from app.services.virtual_tables import row_policy
 from app.services.virtual_tables._base import Operations
 from app.services.virtual_tables.deadline import ReadDeadline
-from app.services.virtual_tables.exceptions import DeadlineReached
+from app.services.virtual_tables.exceptions import DeadlineReached, InvalidRowPolicyError
 from app.services.virtual_tables.row_policy import (
     bypasses_policy,
     may_edit_row,
@@ -137,9 +137,13 @@ def test_parse_policy_reads_none_as_no_policy_and_none_rule_as_no_policy():
     assert parse_policy(POLICY.model_dump(mode="json")) == POLICY
 
 
-def test_parse_policy_reads_an_unvalidatable_document_as_no_policy():
-    assert parse_policy({"rule": "assignee"}) is None
-    assert parse_policy({"rule": "grants", "view_column_id": str(ASSIGNEE)}) is None
+@pytest.mark.parametrize(
+    "document",
+    [{"rule": "assignee"}, {"rule": "unexpected"}, {"rule": "none", "view_column_id": "invalid"}],
+)
+def test_parse_policy_refuses_an_unvalidatable_document(document):
+    with pytest.raises(InvalidRowPolicyError):
+        parse_policy(document)
 
 
 # -- the bypass ---------------------------------------------------------------
@@ -1087,6 +1091,21 @@ async def test_clearing_a_policy_stores_null(monkeypatch):
 
     stored = _tables.virtual_table_repo.update_table.await_args.kwargs["update_data"]
     assert stored == {"row_policy": None}
+
+
+async def test_an_authorized_editor_can_replace_an_invalid_stored_policy(monkeypatch):
+    damaged = _table(None)
+    damaged.row_policy = {"rule": "unexpected"}
+    ops = _table_ops(monkeypatch, table=damaged, columns=[ASSIGNEE_COL])
+
+    repaired = await ops.set_row_policy(
+        _ctx(OWNER),
+        TABLE_ID,
+        RowPolicyUpdate(rule="assignee", view_column_id=ASSIGNEE, edit_column_id=ASSIGNEE),
+    )
+
+    assert repaired.row_policy == POLICY
+    assert repaired.row_policy_valid is True
 
 
 async def test_setting_a_policy_on_a_board_table_is_refused(monkeypatch):
