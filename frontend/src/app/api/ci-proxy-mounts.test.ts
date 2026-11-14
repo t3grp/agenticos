@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET as mfaGet, POST as mfaPost } from "./auth/mfa/[...path]/route";
 import { GET as patternsGet } from "./failure-learning/[[...path]]/route";
+import { GET as agentMessagesGet } from "./agent-messages/[[...path]]/route";
+import { GET as appConnectionsGet } from "./me/app-connections/[[...path]]/route";
+import { POST as onboardingPost } from "./onboarding/[[...path]]/route";
 
 const mounts = [
   { path: "/auth/mfa/status", method: "GET", handler: mfaGet, body: undefined },
@@ -11,6 +14,9 @@ const mounts = [
   { path: "/auth/mfa/disable", method: "POST", handler: mfaPost, body: '{"code":"123456"}' },
   { path: "/auth/mfa/recovery-codes", method: "POST", handler: mfaPost, body: '{"code":"123456"}' },
   { path: "/failure-learning/patterns", method: "GET", handler: patternsGet, body: undefined },
+  { path: "/agent-messages", method: "GET", handler: agentMessagesGet, body: undefined },
+  { path: "/me/app-connections", method: "GET", handler: appConnectionsGet, body: undefined },
+  { path: "/onboarding/team-proposal", method: "POST", handler: onboardingPost, body: "{}" },
 ] as const;
 
 function request(mount: (typeof mounts)[number], authenticated = true) {
