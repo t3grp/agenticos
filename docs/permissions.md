@@ -149,10 +149,19 @@ subset of the permissions here, never more than its issuer holds now.
 **Resource** permissions carry a `Scope`, because they answer the second question
 a role cannot: not "may this role touch agents?" but *which* agents.
 
-`mcp:manage` is one of them: an organization's MCP server can be narrowed to
-groups or people, like a skill ([Departments](departments.md#a-departments-mcp-servers)).
-A role holding it at `SHARED` sees the organization's servers, its own, and
-those shared with it; `ALL` sees every one.
+`mcp:use` and `mcp:manage` separate selecting a connection from administering it.
+An organization's MCP server can be narrowed to groups or people, like a skill
+([Departments](departments.md#a-departments-mcp-servers)). A `use` grant permits
+binding its tools; an `edit` grant permits administration. Role scopes still
+apply: Owners and Admins retain `ALL`, and Builders retain `SHARED`.
+
+Existing `use` grants are kept, not upgraded to `edit`. A Builder using a private
+server needs an explicit `edit` grant to change, delete, probe or reshare it.
+Existing management-scoped API keys retain connection use, while a use-scoped key
+cannot administer a server. Published-agent delegation and the existing
+workflow/trigger selection paths keep their previous audience. The management
+listing still requires `mcp:manage`; this change adds no discovery endpoint or
+Viewer-role permission.
 
 ### Scope
 

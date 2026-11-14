@@ -1,5 +1,5 @@
 ---
-source_sha: "960aa2ad5086"
+source_sha: "6c4706b0b0d5"
 ---
 
 # Berechtigungen { #permissions }
@@ -171,11 +171,21 @@ Teilmenge dieser Berechtigungen, nie mehr, als sein Aussteller jetzt hat.
 zweite Frage, die eine Rolle nicht kann: nicht "darf diese Rolle Agents
 anfassen?", sondern *welche* Agents.
 
-`mcp:manage` ist eine davon: Ein MCP-Server der Organisation lässt sich auf
-Gruppen oder Personen einschränken, wie ein Skill
-([Abteilungen](departments.md#a-departments-mcp-servers)). Eine Rolle, die sie auf
-`SHARED` hält, sieht die Server der Organisation, ihre eigenen und die mit ihr
-geteilten; `ALL` sieht jeden.
+`mcp:use` und `mcp:manage` trennen die Auswahl einer Verbindung von ihrer Verwaltung.
+Ein MCP-Server der Organisation lässt sich wie ein Skill auf Gruppen oder Personen
+einschränken ([Abteilungen](departments.md#a-departments-mcp-servers)). Ein
+`use`-Grant erlaubt das Einbinden seiner Werkzeuge; ein `edit`-Grant erlaubt die
+Verwaltung. Die Rollenbereiche gelten weiterhin: Owner und Admin behalten `ALL`,
+Builder behalten `SHARED`.
+
+Bestehende `use`-Grants bleiben erhalten und werden nicht auf `edit` erweitert.
+Ein Builder braucht für einen privaten Server einen ausdrücklichen `edit`-Grant,
+um ihn zu ändern, zu löschen, zu testen oder weiterzugeben. Bestehende API-Schlüssel
+mit Verwaltungs-Scope dürfen Verbindungen weiterhin nutzen; ein Schlüssel mit
+Nutzungs-Scope darf sie nicht verwalten. Die Delegation veröffentlichter Agents
+und die bestehenden Auswahlpfade für Workflows und Trigger behalten ihren
+bisherigen Nutzerkreis. Die Verwaltungsliste erfordert weiterhin `mcp:manage`;
+diese Änderung fügt weder einen Discovery-Endpunkt noch eine Viewer-Berechtigung hinzu.
 
 ### Scope { #scope }
 

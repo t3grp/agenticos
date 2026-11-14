@@ -1,5 +1,5 @@
 ---
-source_sha: "960aa2ad5086"
+source_sha: "6c4706b0b0d5"
 ---
 
 # Permisos { #permissions }
@@ -166,11 +166,21 @@ Los permisos de **recurso** llevan un `Scope`, porque responden a la segunda
 pregunta que un rol no puede: no "¿puede este rol tocar agents?" sino *qué*
 agents.
 
-`mcp:manage` es uno de ellos: un servidor MCP de la organización se puede limitar
-a grupos o personas, como un skill
-([Departamentos](departments.md#a-departments-mcp-servers)). Un rol que lo tiene en
-`SHARED` ve los servidores de la organización, los suyos y los compartidos con él;
-`ALL` los ve todos.
+`mcp:use` y `mcp:manage` separan la selección de una conexión de su administración.
+Un servidor MCP de la organización puede limitarse a grupos o personas, como un
+skill ([Departamentos](departments.md#a-departments-mcp-servers)). Una concesión
+`use` permite vincular sus herramientas; una concesión `edit` permite administrarlo.
+Los alcances de los roles siguen vigentes: Owner y Admin conservan `ALL`, y Builder
+conserva `SHARED`.
+
+Las concesiones `use` existentes se conservan, sin elevarlas a `edit`. Un Builder
+necesita una concesión explícita `edit` para cambiar, eliminar, probar o volver a
+compartir un servidor privado. Las claves API existentes con scope de administración
+conservan el uso de conexiones; una clave con scope de uso no puede administrarlas.
+La delegación de agentes publicados y las rutas existentes de selección en workflows
+y triggers conservan sus usuarios autorizados. La lista de administración sigue
+requiriendo `mcp:manage`; este cambio no añade un endpoint de descubrimiento ni un
+permiso al rol Viewer.
 
 ### Scope { #scope }
 

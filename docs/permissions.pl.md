@@ -1,5 +1,5 @@
 ---
-source_sha: "960aa2ad5086"
+source_sha: "6c4706b0b0d5"
 ---
 
 # Uprawnienia { #permissions }
@@ -161,10 +161,20 @@ Uprawnienia **zasobowe** niosą `Scope`, ponieważ odpowiadają na drugie pytani
 na które rola nie potrafi: nie „czy ta rola może ruszać agentów?”, lecz *których*
 agentów.
 
-Jednym z nich jest `mcp:manage`: serwer MCP organizacji można zawęzić do grup lub
-osób, tak jak skill ([Działy](departments.md#a-departments-mcp-servers)). Rola z
-nim na poziomie `SHARED` widzi serwery organizacji, własne i te jej udostępnione;
-`ALL` widzi każdy.
+`mcp:use` i `mcp:manage` rozdzielają wybór połączenia od zarządzania nim. Serwer MCP
+organizacji można ograniczyć do grup lub osób, tak jak skill
+([Działy](departments.md#a-departments-mcp-servers)). Grant `use` pozwala przypiąć
+narzędzia, a `edit` pozwala zarządzać połączeniem. Zakresy ról nadal obowiązują:
+Owner i Admin zachowują `ALL`, a Builder zachowuje `SHARED`.
+
+Istniejące granty `use` pozostają bez zmian, bez podnoszenia do `edit`. Builder
+korzystający z prywatnego serwera potrzebuje jawnego grantu `edit`, aby go zmienić,
+usunąć, sprawdzić lub dalej udostępnić. Istniejące klucze API ze scope'em
+zarządzania zachowują możliwość używania połączenia; klucz ze scope'em używania
+nie może nim zarządzać. Delegacja opublikowanych agentów oraz obecny wybór w
+workflowach i triggerach zachowują dotychczasowych odbiorców. Lista zarządzania
+nadal wymaga `mcp:manage`; zmiana nie dodaje endpointu odkrywania ani uprawnienia
+roli Viewer.
 
 ### Scope { #scope }
 
