@@ -56,8 +56,8 @@ def test_setup_stores_named_pat_then_configures_armada_without_calling_github() 
     assert requests[0].data == b"pat-value"
     assert b"pat-value" not in requests[1].data
     assert b"signing-value" in requests[1].data
-    assert all(request.get_header("Armada-protocol") == "12" for request in requests)
-    assert all(request.get_header("User-agent") == "agenticos-armada-setup/1" for request in requests)
+    assert all(request.get_header("Armada-protocol") == setup.PROTOCOL for request in requests)
+    assert all(request.get_header("User-agent") == setup.USER_AGENT for request in requests)
 
 
 def test_connection_requires_https_and_does_not_accept_url_credentials() -> None:

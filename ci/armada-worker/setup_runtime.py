@@ -79,22 +79,27 @@ def configure_runtime(
     if not ci_token:
         raise ValueError("the CI token is required")
     config = json.dumps(webhook_config(signing_secret), separators=(",", ":")).encode("utf-8")
-    headers = {
-        "authorization": f"Bearer {bearer}",
-        "armada-protocol": PROTOCOL,
-        "user-agent": USER_AGENT,
-    }
     requests = [
         Request(
             f"https://{origin}/secrets/{quote(TOKEN_SECRET_NAME, safe='')}",
             data=ci_token.encode("utf-8"),
-            headers={**headers, "content-type": "text/plain"},
+            headers={
+                "authorization": f"Bearer {bearer}",
+                "armada-protocol": PROTOCOL,
+                "user-agent": USER_AGENT,
+                "content-type": "text/plain",
+            },
             method="PUT",
         ),
         Request(
             f"https://{origin}/webhooks/{PROJECT}",
             data=config,
-            headers={**headers, "content-type": "application/json"},
+            headers={
+                "authorization": f"Bearer {bearer}",
+                "armada-protocol": PROTOCOL,
+                "user-agent": USER_AGENT,
+                "content-type": "application/json",
+            },
             method="POST",
         ),
     ]

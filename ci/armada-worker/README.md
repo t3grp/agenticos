@@ -19,11 +19,6 @@ added manually after the Worker is live, with:
 - Events: Pushes and Pull requests
 - SSL verification: enabled
 
-For the current runtime, the payload URL is
-`https://t3-armada-github-runners.sherman-tansx.workers.dev/webhooks/github/agenticos`.
-Use the secret `agenticos-armada-webhook-signing-secret`. Do not create a webhook
-administration token; the repository webhook is added once by hand.
-
 The repository hook runs on `t3` pushes. The runtime ignores other branches and
 PR actions, and refuses fork pull requests.
 
