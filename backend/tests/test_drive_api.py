@@ -6,8 +6,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import httpx
-from pydantic import SecretStr
 import pytest
+from pydantic import SecretStr
 
 from app.services.rag.drive_api import DRIVE_API, SCOPES, DriveClient
 

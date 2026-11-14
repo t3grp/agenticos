@@ -12,9 +12,9 @@ import json
 from typing import Any, get_args
 from uuid import uuid4
 
+import pytest
 from pydantic import ValidationError
 from pydantic_ai.exceptions import UserError
-import pytest
 
 from app.agents.capabilities.coding_agent._harness import (
     Harness,
