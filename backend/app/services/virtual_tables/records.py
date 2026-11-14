@@ -44,8 +44,9 @@ from app.core.permissions import AuthContext, Perm
 from app.db.locks import LockScope, try_hold_name
 from app.db.models.virtual_table import VirtualTable, VirtualTableRecord
 from app.repositories import resource_grant_repo, virtual_table_repo
+from app.repositories import virtual_table_relation as relation_repo
 from app.repositories import virtual_table_trigger as trigger_repo
-from app.repositories.virtual_table import FilterClause, SearchClause, SortClause
+from app.repositories.virtual_table import FilterClause, RecordCells, SearchClause, SortClause
 from app.schemas.virtual_table import (
     MAX_COUNT,
     RECORD_METADATA_FIELDS,
@@ -80,6 +81,7 @@ from app.services.virtual_tables.computed import (
     linked_table_access,
     reach,
     read_through,
+    record_snapshot,
     visible_link_ids,
 )
 from app.services.virtual_tables.deadline import ReadDeadline, arm_if_set
@@ -530,7 +532,7 @@ class _BoundWalk:
                 newly[table_id] |= ids
         return fitting, spent
 
-    async def load(self, record_ids: list[UUID], *, keys: Sequence[str]) -> list[RecordRead]:
+    async def load(self, record_ids: list[UUID], *, keys: Sequence[str]) -> list[RecordCells]:
         """These records with only the cells under `keys`, in the order given."""
         await self._deadline.arm(self._db)
         cells = await virtual_table_repo.get_record_cells_by_ids(
@@ -542,11 +544,7 @@ class _BoundWalk:
         )
         by_id = {cell.id: cell for cell in cells}
         # A record deleted since the sizes were read is left out.
-        return [
-            RecordRead.model_validate(by_id[record_id])
-            for record_id in record_ids
-            if record_id in by_id
-        ]
+        return [by_id[record_id] for record_id in record_ids if record_id in by_id]
 
     def linked_ids(self, record_ids: Sequence[UUID]) -> dict[UUID, frozenset[UUID]]:
         """The measured linked records `record_ids` name, by visible linked table."""
@@ -570,14 +568,17 @@ class _BoundWalk:
         if not self._links:
             return
         await self._deadline.arm(self._db)
-        cells = await virtual_table_repo.get_record_cells_by_ids(
+        cells = await relation_repo.linked_ids(
             self._db,
-            record_ids,
             table_id=self._table_id,
             organization_id=self._ctx.organization_id,
-            keys=sorted(str(column_id) for column_id in self._links),
+            revisions=dict.fromkeys(record_ids),
+            column_ids=list(self._links),
         )
-        self._referenced = {cell.id: _referenced(cell.values, self._links) for cell in cells}
+        self._referenced = {
+            record_id: _referenced({str(key): value for key, value in values.items()}, self._links)
+            for record_id, values in cells.items()
+        }
         for table_id, linked in self._tables.items():
             unmeasured = {
                 linked_id
@@ -587,13 +588,23 @@ class _BoundWalk:
             if not unmeasured:
                 continue
             await self._deadline.arm(self._db)
-            found = await virtual_table_repo.get_record_sizes_by_ids(
-                self._db,
-                unmeasured,
-                table_id=table_id,
-                organization_id=self._ctx.organization_id,
-                keys=linked_cell_keys(linked, self._targets[table_id]),
+            target = await virtual_table_repo.get_table(
+                self._db, table_id, organization_id=self._ctx.organization_id
             )
+            found = {}
+            if target is not None and target.archived_at is None:
+                visible = await view_expression(
+                    self._db, self._ctx, target, linked.columns, deadline=self._deadline
+                )
+                await self._deadline.arm(self._db)
+                found = await virtual_table_repo.get_record_sizes_by_ids(
+                    self._db,
+                    unmeasured,
+                    table_id=table_id,
+                    organization_id=self._ctx.organization_id,
+                    keys=linked_cell_keys(linked, self._targets[table_id]),
+                    extra=visible,
+                )
             # One deleted since costs nothing: it is not there to load.
             self._sizes[table_id].update(
                 {linked_id: found.get(linked_id, 0) for linked_id in unmeasured}
@@ -614,7 +625,7 @@ class RecordOperations(Operations):
             self.db, ctx, table, await self._columns(table), record.values, record_id=record.id
         ):
             raise NotFoundError(message="Record not found", details={"record_id": record_id})
-        return await self._read_through(ctx, table, RecordRead.model_validate(record))
+        return await self._read_through(ctx, table, record)
 
     async def get_record_by_external_id(
         self, ctx: AuthContext, table_id: UUID, external_id: str
@@ -630,7 +641,7 @@ class RecordOperations(Operations):
             self.db, ctx, table, await self._columns(table), record.values, record_id=record.id
         ):
             raise NotFoundError(message="Record not found", details={"external_id": external_id})
-        return await self._read_through(ctx, table, RecordRead.model_validate(record))
+        return await self._read_through(ctx, table, record)
 
     async def record_exists(self, ctx: AuthContext, table_id: UUID, external_id: str) -> bool:
         """Whether a record with this external id exists, without reading it.
@@ -742,7 +753,7 @@ class RecordOperations(Operations):
             self.db,
             ctx,
             columns,
-            [RecordRead.model_validate(row) for row in rows[: query.limit]],
+            rows[: query.limit],
         )
         items = await with_record_access(self.db, ctx, table, columns, items)
         if selected is not None:
@@ -1074,9 +1085,7 @@ class RecordOperations(Operations):
                 )
             ) as batches:
                 async for rows in batches:
-                    read = await read_through(
-                        self.db, ctx, columns, [RecordRead.model_validate(row) for row in rows]
-                    )
+                    read = await read_through(self.db, ctx, columns, rows)
                     for record in read:
                         yield _csv_line(
                             [_export_cell(column, record) for column in chosen]
@@ -1128,7 +1137,7 @@ class RecordOperations(Operations):
             record = await self._insert(ctx, table, data.external_id, data.values)
             if record is None:
                 raise self._already_exists(data.external_id)
-            return self._outcome(record, created=True)
+            return await self._outcome(record, created=True)
 
         return await self._write(
             ctx,
@@ -1210,7 +1219,7 @@ class RecordOperations(Operations):
             record = await self._lock_record(ctx, table, record_id)
             revision = record.revision if expected_revision is None else expected_revision
             await self._apply(ctx, table, record, values, revision, link_changes=link_changes)
-            return self._outcome(record, created=False)
+            return await self._outcome(record, created=False)
 
         request: dict[str, Any] = {"table_id": table.id, "record_id": record_id, "values": values}
         if expected_revision is not None:
@@ -1310,7 +1319,7 @@ class RecordOperations(Operations):
             if existing is None:
                 created = await self._insert(ctx, table, external_id, values)
                 if created is not None:
-                    return self._outcome(created, created=True)
+                    return await self._outcome(created, created=True)
                 # Another transaction took the external id between the lookup and
                 # the insert. Its row is committed by now, so read and update it.
                 existing = await self._lookup(ctx, table, external_id)
@@ -1326,7 +1335,7 @@ class RecordOperations(Operations):
                     record_id=existing.id, current_revision=existing.revision
                 )
             await self._apply(ctx, table, existing, values, revision)
-            return self._outcome(existing, created=False)
+            return await self._outcome(existing, created=False)
 
         request: dict[str, Any] = {
             "table_id": table.id,
@@ -1514,7 +1523,7 @@ class RecordOperations(Operations):
         )
 
     async def _read_through(
-        self, ctx: AuthContext, table: VirtualTable, record: RecordRead
+        self, ctx: AuthContext, table: VirtualTable, record: RecordRead | VirtualTableRecord
     ) -> RecordRead:
         """One record with its links named and its lookups and rollups worked out."""
         columns = await self._columns(table)
@@ -1654,9 +1663,28 @@ class RecordOperations(Operations):
             for_update=True,
         )
 
-    @staticmethod
-    def _outcome(record: VirtualTableRecord, *, created: bool) -> WriteOutcome:
-        return WriteOutcome(created=created, record=RecordRead.model_validate(record))
+    async def _snapshot(self, record: VirtualTableRecord) -> RecordRead:
+        """An immutable source outcome, before per-reader target redaction.
+
+        Legacy malformed cells remain in storage/evidence but must not make an
+        otherwise valid edit fail while serializing its receipt.
+        """
+        definitions = await relation_repo.definitions(
+            self.db, organization_id=record.organization_id, source_table_id=record.table_id
+        )
+        if not definitions:
+            return RecordRead.model_validate(record)
+        links = await relation_repo.linked_ids(
+            self.db,
+            organization_id=record.organization_id,
+            table_id=record.table_id,
+            revisions={record.id: record.revision},
+            column_ids=[item.column_id for item in definitions],
+        )
+        return record_snapshot(record, links.get(record.id, {}))
+
+    async def _outcome(self, record: VirtualTableRecord, *, created: bool) -> WriteOutcome:
+        return WriteOutcome(created=created, record=await self._snapshot(record))
 
     async def _insert(
         self,
@@ -1779,13 +1807,16 @@ class RecordOperations(Operations):
         refusal never confirms the row exists.
         """
         columns = await self._columns(table)
-        if not await can_write_record(self.db, ctx, table, record.id, columns, record.values):
+        baseline = await relation_repo.write_values(
+            self.db, record=record, column_ids=[item.id for item in columns if item.type == "link"]
+        )
+        if not await can_write_record(self.db, ctx, table, record.id, columns, baseline):
             raise NotFoundError(message="Record not found", details={"record_id": record.id})
         self._check_revision(record, expected_revision)
         before = dict(record.values)
-        merged = _merge(columns, values, before)
+        merged = _merge(columns, values, baseline)
         if link_changes:
-            merged = _merge(columns, _link_delta_values(columns, before, link_changes), merged)
+            merged = _merge(columns, _link_delta_values(columns, baseline, link_changes), merged)
             # Validate only the explicitly named targets, including removals and no-ops.
             # Internally retained links may be invisible to this writer.
             await self._check_links(
@@ -1799,13 +1830,13 @@ class RecordOperations(Operations):
                 field_prefix="link_changes",
             )
         merged = await normalize_task_cells(self.db, ctx.organization_id, table.id, merged)
-        await self._preserve_unreadable_links(ctx, columns, values, before, merged)
-        await require_access_fields(self.db, ctx, table, columns, before, merged)
-        if merged == before:
+        await self._preserve_unreadable_links(ctx, columns, values, baseline, merged)
+        await require_access_fields(self.db, ctx, table, columns, baseline, merged)
+        if merged == baseline:
             # Nothing to record. Bumping the revision and keeping a full before-and-after
             # snapshot, and a receipt holding a whole copy, for a request that changed
             # nothing would let tiny repeated requests grow the shared database.
-            raise _Unchanged(RecordRead.model_validate(record))
+            raise _Unchanged(await self._snapshot(record))
         problems = await principal_problems(
             self.db,
             ctx,
@@ -1818,7 +1849,7 @@ class RecordOperations(Operations):
         )
         if problems:
             raise InvalidRecordError([(f"values.{key}", message) for key, message in problems])
-        await self._check_links(ctx, columns, values, stored=before)
+        await self._check_links(ctx, columns, values, stored=baseline)
         if not await can_write_record(self.db, ctx, table, record.id, columns, merged):
             raise NotFoundError(message="Record not found", details={"record_id": record.id})
         await quotas.enforce_record_size(ctx, table, merged)

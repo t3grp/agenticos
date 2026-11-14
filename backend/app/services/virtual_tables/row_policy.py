@@ -87,6 +87,20 @@ def _driving(column_id: UUID | None, columns: list[ColumnDef]) -> ColumnDef | No
     return column if column is not None and not column.archived else None
 
 
+def _project_link(policy: RowPolicy, columns: list[ColumnDef]) -> ColumnDef | None:
+    """Only a live field pointing at the declared Projects table can grant access."""
+    if policy.view_project_link_column_id is None:
+        return None
+    column = _driving(policy.view_project_link_column_id, columns)
+    if (
+        column is None
+        or column.type != "link"
+        or column.link_table_id != policy.view_projects_table_id
+    ):
+        return None
+    return column
+
+
 def policy_columns_valid(policy: RowPolicy | None, columns: list[ColumnDef]) -> bool:
     """A grant must not widen a policy whose Read or Write field cannot be evaluated."""
     if policy is None or policy.rule != "assignee":
@@ -235,14 +249,22 @@ def row_matches(
         matched = isinstance(cell, list) and str(subject) in {str(item) for item in cell}
     if matched or kind == "edit":
         return matched
-    link_column_id = policy.view_project_link_column_id
-    if link_column_id is None or not project_ids:
+    link = _project_link(policy, columns)
+    if link is None or not project_ids:
         return False
-    linked = values.get(str(link_column_id))
-    if not isinstance(linked, list):
+    linked = values.get(str(link.id))
+    if not isinstance(linked, list) or len(linked) > (link.link_limit or 100):
         return False
-    wanted = {str(project_id) for project_id in project_ids}
-    return bool(wanted & {str(item) for item in linked})
+    wanted = set(project_ids)
+    for item in linked:
+        if not isinstance(item, str):
+            continue
+        try:
+            if UUID(item) in wanted:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 async def _may(
@@ -337,7 +359,11 @@ async def view_expression(
     writer = _assignee_clause(policy, columns, subject, kind="edit")
     if clause is None or writer is None:
         return false()
-    project_ids = await visible_project_ids(db, ctx, policy, deadline=deadline)
+    project_ids = (
+        await visible_project_ids(db, ctx, policy, deadline=deadline)
+        if _project_link(policy, columns) is not None
+        else []
+    )
     rule = policy_expression(
         clause,
         writer=writer,

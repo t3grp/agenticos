@@ -23,6 +23,7 @@ from app.db.models.virtual_table import VirtualTable
 from app.db.updates import writable
 from app.repositories import table_view_repo, virtual_table_repo
 from app.repositories import task as task_repo
+from app.repositories import virtual_table_relation as relation_repo
 from app.schemas.virtual_table import (
     MAX_LABEL,
     MAX_OPTIONS,
@@ -147,12 +148,18 @@ class TableOperations(Operations):
             )
             return self._read(table, columns, can_edit=await self._can_edit(ctx, table))
 
+        payload = data.model_dump(mode="json")
+        # This optional field did not exist in older receipt fingerprints. Its
+        # absent/null form preserves the old request; an explicit limit is new.
+        for column in payload["columns"]:
+            if column.get("link_limit") is None:
+                column.pop("link_limit", None)
         created, _replayed = await run_once(
             self.db,
             ctx,
             operation="table.create",
             operation_key=_checked_key(operation_key),
-            payload=data.model_dump(mode="json"),
+            payload=payload,
             outcome_type=TableRead,
             action=action,
         )
@@ -417,6 +424,7 @@ class TableOperations(Operations):
         await self._refuse_dependents(ctx, table, column_ids=change.archived | change.retyped)
         columns = await self._retype(table, previous, columns, change.retyped)
         await self._refuse_empty_required(table, columns, change.required)
+        await self._refuse_link_limits(ctx, table, previous, columns)
         version = table.schema_version + 1
         await virtual_table_repo.add_schema_version(
             self.db,
@@ -438,6 +446,31 @@ class TableOperations(Operations):
             details={"version": version, "archived_columns": len(change.archived)},
         )
         return self._read(table, columns, can_edit=True)
+
+    async def _refuse_link_limits(
+        self,
+        ctx: AuthContext,
+        table: VirtualTable,
+        previous: list[ColumnDef],
+        columns: list[ColumnDef],
+    ) -> None:
+        old = {column.id: column for column in previous}
+        for index, column in enumerate(columns):
+            before = old.get(column.id)
+            if (
+                column.type != "link"
+                or before is None
+                or (column.link_limit or 100) >= (before.link_limit or 100)
+            ):
+                continue
+            largest = await relation_repo.largest_link_count(
+                self.db, organization_id=ctx.organization_id, table_id=table.id, column_id=column.id
+            )
+            if largest > (column.link_limit or 100):
+                raise InvalidSchemaError(
+                    f"columns.{index}.link_limit",
+                    "Existing records exceed this link limit; remove their extra links first",
+                )
 
     async def set_row_policy(
         self, ctx: AuthContext, table_id: UUID, data: RowPolicyUpdate

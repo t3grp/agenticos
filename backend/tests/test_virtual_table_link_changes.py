@@ -60,6 +60,7 @@ def linked(monkeypatch):
     target_columns = [ColumnDef(id=READER, label="Reader", type="user")]
     row = SimpleNamespace(
         id=uuid4(),
+        organization_id=ctx.organization_id,
         table_id=source.id,
         external_id=None,
         schema_version=1,
@@ -91,6 +92,13 @@ def linked(monkeypatch):
         record.values = values
         record.revision += 1
 
+    async def baseline(db, *, record, column_ids):
+        return dict(record.values)
+
+    # These service tests supply the internal canonical baseline themselves;
+    # edge hydration and malformed legacy repair have PostgreSQL coverage.
+    monkeypatch.setattr(records.relation_repo, "write_values", baseline)
+    monkeypatch.setattr(records.relation_repo, "definitions", AsyncMock(return_value=[]))
     monkeypatch.setattr(virtual_table_repo, "get_schema_version", schema)
     monkeypatch.setattr(virtual_table_repo, "get_table", AsyncMock(return_value=target))
     queried = AsyncMock(side_effect=found)
