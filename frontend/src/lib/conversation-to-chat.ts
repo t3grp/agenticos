@@ -47,6 +47,9 @@ export interface RawMessagePart {
 
 export interface RawMessage {
   client_message_id?: string | null;
+  thread_root_message_id?: string | null;
+  thread_reply_count?: number;
+  thread_last_activity_at?: string | null;
   id: string;
   conversation_id: string;
   role: "user" | "assistant" | "system";
@@ -234,6 +237,9 @@ export function conversationMessageToChatMessage(msg: RawMessage): ChatMessage {
   return {
     id: msg.id,
     clientMessageId: msg.client_message_id ?? undefined,
+    threadRootMessageId: msg.thread_root_message_id ?? undefined,
+    threadReplyCount: msg.thread_reply_count,
+    threadLastActivityAt: msg.thread_last_activity_at,
     role: msg.role,
     content: msg.content,
     thinking: msg.thinking ?? undefined,

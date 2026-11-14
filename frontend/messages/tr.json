@@ -7983,6 +7983,14 @@
         "title": "Agent’ın kullandığı kendi hesaplarınız",
         "body": "Her kişinin kendi hesabına bağlanan bir agent, Notion veya Jira’da sizin adınıza işlem yapar. Burada hangi servislerin hesabınıza ihtiyaç duyduğunu görüp sohbetten ayrılmadan bağlanabilirsiniz."
       },
+      "chat-room-thread": {
+        "title": "Bir mesajı tartışın",
+        "body": "Ana odayı doldurmadan yanıtları bir arada tutmak için bir konu açın. Yanıt sayısı sizi tartışmaya geri götürür; Yanıtla bir mesajı alıntılamaya devam eder."
+      },
+      "chat-room-thread-panel": {
+        "title": "Kendi bağlamında yanıtlar",
+        "body": "İlk mesaj yanıtların üstünde kalır. Odadaki herkes konuyu okuyabilir. Yardım istediğinizde bir ajan seçin veya odaya dönmek için konuyu kapatın."
+      },
       "chat-composer": {
         "title": "Dilediğinizi sorun",
         "body": "Mesaj yazın, dosya ekleyin veya slash komutuyla başlayın. Enter gönderir; Shift+Enter yeni satır ekler."
@@ -8710,6 +8718,28 @@
     }
   },
   "chat": {
+    "roomThread": {
+      "historyAudience": "Kaydedilmiş sohbet geçmişi",
+      "readOnly": "Bu konu salt okunurdur.",
+      "title": "Konu",
+      "start": "Konuda yanıtla",
+      "replies": "{count, plural, one {# yanıt} other {# yanıt}}",
+      "message": "Konuya yanıt ver",
+      "placeholder": "Buradan yanıtlayın. Odadaki herkes bu konuyu okuyabilir.",
+      "post": "Yanıtı gönder",
+      "close": "Konuyu kapat",
+      "earlier": "Önceki yanıtları yükle",
+      "audience": "Bu odadaki herkes görebilir",
+      "root": "İlk mesaj",
+      "loading": "Konu yükleniyor…",
+      "unavailable": "Bu konu kullanılamıyor. Silinmiş veya odaya erişiminiz değişmiş olabilir.",
+      "retry": "Tekrar dene",
+      "empty": "Bu konuda sohbeti başlatın.",
+      "open": "Konuyu aç",
+      "pending": "Bir ajan bir konuda sizi bekliyor.",
+      "mainPending": "Bir ajan ana odada sizi bekliyor.",
+      "main": "Odaya dön"
+    },
     "loadEarlierMessages": "Önceki mesajları yükle",
     "accessLevel": "Erişim düzeyi",
     "accessRevoked": "Erişim iptal edildi",

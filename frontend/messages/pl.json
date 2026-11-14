@@ -393,6 +393,28 @@
     "deleteAccount": "Usuń konto"
   },
   "chat": {
+    "roomThread": {
+      "historyAudience": "Zapisana historia rozmowy",
+      "readOnly": "Ten wątek jest tylko do odczytu.",
+      "title": "Wątek",
+      "start": "Odpowiedz w wątku",
+      "replies": "{count, plural, one {# odpowiedź} few {# odpowiedzi} many {# odpowiedzi} other {# odpowiedzi}}",
+      "message": "Odpowiedz w wątku",
+      "placeholder": "Odpowiedz tutaj. Każdy w pokoju może przeczytać ten wątek.",
+      "post": "Wyślij odpowiedź",
+      "close": "Zamknij wątek",
+      "earlier": "Wczytaj wcześniejsze odpowiedzi",
+      "audience": "Widoczny dla wszystkich w tym pokoju",
+      "root": "Oryginalna wiadomość",
+      "loading": "Wczytywanie wątku…",
+      "unavailable": "Ten wątek jest niedostępny. Być może został usunięty lub zmienił się Twój dostęp do pokoju.",
+      "retry": "Spróbuj ponownie",
+      "empty": "Rozpocznij rozmowę w tym wątku.",
+      "open": "Otwórz wątek",
+      "pending": "Agent czeka na Ciebie w wątku.",
+      "mainPending": "Agent czeka na Ciebie w głównym pokoju.",
+      "main": "Wróć do pokoju"
+    },
     "teamRoom": {
       "title": "Pokój zespołu",
       "titleInProject": "Pokój zespołu · {name}",
@@ -6450,6 +6472,14 @@
       "chat-your-connections": {
         "title": "Twoje własne konta, tam gdzie agent ich używa",
         "body": "Agent powiązany z własnym kontem każdej osoby mówi do Notion czy Jiry jako Ty. Tu widać, które z jego usług potrzebują Twojego konta, i można je podłączyć bez wychodzenia z czatu."
+      },
+      "chat-room-thread": {
+        "title": "Omów jedną wiadomość",
+        "body": "Otwórz wątek, aby zebrać odpowiedzi w jednym miejscu bez zapełniania głównego pokoju. Liczba odpowiedzi prowadzi z powrotem do dyskusji; Odpowiedz nadal cytuje wiadomość."
+      },
+      "chat-room-thread-panel": {
+        "title": "Odpowiedzi we własnym kontekście",
+        "body": "Oryginalna wiadomość pozostaje nad odpowiedziami. Każdy w pokoju może przeczytać wątek. Wybierz agenta, gdy potrzebujesz pomocy, lub zamknij wątek, aby wrócić do pokoju."
       },
       "chat-team-room": {
         "title": "Pokój twojego zespołu",
