@@ -182,6 +182,7 @@ def test_listing_targets_neither_adds_bindings_nor_changes_limits_or_credentials
     assert bindings == before
 
 
+@pytest.mark.security
 def test_unknown_hosted_configuration_is_distinct_from_none_and_grants_no_run_permission() -> None:
     row = AgentRead(
         id=uuid4(),
