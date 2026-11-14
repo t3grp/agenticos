@@ -588,7 +588,7 @@ class TestLegacyCookieSessionRevocation:
                     [
                         {
                             "id": old_id,
-                            "user": user.id,
+                            "user": user_id,
                             "impersonator": None,
                             "current": hash_token("legacy-current"),
                             "previous": hash_token("legacy-spent"),
@@ -598,7 +598,7 @@ class TestLegacyCookieSessionRevocation:
                         },
                         {
                             "id": impersonation_id,
-                            "user": user.id,
+                            "user": user_id,
                             "impersonator": admin_id,
                             "current": hash_token("legacy-impersonation"),
                             "previous": None,
@@ -608,7 +608,7 @@ class TestLegacyCookieSessionRevocation:
                         },
                         {
                             "id": ended_id,
-                            "user": user.id,
+                            "user": user_id,
                             "impersonator": None,
                             "current": hash_token("legacy-ended"),
                             "previous": None,

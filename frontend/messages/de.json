@@ -8442,7 +8442,8 @@
         "software": "Software-Teams",
         "public-sector": "Öffentlicher Sektor und Versorger",
         "legal": "Recht und freie Berufe",
-        "manufacturing": "Produktion und Logistik"
+        "manufacturing": "Produktion und Logistik",
+        "aerospace": "Luft- und Raumfahrt"
       }
     },
     "moreFiles": "{count, plural, =1 {+1 Datei} other {+# Dateien}}",
@@ -9298,6 +9299,7 @@
       "public-sector": "Öffentlicher Sektor und Versorger",
       "legal": "Recht und freie Berufe",
       "manufacturing": "Produktion und Logistik",
+      "aerospace": "Luft- und Raumfahrt",
       "general": "Allgemeiner Einsatz"
     }
   },
@@ -13791,8 +13793,7 @@
     "appsDescription": "Verbinde deine Tools über Composio. Wähle jede App aus und prüfe ihre Berechtigungen, bevor du den Zugriff erlaubst.",
     "connectApps": "Apps verbinden",
     "opensNewTab": "Öffnet einen neuen Tab. Kehre hierher zurück, wenn du bereit bist.",
-    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen.",
-    "continueToWorkspace": "Weiter zum Workspace"
+    "skipHint": "Du musst keine App verbinden. Das kannst du später unter Verbindungen → Apps nachholen."
   },
   "onboardingTeam": {
     "step1Title": "Über dich & deine Arbeit",
@@ -13817,7 +13818,6 @@
     "step4Title": "Dein empfohlenes KI-Team",
     "step4Subtitle": "Hier ist deine Teamstruktur. Dein Team Lead koordiniert Aufgaben und delegiert an Spezialisten.",
     "leadBadge": "Team Lead & Orchestrator",
-    "leadOrchestrationHint": "Leitet Aufgaben an Spezialisten weiter und bündelt die Ergebnisse für dich.",
     "starterPromptsHeader": "Beispiel-Prompts",
     "specialistsTitle": "Spezialisten-Agenten",
     "addSpecialist": "Spezialist hinzufügen",

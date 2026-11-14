@@ -279,12 +279,12 @@ class TestSigningInWithChatGPT:
         assert response.status_code == 201
         assert response.json()["kind"] == "openai_codex"
         assert "the-code" not in response.text
-        assert codex.create.call_args.kwargs == {
-            "callback_url": callback,
-            "name": "My ChatGPT",
-            "description": None,
-            "visibility": "private",
-        }
+        created = codex.create.call_args.kwargs
+        assert created["callback_url"] == callback
+        assert created["name"] == "My ChatGPT"
+        assert created["description"] is None
+        assert created["visibility"].value == "private"
+        assert created["usage_scope"] == "organization"
 
     async def test_reconnecting_signs_in_again_in_place(self, client, codex) -> None:
         async with client() as opened:

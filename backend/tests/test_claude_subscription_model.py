@@ -268,6 +268,7 @@ async def test_native_tools_fail_before_inference():
     runtime.infer.assert_not_awaited()
 
 
+@pytest.mark.security
 @pytest.mark.parametrize(
     "decision",
     [
@@ -374,6 +375,7 @@ async def test_global_model_request_prohibition_blocks_subscription_usage():
         {"timeout": float("nan")},
     ],
 )
+@pytest.mark.security
 async def test_sampling_and_unsupported_native_controls_are_explicitly_refused(settings):
     model, runtime = _model()
     with pytest.raises(UserError):

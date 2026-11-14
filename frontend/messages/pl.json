@@ -7584,7 +7584,8 @@
         "software": "Zespoły software'owe",
         "public-sector": "Sektor publiczny i utilities",
         "legal": "Prawo i doradztwo",
-        "manufacturing": "Produkcja i logistyka"
+        "manufacturing": "Produkcja i logistyka",
+        "aerospace": "Lotnictwo i kosmonautyka"
       }
     },
     "moreFiles": "{count, plural, one {+1 plik} few {+# pliki} many {+# plików} other {+# pliku}}",
@@ -10239,6 +10240,7 @@
       "public-sector": "Sektor publiczny i utilities",
       "legal": "Prawo i doradztwo",
       "manufacturing": "Produkcja i logistyka",
+      "aerospace": "Lotnictwo i kosmonautyka",
       "general": "Ogólnego przeznaczenia"
     }
   },
@@ -13894,8 +13896,7 @@
     "appsDescription": "Połącz używane narzędzia przez Composio. Wybierz każdą aplikację i sprawdź jej uprawnienia przed udzieleniem dostępu.",
     "connectApps": "Połącz aplikacje",
     "opensNewTab": "Otwiera się w nowej karcie. Wróć tutaj, gdy będziesz gotowy.",
-    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Połączenia → Aplikacje.",
-    "continueToWorkspace": "Przejdź do workspace"
+    "skipHint": "Nie musisz łączyć żadnej aplikacji. Możesz to zrobić później w Połączenia → Aplikacje."
   },
   "onboardingTeam": {
     "step1Title": "O Tobie i Twojej pracy",
@@ -13920,7 +13921,6 @@
     "step4Title": "Twój rekomendowany zespół AI",
     "step4Subtitle": "Oto struktura Twojego zespołu. Lider zespołu koordynuje zadania i deleguje pracę do specjalistów.",
     "leadBadge": "Lider zespołu i orkiestrator",
-    "leadOrchestrationHint": "Przekazuje zadania specjalistom i przygotowuje dla Ciebie zsyntetyzowane odpowiedzi.",
     "starterPromptsHeader": "Przykładowe zapytania",
     "specialistsTitle": "Agenci specjaliści",
     "addSpecialist": "Dodaj specjalistę",

@@ -111,6 +111,7 @@ UNREFERENCED_BY_DESIGN = (SCRATCH_DIRECTORY,)
 # either named here or in `CAPABILITIES_STAYING_INSIDE`, so a new one fails a
 # test rather than quietly leaving the inventory short.
 OUTBOUND_CAPABILITIES: dict[str, str] = {
+    "babysit_pr": "the GitHub repository named in the pull request",
     "phone_calls": "the configured telephony provider and explicitly consented recipients",
     # The pages it opens are the destination a reviewer has to know about. What
     # each step sends the model - the page's address, element labels and an
@@ -127,6 +128,7 @@ OUTBOUND_CAPABILITIES: dict[str, str] = {
     # text the model types, go to the desktop.
     "computer_use": "the agent's sandbox connection, or the computerd host on COMPUTER_DAEMON_ALLOWED_HOSTS",
     "image_generation": "the image provider named in the binding",
+    "harness": "the CLI model vendor or gateway named in the binding, and the code it reads",
     "knowledge": "the collection's embedding endpoint",
     "sandbox": "the sandbox runtime this deployment configures",
     "mirage": (
@@ -155,6 +157,8 @@ CAPABILITIES_STAYING_INSIDE = frozenset(
         # sharing decision recorded on the artifact, not a destination the
         # capability sends anything to.
         "artifacts",
+        # Messages are stored in this deployment and shown in its console.
+        "agent_messages",
         # Questions go to the person running the agent, on the surface they are
         # already using.
         "ask_user",
@@ -167,6 +171,12 @@ CAPABILITIES_STAYING_INSIDE = frozenset(
         # Delegation stays in this deployment; outbound destinations belong to
         # the child model and tools, which this inventory already lists.
         "background_tasks",
+        # These orchestrate model calls whose providers are listed above.
+        "burst",
+        "council",
+        # Eval cases and tuning proposals stay in the deployment; the run's
+        # configured model provider is listed in model destinations.
+        "eval_tool_tuning",
         "channel_tools",
         "proof_scenario",
         "secret_request",

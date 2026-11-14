@@ -8764,7 +8764,8 @@
         "software": "Software teams",
         "public-sector": "Public sector and utilities",
         "legal": "Legal and professional services",
-        "manufacturing": "Manufacturing and logistics"
+        "manufacturing": "Manufacturing and logistics",
+        "aerospace": "Aerospace"
       }
     },
     "moreFiles": "{count, plural, =1 {+1 file} other {+# files}}",
@@ -9619,6 +9620,7 @@
       "public-sector": "Public sector and utilities",
       "legal": "Legal and professional services",
       "manufacturing": "Manufacturing and logistics",
+      "aerospace": "Aerospace",
       "general": "General purpose"
     }
   },
@@ -12545,7 +12547,7 @@
     "harness": {
       "harness": {
         "title": "Harness",
-        "description": "The CLI session that does the agent's work: Claude Code or Codex."
+        "description": "The CLI session that does the agent's work: Claude Code, Codex, OpenCode, Gemini CLI or Pi."
       },
       "access": {
         "title": "Access",
@@ -12553,7 +12555,7 @@
       },
       "model": {
         "title": "Model",
-        "description": "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex. Not set takes the harness's own default."
+        "description": "The model the harness runs on: a Claude model for Claude Code, an OpenAI one for Codex, a Gemini one for Gemini CLI, or any of those vendors' models for OpenCode or Pi. Not set takes the harness's own default."
       },
       "base_url": {
         "title": "Anthropic-compatible endpoint",
@@ -14330,8 +14332,7 @@
     "appsDescription": "Connect the tools you use through Composio. Choose each app and review its permissions before authorizing access.",
     "connectApps": "Connect apps",
     "opensNewTab": "Opens in a new tab. Return here when you're ready.",
-    "skipHint": "No app connection is required. You can connect later from Connections → Apps.",
-    "continueToWorkspace": "Continue to workspace"
+    "skipHint": "No app connection is required. You can connect later from Connections → Apps."
   },
   "onboardingTeam": {
     "step1Title": "About you & your work",
@@ -14356,7 +14357,6 @@
     "step4Title": "Your recommended AI team",
     "step4Subtitle": "Here is your team structure. Your Team Lead coordinates incoming requests and delegates work to your specialists.",
     "leadBadge": "Team Lead & Orchestrator",
-    "leadOrchestrationHint": "Routes tasks to specialists and synthesizes unified answers for you.",
     "starterPromptsHeader": "Example starter prompts",
     "specialistsTitle": "Specialist agents",
     "addSpecialist": "Add specialist",

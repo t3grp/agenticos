@@ -45,7 +45,6 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.permissions import AuthContext, Perm
-from app.db.updates import writable
 from app.db.models.agent import Agent
 from app.db.models.agent_run import AgentRun, RunStatus, RunSurface
 from app.db.models.failure_learning import (
@@ -54,6 +53,7 @@ from app.db.models.failure_learning import (
     AgentFailureLedger,
     AgentInstructionProposal,
 )
+from app.db.updates import writable
 from app.repositories import (
     agent_repo,
     agent_run_repo,

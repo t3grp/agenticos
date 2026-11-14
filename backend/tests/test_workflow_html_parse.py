@@ -527,16 +527,17 @@ async def test_the_step_parses_in_a_child_process(monkeypatch: pytest.MonkeyPatc
 
 
 async def test_a_selector_that_never_finishes_fails_as_too_complex(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ):
-    # soupsieve backtracks without memoising: `p div` over 20,000 nested divs takes
-    # minutes. The deadline is shortened so the test does not wait for it.
     monkeypatch.setattr(html_parse, "PARSE_DEADLINE_SECONDS", 1)
+    monkeypatch.setattr(
+        html_parse, "_CHILD_SCRIPT", _child_script(tmp_path, "import time; time.sleep(30)")
+    )
     spawns = _Spawns(monkeypatch)
     started = time.monotonic()
 
     result = await handle(
-        HtmlParseConfig(selector="p div"), HtmlParseInput(html="<p>" + "<div>" * 20_000)
+        HtmlParseConfig(selector="p div"), HtmlParseInput(html="<p>content</p>")
     )
 
     assert time.monotonic() - started < 15

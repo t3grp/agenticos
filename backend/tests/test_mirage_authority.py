@@ -50,12 +50,12 @@ async def test_personal_account_keeps_the_issuing_tenant_and_current_client(monk
     monkeypatch.setattr(
         McpConnectionService,
         "_refresh_client_secret",
-        AsyncMock(return_value=payload.client_secret),
+        AsyncMock(return_value=None if changed == "removed" else payload.client_secret),
     )
     result = await McpConnectionService(AsyncMock()).account_grant(
         account, organization_id=uuid4() if changed == "tenant" else SOURCE_ORG
     )
-    assert (result is not None) is (changed == "unchanged")
+    assert (result is not None) is (changed in {"unchanged", "rotation"})
     if changed in {"tenant", "legacy"}:
         member.assert_not_awaited()
         generation.assert_not_awaited()
