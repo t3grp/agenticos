@@ -26,7 +26,7 @@ name: CI
 # pull request, and widening it would run everything twice.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, t3]
   pull_request:
 
 # One run per branch. `AGENTS.md` asks for a commit and a push per finished piece,
