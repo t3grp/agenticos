@@ -188,7 +188,10 @@ def _visible(
             or_(
                 Artifact.owner_user_id == user_id,
                 Artifact.visibility == Visibility.ORG.value,
-                and_(team_visible, Artifact.visibility == Visibility.TEAM.value),
+                and_(
+                    true() if team_visible else false(),
+                    Artifact.visibility == Visibility.TEAM.value,
+                ),
                 Artifact.id.in_(shared_ids) if shared_ids else false(),
             )
         )

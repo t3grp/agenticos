@@ -1321,10 +1321,15 @@ class FailureLearningService:
             tested_content_sha256 = hashlib.sha256(new_text.encode("utf-8")).hexdigest()
         else:
             new_text = data.instructions_override
-        if new_text is None and target_skill_id is None:
+        if new_text is None:
+            if target_skill_id is None:
+                raise BadRequestError(
+                    message="A try needs new instruction text to try",
+                    details={"instructions_override": None},
+                )
             raise BadRequestError(
-                message="A try needs new instruction text to try",
-                details={"instructions_override": None},
+                message="The skill proposal has no new content to try",
+                details={"proposal_id": str(proposal.id) if proposal is not None else None},
             )
         cases = await failure_learning_repo.get_cases_by_ids(
             self.db, data.case_ids, organization_id=ctx.organization_id, agent_id=agent.id

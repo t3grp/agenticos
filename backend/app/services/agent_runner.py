@@ -7542,6 +7542,11 @@ class AgentRunnerService:
             )
         conversations = ConversationService(self.db)
         conversation = await conversations.find_conversation(run.conversation_id)
+        if conversation is None:
+            raise NotFoundError(
+                message="Conversation not found",
+                details={"conversation_id": str(run.conversation_id)},
+            )
         prompt = await conversations.model_text(prompt_message, conversation)
         history = await conversations.model_history(
             run.conversation_id,
