@@ -133,7 +133,9 @@ What a lookup shows goes no further than its reader may: a linked table the
 reader cannot see leaves the links and every lookup and rollup through them
 empty. The destination's row policy also applies: both raw link IDs in `values`
 and labels in `links` contain only readable records. Archived link fields are
-omitted from returned values. A link keeps its table for life. A lookup reads a column holding
+omitted from returned values.
+
+A link keeps its table for life. A lookup reads a column holding
 values, not another link or lookup, and archiving a link column is refused
 while a lookup or rollup still reads through it. An export writes a link by the
 names of its records, and a lookup by what it read.

@@ -10,7 +10,7 @@ from app.core.permissions import AuthContext
 from app.db.models.virtual_table import VirtualTable, VirtualTableRecord
 from app.repositories import virtual_table_repo
 from app.schemas.virtual_table import CellValue, ColumnDef, RecordRead, RowPolicy
-from app.services.virtual_tables import computed
+from app.services.virtual_tables import computed, records
 from app.services.virtual_tables._base import Operations
 from app.services.virtual_tables.exceptions import InvalidRecordError, InvalidRowPolicyError
 from app.services.virtual_tables.records import RecordOperations, _export_cell, _merge
@@ -100,6 +100,7 @@ def linked_data(monkeypatch: pytest.MonkeyPatch) -> VirtualTable:
     monkeypatch.setattr(virtual_table_repo, "get_records_by_ids", AsyncMock(return_value=rows))
     monkeypatch.setattr(virtual_table_repo, "get_record_cells_by_ids", AsyncMock(return_value=rows))
     monkeypatch.setattr(computed, "resolve_access", AsyncMock(return_value=True))
+    monkeypatch.setattr(records, "resolve_access", AsyncMock(return_value=True))
     return target
 
 
@@ -226,6 +227,18 @@ async def test_legacy_replacement_preserves_all_links_when_target_is_unreachable
     assert merged == before
 
 
+@pytest.mark.parametrize("hidden_first", [False, True])
+async def test_a_visible_array_round_trip_preserves_hidden_positions(linked_data, hidden_first):
+    old = [str(HIDDEN), str(VISIBLE)] if hidden_first else [str(VISIBLE), str(HIDDEN)]
+    before: dict[str, CellValue] = {KEY: old}
+    requested: dict[str, CellValue] = {KEY: [str(VISIBLE)]}
+    merged = _merge([LINK], requested, before)
+    await RecordOperations(MagicMock())._preserve_unreadable_links(
+        context(), [LINK], requested, before, merged
+    )
+    assert merged == before
+
+
 async def test_an_unrelated_field_update_keeps_the_complete_link_set(linked_data):
     before: dict[str, CellValue] = {KEY: [str(VISIBLE), str(HIDDEN)], str(NAME.id): "Old"}
     requested: dict[str, CellValue] = {str(NAME.id): "New"}
@@ -241,6 +254,26 @@ async def test_retained_hidden_ids_are_not_treated_as_new_user_references(linked
     await RecordOperations(MagicMock())._check_links(
         context(), [LINK], {KEY: [str(HIDDEN)]}, stored=before
     )
+
+
+async def test_unchanged_links_need_no_destination_read_for_preservation(linked_data, monkeypatch):
+    check = AsyncMock()
+    monkeypatch.setattr(records, "visible_link_ids", check)
+    before: dict[str, CellValue] = {KEY: [str(VISIBLE), str(HIDDEN)]}
+    merged = _merge([LINK], before, before)
+    await RecordOperations(MagicMock())._preserve_unreadable_links(
+        context(), [LINK], before, before, merged
+    )
+    assert merged == before
+    check.assert_not_awaited()
+
+
+async def test_inaccessible_target_does_not_create_an_absent_link_cell(linked_data, monkeypatch):
+    monkeypatch.setattr(computed, "resolve_access", AsyncMock(return_value=False))
+    original = record({str(NAME.id): "Unchanged"})
+    result = (await computed.read_through(MagicMock(), context(), [LINK, NAME], [original]))[0]
+    assert result.values == original.values
+    assert KEY not in result.values
 
 
 async def test_new_hidden_ids_still_cannot_be_added(linked_data):
