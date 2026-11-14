@@ -181,9 +181,7 @@ async def test_origin_is_checked_before_the_first_model_resolution(
     ):
         await service._assemble(
             ctx,
-            agent=MagicMock(
-                id=uuid4(), kind="agent", system_key=None, current_version_id=None
-            ),
+            agent=MagicMock(id=uuid4(), kind="agent", system_key=None, current_version_id=None),
             spec=spec,
             existing_run=MagicMock(id=uuid4()) if resumed else None,
             surface=RunSurface.WORKFLOW if workflow else RunSurface.WEB,
@@ -260,9 +258,7 @@ async def test_a_parked_nested_workflow_keeps_its_origin_without_a_live_dispatch
             "_parked_spec",
             new=AsyncMock(
                 return_value=(
-                    MagicMock(
-                        id=uuid4(), kind="agent", system_key=None, current_version_id=None
-                    ),
+                    MagicMock(id=uuid4(), kind="agent", system_key=None, current_version_id=None),
                     spec,
                 )
             ),
