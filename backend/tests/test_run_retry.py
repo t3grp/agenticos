@@ -31,6 +31,26 @@ pytestmark = pytest.mark.anyio
 MODULE = "app.services.agent_runner"
 
 
+@pytest.fixture(autouse=True)
+def ordinary_runs_have_no_room_request():
+    with patch("app.repositories.room_submission.for_run", new=AsyncMock(return_value=None)):
+        yield
+
+
+async def test_a_room_run_requires_a_new_explicit_queued_request():
+    service = AgentRunnerService(MagicMock())
+    original = _run()
+    ctx = _ctx(user_id=original.user_id)
+    with (
+        patch(f"{MODULE}.agent_run_repo.get_run", new=AsyncMock(return_value=original)),
+        patch("app.repositories.room_submission.for_run", new=AsyncMock(return_value=object())),
+        patch.object(service, "execute", new=AsyncMock()) as execute,
+        pytest.raises(BadRequestError, match="project room"),
+    ):
+        await service.retry_run(ctx, original.id)
+    execute.assert_not_called()
+
+
 def _ctx(*, user_id=None, api_key_id=None) -> AuthContext:
     return AuthContext(
         user_id=user_id or uuid.uuid4(),

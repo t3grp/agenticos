@@ -15,6 +15,7 @@ because the audit lock is the last one a transaction takes.
 """
 
 from collections.abc import Awaitable, Callable, Mapping
+from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
@@ -34,6 +35,7 @@ from app.db.models.agent_run import (
     ToolApproval,
 )
 from app.repositories import agent_run_repo, channel_prompt_repo
+from app.repositories import room_submission as room_repo
 from app.repositories.channel_prompt import SettledBy
 from app.schemas.agent import (
     AgentRunResult,
@@ -48,6 +50,7 @@ from app.services.channels.continuation import continue_in_chat
 from app.services.channels.handback import chat_destination, continues_in_chat
 from app.services.channels.handback_jobs import queue_segment
 from app.services.channels.prompts import ChannelPrompts
+from app.services.conversation_turns import claim
 from app.services.secret_requests import SecretRequestService
 
 
@@ -243,13 +246,24 @@ class ParkedRunService:
         step: Callable[[Callable[[RunSegment], Awaitable[None]] | None], Awaitable[RunSegment]],
     ) -> Continued:
         run = await self.runner.get_run(ctx, run_id)
-        destination = chat_destination(run) if continues_in_chat(run, ctx) else None
-        if destination is None:
-            return Continued(await step(None), False)
-        inherited = ChannelPrompts.inherited_calls(run)
-        await channel_prompt_repo.settle_open(self.db, run_id=run_id, by=by)
-        segment = await step(queue_segment(self.db, destination, inherited))
-        return Continued(segment, True)
+        async with AsyncExitStack() as admission:
+            if (
+                run.conversation_id is not None
+                and await room_repo.for_run(self.db, run_id, organization_id=ctx.organization_id)
+                is not None
+            ):
+                # Before runner.resume takes the run-row lock: keep the same
+                # room admission order as new turns and WebSocket answers.
+                await admission.enter_async_context(
+                    claim(run.conversation_id, background=False, resume_run_id=run_id)
+                )
+            destination = chat_destination(run) if continues_in_chat(run, ctx) else None
+            if destination is None:
+                return Continued(await step(None), False)
+            inherited = ChannelPrompts.inherited_calls(run)
+            await channel_prompt_repo.settle_open(self.db, run_id=run_id, by=by)
+            segment = await step(queue_segment(self.db, destination, inherited))
+            return Continued(segment, True)
 
 
 async def run_result(

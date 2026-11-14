@@ -8,6 +8,7 @@ from app.db.models.user import User
 from app.db.models.session import Session
 from app.db.models.conversation import Conversation, Message, ToolCall
 from app.db.models.conversation_task import ConversationTask, ConversationTurnClaim
+from app.db.models.room_submission import RoomSubmission
 from app.db.models.coding_task_change import CodingTaskChange
 from app.db.models.chat_file import ChatFile
 from app.db.models.message_rating import MessageRating
@@ -207,6 +208,7 @@ __all__ = [
     "CodingTaskChange",
     "ConversationTask",
     "ConversationTurnClaim",
+    "RoomSubmission",
     "Message",
     "ToolCall",
     "ChatFile",

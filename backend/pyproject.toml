@@ -1116,6 +1116,11 @@ include = [
     "app/schemas/conversation_task.py",
     "app/repositories/conversation_task.py",
     "app/services/conversation_tasks.py",
+    "app/db/models/room_submission.py",
+    "app/schemas/room_submission.py",
+    "app/repositories/room_submission.py",
+    "app/services/room_submission.py",
+    "app/worker/tasks/room_tasks.py",
     # What a coding-agent task changed, read under the conversation's own reader
     # check (#2480).
     "app/db/models/coding_task_change.py",
@@ -1927,6 +1932,11 @@ include = [
     "app/schemas/conversation_task.py",
     "app/repositories/conversation_task.py",
     "app/services/conversation_tasks.py",
+    "app/db/models/room_submission.py",
+    "app/schemas/room_submission.py",
+    "app/repositories/room_submission.py",
+    "app/services/room_submission.py",
+    "app/worker/tasks/room_tasks.py",
     # What a coding-agent task changed, read under the conversation's own reader
     # check (#2480).
     "app/db/models/coding_task_change.py",
