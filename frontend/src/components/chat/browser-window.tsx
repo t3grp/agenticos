@@ -500,7 +500,7 @@ export function BrowserWindow({
           so the picture fills it 1:1 rather than being a laptop screen shrunk
           into a column. Activity does not cover the page. */}
       <div ref={pageRef} className="bg-background relative min-h-0 flex-1 overflow-hidden">
-        <div className="scrollbar-thin h-full overflow-y-auto">
+        <div className="h-full scrollbar-thin overflow-y-auto">
           {browse.image && fitted ? (
             // The comment picker sits beside the remote screen rather than inside
             // it: a form within `role="application"` is one a screen reader
@@ -557,7 +557,7 @@ export function BrowserWindow({
       </div>
 
       {showSteps && (
-        <div className="bg-background border-border scrollbar-thin max-h-[40%] min-h-0 space-y-3 overflow-y-auto border-t p-4">
+        <div className="bg-background border-border max-h-[40%] min-h-0 scrollbar-thin space-y-3 overflow-y-auto border-t p-4">
           {browse.goal && (
             <p className="text-foreground/80 text-sm leading-relaxed">
               <span className="text-muted-foreground font-medium">{t("browserGoal")} · </span>
