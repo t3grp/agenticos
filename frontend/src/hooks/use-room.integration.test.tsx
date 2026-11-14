@@ -464,6 +464,13 @@ function threadPage(root = "root-a", ids: string[] = [], total = ids.length): Ro
 }
 
 describe("room thread drafts", () => {
+  it("does not post or create a retained attempt for an untouched empty draft", async () => {
+    const { result } = renderHook(() => useRoomDraft("room-a", "root-a"), { wrapper });
+    await act(async () => result.current.submit());
+    expect(apiClient.post).not.toHaveBeenCalled();
+    expect(useChatStore.getState().roomDrafts).toEqual({});
+  });
+
   it("posts an explicit thread root independently of the quoted message and main draft", async () => {
     useChatStore.setState({ replyTo: { messageId: "main-quote", role: "user", excerpt: "Main" } });
     const { result } = renderHook(() => useRoomDraft("room-a", "root-a"), { wrapper });
@@ -716,7 +723,7 @@ describe("authorized thread history", () => {
     const page = threadPage("root-a", ["reply"]);
     mutate(page);
     vi.mocked(apiClient.get).mockResolvedValue(page);
-    await expect(getRoomThread("room-a", "root-a")).rejects.toThrow("another scope");
+    await expect(getRoomThread("room-a", "root-a")).rejects.toThrow("ROOM_THREAD_SCOPE_MISMATCH");
   });
 
   it("isolates cache entries across root, account, tenant and room", () => {

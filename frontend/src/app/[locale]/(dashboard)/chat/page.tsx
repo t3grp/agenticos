@@ -51,8 +51,14 @@ export default function ChatPage() {
           requestedConversationId={requestedConversationId}
           requestedThreadRootId={requestedThreadRootId}
           onOpenThread={(root) => {
-            if (document.activeElement instanceof HTMLElement)
-              trigger.current = document.activeElement;
+            const opener = document.activeElement;
+            // A notice inside a thread disappears when its root changes. Keep
+            // the main-room opener so closing the final panel can restore focus.
+            if (
+              opener instanceof HTMLElement &&
+              opener.closest('[data-tour="chat-room-thread-panel"]') === null
+            )
+              trigger.current = opener;
             changeThread(root);
           }}
           onCloseThread={() => {

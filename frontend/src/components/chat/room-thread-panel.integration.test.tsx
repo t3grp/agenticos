@@ -309,22 +309,46 @@ describe("RoomThreadPanel", () => {
     expect(await screen.findByText("Saved reply A")).toBeInTheDocument();
   });
 
-  it("loads earlier replies in transcript order without fetching main history", async () => {
+  it("removes authorized thread content immediately when the account is cleared", async () => {
+    render(view(), { wrapper });
+    await screen.findByText("Saved reply A");
+    await screen.findByRole("textbox", { name: "Reply to thread" });
+    act(() => useAuthStore.setState({ user: null }));
+    expect(screen.queryByText("Original topic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved reply A")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading thread");
+  });
+
+  it("loads earlier replies in order and preserves the reader's place without fetching main history", async () => {
     page = { ...page, total: 2 };
-    vi.mocked(apiClient.get).mockImplementation(async (path) => {
-      if (String(path).includes("before=reply-a"))
-        return {
-          ...page,
-          items: [{ ...page.items[0]!, id: "earlier", content: "Earlier reply" }],
-        };
-      return serve(String(path));
-    });
+    const pending = deferred<RoomThreadPage>();
+    vi.mocked(apiClient.get).mockImplementation((path) =>
+      String(path).includes("before=reply-a")
+        ? pending.promise
+        : Promise.resolve(serve(String(path))),
+    );
     const { container } = render(view(), { wrapper });
     await screen.findByText("Saved reply A");
-    const scroller = container.querySelector(".overflow-y-auto")!;
+    const scroller = container.querySelector<HTMLDivElement>(".overflow-y-auto")!;
+    let height = 700;
+    Object.defineProperties(scroller, {
+      scrollHeight: { get: () => height },
+      clientHeight: { value: 200 },
+    });
+    scroller.scrollTop = 300;
     fireEvent.scroll(scroller);
     await userEvent.click(screen.getByRole("button", { name: "Load earlier replies" }));
+    expect(screen.getByRole("button", { name: "Load earlier replies" })).toBeDisabled();
+    await act(async () => {
+      height = 900;
+      pending.resolve({
+        ...page,
+        items: [{ ...page.items[0]!, id: "earlier", content: "Earlier reply" }],
+      });
+    });
     await screen.findByText("Earlier reply");
+    await waitFor(() => expect(scroller.scrollTop).toBe(500));
     const replies = [...container.querySelectorAll("[data-message-id]")].map((element) =>
       element.getAttribute("data-message-id"),
     );
@@ -333,6 +357,60 @@ describe("RoomThreadPanel", () => {
     expect(
       vi.mocked(apiClient.get).mock.calls.some(([path]) => String(path).includes("/messages?")),
     ).toBe(false);
+  });
+
+  it("ignores an earlier-page scroll restoration after the reader opens another thread", async () => {
+    page = { ...page, total: 2 };
+    const earlierPage = {
+      ...page,
+      items: [{ ...page.items[0]!, id: "earlier", content: "Earlier reply" }],
+    };
+    const pending = deferred<RoomThreadPage>();
+    vi.mocked(apiClient.get).mockImplementation((path) =>
+      String(path).includes("before=reply-a")
+        ? pending.promise
+        : Promise.resolve(serve(String(path))),
+    );
+    const mounted = render(view(), { wrapper });
+    await screen.findByText("Saved reply A");
+    const original = mounted.container.querySelector<HTMLDivElement>(".overflow-y-auto")!;
+    let height = 700;
+    Object.defineProperties(original, {
+      scrollHeight: { get: () => height },
+      clientHeight: { value: 200 },
+    });
+    original.scrollTop = 300;
+    fireEvent.scroll(original);
+    await userEvent.click(screen.getByRole("button", { name: "Load earlier replies" }));
+    page = {
+      ...page,
+      root: { ...page.root, id: "root-b", content: "Another topic" },
+      items: [
+        {
+          ...page.items[0]!,
+          id: "reply-b",
+          content: "Saved reply B",
+          thread_root_message_id: "root-b",
+        },
+      ],
+      total: 1,
+    };
+    mounted.rerender(view("root-b"));
+    await screen.findByText("Saved reply B");
+    const current = mounted.container.querySelector<HTMLDivElement>(".overflow-y-auto")!;
+    current.scrollTop = 80;
+    await act(async () => {
+      height = 900;
+      pending.resolve(earlierPage);
+    });
+    await act(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    });
+    expect(original.isConnected).toBe(false);
+    expect(original.scrollTop).toBe(300);
+    expect(current.scrollTop).toBe(80);
+    expect(screen.queryByText("Earlier reply")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved reply A")).not.toBeInTheDocument();
   });
 
   it("shows an empty thread, its scoped action, and preserves its draft after switching away", async () => {

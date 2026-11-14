@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,9 +34,16 @@ vi.mock("@/components/chat", () => ({
       <button type="button" onClick={() => onOpenThread("root-b")}>
         Open thread B
       </button>
-      <button type="button" onClick={onCloseThread}>
-        Close selected thread
-      </button>
+      {requestedThreadRootId !== null && (
+        <aside key={requestedThreadRootId} aria-label="Thread" data-tour="chat-room-thread-panel">
+          <button type="button" onClick={() => onOpenThread("root-c")}>
+            Open pending thread
+          </button>
+          <button type="button" onClick={onCloseThread}>
+            Close selected thread
+          </button>
+        </aside>
+      )}
     </main>
   ),
 }));
@@ -120,6 +127,27 @@ describe("thread URLs on the chat page", () => {
     queryString = destination().search.slice(1);
     rerender(<ChatPage />);
     expect(screen.getByLabelText("Requested thread")).toHaveTextContent("none");
+  });
+
+  it("keeps the main-room opener when a pending-action notice switches the panel's root", async () => {
+    queryString = "id=room-a&keep=present";
+    const { rerender } = render(<ChatPage />);
+    const opener = screen.getByRole("button", { name: "Open thread B" });
+    await userEvent.click(opener);
+    queryString = destination().search.slice(1);
+    rerender(<ChatPage />);
+
+    const panel = screen.getByRole("complementary", { name: "Thread" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Open pending thread" }));
+    expect(destination().searchParams.get("thread")).toBe("root-c");
+    queryString = destination().search.slice(1);
+    rerender(<ChatPage />);
+    expect(panel).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close selected thread" }));
+    queryString = destination().search.slice(1);
+    rerender(<ChatPage />);
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 
   it("retains the requested room while its selection is still loading", async () => {

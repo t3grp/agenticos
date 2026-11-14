@@ -384,6 +384,34 @@ async def test_delayed_first_thread_frame_discloses_nothing_after_authority_expi
     assert _sent_events(session) == [(live_turn.END, {"conversation_id": conversation_id})]
 
 
+async def test_truncated_thread_stream_closes_without_reattaching_as_main() -> None:
+    session = _session()
+    conversation_id, root = str(uuid4()), str(uuid4())
+    payload = {
+        "conversation_id": conversation_id,
+        "thread_root_message_id": root,
+        "content": "A partial thread reply",
+    }
+
+    async def truncated(_conversation_id: str, _token: str) -> AsyncIterator[dict[str, Any]]:
+        yield {"seq": 1, "type": "text_delta", "data": payload}
+
+    with (
+        patch.object(live_turn, "follow", truncated),
+        patch("app.services.agent_session.time", SimpleNamespace(monotonic=lambda: 0.0)),
+    ):
+        continuing = await session._follow_one(conversation_id, "thread-token")
+    assert continuing
+    assert _sent_events(session) == [
+        (
+            "turn_attached",
+            {"conversation_id": conversation_id, "thread_root_message_id": root},
+        ),
+        ("text_delta", payload),
+        (live_turn.END, {"conversation_id": conversation_id}),
+    ]
+
+
 @pytest.mark.parametrize("in_thread", [False, True])
 async def test_resumed_frames_retain_server_scope_on_socket_and_shared_trace(
     in_thread: bool,

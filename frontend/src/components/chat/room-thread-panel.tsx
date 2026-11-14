@@ -90,9 +90,9 @@ export function RoomThreadPanel({
   useLayoutEffect(() => {
     if (follow.current && scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight;
   }, [last?.id, last?.content, messages.length]);
-  const earlier = async () => {
-    const target = scroll.current;
-    if (!target) return;
+  // The load button supplies the scroller it is mounted inside; after the read,
+  // the same element must still belong to this panel before restoring its place.
+  const earlier = async (target: HTMLDivElement) => {
     const height = target.scrollHeight;
     const top = target.scrollTop;
     follow.current = false;
@@ -164,7 +164,7 @@ export function RoomThreadPanel({
                 size="sm"
                 className="mb-3 w-full"
                 disabled={query.isFetchingNextPage}
-                onClick={() => void earlier()}
+                onClick={() => void earlier(scroll.current!)}
               >
                 {t("earlier")}
               </Button>

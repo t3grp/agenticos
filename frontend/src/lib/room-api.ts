@@ -53,7 +53,8 @@ export async function getRoomThread(
         item.conversation_id !== conversationId || item.thread_root_message_id !== rootMessageId,
     )
   ) {
-    throw new Error("The thread response belongs to another scope");
+    // The panel renders chat.roomThread.unavailable; this diagnostic stays machine-readable.
+    throw new Error("ROOM_THREAD_SCOPE_MISMATCH");
   }
   return page;
 }

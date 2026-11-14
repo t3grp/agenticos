@@ -188,15 +188,23 @@ function threadPanel(page: Page): Locator {
   return page.getByRole("complementary", { name: "Thread", exact: true });
 }
 
-async function openThread(page: Page, rootId: string): Promise<Locator> {
+async function openThread(
+  page: Page,
+  rootId: string,
+  { replies = 0, pendingRetry = false }: { replies?: number; pendingRetry?: boolean } = {},
+): Promise<Locator> {
   const root = page.locator('[data-message-id="' + rootId + '"]');
   await root.hover();
-  await root.getByRole("button", { name: "Reply in thread", exact: true }).click();
+  const label =
+    replies === 0 ? "Reply in thread" : `${replies} ${replies === 1 ? "reply" : "replies"}`;
+  await root.getByRole("button", { name: label, exact: true }).click();
   const panel = threadPanel(page);
   await expect(panel).toBeVisible();
   await expect(page).toHaveURL(new RegExp("[?&]thread=" + rootId + "(&|$)"));
   await expect(panel.locator("[data-thread-root]")).toHaveAttribute("data-thread-root", rootId);
-  await expect(panel.getByRole("textbox", { name: "Reply to thread" })).toBeEnabled();
+  const composer = panel.getByRole("textbox", { name: "Reply to thread" });
+  if (pendingRetry) await expect(composer).toBeDisabled();
+  else await expect(composer).toBeEnabled();
   return panel;
 }
 
@@ -712,7 +720,7 @@ test.describe("multiplayer project rooms", () => {
         .getByRole("textbox", { name: "Reply to thread" })
         .fill("Keep this separate draft");
       await closeThread(page);
-      await openThread(page, rootId);
+      await openThread(page, rootId, { replies: 3, pendingRetry: true });
       const retried = page.waitForResponse(
         (response) =>
           new URL(response.url()).pathname === path && response.request().method() === "POST",
@@ -735,7 +743,7 @@ test.describe("multiplayer project rooms", () => {
         "Keep this separate draft",
       );
       await closeThread(page);
-      await openThread(page, rootId);
+      await openThread(page, rootId, { replies: 3 });
 
       await expect.poll(network.attachments).toBeGreaterThan(0);
       const before = network.attachments();

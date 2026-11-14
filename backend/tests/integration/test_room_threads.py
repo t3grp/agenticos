@@ -632,6 +632,58 @@ async def test_ordinary_main_model_history_excludes_replies_even_after_a_summary
 
 
 @pytest.mark.security
+async def test_project_reader_can_read_thread_but_cannot_post_or_enqueue(db: AsyncSession) -> None:
+    room = await seed(db)
+    root = await message(db, room, "Thread root")
+    reply = await message(db, room, "Existing reply", root=root)
+    reader = User(id=uuid4(), email=f"{uuid4()}@example.com", hashed_password="x", is_active=True)
+    db.add(reader)
+    await db.flush()
+    assert room.conversation.project_id is not None
+    db.add_all(
+        [
+            OrganizationMember(
+                id=uuid4(),
+                organization_id=room.ctx.organization_id,
+                user_id=reader.id,
+                role="member",
+            ),
+            ResourceGrant(
+                organization_id=room.ctx.organization_id,
+                resource_type="project",
+                resource_id=room.conversation.project_id,
+                subject_user_id=reader.id,
+                level="read",
+            ),
+        ]
+    )
+    await db.flush()
+    ctx = AuthContext(user_id=reader.id, organization_id=room.ctx.organization_id, role="member")
+    service = RoomSubmissionService(db)
+
+    page = await service.thread(ctx, room.conversation.id, root.id)
+    assert page.root.id == root.id
+    assert [row.id for row in page.items] == [reply.id]
+    assert page.total == 1
+    assert not page.can_post
+    with pytest.raises(NotFoundError, match="Conversation not found"):
+        await service.post(
+            ctx,
+            room.conversation.id,
+            RoomMessageCreate(
+                client_message_id=uuid4().hex,
+                content="A reader must not enqueue an agent",
+                thread_root_message_id=root.id,
+                agent_id=room.agent.id,
+            ),
+            reader,
+        )
+    assert await conversation_repo.count_messages(db, room.conversation.id) == 2
+    assert list(await db.scalars(select(RoomSubmission.id))) == []
+    assert list(await db.scalars(select(BackgroundJob.id))) == []
+
+
+@pytest.mark.security
 async def test_detached_thread_stays_readable_by_starter_but_not_its_former_project_member(
     db: AsyncSession,
 ) -> None:
