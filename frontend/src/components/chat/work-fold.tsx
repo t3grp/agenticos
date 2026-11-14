@@ -166,21 +166,21 @@ export function WorkFold({
       ? runText("toolState", { status: waiting })
       : stalledFor !== null
         ? t("stalledFor", { duration: stalledFor })
-      : running
-        ? duration === null
-          ? t("working")
-          : t("workingFor", { duration })
-        : stopped
+        : running
           ? duration === null
-            ? t("stopped", { count: steps })
-            : t("stoppedAfter", { duration, count: steps })
-          : steps === 0
+            ? t("working")
+            : t("workingFor", { duration })
+          : stopped
             ? duration === null
-              ? tChat("thoughtAboutIt")
-              : t("thoughtFor", { duration })
-            : duration === null
-              ? t("worked", { count: steps })
-              : t("workedFor", { duration, count: steps });
+              ? t("stopped", { count: steps })
+              : t("stoppedAfter", { duration, count: steps })
+            : steps === 0
+              ? duration === null
+                ? tChat("thoughtAboutIt")
+                : t("thoughtFor", { duration })
+              : duration === null
+                ? t("worked", { count: steps })
+                : t("workedFor", { duration, count: steps });
 
   return (
     <div>

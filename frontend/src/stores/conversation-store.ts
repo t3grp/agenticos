@@ -96,8 +96,7 @@ const conversationState: StateCreator<ConversationState> = (set) => ({
       selectionVersion: state.selectionVersion + 1,
       loadedTranscript: null,
     })),
-  adoptCreatedConversation: (id) =>
-    set({ currentConversationId: id, createdConversationId: id }),
+  adoptCreatedConversation: (id) => set({ currentConversationId: id, createdConversationId: id }),
   requestComposerFocus: () =>
     set((state) => ({ composerFocusRequest: state.composerFocusRequest + 1 })),
 

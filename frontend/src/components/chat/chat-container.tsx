@@ -277,9 +277,7 @@ export function ChatContainer({
   const newlyCreated = notListed && createdConversationId === currentConversationId;
   const tenantId = useTenantId();
   const needsAccess =
-    currentConversationId !== null &&
-    !newlyCreated &&
-    (notListed || listed?.user_id !== meId);
+    currentConversationId !== null && !newlyCreated && (notListed || listed?.user_id !== meId);
   const access = useConversationAccess(currentConversationId, needsAccess);
   const sharedConversation = useSharedConversation(currentConversationId);
   const isArchived = listed?.is_archived ?? access.archived;

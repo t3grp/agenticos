@@ -153,6 +153,7 @@ describe("managed app connection routing", () => {
         label: null,
         is_default: false,
         last_tools: null,
+        trust_read_only_hints: false,
         created_at: "2026-11-14T08:00:00Z",
         updated_at: null,
       };
