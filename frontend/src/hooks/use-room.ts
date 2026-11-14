@@ -111,12 +111,14 @@ export function useRoomActions(conversationId: string | null) {
       conversationApi.getState().currentConversationId === conversationId,
     [current, conversationApi, conversationId],
   );
-  const changed = useCallback(() => {
-    if (conversationId === null) return;
-    announceRoomChange({ conversationId, accountId, organizationId });
-    void queryClient.invalidateQueries({ queryKey: qk.conversations.all() });
-    void queryClient.invalidateQueries({ queryKey: qk.projects.all() });
-  }, [accountId, organizationId, conversationId, queryClient]);
+  const changed = useCallback(
+    (selectedId: string) => {
+      announceRoomChange({ conversationId: selectedId, accountId, organizationId });
+      void queryClient.invalidateQueries({ queryKey: qk.conversations.all() });
+      void queryClient.invalidateQueries({ queryKey: qk.projects.all() });
+    },
+    [accountId, organizationId, queryClient],
+  );
 
   const post = useCallback(
     async (input: RoomMessageCreate) => {
@@ -124,7 +126,7 @@ export function useRoomActions(conversationId: string | null) {
       try {
         const response = await postRoomMessage(conversationId, input);
         if (!stillHere()) return null;
-        changed();
+        changed(conversationId);
         return response;
       } catch (error) {
         if (!stillHere()) return null;
@@ -139,7 +141,7 @@ export function useRoomActions(conversationId: string | null) {
       if (conversationId === null || !stillHere()) return;
       try {
         await cancelRoomRequest(conversationId, requestId);
-        if (stillHere()) changed();
+        if (stillHere()) changed(conversationId);
       } catch (error) {
         if (stillHere()) throw error;
       }

@@ -55,6 +55,22 @@ beforeEach(() => {
 afterEach(() => client.clear());
 
 describe("starting a team room", () => {
+  it("admits one rapid pair of click events before the disabled state is painted", async () => {
+    const creation = deferred<typeof room>();
+    vi.mocked(apiClient.post).mockReturnValueOnce(creation.promise);
+    render(<StartTeamRoom projectId="project-a" />, { wrapper });
+    const button = screen.getByRole("button", { name: "New team room" });
+    act(() => {
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiClient.post).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+    expect(button).toBeDisabled();
+    await act(async () => creation.resolve(room));
+    expect(push).toHaveBeenCalledExactlyOnceWith("/chat?id=new-room");
+  });
+
   it("waits for the signed-in account before allowing creation", async () => {
     useAuthStore.setState({ user: null });
     render(<StartTeamRoom projectId="project-a" />, { wrapper });

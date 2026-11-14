@@ -196,6 +196,40 @@ describe("posting to a room", () => {
     ).resolves.toBeNull();
     expect(apiClient.post).not.toHaveBeenCalled();
   });
+
+  it("clears the selected reply without discarding the draft text", () => {
+    useChatStore.setState({ replyTo: { messageId: "parent", role: "user", excerpt: "Earlier" } });
+    const { result } = renderHook(() => useRoomDraft("room-a"), { wrapper });
+    act(() => result.current.setContent("Keep this draft"));
+    act(() => result.current.clearReply());
+    expect(result.current.reply).toBeNull();
+    expect(useChatStore.getState().replyTo).toBeNull();
+    expect(result.current.content).toBe("Keep this draft");
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("does not draw a refusal when the organization changes before the draft receives it", async () => {
+    const pending = deferred<RoomMessageResult>();
+    vi.mocked(apiClient.post).mockReturnValueOnce(pending.promise);
+    const { result } = renderHook(() => useRoomDraft("room-a"), { wrapper });
+    act(() => result.current.setContent("The original draft"));
+    let posting!: Promise<void>;
+    act(() => {
+      posting = result.current.submit();
+    });
+
+    await act(async () => {
+      pending.reject(new ApiError(403, "Access changed"));
+      // The transport's refusal is queued first; selection changes before the
+      // outer draft continuation receives that refusal.
+      queueMicrotask(() => useOrgStore.setState({ activeOrgId: "org-b" }));
+      await posting;
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.content).toBe("The original draft");
+    expect(apiClient.post).toHaveBeenCalledTimes(1);
+  });
 });
 
 it("refreshes authoritative posting access on a matching room event only", async () => {
@@ -244,6 +278,29 @@ it("refreshes a human message while preserving an unsaved streaming answer", asy
     expect(useChatStore.getState().messages).toEqual(expect.arrayContaining([live]));
     expect(useChatStore.getState().messages.map((message) => message.id)).toContain("teammate");
     expect(reread).toHaveBeenCalledWith("room-a");
+  } finally {
+    unmount();
+    vi.useRealTimers();
+  }
+});
+
+it.each([
+  { conversationId: "room-b", accountId: "me", organizationId: "org-a" },
+  { conversationId: "room-a", accountId: "other", organizationId: "org-a" },
+  { conversationId: "room-a", accountId: "me", organizationId: "org-b" },
+])("ignores a transcript event outside the selected identity: %j", async (event) => {
+  vi.useFakeTimers();
+  const reread = vi.fn(async () => {});
+  const { unmount } = renderHook(() => useRoomSync("room-a", reread), { wrapper });
+  try {
+    act(() => announceRoomChange(event));
+    await act(async () => vi.advanceTimersByTimeAsync(150));
+    expect(reread).not.toHaveBeenCalled();
+    act(() =>
+      announceRoomChange({ conversationId: "room-a", accountId: "me", organizationId: "org-a" }),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(150));
+    expect(reread).toHaveBeenCalledExactlyOnceWith("room-a");
   } finally {
     unmount();
     vi.useRealTimers();
@@ -312,4 +369,70 @@ it("cancels a queued request through its room endpoint", async () => {
     "/conversations/room-a/room-requests/request-a/cancel",
     {},
   );
+});
+
+describe("room cancellation ownership", () => {
+  it.each([null, "room-b"])(
+    "does not cancel through an unselected room %s",
+    async (conversationId) => {
+      const { result } = renderHook(() => useRoomActions(conversationId), { wrapper });
+      await act(async () => result.current.cancel("request-a"));
+      expect(apiClient.post).not.toHaveBeenCalled();
+    },
+  );
+
+  it("propagates a current refusal without announcing or invalidating a successful cancellation", async () => {
+    const failure = new ApiError(403, "Only its requester can cancel");
+    vi.mocked(apiClient.post).mockRejectedValueOnce(failure);
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const changed = vi.fn();
+    const unsubscribe = onRoomChange(changed);
+    const { result } = renderHook(() => useRoomActions("room-a"), { wrapper });
+    try {
+      await act(async () => expect(result.current.cancel("request-a")).rejects.toBe(failure));
+      expect(apiClient.post).toHaveBeenCalledExactlyOnceWith(
+        "/conversations/room-a/room-requests/request-a/cancel",
+        {},
+      );
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it.each(
+    (["resolve", "reject"] as const).flatMap((outcome) =>
+      (["conversation", "account", "organization", "unmount"] as const).map((boundary) => ({
+        outcome,
+        boundary,
+      })),
+    ),
+  )("drops a cancellation $outcome after the $boundary changes", async ({ outcome, boundary }) => {
+    const pending = deferred<unknown>();
+    vi.mocked(apiClient.post).mockReturnValueOnce(pending.promise);
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const changed = vi.fn();
+    const unsubscribe = onRoomChange(changed);
+    const { result, unmount } = renderHook(() => useRoomActions("room-a"), { wrapper });
+    const cancelling = result.current.cancel("request-a");
+    act(() => {
+      if (boundary === "conversation")
+        useConversationStore.setState({ currentConversationId: "room-b" });
+      if (boundary === "account") useAuthStore.setState({ user: user("other") });
+      if (boundary === "organization") useOrgStore.setState({ activeOrgId: "org-b" });
+      if (boundary === "unmount") unmount();
+    });
+    try {
+      await act(async () => {
+        if (outcome === "resolve") pending.resolve({ id: "request-a", status: "cancelled" });
+        else pending.reject(new ApiError(403, "Old room access changed"));
+        await expect(cancelling).resolves.toBeUndefined();
+      });
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+    } finally {
+      unsubscribe();
+    }
+  });
 });
