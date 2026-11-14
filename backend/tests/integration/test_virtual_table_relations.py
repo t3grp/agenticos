@@ -20,6 +20,7 @@ from app.schemas.virtual_table import (
     ColumnInput,
     RecordCreate,
     RecordFilter,
+    RecordLinkChange,
     RecordQuery,
     RecordUpdate,
     RowPolicyUpdate,
@@ -413,10 +414,11 @@ async def test_unresolved_values_keep_evidence_without_duplicating_it_on_later_w
         RecordUpdate(
             expected_revision=7,
             values={cid(source, "Name"): "Updated"},
+            link_changes={UUID(key): RecordLinkChange(add=[targets[0]])},
         ),
     )
     assert changed.record.revision == 8
-    assert changed.record.values[key] == [str(targets[1])]
+    assert changed.record.values[key] == [str(targets[1]), str(targets[0])]
     history = await db.scalar(
         select(VirtualTableRecordHistory).where(
             VirtualTableRecordHistory.record_id == stored.id,

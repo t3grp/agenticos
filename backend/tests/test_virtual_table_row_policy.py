@@ -661,6 +661,7 @@ LINK_COL = ColumnDef(
 def _row(values: dict, *, revision: int = 1, record_id: UUID | None = None):
     return SimpleNamespace(
         id=record_id or _uuid.uuid4(),
+        organization_id=ORG,
         table_id=TABLE_ID,
         external_id=None,
         schema_version=1,
@@ -706,6 +707,12 @@ def ops(monkeypatch):
     async def within_quota(*args, **kwargs):
         return None
 
+    async def canonical_baseline(db, *, record, column_ids):
+        return dict(record.values)
+
+    monkeypatch.setattr(records_module.relation_repo, "write_values", canonical_baseline)
+    monkeypatch.setattr(records_module.relation_repo, "definitions", AsyncMock(return_value=[]))
+    monkeypatch.setattr(records_module.relation_repo, "linked_ids", AsyncMock(return_value={}))
     monkeypatch.setattr(records_module, "source_for", source_for)
     monkeypatch.setattr(service, "_load_table", load)
     monkeypatch.setattr(service, "_columns", columns)

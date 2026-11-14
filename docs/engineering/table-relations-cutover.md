@@ -36,6 +36,13 @@ source revision keeps its original source snapshot and resolves destination
 visibility at read time. It must not combine today's edges with an older
 revision number.
 
+Authorized `contains` and `is_null` filters join these same edges to readable
+destination rows before pagination or counting. One-hop project membership
+uses canonical edges in SQL and the same validated field/cardinality rules for
+single-record checks. A quarantined legacy value therefore grants no inherited
+Read access and cannot make a link filter match. Explicit row Read/Write grants
+remain subject to the destination table's access boundary.
+
 The original JSON link representation remains available for immutable history,
 legacy evidence and rollback. Direct writes outside the repository boundary are
 unsupported after cutover. No per-user-table DDL runs on an API request.
@@ -66,11 +73,15 @@ destinations and one-to-one destination constraints are outside this version.
 
 ## Backfill and evidence
 
-Migration `0326_virtual_table_relations` follows the verified local head
-`0311_room_submissions`. PR #82 carries a different migration line ending at
-`0325_merge_t3_rooms_v173`; integration must rebase this unapplied revision or
-add the appropriate merge revision and verify one resulting head before merge.
-Never edit this migration after it has been applied to a deployed database.
+Migration `0326_virtual_table_relations` follows the verified head of this
+checkpoint's base, `0311_room_submissions`. The upstream sync has since landed
+on `t3` at `4f00be21`, including `0325_merge_t3_rooms_v173` and changes to the
+Tables implementation. This checkpoint deliberately does not import that broad
+update. Before activation, rebase the dependency stack onto the updated `t3`,
+reconcile this unapplied revision with the actual migration ancestry, and
+verify one resulting Alembic head. Merely renumbering this file without the
+new ancestry is insufficient. Never edit a migration after it has been applied
+to a deployed database.
 
 The migration takes a write barrier, copies current schema definitions including
 archived fields, and walks source records in 500-row keyset batches. It keeps
@@ -94,14 +105,15 @@ source table still removes that table's data.
 ## Deployment gate and rehearsal
 
 1. Review the dependency stack: #103 link-visibility hardening, #99 explicit row
-   Read/Write access and #100 atomic link deltas. Combine their tests with this
-   PR's canonical read path and use edges in authorized link-filter predicates.
-   Reconcile one-hop project membership against canonical edges on both SQL and
-   single-record policy paths. Also add a schema-definition storage gate to the
+   Read/Write access and #100 atomic link deltas. This checkpoint combines their
+   implementation with canonical read/write baselines and authorized edge
+   predicates; keep the combined permission regressions in the required CI
+   run. Finish the updated-`t3` rebase and migration reconciliation above.
+   Also add a schema-definition storage gate to the
    pre-existing table-create/schema-update paths: acquire storage before table
    locks and enforce before the table audit, since quota refusals audit in a
-   separate transaction. These are remaining stack integration gates, not
-   claims of complete cutover enforcement in this isolated PR.
+   separate transaction. The definition quota gate and upstream migration
+   integration remain unfinished; this draft is not ready for activation.
 2. On a disposable copy, rehearse the migration and inspect invalid definitions,
    evidence counts and storage growth. Check valid edge counts and ordered
    destinations against source values; resolve invalid definitions before
