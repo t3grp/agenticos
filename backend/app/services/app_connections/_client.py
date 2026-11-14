@@ -253,7 +253,7 @@ class ComposioClient:
 
     async def __aexit__(
         self,
-        exc_type: type[BaseException] | None,
+        _exc_type: type[BaseException] | None,
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
@@ -525,7 +525,7 @@ class ComposioCatalogClient:
 
     async def __aexit__(
         self,
-        exc_type: type[BaseException] | None,
+        _exc_type: type[BaseException] | None,
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
