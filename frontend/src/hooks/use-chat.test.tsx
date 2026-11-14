@@ -7579,6 +7579,85 @@ describe("explicit room thread stream scope", () => {
     expect(result.current.actionThreadRoots.approval).toBe("root-a");
   });
 
+  it.each(["root-a", null] as const)(
+    "keeps a restored %s run's HTTP answer and next approval in its recorded scope",
+    async (root) => {
+      const nextApproval = {
+        id: "approval-next",
+        tool_call_id: "tc-next",
+        tool_name: "send_email",
+        tool_args: { to: "team@example.test" },
+      };
+      get.mockImplementation(async (url: string) =>
+        url.endsWith("/parked")
+          ? [{ id: "approval-a", tool_call_id: "tc-1", tool_name: "send_email", tool_args: {} }]
+          : [],
+      );
+      post.mockImplementation(async (url: string) =>
+        url.endsWith("/resume")
+          ? {
+              status: "awaiting_approval",
+              output: "Continued the restored run.",
+              parked: [nextApproval],
+              steps: [
+                {
+                  tool_call_id: "tc-next",
+                  tool_name: "send_email",
+                  args: nextApproval.tool_args,
+                  result: null,
+                },
+              ],
+              settled: [{ tool_call_id: "tc-1", result: "Sent the first email." }],
+            }
+          : {},
+      );
+      useConversationStore.getState().setCurrentConversationId("c-1");
+      const { result } = renderHook(() => useChat({ conversationId: "c-1" }), { wrapper: decider });
+      // The tab last followed B to completion. A later parked run is learned
+      // from history, with none of its live frames replayed into this tab.
+      receive("model_request_start", scope("root-b"));
+      receive("text_delta", scope("root-b", { content: "Earlier B answer." }));
+      receive(
+        "message_saved",
+        scope("root-b", { message_id: "saved-b", run_id: "run-b", run_status: "completed" }),
+      );
+      receive("complete", scope("root-b"));
+      act(() =>
+        useChatStore
+          .getState()
+          .addMessage({ ...parkedTurn(), threadRootMessageId: root ?? undefined }),
+      );
+      await waitFor(() => expect(result.current.pendingApproval?.runId).toBe("r-1"));
+      expect(result.current.activeThreadRootId).toBe("root-b");
+      expect(result.current.actionThreadRoots.approval).toBe(root);
+
+      await act(async () => {
+        await result.current.sendResumeDecisions([{ type: "approve" }]);
+      });
+
+      expect(post).toHaveBeenCalledWith("/approvals/approval-a", { approved: true });
+      expect(post).toHaveBeenCalledWith("/runs/r-1/resume");
+      const continuation = useChatStore.getState().messages.at(-1);
+      expect(continuation).toMatchObject({
+        content: "Continued the restored run.",
+        isLocalContinuation: true,
+        conversationId: "c-1",
+        runId: "r-1",
+        threadRootMessageId: root ?? undefined,
+        toolCalls: [{ id: "tc-next", status: "awaiting_approval" }],
+      });
+      expect(result.current.pendingApproval).toMatchObject({
+        runId: "r-1",
+        messageId: continuation!.id,
+        actionRequests: [{ id: "approval-next", tool_call_id: "tc-next" }],
+      });
+      expect(result.current.actionThreadRoots.approval).toBe(root);
+      expect(
+        useChatStore.getState().messages.find((message) => message.id === "saved-b"),
+      ).toMatchObject({ content: "Earlier B answer.", threadRootMessageId: "root-b" });
+    },
+  );
+
   it("keeps a durable question with the thread where it parked after the next turn starts", () => {
     get.mockResolvedValue([]);
     useConversationStore.getState().setCurrentConversationId("c-1");

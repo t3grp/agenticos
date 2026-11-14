@@ -2653,10 +2653,9 @@ export function useChat(options: UseChatOptions = {}) {
           parts: buildAssistantParts(steps, resumed.output, continuation),
           timestamp: new Date(),
           conversationId: conversationId || undefined,
-          threadRootMessageId: runThreadRootsRef.current.has(runId)
-            ? (runThreadRootsRef.current.get(runId) ?? undefined)
-            : chatApi.getState().messages.find((message) => message.runId === runId)
-                ?.threadRootMessageId,
+          // Each resumable action records its run's scope before it is offered.
+          // A recorded null keeps a main-room continuation out of other threads.
+          threadRootMessageId: runThreadRootsRef.current.get(runId) ?? undefined,
           // The same run as the turn that parked, which is what draws the two as
           // one turn instead of as two agents answering the same question.
           runId,
