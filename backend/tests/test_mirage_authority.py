@@ -82,6 +82,27 @@ async def test_personal_account_keeps_the_issuing_tenant_and_current_client(monk
         identity.assert_awaited_once_with(SOURCE_ORG, kind=SecretKind.GOOGLE_OAUTH_APP)
 
 
+async def test_membership_lost_during_grant_resolution_never_reads_the_org_client(monkeypatch):
+    account = _account()
+    account.oauth_payload = _sealed(account, _payload())
+    membership = AsyncMock(side_effect=[MagicMock(), None])
+    active_member = AsyncMock(return_value=MagicMock())
+    identity = AsyncMock()
+    monkeypatch.setattr(mcp_connection, "decider_context", membership)
+    monkeypatch.setattr(member_repo, "get_active", active_member)
+    monkeypatch.setattr(
+        mcp_connection.OrganizationSecretService, "oauth_app_identity_for_org", identity
+    )
+    db = AsyncMock()
+
+    grant = await McpConnectionService(db).account_grant(account, organization_id=SOURCE_ORG)
+
+    assert grant is None
+    assert membership.await_count == 2
+    active_member.assert_awaited_once_with(db, organization_id=SOURCE_ORG, user_id=account.user_id)
+    identity.assert_not_awaited()
+
+
 async def test_personal_mount_does_not_list_an_account_issued_by_another_tenant(monkeypatch):
     ctx = AuthContext(user_id=uuid4(), organization_id=SOURCE_ORG, role="owner")
     own, other = _account(), _account(account_source_organization_id=uuid4())

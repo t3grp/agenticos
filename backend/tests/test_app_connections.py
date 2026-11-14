@@ -868,6 +868,25 @@ async def test_legacy_patch_keeps_labels_enable_and_narrowed_action_controls(har
     assert connection.allowed_tools == ["GMAIL_FETCH_EMAILS"]
 
 
+async def test_a_managed_app_label_change_preserves_the_authorization_generation(harness):
+    connection = row(harness.user_id, composio_status="ACTIVE", composio_account_id="ca_existing")
+    harness.store[connection.id] = connection
+    generation = connection.authorization_generation
+    allowed_tools = list(connection.allowed_tools)
+
+    updated = await legacy.McpConnectionService(harness.db).update(
+        user_id=harness.user_id,
+        connection_id=connection.id,
+        data=McpConnectionUpdate(label="Personal calendar"),
+    )
+
+    assert updated.label == "Personal calendar"
+    assert updated.authorization_generation == generation
+    assert updated.allowed_tools == allowed_tools
+    assert updated.is_enabled
+    assert not harness.provider.mock_calls
+
+
 @pytest.mark.parametrize("method", ["delete", "test"])
 async def test_legacy_delete_and_probe_use_managed_lifecycle(harness, method):
     attempt = await start(harness)
