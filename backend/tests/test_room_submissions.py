@@ -413,7 +413,7 @@ async def test_disabled_local_capability_does_not_block_a_cloud_agent() -> None:
             model_profile_id=uuid4(),
             capabilities=[
                 CapabilityBindingSpec(id="sandbox", config={"backend": "local"}, enabled=False),
-        CapabilityBindingSpec(id="coding_agent", config={"runs_on": "sandbox"}),
+                CapabilityBindingSpec(id="coding_agent", config={"runs_on": "sandbox"}),
             ],
         )
     )

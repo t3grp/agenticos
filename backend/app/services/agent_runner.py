@@ -7555,7 +7555,10 @@ class AgentRunnerService:
             )
         from app.repositories import room_submission as room_repo
 
-        if await room_repo.for_run(self.db, run_id, organization_id=ctx.organization_id) is not None:
+        if (
+            await room_repo.for_run(self.db, run_id, organization_id=ctx.organization_id)
+            is not None
+        ):
             raise BadRequestError(
                 message="Request another answer from the project room to keep its queue and shared context",
                 details={"run_id": run_id},

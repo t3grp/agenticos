@@ -1417,6 +1417,12 @@ class TestTheQueueNamesWhatItAsks:
         assert (item["tool_id"], item["capability_tool_id"]) == ("change_ticket", "update_record")
 
 
+@pytest.fixture
+def ordinary_run_without_room_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These HTTP contracts resume a regular run, outside a room delivery."""
+    monkeypatch.setattr("app.services.parked_runs.room_repo.for_run", AsyncMock(return_value=None))
+
+
 class TestResumeConveysAFailedContinuation:
     """A resume whose continuation raised is a 5xx that still names the run's status.
 
@@ -1428,7 +1434,10 @@ class TestResumeConveysAFailedContinuation:
     """
 
     async def test_a_failed_resume_answers_5xx_with_the_status_in_the_body(
-        self, as_role: ClientFactory, synthetic_roles: None
+        self,
+        as_role: ClientFactory,
+        synthetic_roles: None,
+        ordinary_run_without_room_request: None,
     ) -> None:
         run_id = uuid4()
 
@@ -1462,7 +1471,10 @@ class TestResumeAnswersWithWhatTheContinuationDid:
     """
 
     async def test_the_continuations_tool_calls_are_in_the_response(
-        self, as_role: ClientFactory, synthetic_roles: None
+        self,
+        as_role: ClientFactory,
+        synthetic_roles: None,
+        ordinary_run_without_room_request: None,
     ) -> None:
         run = MagicMock(
             id=uuid4(),
@@ -2314,7 +2326,10 @@ class TestAQuestionTheRunParkedOn:
         assert response.json()[0]["questions"][0]["header"] == "Tone"
 
     async def test_an_answer_continues_the_run_and_says_what_it_did(
-        self, as_role: ClientFactory, synthetic_roles: None
+        self,
+        as_role: ClientFactory,
+        synthetic_roles: None,
+        ordinary_run_without_room_request: None,
     ) -> None:
         run = self._run()
         service = MagicMock(

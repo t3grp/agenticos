@@ -55,7 +55,6 @@ from app.core.claude_subscription import (
     CLAUDE_SUBSCRIPTION_IMAGE_TYPES,
     CLAUDE_SUBSCRIPTION_PROVIDER,
     ClaudeSubscriptionImage,
-    ClaudeSubscriptionImageType,
     ClaudeSubscriptionModel,
     ClaudeSubscriptionOwner,
     ClaudeSubscriptionThinking,
@@ -169,11 +168,11 @@ class ClaudeSubscriptionModelClient(Model):
         requested_settings = merge_model_settings(self.settings, model_settings)
         maximum_tokens = _max_output_tokens(requested_settings)
         timeout = _request_timeout(requested_settings)
-        settings, parameters = self.prepare_request(model_settings, model_request_parameters)
-        if parameters.native_tools:
+        if model_request_parameters.native_tools:
             raise UserError(
                 "Claude subscription models support application tools, not provider-native tools"
             )
+        settings, parameters = self.prepare_request(model_settings, model_request_parameters)
         tools = _request_tools(settings, parameters)
         # Construct and validate the entire input before the first runtime call.
         # Unsupported attachments must never be silently dropped from a request.
@@ -326,11 +325,7 @@ def _text_content(
             and item.media_type in CLAUDE_SUBSCRIPTION_IMAGE_TYPES
             and item.data
         ):
-            images.append(
-                ClaudeSubscriptionImage(
-                    media_type=cast(ClaudeSubscriptionImageType, item.media_type), data=item.data
-                )
-            )
+            images.append(ClaudeSubscriptionImage(media_type=item.media_type, data=item.data))
             parts.append(f"[image:{len(images)}]")
         else:
             raise UserError(

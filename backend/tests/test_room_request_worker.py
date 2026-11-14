@@ -239,6 +239,31 @@ async def test_prepare_refusal_is_reported_without_auto_replay(work) -> None:
     work.execute.assert_awaited_once()
 
 
+@pytest.mark.security
+@pytest.mark.parametrize("settlement", ["deleted", "completed"])
+async def test_a_late_execution_error_cannot_reopen_or_overwrite_a_settled_request(
+    work, settlement
+) -> None:
+    async def execute(*_args, **_options):
+        if settlement == "deleted":
+            work.get.return_value = None
+        else:
+            work.row.status = "completed"
+        raise AuthorizationError(message="A late provider refusal")
+
+    work.execute.side_effect = execute
+
+    await module.run_request(work.job)
+    await module.run_request(work.job)
+
+    work.execute.assert_awaited_once()
+    module.room_repo.save.assert_awaited_once()  # Only the original running transition.
+    module.announce_request.assert_called_once()
+    work.service.queue.assert_not_awaited()
+    if settlement == "completed":
+        assert work.row.status == "completed" and work.row.error is None
+
+
 @pytest.mark.parametrize(
     "status,expected",
     [
@@ -293,7 +318,10 @@ async def test_reconciler_settles_resumes_and_queues_only_repository_selected_he
     work.service.queue.assert_awaited_once_with(ready)
 
 
-async def test_live_stream_uses_the_same_saved_prompt_and_sender(monkeypatch) -> None:
+@pytest.mark.parametrize("trace_available", [False, True])
+async def test_live_stream_uses_the_same_saved_prompt_and_sender(
+    monkeypatch, trace_available
+) -> None:
     # Exercise the real stream context separately from the worker fixture.
     row = SimpleNamespace(conversation_id=uuid4(), requester_id=uuid4(), agent_id=uuid4())
     message = MessageRead(
@@ -305,7 +333,7 @@ async def test_live_stream_uses_the_same_saved_prompt_and_sender(monkeypatch) ->
         created_at=datetime.now(UTC),
         sender=ChatPerson(user_id=row.requester_id, name="Sender"),
     )
-    trace = object()
+    trace = object() if trace_available else None
     begin, publish, end, begun = (
         AsyncMock(return_value=trace),
         AsyncMock(),
@@ -318,11 +346,16 @@ async def test_live_stream_uses_the_same_saved_prompt_and_sender(monkeypatch) ->
     monkeypatch.setattr(module.chat_room, "turn_begun", begun)
     async with module._live(row, message):
         pass
-    event = publish.call_args_list[0].args
-    assert event[1] == "turn_prompt" and event[2]["message_id"] == str(message.id)
-    assert event[2]["sender"]["user_id"] == str(row.requester_id)
-    assert publish.call_args_list[-1].args[1] == "complete"
-    end.assert_awaited_once_with(trace)
+    begun.assert_awaited_once_with(str(row.conversation_id), row.requester_id)
+    if trace_available:
+        event = publish.call_args_list[0].args
+        assert event[1] == "turn_prompt" and event[2]["message_id"] == str(message.id)
+        assert event[2]["sender"]["user_id"] == str(row.requester_id)
+        assert publish.call_args_list[-1].args[1] == "complete"
+        end.assert_awaited_once_with(trace)
+    else:
+        publish.assert_not_awaited()
+        end.assert_not_awaited()
 
 
 @pytest.mark.parametrize("visible", [False, True])

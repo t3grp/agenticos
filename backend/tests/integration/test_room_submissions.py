@@ -236,6 +236,60 @@ async def test_lost_membership_refuses_execution_and_queue_keeps_active_head_vis
     discard_deferred(db)
 
 
+async def test_reconciliation_selects_only_changed_active_runs_in_queue_order(
+    db: AsyncSession,
+) -> None:
+    room = await seed(db)
+    expected = []
+    for index, (request_status, run_status) in enumerate(
+        [
+            ("running", "completed"),
+            ("awaiting_approval", "running"),
+            ("awaiting_answer", "cancelled"),
+            ("running", "running"),
+            ("awaiting_approval", "awaiting_approval"),
+            ("awaiting_answer", "awaiting_answer"),
+            ("queued", "completed"),
+            ("completed", "running"),
+        ]
+    ):
+        result = await post(db, room, f"reconcile-{index}")
+        assert result.request is not None
+        row = await room_repo.get(db, result.request.id, organization_id=room.ctx.organization_id)
+        assert row is not None
+        run = await run_repo.create_run(
+            db,
+            organization_id=room.ctx.organization_id,
+            agent_id=room.agent.id,
+            agent_version_id=room.version.id,
+            user_id=room.user.id,
+            conversation_id=room.conversation.id,
+            surface="web",
+            model_label="test",
+            provider="test",
+            started_at=datetime.now(UTC),
+        )
+        run.status = run_status
+        row.run_id, row.status = run.id, request_status
+        await room_repo.save(db, row)
+        if index < 3:
+            expected.append((row.id, run.id))
+
+    without_run = await post(db, room, "no-run")
+    assert without_run.request is not None
+    row = await room_repo.get(db, without_run.request.id, organization_id=room.ctx.organization_id)
+    assert row is not None
+    row.status = "running"
+    await room_repo.save(db, row)
+
+    selected = await room_repo.unsettled_runs(db)
+    assert [(submission.id, run.id) for submission, run in selected] == expected
+    assert [submission.ordinal for submission, _ in selected] == sorted(
+        submission.ordinal for submission, _ in selected
+    )
+    discard_deferred(db)
+
+
 async def test_concurrent_http_retries_persist_one_message_and_one_request(
     db: AsyncSession, engine: AsyncEngine
 ) -> None:
