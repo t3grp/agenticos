@@ -1246,6 +1246,21 @@ class AgentRegistryService:
         """
         return await resolve_access(self.db, ctx, agent, Perm.AGENTS_RUN, resource_type=AGENT)
 
+    async def configuration_access(self, ctx: AuthContext, agent: Agent) -> tuple[bool, bool]:
+        """Whether this caller may edit and publish this agent in the console.
+
+        These are UI hints, resolved with the same scopes and explicit grants as
+        the write paths. Workflow-owned agents are configured by their owning
+        step, and archived agents must be restored before this editor offers work.
+        Every write still resolves access independently.
+        """
+        if agent.workflow_id is not None or agent.status == AgentStatus.ARCHIVED.value:
+            return False, False
+        return (
+            await resolve_access(self.db, ctx, agent, Perm.AGENTS_EDIT, resource_type=AGENT),
+            await resolve_access(self.db, ctx, agent, Perm.AGENTS_PUBLISH, resource_type=AGENT),
+        )
+
     async def _visible_scope(
         self, ctx: AuthContext, *, shared_with_me: bool
     ) -> tuple[bool, list[UUID]]:

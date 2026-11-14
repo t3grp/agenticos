@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Monitor } from "lucide-react";
+import { Globe, Monitor, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Ref } from "react";
 
@@ -9,8 +9,15 @@ import { useBrowserPanelStore } from "@/stores/browser-panel-store";
 import { useSourcesPanelStore } from "@/stores/sources-panel-store";
 
 /** Opening a workspace pane changes only this chat's UI state. */
-export function WorkspaceRail({ filesSlot }: { filesSlot: Ref<HTMLSpanElement> }) {
+export function WorkspaceRail({
+  filesSlot,
+  hasAgent = false,
+}: {
+  filesSlot: Ref<HTMLSpanElement>;
+  hasAgent?: boolean;
+}) {
   const t = useTranslations("chat.workspace");
+  const settings = useTranslations("chat.agentSettings");
   const surface = useBrowserPanelStore((state) => state.surface);
   const open = useBrowserPanelStore((state) => state.openSurface);
   const close = useBrowserPanelStore((state) => state.close);
@@ -46,6 +53,26 @@ export function WorkspaceRail({ filesSlot }: { filesSlot: Ref<HTMLSpanElement> }
         );
       })}
       <span ref={filesSlot} className="flex size-9 items-center justify-center" />
+      {hasAgent && (
+        <button
+          type="button"
+          data-tour="chat-agent-settings"
+          aria-label={settings("open")}
+          title={settings("open")}
+          aria-expanded={surface === "settings"}
+          onClick={() => {
+            closeSources();
+            if (surface === "settings") close();
+            else open("settings");
+          }}
+          className={cn(
+            "text-muted-foreground hover:text-foreground hover:bg-accent/60 flex size-9 items-center justify-center rounded-lg transition-colors",
+            surface === "settings" && "bg-foreground/[0.06] text-foreground",
+          )}
+        >
+          <Settings2 className="size-4" aria-hidden />
+        </button>
+      )}
     </nav>
   );
 }

@@ -323,6 +323,14 @@ class AgentDetail(AgentRead):
     """An agent plus the spec currently being edited."""
 
     draft_spec: AgentSpec
+    can_edit: bool = Field(
+        default=False,
+        description="Whether this caller may edit this agent's draft, including explicit resource grants.",
+    )
+    can_publish: bool = Field(
+        default=False,
+        description="Whether this caller may publish this agent, including explicit resource grants.",
+    )
 
 
 class AgentCeiling(BaseSchema):

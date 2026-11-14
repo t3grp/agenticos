@@ -1,5 +1,5 @@
 ---
-source_sha: "063cfd62059e"
+source_sha: "0f7c70175c8d"
 ---
 
 # Konsola { #the-console }
@@ -610,6 +610,20 @@ zamknięty panel pozostaje zamknięty także po nadejściu nowych wyników narz�
 wąskich ekranach wybrany panel zajmuje cały ekran. Po zakończeniu runu obraz ma
 oznaczenie **Ostatni widok (Last view)**; nie jest to pulpit na żywo. Poproś o nowy
 zrzut ekranu, aby odświeżyć widok komputera.
+
+**Ustawienia agenta.** Przycisk ustawień po prawej otwiera wersję roboczą wybranego
+agenta obok rozmowy. Zmień nazwę, krótki opis, instrukcje, domyślny model i włączone
+capabilities, a następnie wybierz **Save draft**. **Review and publish** sprawdza
+zapisaną wersję roboczą i otwiera istniejące potwierdzenie publikacji. Zmiana modelu
+domyślnego nie usuwa wyboru modelu w Chat controls; trwający run zachowuje swoją
+zamrożoną konfigurację.
+
+Edycja i publikowanie zależą od decyzji serwera dla tego agenta, w tym jawnych
+grantów. Chat tylko do odczytu pokazuje ustawienia bez przycisków edycji; agent
+należący do workflow jest nadal konfigurowany w swoim kroku. Złożenie panelu lub
+otwarcie Browser, Computer albo Files zachowuje niezapisane zmiany wybranego agenta.
+Zapisz je przed zmianą agenta lub opuszczeniem chatu. Zmiana wykonana gdzie indziej
+wstrzymuje zapis, aż wczytasz nową wersję lub wybierzesz zachowanie swoich zmian.
 
 **Oglądanie przeglądania.** [Przeglądarka](reference/capabilities.md#browser-automation)
 pojawia się we własnym panelu obok rozmowy. Karty odwiedzonych stron otwierają

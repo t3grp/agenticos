@@ -15,6 +15,7 @@ import type { PageComment } from "./browser-comment";
 import { BrowserPanel } from "./browser-panel";
 import { WorkspaceFiles } from "./workspace-files";
 import { WorkspaceRail } from "./workspace-rail";
+import { ChatAgentSettingsPanel } from "./agent-settings-panel";
 
 interface WorkspacePanelsProps {
   teamRoom: boolean;
@@ -128,7 +129,16 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
         onOpenChange={(shown) => (shown ? open("files") : close())}
         responsive
       />
-      <WorkspaceRail filesSlot={setFilesSlot} />
+      {props.agentId !== null && (
+        <ChatAgentSettingsPanel
+          key={`${account}:${organization}:${props.agentId}`}
+          agentId={props.agentId}
+          open={surface === "settings"}
+          readOnly={props.readOnly || props.loading}
+          onClose={close}
+        />
+      )}
+      <WorkspaceRail filesSlot={setFilesSlot} hasAgent={props.agentId !== null} />
     </>
   );
 }
