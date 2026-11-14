@@ -332,6 +332,7 @@ StreamingMessageRatingSvc = Annotated[MessageRatingService, Depends(get_streamin
 from app.services.rag_document import RAGDocumentService
 from app.services.rag_sync import RAGSyncService
 from app.services.sync_source import SyncSourceService
+from app.services.gdrive_picker import GoogleDrivePickerService
 
 
 def get_rag_document_service(db: DBSession) -> RAGDocumentService:
@@ -349,9 +350,14 @@ def get_sync_source_service(db: DBSession) -> SyncSourceService:
     return SyncSourceService(db)
 
 
+def get_google_drive_picker_service(db: DBSession) -> GoogleDrivePickerService:
+    return GoogleDrivePickerService(db)
+
+
 RAGDocumentSvc = Annotated[RAGDocumentService, Depends(get_rag_document_service)]
 RAGSyncSvc = Annotated[RAGSyncService, Depends(get_rag_sync_service)]
 SyncSourceSvc = Annotated[SyncSourceService, Depends(get_sync_source_service)]
+GoogleDrivePickerSvc = Annotated[GoogleDrivePickerService, Depends(get_google_drive_picker_service)]
 from app.services.knowledge_base import KnowledgeBaseService
 
 

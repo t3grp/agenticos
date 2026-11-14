@@ -3610,7 +3610,7 @@ class TestMcpConnectionService:
 
     @pytest.mark.anyio
     async def test_oauth_start_refuses_a_client_the_server_will_not_authenticate(
-        self, service, monkeypatch
+        self, service, repo, monkeypatch
     ):
         """`exchange_code` and `refresh_tokens` only put the secret in the form
         body. A server that does not allow that is refused at start, not after
@@ -3640,6 +3640,9 @@ class TestMcpConnectionService:
                 client_secret=SecretStr("operators-secret"),
             )
         assert "client_secret_basic" in str(excinfo.value)
+        repo.get_by_name.assert_awaited_once()
+        repo.create.assert_not_awaited()
+        repo.update.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_a_server_that_names_no_auth_method_takes_the_static_client(
@@ -6886,6 +6889,7 @@ class TestGoogleMcpUsesTheOrganizationsGoogleApp:
 
         assert "client_id=typed-client" in url
         org_app.assert_not_called()
+
 
 @pytest.mark.anyio
 @pytest.mark.security
