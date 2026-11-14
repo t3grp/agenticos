@@ -89,6 +89,12 @@ async def claim(
             raise AlreadyExistsError(
                 message="This turn lost its conversation admission and was stopped. Check its saved answer before trying again."
             )
+    except BaseExceptionGroup as group_error:
+        # TaskGroup wraps even a lone refusal from the turn. Keep it typed for
+        # the caller's error handling, but retain concurrent failures together.
+        if len(group_error.exceptions) == 1:
+            raise group_error.exceptions[0] from None
+        raise
     finally:
         try:
             with anyio.move_on_after(RELEASE_SECONDS, shield=True) as closing:

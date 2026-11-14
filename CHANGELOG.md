@@ -102,6 +102,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Return HTTP 403 when a room member tries to answer a question addressed to someone else, preserving the original requester check during conversation admission.
 - Preserve existing personal API and Claude subscription connections when
   deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
   the personal-model, Google Drive OAuth, and Composio migration branches without
