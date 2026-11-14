@@ -101,7 +101,7 @@ names no author is in the evidence column below.
 | defusedxml | 0.7.1 | PSF-2.0 | https://github.com/tiran/defusedxml | classifier |
 | deprecated | 1.3.1 | MIT | https://github.com/laurent-laporte-pro/deprecated | License field |
 | distro | 1.9.0 | Apache-2.0 | https://github.com/python-distro/distro | License field |
-| dnspython | 2.9.0 | ISC | https://github.com/rthalley/dnspython.git | License-Expression; no licence file, attributed to Bob Halley |
+| dnspython | 2.9.2 | ISC | https://github.com/rthalley/dnspython.git | License-Expression |
 | docstring-parser | 0.18.0 | MIT | https://github.com/rr-/docstring_parser | License field |
 | e2b | 2.59.0 | MIT | https://github.com/e2b-dev/e2b/tree/main/packages/python-sdk | License-Expression; no licence file, attributed to e2b |
 | e2b-dockerfile-utils | 0.1.1 | Apache-2.0 | https://github.com/e2b-dev/e2b/tree/main/packages/dockerfile-utils-python | License-Expression |
@@ -173,22 +173,22 @@ names no author is in the evidence column below.
 | openai | 3.39.0 | Apache-2.0 | https://github.com/openai/openai-python | License-Expression |
 | openapi-pydantic | 0.6.0 | MIT | https://github.com/mike-oakley/openapi-pydantic | License field |
 | openpyxl | 3.1.5 | MIT | https://foss.heptapod.net/openpyxl/openpyxl | License field |
-| opentelemetry-api | 1.45.1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
+| opentelemetry-api | 1.45.2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
 | opentelemetry-exporter-http-transport | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
 | opentelemetry-exporter-otlp-common | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
 | opentelemetry-exporter-otlp-proto-common | 1.45.1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
 | opentelemetry-exporter-otlp-proto-http | 1.45.1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
-| opentelemetry-instrumentation | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
-| opentelemetry-instrumentation-aiohttp-client | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
-| opentelemetry-instrumentation-asgi | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
-| opentelemetry-instrumentation-asyncpg | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
-| opentelemetry-instrumentation-fastapi | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
-| opentelemetry-instrumentation-httpx | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
-| opentelemetry-instrumentation-redis | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation-aiohttp-client | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation-asgi | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation-asyncpg | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation-fastapi | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation-httpx | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
+| opentelemetry-instrumentation-redis | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression |
 | opentelemetry-proto | 1.45.1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
-| opentelemetry-sdk | 1.45.1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
-| opentelemetry-semantic-conventions | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
-| opentelemetry-util-http | 0.66b1 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression; no licence file, attributed to OpenTelemetry Authors |
+| opentelemetry-sdk | 1.45.2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
+| opentelemetry-semantic-conventions | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python | License-Expression |
+| opentelemetry-util-http | 0.66b2 | Apache-2.0 | https://github.com/open-telemetry/opentelemetry-python-contrib | License-Expression; no licence file, attributed to OpenTelemetry Authors |
 | packaging | 26.3 | Apache-2.0 OR BSD-2-Clause | https://github.com/pypa/packaging | License-Expression |
 | pathable | 0.6.0 | Apache-2.0 | https://github.com/p1c2u/pathable | License field |
 | phonenumberslite | 9.0.41 | Apache-2.0 | https://github.com/daviddrysdale/python-phonenumbers | License-Expression |
@@ -246,7 +246,7 @@ names no author is in the evidence column below.
 | six | 1.17.0 | MIT | https://github.com/benjaminp/six | License field |
 | slack-sdk | 3.45.0 | MIT | https://github.com/slackapi/python-slack-sdk | License field |
 | sniffio | 1.3.1 | Apache-2.0 | https://github.com/python-trio/sniffio | licence file text |
-| soupsieve | 3.0.4 | MIT | https://github.com/facelessuser/soupsieve | License-Expression |
+| soupsieve | 4.0 | MIT | https://github.com/facelessuser/soupsieve | License-Expression |
 | sqlalchemy | 2.1.6 | MIT | https://github.com/sqlalchemy/sqlalchemy | License-Expression |
 | sse-starlette | 3.6.0 | BSD-3-Clause | https://github.com/sysid/sse-starlette | License-Expression |
 | starlette | 1.10.0 | BSD-3-Clause | https://github.com/Kludex/starlette | License-Expression |
@@ -590,7 +590,7 @@ names no author is in the evidence column below.
 | victory-vendor | 37.3.6 | MIT AND ISC | https://github.com/FormidableLabs/victory | package.json license; no licence file, attributed to Formidable |
 | voice-glow | 0.2.0 | MIT | https://github.com/Jakubantalik/Libraries.dev | package.json license |
 | yaml | 2.9.1 | ISC | github:eemeli/yaml | package.json license |
-| zod | 4.6.7 | MIT | https://github.com/colinhacks/zod | package.json license |
+| zod | 4.6.6 | MIT | https://github.com/colinhacks/zod | package.json license |
 | zustand | 4.5.7 | MIT | https://github.com/pmndrs/zustand | package.json license |
 | zustand | 5.0.15 | MIT | https://github.com/pmndrs/zustand | package.json license |
 | zwitch | 2.0.4 | MIT | https://github.com/wooorm/zwitch | package.json license |

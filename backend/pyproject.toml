@@ -108,7 +108,8 @@ dependencies = [
     # elements with soupsieve. Both already ship through `pydantic-ai-slim`'s
     # web-fetch extra; declared here so a release of it cannot drop them.
     "beautifulsoup4>=4.15.0",
-    "soupsieve>=2.9.2",
+    # GHSA-mmhr-3c5m-f64f: cache descendant matching for untrusted markup.
+    "soupsieve>=4.0.0",
     # Google Drive speaks plain REST through `app/services/rag/drive_api.py`;
     # `google-auth` only signs the service account's token, over `requests`.
     # `google-api-python-client` was 108 MB of discovery documents for four URLs.
@@ -906,6 +907,7 @@ include = [
     # The Drive REST client that replaced Google's discovery SDK: written here,
     # so held to the bar.
     "app/services/rag/drive_api.py",
+    "app/services/gdrive_picker.py",
     # What a chunk is, and therefore what a search can find. Written here rather
     # than imported (#158), and the rest of the pipeline can only retrieve what
     # this module decided to store - so it is held to the bar the code it
@@ -1116,6 +1118,11 @@ include = [
     "app/schemas/conversation_task.py",
     "app/repositories/conversation_task.py",
     "app/services/conversation_tasks.py",
+    "app/db/models/room_submission.py",
+    "app/schemas/room_submission.py",
+    "app/repositories/room_submission.py",
+    "app/services/room_submission.py",
+    "app/worker/tasks/room_tasks.py",
     # What a coding-agent task changed, read under the conversation's own reader
     # check (#2480).
     "app/db/models/coding_task_change.py",
@@ -1717,6 +1724,7 @@ include = [
     # The Drive REST client that replaced Google's discovery SDK: written here,
     # so held to the bar.
     "app/services/rag/drive_api.py",
+    "app/services/gdrive_picker.py",
     # What a chunk is, and therefore what a search can find. Written here rather
     # than imported (#158), and the rest of the pipeline can only retrieve what
     # this module decided to store - so it is held to the bar the code it
@@ -1927,6 +1935,11 @@ include = [
     "app/schemas/conversation_task.py",
     "app/repositories/conversation_task.py",
     "app/services/conversation_tasks.py",
+    "app/db/models/room_submission.py",
+    "app/schemas/room_submission.py",
+    "app/repositories/room_submission.py",
+    "app/services/room_submission.py",
+    "app/worker/tasks/room_tasks.py",
     # What a coding-agent task changed, read under the conversation's own reader
     # check (#2480).
     "app/db/models/coding_task_change.py",
@@ -2185,6 +2198,11 @@ exclude_also = [
 ]
 
 [tool.uv]
+constraint-dependencies = [
+    "dnspython>=2.9.2", # GHSA-vvf4-9x63-8xvv: bound WKS service bitmaps.
+    "opentelemetry-api>=1.45.2", # GHSA-mf5v-w3w3-f6cg: bound traceparent parsing.
+]
+
 # aiogram 3.31 caps pydantic below 2.14, and every pydantic 2.13 pins a
 # pydantic-core with no CPython 3.15 wheel, so without this the backend cannot
 # be installed on the Python it runs (#2229). aiogram raises that cap with each

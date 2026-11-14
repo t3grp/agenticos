@@ -5522,6 +5522,28 @@
         }
       }
     },
+    "harness": {
+      "harness": {
+        "title": "Komut satırı aracı",
+        "description": "Agent'ın işini yapan CLI oturumu: Claude Code, Codex, OpenCode, Gemini CLI veya Pi."
+      },
+      "access": {
+        "title": "Erişim",
+        "description": "Aracın Agent'ın sandbox'ında yapabilecekleri: yalnızca kod okumak ya da kodu değiştirmek ve komut çalıştırmak."
+      },
+      "model": {
+        "title": "Model",
+        "description": "Aracın kullandığı model: Claude Code için Claude, Codex için OpenAI, Gemini CLI için Gemini modeli; OpenCode veya Pi için ise bu sağlayıcılardan herhangi birinin modeli. Boş bırakılırsa aracın kendi varsayılan modeli kullanılır."
+      },
+      "base_url": {
+        "title": "Anthropic uyumlu endpoint",
+        "description": "Yalnızca Claude Code için: https://openrouter.ai/api gibi Anthropic API'siyle konuşan bir gateway. Vault'taki key bu gateway'e ait olmalı. Boşsa doğrudan Anthropic'e istek gönderilir."
+      },
+      "timeout_minutes": {
+        "title": "Prompt süre sınırı (dakika)",
+        "description": "Tek bir prompt'un durdurulmadan önce ne kadar çalışabileceği. Oturum açık kalır."
+      }
+    },
     "workflows": {
       "workflow_ids": {
         "title": "Başlatabileceği workflow'lar",
@@ -13157,8 +13179,7 @@
     "appsDescription": "Kullandığınız araçları Composio üzerinden bağlayın. Her uygulamayı seçin ve erişim izni vermeden önce istediği izinleri inceleyin.",
     "connectApps": "Uygulamaları bağla",
     "opensNewTab": "Yeni bir sekmede açılır. Hazır olduğunuzda buraya dönün.",
-    "skipHint": "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Bağlantılar → Uygulamalar bölümünden yapabilirsiniz.",
-    "continueToWorkspace": "Workspace alanına geç"
+    "skipHint": "Uygulama bağlamak zorunlu değildir. Bunu daha sonra Bağlantılar → Uygulamalar bölümünden yapabilirsiniz."
   },
   "onboardingTeam": {
     "step1Title": "Siz ve işiniz hakkında",
@@ -13183,7 +13204,6 @@
     "step4Title": "Önerilen yapay zeka ekibiniz",
     "step4Subtitle": "İşte ekip yapınız. Takım lideriniz görevleri koordine eder ve uzmanlara devreder.",
     "leadBadge": "Takım Lideri ve Orkestratör",
-    "leadOrchestrationHint": "Görevleri uzmanlara yönlendirir ve sizin için sonuçları birleştirir.",
     "starterPromptsHeader": "Örnek başlangıç soruları",
     "specialistsTitle": "Uzman agent'lar",
     "addSpecialist": "Uzman ekle",

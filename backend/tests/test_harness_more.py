@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
+from pydantic_ai.exceptions import UserError
 
 from app.agents.capabilities.coding_agent._harness import (
     Harness,
@@ -35,8 +36,7 @@ from app.agents.capabilities.harness._sessions import (
     session_path,
 )
 from app.agents.subagent_events import SubagentStarted
-from pydantic_ai.exceptions import UserError
-from tests.test_harness_capability import _Shell, _call, _ctx, _lines
+from tests.test_harness_capability import _call, _ctx, _lines, _Shell
 from tests.workspaces import document_workspace
 
 pytestmark = pytest.mark.anyio
@@ -46,9 +46,7 @@ def test_the_subagent_frame_names_the_same_five_harnesses() -> None:
     """`SubagentStarted.harness` spells the literal out - see its comment."""
     field = SubagentStarted.model_fields["harness"].annotation
     literals = [arg for arg in get_args(field) if get_args(arg)]
-    assert {value for literal in literals for value in get_args(literal)} == set(
-        get_args(Harness)
-    )
+    assert {value for literal in literals for value in get_args(literal)} == set(get_args(Harness))
 
 
 def _opencode_stream() -> list[dict[str, Any]]:
@@ -163,6 +161,7 @@ class TestInvocation:
         ]
         assert command.env["ANTHROPIC_API_KEY"] == "sk-x"
 
+    @pytest.mark.security
     def test_opencode_read_only_uses_the_plan_agent_not_a_permission_flag(self) -> None:
         command = invocation(
             "opencode",
@@ -293,13 +292,21 @@ class TestInvocation:
     def test_an_unknown_harness_is_refused_rather_than_run_as_codex(self) -> None:
         with pytest.raises(UserError, match="Unknown harness"):
             invocation(
-                "aider", "edit", "Fix it", api_key="sk-x", model=None, session_id=None, base_url=None
+                "aider",
+                "edit",
+                "Fix it",
+                api_key="sk-x",
+                model=None,
+                session_id=None,
+                base_url=None,
             )  # type: ignore[arg-type]
 
 
 class TestReports:
     def test_opencode_completes_when_it_said_something(self) -> None:
-        report, usage = opencode_report(_opencode_stream(), access="edit", model="claude-sonnet-5-5")
+        report, usage = opencode_report(
+            _opencode_stream(), access="edit", model="claude-sonnet-5-5"
+        )
         assert report.harness == "opencode"
         assert report.outcome == "completed"
         assert report.answer == "It adds."
@@ -314,17 +321,23 @@ class TestReports:
         assert spent.output_tokens == 120
 
     def test_opencode_read_only_reports_no_files_changed(self) -> None:
-        report, _ = opencode_report(_opencode_stream(), access="read_only", model="claude-sonnet-5-5")
+        report, _ = opencode_report(
+            _opencode_stream(), access="read_only", model="claude-sonnet-5-5"
+        )
         assert report.outcome == "completed"
         assert report.files_changed == []
 
     def test_opencode_with_no_text_is_a_session_that_stopped(self) -> None:
-        report, _ = opencode_report(_opencode_stream()[:3], access="edit", model="claude-sonnet-5-5")
+        report, _ = opencode_report(
+            _opencode_stream()[:3], access="edit", model="claude-sonnet-5-5"
+        )
         assert report.outcome == "failed"
         assert "stopped before it finished" in report.answer
 
     def test_gemini_completes_on_its_result_event(self) -> None:
-        report, usage = gemini_report(_gemini_stream(), access="read_only", model="gemini-2.5-flash")
+        report, usage = gemini_report(
+            _gemini_stream(), access="read_only", model="gemini-2.5-flash"
+        )
         assert report.harness == "gemini"
         assert report.outcome == "completed"
         assert report.answer == "Looking.\n\nDone."
@@ -334,7 +347,8 @@ class TestReports:
         assert spent.output_tokens == 5
 
     def test_gemini_with_no_result_event_fails_with_its_last_error(self) -> None:
-        events = _gemini_stream()[:-1] + [
+        events = [
+            *_gemini_stream()[:-1],
             {"type": "error", "message": "Quota exceeded."},
         ]
         report, _ = gemini_report(events, access="read_only", model="gemini-2.5-flash")
@@ -386,10 +400,13 @@ class TestLiveItems:
             {"type": "message", "message": {"role": "assistant", "content": "Done."}},
         )
         assert said == [Said("Done.")]
-        assert live_items(
-            "gemini",
-            {"type": "message", "message": {"role": "user", "content": "Do it."}},
-        ) == []
+        assert (
+            live_items(
+                "gemini",
+                {"type": "message", "message": {"role": "user", "content": "Do it."}},
+            )
+            == []
+        )
 
     def test_pi_opens_and_closes_a_tool_call_by_its_id(self) -> None:
         opened = live_items(
@@ -411,10 +428,13 @@ class TestLiveItems:
         assert closed[0].key == "c1" and closed[0].failed is False
 
     def test_pi_shows_only_the_final_message_not_its_deltas(self) -> None:
-        assert live_items(
-            "pi",
-            {"type": "message_update", "usage": {"input": 100, "output": 1}},
-        ) == []
+        assert (
+            live_items(
+                "pi",
+                {"type": "message_update", "usage": {"input": 100, "output": 1}},
+            )
+            == []
+        )
         assert live_items(
             "pi",
             {
@@ -431,7 +451,10 @@ class TestConfig:
             ("gemini", "google:gemini-2.5-flash"),
             ("pi", "openai:gpt-5.6-sol"),
         ):
-            assert HarnessConfig(harness=harness, access="read_only", model=model).access == "read_only"
+            assert (
+                HarnessConfig(harness=harness, access="read_only", model=model).access
+                == "read_only"
+            )
 
     def test_a_model_of_another_vendor_is_refused_for_the_new_harnesses(self) -> None:
         with pytest.raises(ValidationError, match="Gemini CLI runs Gemini models"):
@@ -515,9 +538,7 @@ class TestASession:
 
     async def test_start_opens_a_gemini_session(self) -> None:
         shell = _Shell(events=_lines(_gemini_stream()))
-        raw = await _call(
-            shell, "harness_start", harness="gemini", model="gemini-2.5-flash"
-        )
+        raw = await _call(shell, "harness_start", harness="gemini", model="gemini-2.5-flash")
         report = HarnessReport.model_validate_json(raw)
         assert report.outcome == "completed"
         assert report.session_id == "s-9"
@@ -535,3 +556,311 @@ class TestASession:
         report = HarnessReport.model_validate_json(raw)
         assert report.outcome == "completed"
         assert report.session_id == "u-1"
+
+
+class TestProtocolBoundaries:
+    @pytest.mark.parametrize("harness", ["opencode", "pi"])
+    def test_a_direct_default_model_invocation_does_not_invent_a_model_selector(
+        self,
+        harness,
+    ) -> None:
+        command = invocation(
+            harness,
+            "edit",
+            "Explain",
+            api_key="test-only",
+            model=None,
+            model_vendor=None,
+            session_id=None,
+            base_url=None,
+        )
+        assert "-m" not in command.argv
+        assert command.env == {
+            "ANTHROPIC_API_KEY": "test-only",
+            "OPENAI_API_KEY": "test-only",
+            "GEMINI_API_KEY": "test-only",
+            "GOOGLE_GENERATIVE_AI_API_KEY": "test-only",
+        }
+
+    @pytest.mark.parametrize("access", ["edit", "read_only"])
+    @pytest.mark.parametrize(
+        "error,answer",
+        [
+            ({"message": "Quota reached"}, "Quota reached"),
+            ({"text": "Key refused"}, "Key refused"),
+            ({}, "OpenCode stopped with an error."),
+        ],
+    )
+    def test_opencode_errors_win_over_partial_text_and_repeated_tool_frames(
+        self,
+        access,
+        error,
+        answer,
+    ) -> None:
+        edit = {
+            "type": "tool_use",
+            "part": {
+                "id": "edit-1",
+                "tool": "edit",
+                "state": {"input": {"filePath": "app.py"}},
+            },
+        }
+        report, usage = opencode_report(
+            [
+                edit,
+                edit,
+                {"type": "text", "part": {"text": ""}},
+                {"type": "step_finish", "part": {"tokens": {}}},
+                {"type": "text", "part": {"text": "Still working"}},
+                {"type": "error", "part": error},
+            ],
+            access=access,
+            model=None,
+        )
+        assert report.outcome == "failed"
+        assert report.answer == answer
+        assert len(report.steps) == 1
+        assert report.files_changed == (["app.py"] if access == "edit" else [])
+        assert usage.by_model == {}
+
+    @pytest.mark.parametrize(
+        "event,answer",
+        [
+            ({"role": "assistant", "message": "One"}, "One"),
+            (
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"text": "One"},
+                            {},
+                            17,
+                            {"text": "Two"},
+                        ],
+                    }
+                },
+                "One\n\nTwo",
+            ),
+            ({"message": {"role": "assistant", "text": "One"}}, "One"),
+            ({"role": "assistant", "text": "One"}, "One"),
+            ({"role": "assistant", "delta": "One"}, "One"),
+            ({"message": ""}, None),
+            ({"message": {"content": ""}}, None),
+            ({"message": {"content": []}}, None),
+            ({"message": {"content": [{}]}}, None),
+            ({"message": {}}, None),
+        ],
+    )
+    def test_gemini_accepts_text_shapes_without_echoing_user_or_empty_frames(
+        self,
+        event,
+        answer,
+    ) -> None:
+        event = {"type": "message", **event}
+        report, usage = gemini_report(
+            [
+                {"type": "message", "role": "user", "message": "private prompt"},
+                {"type": "tool_result", "is_error": True},
+                {"type": "heartbeat"},
+                event,
+                {"type": "result"},
+            ],
+            access="read_only",
+            model=None,
+        )
+        assert report.outcome == "completed"
+        assert report.answer == (answer or "(Gemini CLI sent no answer.)")
+        assert "private prompt" not in report.answer
+        assert live_items("gemini", event) == ([Said(answer)] if answer else [])
+        assert usage.by_model == {}
+
+    def test_gemini_keeps_failed_edits_once_when_a_run_ends_with_an_error(self) -> None:
+        edit = {"type": "tool_use", "tool": "write_file", "args": {"path": "app.py"}}
+        report, _ = gemini_report(
+            [
+                edit,
+                edit,
+                {"type": "tool_result", "is_error": True},
+                {"type": "error", "message": "Quota reached"},
+            ],
+            access="edit",
+            model=None,
+        )
+        assert report.outcome == "failed"
+        assert report.answer == "Quota reached"
+        assert report.files_changed == ["app.py"]
+        assert [step.failed for step in report.steps] == [False, True]
+
+    def test_gemini_without_a_result_or_error_is_still_unfinished(self) -> None:
+        report, _ = gemini_report(
+            [{"type": "init", "session_id": "s-1"}], access="read_only", model=None
+        )
+        assert report.outcome == "failed"
+        assert "stopped before it finished" in report.answer
+
+    @pytest.mark.parametrize(
+        "tokens",
+        [
+            {
+                "input_tokens": 4,
+                "cached_input_tokens": 2,
+                "cache_creation_input_tokens": 3,
+                "output_tokens": 5,
+            },
+            {"inputTokens": 4, "cache_read_tokens": 2, "cache_write_tokens": 3, "outputTokens": 5},
+            {"input": 4, "cacheRead": 2, "cacheWrite": 3, "output": 5},
+        ],
+    )
+    def test_gemini_token_spellings_keep_fresh_cached_and_output_counts(self, tokens) -> None:
+        _, usage = gemini_report(
+            [{"type": "result", "stats": tokens}], access="read_only", model=None
+        )
+        spent = usage.by_model["gemini"]
+        assert (
+            spent.input_tokens,
+            spent.cache_read_tokens,
+            spent.cache_write_tokens,
+            spent.output_tokens,
+        ) == (9, 2, 3, 5)
+
+    @pytest.mark.parametrize("field", ["models", "per_model"])
+    def test_gemini_books_only_real_per_model_statistics(self, field) -> None:
+        _, usage = gemini_report(
+            [
+                {
+                    "type": "result",
+                    "stats": {
+                        field: {
+                            "used-model": {"input_tokens": 4, "output_tokens": 5},
+                            "empty": {},
+                            "malformed": "not usage",
+                        }
+                    },
+                }
+            ],
+            access="read_only",
+            model="configured-model",
+        )
+        assert set(usage.by_model) == {"used-model"}
+        assert (
+            usage.by_model["used-model"].input_tokens,
+            usage.by_model["used-model"].output_tokens,
+        ) == (4, 5)
+
+    def test_gemini_non_token_statistics_do_not_invent_usage(self) -> None:
+        _, usage = gemini_report(
+            [{"type": "result", "stats": {"duration_ms": 20}}], access="read_only", model=None
+        )
+        assert usage.by_model == {}
+
+    @pytest.mark.parametrize("settled", [False, True])
+    def test_pi_uses_latest_usage_and_waits_for_settled_after_agent_end(self, settled) -> None:
+        events = [
+            {"type": "message_update", "usage": {"input": 4, "output": 1}},
+            {"type": "message_update", "usage": {"input": 9, "output": 5}},
+            {"type": "message_update", "usage": {}},
+            {"type": "message_end", "message": {"role": "user", "content": "private prompt"}},
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "thinking", "text": "private thinking"},
+                        17,
+                        {"type": "text", "text": ""},
+                        {"type": "text", "text": "Done."},
+                    ],
+                },
+            },
+            {"type": "agent_end"},
+        ]
+        if settled:
+            events.append({"type": "agent_settled", "aborted": False})
+        report, usage = pi_report(events, access="read_only", model=None)
+        assert report.outcome == ("completed" if settled else "failed")
+        assert "private" not in report.answer
+        if settled:
+            assert report.answer == "Done."
+        else:
+            assert "stopped before it finished" in report.answer
+        assert (usage.by_model["pi"].input_tokens, usage.by_model["pi"].output_tokens) == (9, 5)
+
+    @pytest.mark.parametrize("access", ["edit", "read_only"])
+    @pytest.mark.parametrize(
+        "failure,answer",
+        [
+            (
+                {
+                    "type": "message_end",
+                    "message": {
+                        "role": "assistant",
+                        "content": "Rate limited",
+                        "stopReason": "error",
+                    },
+                },
+                "Rate limited",
+            ),
+            (
+                {
+                    "type": "message_end",
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "stopReason": "aborted",
+                    },
+                },
+                "Pi stopped with an error.",
+            ),
+            (
+                {"type": "auto_retry_end", "success": False, "finalError": "Retries exhausted"},
+                "Retries exhausted",
+            ),
+            ({"type": "auto_retry_end", "success": False}, "Pi stopped with an error."),
+        ],
+    )
+    def test_pi_keeps_the_failure_and_deduplicates_repeated_tool_ids(
+        self,
+        access,
+        failure,
+        answer,
+    ) -> None:
+        edit = {
+            "type": "tool_execution_start",
+            "toolCallId": "c-1",
+            "toolName": "edit",
+            "args": {"path": "app.py"},
+        }
+        report, _ = pi_report(
+            [
+                edit,
+                edit,
+                {"type": "tool_execution_end", "toolCallId": "unknown", "isError": True},
+                {"type": "tool_execution_end", "toolCallId": "c-1", "isError": True},
+                {"type": "auto_retry_end", "success": True},
+                failure,
+                {"type": "agent_settled", "aborted": False},
+            ],
+            access=access,
+            model=None,
+        )
+        assert (report.outcome, report.answer) == ("failed", answer)
+        assert len(report.steps) == 1 and report.steps[0].failed
+        assert report.files_changed == (["app.py"] if access == "edit" else [])
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            {"role": "user", "content": "private prompt"},
+            {"role": "assistant", "content": []},
+            {"role": "assistant", "content": [{"type": "text", "text": ""}]},
+            {"role": "assistant", "content": None},
+        ],
+    )
+    def test_pi_does_not_display_non_assistant_or_empty_final_messages(self, message) -> None:
+        event = {"type": "message_end", "message": message}
+        assert live_items("pi", event) == []
+        report, _ = pi_report(
+            [event, {"type": "agent_settled", "aborted": False}], access="read_only", model=None
+        )
+        assert report.outcome == "completed"
+        assert report.answer == "(Pi sent no answer.)"

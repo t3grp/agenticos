@@ -795,6 +795,35 @@ jobs:
         timeout-minutes: 10
         working-directory: frontend
 
+      - name: Start the agent worker
+        # The system pool reconciles a finished parked run and releases the
+        # next queued room request; the agent pool alone cannot advance it.
+        timeout-minutes: 3
+        working-directory: backend
+        env:
+          WORKER_HEALTH_FILE: ${{ runner.temp }}/worker-alive
+        run: |
+          rm -f "$WORKER_HEALTH_FILE"
+          .venv/bin/python -m app.worker --pools agent,system \
+            > "$RUNNER_TEMP/worker.log" 2>&1 &
+          worker_pid=$!
+          echo "$worker_pid" > "$RUNNER_TEMP/worker.pid"
+          for attempt in $(seq 1 120); do
+            if ! kill -0 "$worker_pid" 2>/dev/null; then
+              echo "worker exited during startup"
+              cat "$RUNNER_TEMP/worker.log"
+              exit 1
+            fi
+            if [ -f "$WORKER_HEALTH_FILE" ] && .venv/bin/python -c 'import os, sys, time; sys.exit(time.time() - os.stat(os.environ["WORKER_HEALTH_FILE"]).st_mtime > 90)'; then
+              echo "worker healthy after ${attempt}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "worker did not become healthy"
+          cat "$RUNNER_TEMP/worker.log"
+          exit 1
+
       - name: Run E2E tests
         # `webServer` in playwright.config.ts starts `next start` and waits for
         # it. This job used to run with no frontend at all: `webServer` was
@@ -808,6 +837,21 @@ jobs:
           # Playwright starts beside the app - so the one spec covering the seams
           # runs on every push instead of skipping itself in every environment
           # that had no key, which was all of them including this one.
+
+      - name: Stop the agent worker
+        if: always()
+        timeout-minutes: 2
+        run: |
+          if [ ! -f "$RUNNER_TEMP/worker.pid" ]; then exit 0; fi
+          worker_pid=$(cat "$RUNNER_TEMP/worker.pid")
+          if ! kill -TERM "$worker_pid" 2>/dev/null; then exit 0; fi
+          # Match compose's 45s grace period, longer than the worker's 30s drain.
+          for attempt in $(seq 1 45); do
+            if ! kill -0 "$worker_pid" 2>/dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "worker did not stop within 45s; forcing shutdown"
+          kill -KILL "$worker_pid" 2>/dev/null || true
 
       - name: Upload the Playwright report when a journey fails
         if: failure()
@@ -838,6 +882,15 @@ jobs:
         # Half of an E2E failure is on the other side of the proxy.
         if: failure()
         run: cat "$RUNNER_TEMP/backend.log"
+
+      - name: Upload the worker log when a journey fails
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: worker-log-${{ matrix.shard }}
+          path: ${{ runner.temp }}/worker.log
+          retention-days: 7
+          if-no-files-found: ignore
 
   e2e:
     needs: [changes, build-frontend, e2e-shards]

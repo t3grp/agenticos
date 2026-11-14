@@ -44,8 +44,10 @@ The key is shown **once**, in the response that creates it. Only a SHA-256 of it
 is stored, and it never appears in a log line, an audit entry or an error body.
 Lists show its prefix (`aos_1a2b3c4d`), which is also how an audit entry names
 the key that acted — every entry recorded during a key-authenticated request
-carries `via_api_key` in its details. A key expires 90 days after it is issued
-by default; a caller may choose an earlier expiry, but cannot set one more than
+carries `via_api_key` in its details.
+
+A key expires 90 days after it is issued by default; a caller may choose an
+earlier expiry, but cannot set one more than
 90 days away. Rotating a legacy key with a later expiry caps its replacement at
 90 days. Revoking it
 (`DELETE /api/v1/api-keys/{id}`) takes effect on its next request. Rotating it
@@ -157,8 +159,10 @@ stops at a challenge instead of a session: the response carries
 `mfa_required`, a `mfa_token` and `expires_in` (five minutes), and no
 cookies are set. The client completes it at `POST /api/v1/auth/mfa/verify`
 with the token and the code, and the answer is the token pair - plus the
-magic link's destination, when the challenge came from one. The challenge
-token proves the password step and nothing else: it cannot call the API as
+magic link's destination, when the challenge came from one.
+
+The challenge token proves the password step and nothing else: it cannot call
+the API as
 a session, and a password change since it was minted invalidates it. A
 recovery code completes the step too, and is spent doing so; the spend is
 audited, so the account's owner can see a code was used.

@@ -703,7 +703,8 @@ class RecordOperations(Operations):
         )
         if table is None:
             raise NotFoundError(message="Table not found", details={"table_id": table_id})
-        extra = await view_expression(self.db, ctx, table, columns)
+        extra = await view_expression(self.db, ctx, table, columns, deadline=deadline)
+        await deadline.arm(self.db)
         measured = await virtual_table_repo.list_record_sizes(
             self.db,
             table_id=table_id,

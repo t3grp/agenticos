@@ -10,7 +10,7 @@ import asyncio
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
-from contextlib import nullcontext
+from contextlib import asynccontextmanager, nullcontext
 from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -86,6 +86,7 @@ from app.core.permissions import AuthContext, OrgRoleName, Perm
 from app.db.models.agent_run import ApprovalStatus, RunStatus, RunSurface
 from app.db.vector_tables import VectorScope
 from app.repositories.group import CappedGroup
+from app.services import agent_runner as runner_module
 from app.services.agent_runner import (
     ASIDE_PREFIX,
     AgentRunnerService,
@@ -9883,3 +9884,315 @@ def test_the_parked_payload_carries_the_history_revision():
     _, _, _, state = _classify_output(result, parked={"approval-1": "send-1"}, history_revision=7)
     assert state is not None
     assert state.model_dump(mode="json")["guardrail_revision"] == 7
+
+
+class TestRoomAndSecretBoundaries:
+    pytestmark = [pytest.mark.anyio, pytest.mark.security]
+
+    @staticmethod
+    def _secret_state():
+        from app.agents.secret_request import SECRET_REQUEST_TOOL
+
+        messages = [
+            ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        SECRET_REQUEST_TOOL,
+                        {"secret_name": "crm_key", "what_for": "Read the requested contacts"},
+                        tool_call_id="secret-1",
+                    )
+                ]
+            )
+        ]
+        return {
+            "messages": ModelMessagesTypeAdapter.dump_python(messages, mode="json"),
+            "tool_call_ids": {},
+            "secret_requests": ["secret-1"],
+        }
+
+    def test_absent_and_mixed_legacy_question_references_remain_readable(self, caplog):
+        state = _asked_state()
+        state["questions"] = ["ask-1", None, 7]
+
+        assert runner_module.parked_question_items(None) == []
+        assert runner_module.parked_secret_request_items(None) == []
+        [question] = runner_module.parked_question_items(state)
+
+        assert question.tool_call_id == "ask-1"
+        assert question.questions[0].header == "Tone"
+        assert state["questions"] == ["ask-1", None, 7]
+        [warning] = [
+            record
+            for record in caplog.records
+            if record.message == "run_paused_questions_malformed"
+        ]
+        assert warning.invalid_count == 2
+
+    async def test_published_runs_refuse_skill_overrides_before_assembly(self):
+        service = AgentRunnerService(_db())
+        agent = MagicMock(id=uuid.uuid4())
+        spec = AgentSpec(name="Published support")
+        with (
+            patch.object(
+                service.registry,
+                "get_runnable_spec",
+                AsyncMock(return_value=(agent, spec, uuid.uuid4())),
+            ),
+            patch.object(service, "_assemble", AsyncMock()) as assemble,
+            pytest.raises(BadRequestError, match="only allowed on test runs"),
+        ):
+            await service.prepare(
+                _ctx(), agent.id, skill_content_overrides={uuid.uuid4(): "Unpublished replacement"}
+            )
+
+        assemble.assert_not_awaited()
+
+    @pytest.mark.parametrize("capability", ["council", "sol_loop"])
+    async def test_reviewer_resolution_deduplicates_a_repeated_discovery_result(
+        self, capability, monkeypatch
+    ):
+        profile = uuid.uuid4()
+        spec = AgentSpec(name="Reviewed work")
+        # Fault injection at the discovery boundary: repeated references must
+        # not reopen a credential or resolve the same model more than once.
+        monkeypatch.setattr(
+            runner_module, f"_{capability}_profile_ids", lambda _spec: [profile, profile]
+        )
+        ctx = _ctx()
+        service = AgentRunnerService(_db())
+        resolved = MagicMock()
+        service.models.resolve = AsyncMock(return_value=resolved)
+
+        models = await getattr(service, f"_{capability}_models")(ctx, spec)
+
+        assert models == {profile: resolved}
+        service.models.resolve.assert_awaited_once_with(ctx, profile_id=profile)
+
+    async def test_secret_request_rows_store_only_the_ask_and_skip_missing_calls(self):
+        service = AgentRunnerService(_db())
+        prepared = _prepared()
+        prepared.run.organization_id = uuid.uuid4()
+        prepared.run.user_id = uuid.uuid4()
+        state = PausedRunState.model_validate(self._secret_state())
+        state.secret_requests.append("missing-call")
+
+        with patch.object(runner_module.secret_request_repo, "create", AsyncMock()) as create:
+            await service._write_secret_requests(prepared, state, include_pending=True)
+
+        create.assert_awaited_once_with(
+            service.db,
+            organization_id=prepared.run.organization_id,
+            run_id=prepared.run.id,
+            agent_id=prepared.run.agent_id,
+            tool_call_id="secret-1",
+            secret_name="crm_key",
+            kind="api_key",
+            what_for="Read the requested contacts",
+            requested_by_user_id=prepared.run.user_id,
+        )
+
+    @pytest.mark.parametrize(
+        "mode", ["own-session", "completed", "no-state", "other-person", "key"]
+    )
+    async def test_secret_cards_are_visible_only_to_the_waiting_person(self, mode):
+        ctx = _ctx()
+        run = _parked_run(
+            user_id=ctx.user_id,
+            status=RunStatus.AWAITING_ANSWER.value,
+            paused_state=self._secret_state(),
+        )
+        if mode == "completed":
+            run.status = RunStatus.COMPLETED.value
+        elif mode == "no-state":
+            run.paused_state = None
+        elif mode == "other-person":
+            run.user_id = uuid.uuid4()
+        elif mode == "key":
+            ctx = AuthContext(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                role=OrgRoleName.OWNER,
+                api_key_id=uuid.uuid4(),
+                key_scopes=frozenset({Perm.AGENTS_RUN}),
+            )
+
+        items = await AgentRunnerService(_db()).parked_secret_requests(ctx, run)
+
+        if mode == "own-session":
+            [item] = items
+            assert item.tool_call_id == "secret-1"
+            assert item.secret_name == "crm_key"
+            assert item.what_for == "Read the requested contacts"
+        else:
+            assert items == []
+
+    async def test_an_unanswered_secret_cannot_release_a_waiting_run(self):
+        service = AgentRunnerService(_db())
+        run = _parked_run(status=RunStatus.AWAITING_ANSWER.value, paused_state=self._secret_state())
+        with (
+            patch.object(
+                runner_module.agent_run_repo, "claim_parked_run", AsyncMock(return_value=run)
+            ),
+            patch.object(service, "_decisions", AsyncMock()) as decisions,
+            patch.object(service, "_assemble", AsyncMock()) as assemble,
+            pytest.raises(BadRequestError, match="waiting for a secret"),
+        ):
+            await service.resume(_ctx(), run.id)
+
+        decisions.assert_not_awaited()
+        assemble.assert_not_awaited()
+        assert run.status == RunStatus.AWAITING_ANSWER.value
+
+    @staticmethod
+    async def _resume_at_boundary(service, ctx, run, *, check=None, drive=None):
+        prepared = _prepared(conversation_id=run.conversation_id)
+        prepared.run = run
+
+        @asynccontextmanager
+        async def stream(_prepared, **_options):
+            yield None
+
+        with (
+            patch.object(
+                runner_module.agent_run_repo, "claim_parked_run", AsyncMock(return_value=run)
+            ),
+            patch.object(
+                runner_module.agent_run_repo, "list_approvals_for_run", AsyncMock(return_value=[])
+            ),
+            patch.object(runner_module.agent_run_repo, "mark_running", AsyncMock()),
+            patch.object(
+                service,
+                "_parked_spec",
+                AsyncMock(return_value=(MagicMock(), AgentSpec(name="Room responder"))),
+            ) as spec,
+            patch.object(service, "_assemble", AsyncMock(return_value=prepared)) as assemble,
+            patch.object(service, "_resume_stream", stream),
+            patch.object(
+                service,
+                "_run",
+                AsyncMock(side_effect=drive, return_value=SimpleNamespace(message_id=None)),
+            ) as execute,
+        ):
+            await service.resume(ctx, run.id, check_model_request=check)
+        return spec, assemble, execute
+
+    @pytest.mark.parametrize("answered", [False, True])
+    async def test_secret_results_resume_with_safe_acknowledgement_or_decline(self, answered):
+        from app.agents.secret_request import SECRET_DECLINED_RESULT, secret_request_result
+
+        state = self._secret_state()
+        acknowledgement = secret_request_result("crm_key", "9c2f")
+        if answered:
+            state["secret_results"] = {"secret-1": acknowledgement}
+        run = _parked_run(
+            user_id=uuid.uuid4(),
+            status=RunStatus.AWAITING_ANSWER.value
+            if answered
+            else RunStatus.AWAITING_APPROVAL.value,
+            paused_state=state,
+        )
+
+        _, _, execute = await self._resume_at_boundary(AgentRunnerService(_db()), _ctx(), run)
+
+        results = execute.await_args.kwargs["deferred_tool_results"]
+        assert results.calls == {
+            "secret-1": acknowledgement if answered else SECRET_DECLINED_RESULT
+        }
+
+    @pytest.mark.parametrize("prior_check", [False, True])
+    async def test_room_resume_uses_requester_and_rechecks_authority_before_each_model_call(
+        self, prior_check
+    ):
+        service = AgentRunnerService(_db())
+        ctx = _ctx()
+        requester = AuthContext(
+            user_id=uuid.uuid4(), organization_id=ctx.organization_id, role=OrgRoleName.MEMBER
+        )
+        conversation = uuid.uuid4()
+        run = _parked_run(
+            conversation_id=conversation,
+            user_id=requester.user_id,
+            paused_state={
+                "messages": [],
+                "tool_call_ids": {},
+                "admitted_as": {"audience_room_key": f"room:project:{conversation}"},
+            },
+        )
+        order = []
+
+        async def authority(_self, run_id, org_id, *, required):
+            assert (run_id, org_id, required) == (run.id, ctx.organization_id, True)
+            order.append("room")
+            return requester
+
+        async def original_check(_db):
+            order.append("prior")
+
+        async def drive(_prepared, **options):
+            for _ in range(2):
+                await options["check_model_request"](service.db)
+            return SimpleNamespace(message_id=None)
+
+        with patch(
+            "app.services.room_submission.RoomSubmissionService.resume_authority", authority
+        ):
+            spec, assemble, _ = await self._resume_at_boundary(
+                service, ctx, run, check=original_check if prior_check else None, drive=drive
+            )
+
+        assert spec.await_args.args[0] is requester
+        assert assemble.await_args.args[0] is requester
+        assert order == (
+            ["room", "room", "prior", "room", "prior"] if prior_check else ["room"] * 3
+        )
+
+    async def test_revoked_room_authority_stops_before_prior_checks_or_model_execution(self):
+        service = AgentRunnerService(_db())
+        ctx = _ctx()
+        conversation = uuid.uuid4()
+        run = _parked_run(
+            user_id=ctx.user_id,
+            conversation_id=conversation,
+            paused_state={
+                "messages": [],
+                "tool_call_ids": {},
+                "admitted_as": {"audience_room_key": f"room:project:{conversation}"},
+            },
+        )
+        authority = AsyncMock(
+            side_effect=[ctx, AuthorizationError(message="Room membership was revoked")]
+        )
+        prior = AsyncMock()
+        model = AsyncMock()
+
+        async def drive(_prepared, **options):
+            await options["check_model_request"](service.db)
+            await model()
+            return SimpleNamespace(message_id=None)
+
+        with (
+            patch("app.services.room_submission.RoomSubmissionService.resume_authority", authority),
+            pytest.raises(RunExecutionError) as raised,
+        ):
+            await self._resume_at_boundary(service, ctx, run, check=prior, drive=drive)
+
+        assert isinstance(raised.value.__cause__, AuthorizationError)
+        assert authority.await_count == 2
+        prior.assert_not_awaited()
+        model.assert_not_awaited()
+
+    @pytest.mark.parametrize(
+        "served,expected", [(None, "earlier-model"), ("current-model", "current-model")]
+    )
+    async def test_terminal_accounting_keeps_or_updates_the_actual_serving_model(
+        self, served, expected
+    ):
+        prepared = _prepared()
+        prepared.run.serving_model = "earlier-model"
+        with (
+            patch.object(runner_module, "resolve_fallback_use", return_value=(False, served)),
+            patch.object(runner_module.agent_run_repo, "finish_run", AsyncMock()) as finish,
+        ):
+            await AgentRunnerService(_db()).finish(prepared, status=RunStatus.COMPLETED)
+
+        assert finish.await_args.kwargs["serving_model"] == expected

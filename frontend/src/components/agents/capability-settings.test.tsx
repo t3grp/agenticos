@@ -12,8 +12,25 @@ import type { CapabilityBindingSpec, CapabilityCatalogEntry } from "@/types/agen
 import type { Secret, SecretRequirement } from "@/types/secrets";
 import en from "../../../messages/en.json";
 
+const councilMembers = vi.hoisted(() => [
+  { name: "Reviewer A", provider: "anthropic", model_profile_id: "profile-a" },
+  { name: "Reviewer B", provider: "openai", model_profile_id: "profile-b" },
+  { name: "Reviewer C", provider: "openrouter", model_profile_id: "profile-c" },
+]);
 vi.mock("./council-members-field", () => ({
-  CouncilMembersField: () => <div role="group" aria-label="Council member editor" />,
+  CouncilMembersField: ({
+    onChange,
+    disabled,
+  }: {
+    onChange: (members: typeof councilMembers) => void;
+    disabled?: boolean;
+  }) => (
+    <div role="group" aria-label="Council member editor">
+      <button type="button" disabled={disabled} onClick={() => onChange(councilMembers)}>
+        Save council members
+      </button>
+    </div>
+  ),
 }));
 
 /** The English catalog, so the suites below keep asserting the words on screen. */
@@ -239,6 +256,21 @@ describe("CapabilitySettings", () => {
 
     expect(screen.getByRole("group", { name: "Council member editor" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Council members" })).not.toBeInTheDocument();
+  });
+
+  it("reports council member edits through the existing binding without changing its approval", async () => {
+    const onChange = vi.fn();
+    const selected = binding("council", {
+      approval: "required",
+      tool_approval: { run_council_review: "required" },
+      config: { members: [] },
+    });
+    render(<CapabilitySettings catalog={[COUNCIL]} selected={[selected]} onChange={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: "Save council members" }));
+    expect(onChange).toHaveBeenCalledWith({
+      ...selected,
+      config: { members: councilMembers },
+    });
   });
 
   it("offers an approval choice for a read-only capability too", async () => {
