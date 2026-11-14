@@ -22,11 +22,7 @@ def test_webhook_config_scopes_ci_to_t3_and_same_repository_pr_actions() -> None
         "repo": "t3grp/agenticos",
         "branches": ["t3"],
         "pullRequests": True,
-        "githubApp": {
-            "appIdSecret": "AGENTICOS_ARMADA_APP_ID",
-            "installationIdSecret": "AGENTICOS_ARMADA_APP_INSTALLATION_ID",
-            "privateKeySecret": "AGENTICOS_ARMADA_APP_PRIVATE_KEY",
-        },
+        "tokenSecret": "AGENTICOS_ARMADA_CI_GITHUB_TOKEN",
         "secret": "s" * 32,
     }
 
@@ -36,7 +32,7 @@ def test_signing_secret_must_meet_runtime_minimum() -> None:
         setup.webhook_config("too-short")
 
 
-def test_setup_stores_named_app_secrets_then_configures_armada_without_calling_github() -> None:
+def test_setup_stores_named_pat_then_configures_armada_without_calling_github() -> None:
     requests: list[Request] = []
 
     class Response:
@@ -51,19 +47,15 @@ def test_setup_stores_named_app_secrets_then_configures_armada_without_calling_g
         requests.append(request)
         return Response()
 
-    setup.configure_runtime(
-        "armada.example", "armada-bearer", "123", "456", "private-key-value", "signing-value" * 3, capture
-    )
+    setup.configure_runtime("armada.example", "armada-bearer", "pat-value", "signing-value" * 3, capture)
 
     assert [(request.method, request.full_url) for request in requests] == [
-        ("PUT", "https://armada.example/secrets/AGENTICOS_ARMADA_APP_ID"),
-        ("PUT", "https://armada.example/secrets/AGENTICOS_ARMADA_APP_INSTALLATION_ID"),
-        ("PUT", "https://armada.example/secrets/AGENTICOS_ARMADA_APP_PRIVATE_KEY"),
+        ("PUT", "https://armada.example/secrets/AGENTICOS_ARMADA_CI_GITHUB_TOKEN"),
         ("POST", "https://armada.example/webhooks/agenticos"),
     ]
-    assert [request.data for request in requests[:3]] == [b"123", b"456", b"private-key-value"]
-    assert all(value not in requests[3].data for value in [b"123", b"456", b"private-key-value"])
-    assert b"signing-value" in requests[3].data
+    assert requests[0].data == b"pat-value"
+    assert b"pat-value" not in requests[1].data
+    assert b"signing-value" in requests[1].data
     assert all(request.get_header("Armada-protocol") == "12" for request in requests)
     assert all(request.get_header("User-agent") == "agenticos-armada-setup/1" for request in requests)
 
