@@ -2,14 +2,18 @@
 
 import asyncio
 import json
+from io import BytesIO
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+from PIL import Image
 from pydantic import BaseModel
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import Instrumentation, Thinking
 from pydantic_ai.exceptions import UnexpectedModelBehavior, UserError
 from pydantic_ai.messages import (
+    BinaryContent,
     ImageUrl,
     ModelRequest,
     ModelResponse,
@@ -25,12 +29,14 @@ from pydantic_ai.tools import (
     DeferredToolResults,
     ToolApproved,
     ToolDefinition,
+    ToolReturn,
 )
 from pydantic_ai.toolsets import FunctionToolset
 
 from app.agents.capabilities import load_builtins
 from app.agents.capabilities.approval import ApprovalGranted, ApprovalPending
 from app.agents.claude_subscription import ClaudeSubscriptionModelClient
+from app.agents.ephemeral_media import dump_messages, ephemeral_image
 from app.agents.factory import build_agent
 from app.agents.model_resolver import ModelRequestSpec, ResolvedCredential
 from app.agents.spec import AgentSpec
@@ -248,7 +254,15 @@ async def test_tool_prepare_visibility_is_honored_each_step():
     assert _prompt(runtime)["available_tools"] == []
 
 
-@pytest.mark.parametrize("prompt", [["Describe", ImageUrl("https://example.com/image.png")]])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        ["Describe", ImageUrl("https://example.com/image.png")],
+        [BinaryContent(data=b"sound", media_type="audio/wav")],
+        [BinaryContent(data=b"document", media_type="application/pdf")],
+        [BinaryContent(data=b"", media_type="image/png")],
+    ],
+)
 async def test_unsupported_attachments_fail_before_inference(prompt):
     model, runtime = _model()
     with pytest.raises(UserError, match="text"):
@@ -367,7 +381,9 @@ async def test_global_model_request_prohibition_blocks_subscription_usage():
     [
         {"temperature": 0.1},
         {"top_p": 0.9},
-        {"thinking": "high"},
+        {"thinking": "ultracode"},
+        {"thinking": 4096},
+        {"thinking": {"budget_tokens": 4096}},
         {"cache": "1h"},
         {"timeout": 0},
         {"timeout": float("nan")},
@@ -394,3 +410,72 @@ async def test_user_timeout_cancels_the_private_inference_request():
     with pytest.raises(TimeoutError):
         await Agent(model, model_settings={"timeout": 0.01}).run("Hello")
     assert cancelled.is_set()
+
+
+@pytest.mark.parametrize(
+    "thinking", [None, False, True, "minimal", "low", "medium", "high", "xhigh", "max"]
+)
+@pytest.mark.parametrize("source", ["capability", "model_settings"])
+async def test_real_instrumented_agent_preserves_effective_thinking(thinking, source):
+    model, runtime = _model(_reply("Ready"))
+    capabilities = [Instrumentation()]
+    if source == "capability" and thinking is not None:
+        capabilities.append(Thinking(effort=thinking))
+    model_settings = (
+        {"thinking": thinking} if source == "model_settings" and thinking is not None else None
+    )
+    result = await Agent(model, capabilities=capabilities, model_settings=model_settings).run(
+        "Hello"
+    )
+    assert result.output == "Ready"
+    assert model.profile.get("supports_thinking") is True
+    assert runtime.infer.await_args.kwargs["thinking"] == thinking
+
+
+async def test_projected_thinking_survives_preparation_and_invalid_budget_is_refused():
+    model, runtime = _model(_reply("Ready"))
+    parameters = ModelRequestParameters(thinking="medium")
+    prepared_settings, prepared = model.prepare_request(None, parameters)
+    assert prepared.thinking == "medium"
+    await model.request(
+        [ModelRequest(parts=[UserPromptPart("Hello")])], prepared_settings, prepared
+    )
+    assert runtime.infer.await_args.kwargs["thinking"] == "medium"
+    runtime.infer.reset_mock()
+    parameters = ModelRequestParameters(thinking={"budget_tokens": 4096})
+    with pytest.raises(UserError, match="token budgets"):
+        model.prepare_request(None, parameters)
+    runtime.infer.assert_not_awaited()
+
+
+async def test_computer_tool_image_reaches_next_model_step_without_entering_stored_history():
+    model, runtime = _model(
+        _reply(calls=[("computer_screenshot", {})]), _reply("I see the desktop")
+    )
+    buffer = BytesIO()
+    Image.new("RGB", (2, 2), "red").save(buffer, "JPEG")
+    screenshot = buffer.getvalue()
+
+    def computer_screenshot() -> ToolReturn:
+        """Capture the managed desktop."""
+        return ToolReturn(
+            return_value=["Desktop 1280x800", ephemeral_image(screenshot, "image/jpeg")]
+        )
+
+    result = await Agent(model, tools=[computer_screenshot]).run("Inspect the desktop")
+    assert result.output == "I see the desktop"
+    first = runtime.infer.await_args_list[0].kwargs
+    second = runtime.infer.await_args_list[1].kwargs
+    assert first["images"] == []
+    [image] = second["images"]
+    assert image.data == screenshot and image.media_type == "image/jpeg"
+    assert "data=" not in repr(image)
+    history = _prompt(runtime)["conversation"]
+    call = next(part for part in history if part["role"] == "assistant_tool_call")
+    returned = next(part for part in history if part["role"] == "tool")
+    assert call["call_id"] == returned["call_id"]
+    assert returned["name"] == "computer_screenshot" and "[image:1]" in returned["content"]
+    assert "Desktop 1280x800" in returned["text"] or "Desktop 1280x800" in returned["content"]
+    stored = json.dumps(dump_messages(result.all_messages()))
+    assert "A screenshot the model was shown at the time" in stored
+    assert '"kind": "binary"' not in stored
