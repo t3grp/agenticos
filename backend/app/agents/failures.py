@@ -35,6 +35,8 @@ def first_leaf(exc: BaseException) -> BaseException:
     while isinstance(cause, BaseExceptionGroup):
         cause = cause.exceptions[0]
     return cause
+
+
 CONTENT_FILTER_SUMMARY = (
     "The model provider blocked this response with its content filter. "
     "The run stopped without a final answer."

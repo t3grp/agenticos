@@ -550,6 +550,7 @@ async def test_deep_descendant_selectors_complete_without_backtracking() -> None
     assert result.output.matches == []
     assert result.output.match_count == 0
 
+
 async def test_a_child_that_never_finishes_fails_as_too_complex(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

@@ -11223,6 +11223,7 @@ def test_native_approval_catalogs_do_not_confuse_ids_reused_by_another_owner(
         for owner, name in names.items()
     }
 
+
 class TestRoomAndSecretBoundaries:
     pytestmark = [pytest.mark.anyio, pytest.mark.security]
 

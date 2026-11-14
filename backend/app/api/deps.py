@@ -1031,6 +1031,7 @@ def get_auto_skill_learning_service(db: DBSession) -> AutoSkillLearningService:
 
 AutoSkillLearningSvc = Annotated[AutoSkillLearningService, Depends(get_auto_skill_learning_service)]
 
+
 def get_skill_version_service(db: DBSession) -> SkillVersionService:
     """Create SkillVersionService instance with database session."""
     return SkillVersionService(db)
