@@ -1,20 +1,23 @@
 # AgenticOS Armada Worker configuration
 
-AgenticOS reuses the existing [`t3grp/armada-runner-runtime` Worker](https://github.com/t3grp/armada-runner-runtime/blob/main/worker/src/worker.ts).
-Its webhook handler verifies `X-Hub-Signature-256`; the
-[event filter](https://github.com/t3grp/armada-runner-runtime/blob/main/worker/src/hooks.ts)
-accepts pushes to `t3` and same-repo pull requests on `opened`, `synchronize` and
-`reopened`, rejecting fork PRs. The CI driver posts the `armada` status to the
+AgenticOS uses the dedicated [`agenticos-armada-ci` Worker](https://agenticos-armada-ci.sherman-tansx.workers.dev/),
+with a 12-vCPU cap. It is deployed from upstream
+[`AshishKumar4/armada@4255c72`](https://github.com/AshishKumar4/armada/commit/4255c720a45f768909c4699572b677e9b903e00d),
+not from `t3grp/armada-runner-runtime`. Its webhook handler verifies
+`X-Hub-Signature-256`; the
+[event filter](https://github.com/AshishKumar4/armada/blob/4255c720a45f768909c4699572b677e9b903e00d/worker/src/hooks.ts)
+accepts pushes to `t3` and same-repository pull requests on `opened`, `synchronize`
+and `reopened`, rejecting fork PRs. The CI driver posts the `armada` status to the
 exact commit SHA. The upstream
-[webhook tests](https://github.com/t3grp/armada-runner-runtime/blob/main/worker/tests/hooks.test.ts)
+[webhook tests](https://github.com/AshishKumar4/armada/blob/4255c720a45f768909c4699572b677e9b903e00d/worker/tests/hooks.test.ts)
 cover signatures, event filtering and fork rejection.
 
-`setup_runtime.py` configures the existing Armada deployment with the CI PAT and
+`setup_runtime.py` configures the dedicated Armada deployment with the CI PAT and
 webhook signing secret by name. It calls only the Armada API; it does not create
 or modify a GitHub webhook and it does not deploy a Worker. The repository hook is
 added manually after the Worker is live, with:
 
-- Payload URL: the existing Armada Worker URL plus `/webhooks/github/agenticos`
+- Payload URL: `https://agenticos-armada-ci.sherman-tansx.workers.dev/webhooks/github/agenticos`
 - Content type: `application/json`
 - Events: Pushes and Pull requests
 - SSL verification: enabled
