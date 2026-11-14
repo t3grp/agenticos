@@ -1,12 +1,13 @@
 import logging
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.capabilities.subagents import SubagentsConfig
 from app.agents.spec import AgentSpec, SubagentRef
-from app.core.exceptions import BadRequestError
+from app.core.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.core.permissions import AuthContext
 from app.db.models.agent import Visibility
 from app.repositories import agent_repo, conversation_repo, credential_repo, user_repo
@@ -195,6 +196,11 @@ class OnboardingTeamService:
         self, ctx: AuthContext, request: CreateOnboardingTeamRequest
     ) -> OnboardingTeamResult:
         """Construct the team: specialists, lead with subagents delegation, and primary chat."""
+        if ctx.user_id is None:
+            raise AuthorizationError(
+                message="A signed-in user is required to create an onboarding team"
+            )
+
         # 1. Ceiling check
         ceiling = await self.registry.ceiling(ctx)
         needed = len(request.specialists) + 1
@@ -212,7 +218,7 @@ class OnboardingTeamService:
                 break
 
         # 3. Create / install specialists
-        created_specialists: list[tuple[any, any]] = []
+        created_specialists: list[tuple[Any, Any]] = []
         created_info: list[CreatedAgentInfo] = []
 
         for s in request.specialists:
@@ -355,9 +361,12 @@ class OnboardingTeamService:
         )
 
         # 7. Mark onboarding completed
+        user = await user_repo.get_by_id(self.db, ctx.user_id)
+        if user is None:
+            raise NotFoundError(message="User not found", details={"user_id": str(ctx.user_id)})
         await user_repo.update(
             self.db,
-            user_id=ctx.user_id,
+            db_user=user,
             update_data={"onboarding_completed_at": datetime.now(UTC)},
         )
         await self.db.flush()

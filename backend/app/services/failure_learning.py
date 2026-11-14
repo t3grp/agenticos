@@ -770,6 +770,7 @@ class FailureLearningService:
                 message="This proposal has no complete skill rollback record",
                 details={"proposal_id": str(proposal.id)},
             )
+        restored_skill_content = proposal.prior_skill_content
         skill = await self.skills.get(ctx, proposal.skill_id, perm=Perm.SKILLS_EDIT)
         current_hash = hashlib.sha256(skill.content.encode("utf-8")).hexdigest()
         if current_hash != proposal.applied_content_sha256:
@@ -777,7 +778,7 @@ class FailureLearningService:
                 message="The skill changed after this proposal applied; refusing to overwrite it",
                 details={"proposal_id": str(proposal.id), "skill_id": str(skill.id)},
             )
-        await self.skills.update(ctx, skill.id, SkillUpdate(content=proposal.prior_skill_content))
+        await self.skills.update(ctx, skill.id, SkillUpdate(content=restored_skill_content))
         proposal = await failure_learning_repo.update_proposal(
             self.db,
             proposal=proposal,
@@ -793,7 +794,7 @@ class FailureLearningService:
             details={
                 "proposal_id": str(proposal.id),
                 "restored_content_sha256": hashlib.sha256(
-                    proposal.prior_skill_content.encode("utf-8")
+                    restored_skill_content.encode("utf-8")
                 ).hexdigest(),
                 "reverted_from_content_sha256": current_hash,
             },
