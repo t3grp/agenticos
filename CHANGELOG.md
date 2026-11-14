@@ -101,6 +101,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Forward avatar requests using a fresh URL-backed request instead of cloning Next.js's proxied request object, which could throw while reading its private state in production.
 - Preserve existing personal API and Claude subscription connections when
   deploying Composio onboarding. Migration `0299_merge_personal_composio` joins
   the personal-model, Google Drive OAuth, and Composio migration branches without
