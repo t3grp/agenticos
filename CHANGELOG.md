@@ -103,6 +103,9 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Keep parked secret requests in their original conversation, account and organization.
+  Leaving that context clears the card and ignores delayed reads or decisions;
+  an ordinary access-token refresh preserves the current request.
 - Starting a team room waits for the signed-in account and explicit organization selection, so initial organization loading cannot discard a successfully created room before it opens. Responses from an account or organization the person has left remain ignored.
 - Return HTTP 403 when a room member tries to answer a question addressed to someone else, preserving the original requester check during conversation admission.
 - Forward avatar requests using a fresh URL-backed request instead of cloning Next.js's proxied request object, which could throw while reading its private state in production.

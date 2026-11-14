@@ -3302,6 +3302,33 @@ describe("useChat - the Builder's test panel", () => {
 });
 
 describe("useChat - leaving a conversation whose agent is still answering", () => {
+  it("detaches the loaded conversation before reopening its busy socket", () => {
+    useConversationStore.getState().setCurrentConversationId("c-a");
+    useChatStore.getState().rereadMessages([], {
+      conversationId: "c-a",
+      selectionVersion: useConversationStore.getState().selectionVersion,
+      accountId: null,
+      tenantId: null,
+    });
+    let conversationId = "c-a";
+    const { result, rerender } = renderHook(() => useChat({ conversationId }), { wrapper });
+    expect(sent).toHaveBeenCalledWith({ type: "attach", conversation_id: "c-a" });
+    act(() => result.current.sendMessage("a long question"));
+    expect(result.current.isProcessing).toBe(true);
+
+    conversationId = "c-b";
+    act(() => useConversationStore.getState().setCurrentConversationId("c-b"));
+    rerender();
+
+    expect(sent.mock.calls.filter(([frame]) => frame.type === "attach")).toEqual([
+      [{ type: "attach", conversation_id: "c-a" }],
+      [{ type: "attach", conversation_id: null }],
+    ]);
+    expect(reopen).toHaveBeenCalledTimes(1);
+    expect(result.current.isProcessing).toBe(false);
+    expect(useWorkingStore.getState().handedOff["c-a"]).toBe(true);
+  });
+
   // The server serves one turn per socket and drops a message sent during it, so
   // a new chat opened mid-answer queued its first message behind an answer that
   // belonged to another conversation.

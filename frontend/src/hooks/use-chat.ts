@@ -387,9 +387,11 @@ export function useChat(options: UseChatOptions = {}) {
   const [parkedSecretRequest, setParkedSecretRequest] = useState<{
     runId: string;
     messageId: string;
+    context: number;
   } | null>(null);
   const secretOfferedForRef = useRef<Set<string>>(new Set());
-  const answeringSecretRef = useRef<object | null>(null);
+  const secretContextRef = useRef(0);
+  const answeringSecretRef = useRef<{ kind: "fulfil" | "decline" } | null>(null);
   const pendingRunAnswerRef = useRef<{
     requestId: string;
     runId: string;
@@ -405,6 +407,8 @@ export function useChat(options: UseChatOptions = {}) {
   useEffect(
     () => () => {
       answeringQuestionRef.current = null;
+      answeringSecretRef.current = null;
+      secretContextRef.current += 1;
       abandonRunAnswer();
     },
     [abandonRunAnswer],
@@ -630,7 +634,7 @@ export function useChat(options: UseChatOptions = {}) {
     (requests: ParkedSecretRequest[], runId: string, messageId: string) => {
       secretOfferedForRef.current.add(runId);
       setPendingSecretRequests(requests.filter((request) => request.status === "pending"));
-      setParkedSecretRequest({ runId, messageId });
+      setParkedSecretRequest({ runId, messageId, context: secretContextRef.current });
     },
     [],
   );
@@ -1688,6 +1692,44 @@ export function useChat(options: UseChatOptions = {}) {
   // socket, so a conversation never continues under the wrong organization.
   const activeOrgId = useOrgStore((state) => state.activeOrgId);
   const queueAccountId = useAuthStore((state) => state.user?.id);
+  const previousSecretContext = useRef({
+    conversationId: activeConversationId,
+    selectionVersion,
+    accountId: queueAccountId,
+    tenantId,
+    organizationId: activeOrgId,
+  });
+  // Secret cards and their HTTP completions belong to one selected transcript.
+  // A generation also fences A -> B -> A and a retry of the same selection;
+  // comparing only the conversation id would accept the older request again.
+  useLayoutEffect(() => {
+    const previous = previousSecretContext.current;
+    secretContextRef.current += 1;
+    secretOfferedForRef.current = new Set();
+    if (
+      previous.conversationId === activeConversationId &&
+      previous.selectionVersion === selectionVersion &&
+      previous.accountId === queueAccountId &&
+      previous.tenantId === tenantId &&
+      previous.organizationId === activeOrgId
+    )
+      return;
+    previousSecretContext.current = {
+      conversationId: activeConversationId,
+      selectionVersion,
+      accountId: queueAccountId,
+      tenantId,
+      organizationId: activeOrgId,
+    };
+    const wasFulfilling = answeringSecretRef.current?.kind === "fulfil";
+    answeringSecretRef.current = null;
+    setPendingSecretRequests(null);
+    setParkedSecretRequest(null);
+    if (wasFulfilling) {
+      processingRef.current = false;
+      setIsProcessing(false);
+    }
+  }, [activeConversationId, selectionVersion, queueAccountId, tenantId, activeOrgId]);
   useLayoutEffect(() => {
     pendingNextSteps.current.clear();
     stoppedMessageIdRef.current = null;
@@ -2611,6 +2653,28 @@ export function useChat(options: UseChatOptions = {}) {
     offerParkedQuestion,
   ]);
 
+  // Read the stores as well as the generation: an old event handler can run in
+  // the same tick as a scope change, before its layout effect clears the card.
+  const secretContextCurrent = useCallback(
+    (context: number) =>
+      context === secretContextRef.current &&
+      useAuthStore.getState().user?.id === queueAccountId &&
+      useOrgStore.getState().activeOrgId === activeOrgId &&
+      queueBelongsTo.current === tenantId &&
+      conversationApi.getState().selectionVersion === selectionVersion &&
+      (conversationApi.getState().currentConversationId ?? conversationId ?? null) ===
+        activeConversationId,
+    [
+      queueAccountId,
+      activeOrgId,
+      tenantId,
+      selectionVersion,
+      conversationApi,
+      conversationId,
+      activeConversationId,
+    ],
+  );
+
   // The same for a secret: an agent asked for one and its person left before
   // providing it, so the run parked on it (#13). Reopening the conversation
   // is where the card comes back - and only for the person asked, which the
@@ -2638,18 +2702,24 @@ export function useChat(options: UseChatOptions = {}) {
     if (secretOfferedForRef.current.has(runId) || terminalRunIdsRef.current.has(runId)) return;
     secretOfferedForRef.current.add(runId);
     const conversation = activeConversationId;
+    const context = secretContextRef.current;
     void (async () => {
       try {
         const requests = await apiClient.get<ParkedSecretRequest[]>(
           `/runs/${runId}/secret-requests`,
         );
-        if (requests.length === 0 || panelsBelongTo.current !== conversation) return;
+        if (
+          requests.length === 0 ||
+          panelsBelongTo.current !== conversation ||
+          !secretContextCurrent(context)
+        )
+          return;
         offerParkedSecretRequests(requests, runId, askedMessage.id);
       } catch {
         // Quiet, like the question restore above: the transcript still says
         // the step is waiting, and a toast over it buys nothing. Unmarked so
         // the next render - or reopening the conversation - tries again.
-        secretOfferedForRef.current.delete(runId);
+        if (secretContextCurrent(context)) secretOfferedForRef.current.delete(runId);
       }
     })();
   }, [
@@ -2659,6 +2729,7 @@ export function useChat(options: UseChatOptions = {}) {
     isConnected,
     activeConversationId,
     offerParkedSecretRequests,
+    secretContextCurrent,
   ]);
 
   // Stop belongs to the run's owner independently of the decision panel.
@@ -3031,10 +3102,15 @@ export function useChat(options: UseChatOptions = {}) {
   const submitSecretRequest = useCallback(
     async (requestId: string, value: string) => {
       const parked = parkedSecretRequest;
-      if (parked === null || answeringSecretRef.current !== null) return;
+      if (
+        parked === null ||
+        !secretContextCurrent(parked.context) ||
+        answeringSecretRef.current !== null
+      )
+        return;
       const request = (pendingSecretRequests ?? []).find((item) => item.id === requestId);
       if (request === undefined) return;
-      const ticket = {};
+      const ticket = { kind: "fulfil" as const };
       answeringSecretRef.current = ticket;
       updateToolCallPart(parked.messageId, request.tool_call_id, { status: "running" });
       try {
@@ -3044,7 +3120,7 @@ export function useChat(options: UseChatOptions = {}) {
           `/runs/${parked.runId}/secret-requests/${requestId}/fulfil`,
           { value },
         );
-        if (answeringSecretRef.current !== ticket) return;
+        if (answeringSecretRef.current !== ticket || !secretContextCurrent(parked.context)) return;
         setPendingSecretRequests((current) =>
           (current ?? []).filter((item) => item.id !== requestId),
         );
@@ -3068,13 +3144,13 @@ export function useChat(options: UseChatOptions = {}) {
         showContinuation(resumed, parked.runId, new Set([request.tool_call_id]));
         if (resumed.continues_in_chat) toast.info(t("answerAlsoInTheChat"));
       } catch (error) {
-        if (answeringSecretRef.current !== ticket) return;
+        if (answeringSecretRef.current !== ticket || !secretContextCurrent(parked.context)) return;
         toast.error(getErrorMessage(error, tErrors));
         updateToolCallPart(parked.messageId, request.tool_call_id, {
           status: "awaiting_answer",
         });
       } finally {
-        if (answeringSecretRef.current === ticket) {
+        if (answeringSecretRef.current === ticket && secretContextCurrent(parked.context)) {
           answeringSecretRef.current = null;
           processingRef.current = false;
           setIsProcessing(false);
@@ -3087,6 +3163,7 @@ export function useChat(options: UseChatOptions = {}) {
       updateToolCallPart,
       updateMessage,
       showContinuation,
+      secretContextCurrent,
       tErrors,
       t,
     ],
@@ -3096,14 +3173,19 @@ export function useChat(options: UseChatOptions = {}) {
   const declineSecretRequest = useCallback(
     async (requestId: string) => {
       const parked = parkedSecretRequest;
-      if (parked === null || answeringSecretRef.current !== null) return;
+      if (
+        parked === null ||
+        !secretContextCurrent(parked.context) ||
+        answeringSecretRef.current !== null
+      )
+        return;
       const request = (pendingSecretRequests ?? []).find((item) => item.id === requestId);
       if (request === undefined) return;
-      const ticket = {};
+      const ticket = { kind: "decline" as const };
       answeringSecretRef.current = ticket;
       try {
         await apiClient.post(`/runs/${parked.runId}/secret-requests/${requestId}/decline`, {});
-        if (answeringSecretRef.current !== ticket) return;
+        if (answeringSecretRef.current !== ticket || !secretContextCurrent(parked.context)) return;
         setPendingSecretRequests((current) =>
           (current ?? []).filter((item) => item.id !== requestId),
         );
@@ -3118,10 +3200,11 @@ export function useChat(options: UseChatOptions = {}) {
         });
         abandonOpenCalls(parked.messageId);
       } catch (error) {
-        if (answeringSecretRef.current !== ticket) return;
+        if (answeringSecretRef.current !== ticket || !secretContextCurrent(parked.context)) return;
         toast.error(getErrorMessage(error, tErrors));
       } finally {
-        if (answeringSecretRef.current === ticket) answeringSecretRef.current = null;
+        if (answeringSecretRef.current === ticket && secretContextCurrent(parked.context))
+          answeringSecretRef.current = null;
       }
     },
     [
@@ -3130,6 +3213,7 @@ export function useChat(options: UseChatOptions = {}) {
       updateToolCallPart,
       updateMessage,
       abandonOpenCalls,
+      secretContextCurrent,
       tErrors,
       t,
     ],
