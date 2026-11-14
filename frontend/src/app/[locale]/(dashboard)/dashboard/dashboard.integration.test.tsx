@@ -50,6 +50,9 @@ vi.mock("@/hooks/use-permissions", () => ({
 
 const params = new URLSearchParams();
 vi.mock("next/navigation", () => ({
+  redirect: vi.fn(),
+  permanentRedirect: vi.fn(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
   useSearchParams: () => {
     const query = useSyncExternalStore(
       (listener) => {

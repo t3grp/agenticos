@@ -6,10 +6,7 @@ import { apiClient } from "@/lib/api-client";
 import { qk } from "@/lib/query-keys";
 import { useAuthStore, useOrgStore } from "@/stores";
 import { useAppConnections } from "./use-app-connections";
-import type {
-  AppConnectionAuthorization,
-  ConnectedAppDefinition,
-} from "@/types/app-connections";
+import type { AppConnectionAuthorization, ConnectedAppDefinition } from "@/types/app-connections";
 
 vi.mock("@/lib/api-client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), delete: vi.fn(), patch: vi.fn() },
