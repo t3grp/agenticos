@@ -19,6 +19,7 @@ from app.schemas.virtual_table import (
     ColumnInput,
     RecordCountQuery,
     RecordCreate,
+    RecordFilter,
     RecordQuery,
     RecordRead,
     RecordUpdate,
@@ -429,3 +430,79 @@ async def test_a_malformed_policy_blocks_grants_and_owners_until_repaired(db, ro
     await rows.service.set_row_policy(rows.owner, table.id, RowPolicyUpdate(rule="grants"))
     repaired = await rows.service.get_record(rows.reader, table.id, rows.first.id)
     assert repaired.access == "write" and not repaired.can_manage_access
+
+
+async def test_link_filters_and_counts_follow_only_current_explicit_target_grants(db, rows):
+    service, owner, reader = rows.service, rows.owner, rows.reader
+    source = await service.create_table(
+        owner,
+        TableCreate(
+            name="Filtered links",
+            visibility="org",
+            columns=[ColumnInput(label="Linked", type="link", link_table_id=rows.table.id)],
+        ),
+    )
+    link = source.columns[0].id
+    destinations = [
+        [str(rows.first.id)],
+        [str(rows.second.id)],
+        [str(rows.first.id), str(rows.second.id)],
+        [],
+    ]
+    source_ids = [
+        (
+            await service.create_record(owner, source.id, RecordCreate(values={str(link): targets}))
+        ).record.id
+        for targets in destinations
+    ]
+    visible_sources = {source_ids[0], source_ids[2]}
+    all_sources = set(source_ids)
+    group = Group(organization_id=owner.organization_id, name="Filtered-link readers")
+    db.add(group)
+    await db.flush()
+    db.add(GroupMember(group_id=group.id, user_id=reader.user_id))
+    await db.flush()
+
+    async def check(allowed):
+        matching = visible_sources if allowed else set()
+        for operation, value, expected in (
+            ("contains", str(rows.first.id), matching),
+            ("contains", str(rows.second.id), set()),
+            ("is_null", False, matching),
+            ("is_null", True, all_sources - matching),
+        ):
+            filters = [RecordFilter(column_id=link, op=operation, value=value)]
+            listed = await service.list_records(reader, source.id, RecordQuery(filters=filters))
+            counted = await service.count_records(
+                reader, source.id, RecordCountQuery(filters=filters)
+            )
+            assert {record.id for record in listed.items} == expected
+            assert counted.count == len(expected) and not counted.capped
+
+    await check(False)
+    for kind, subject in (("user", reader.user_id), ("group", group.id)):
+        subject_fields = {f"subject_{kind}_id": subject}
+        for level in ("read", "write"):
+            await service.set_record_grant(
+                owner,
+                rows.table.id,
+                rows.first.id,
+                RecordGrantUpdate(**subject_fields, level=level),
+            )
+            await check(True)
+        await service.revoke_record_grant(owner, rows.table.id, rows.first.id, subject, kind=kind)
+        await check(False)
+        # Persist an expired grant directly; the public API correctly refuses a past expiry.
+        upsert = (
+            resource_grant_repo.upsert if kind == "user" else resource_grant_repo.upsert_for_group
+        )
+        await upsert(
+            db,
+            organization_id=owner.organization_id,
+            **subject_fields,
+            resource_type="table_record",
+            resource_id=rows.first.id,
+            level=GrantLevel.EDIT,
+            expires_at=datetime.now(UTC) - timedelta(seconds=1),
+        )
+        await check(False)
