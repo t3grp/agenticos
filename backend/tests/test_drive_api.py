@@ -3,11 +3,11 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from pydantic import SecretStr
 from unittest.mock import patch
 
 import httpx
 import pytest
+from pydantic import SecretStr
 
 from app.services.rag.drive_api import DRIVE_API, SCOPES, DriveClient
 

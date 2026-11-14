@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
+from pydantic_ai.exceptions import UserError
 
 from app.agents.capabilities.coding_agent._harness import (
     Harness,
@@ -35,8 +36,7 @@ from app.agents.capabilities.harness._sessions import (
     session_path,
 )
 from app.agents.subagent_events import SubagentStarted
-from pydantic_ai.exceptions import UserError
-from tests.test_harness_capability import _Shell, _call, _ctx, _lines
+from tests.test_harness_capability import _call, _ctx, _lines, _Shell
 from tests.workspaces import document_workspace
 
 pytestmark = pytest.mark.anyio
@@ -334,7 +334,8 @@ class TestReports:
         assert spent.output_tokens == 5
 
     def test_gemini_with_no_result_event_fails_with_its_last_error(self) -> None:
-        events = _gemini_stream()[:-1] + [
+        events = [
+            *_gemini_stream()[:-1],
             {"type": "error", "message": "Quota exceeded."},
         ]
         report, _ = gemini_report(events, access="read_only", model="gemini-2.5-flash")

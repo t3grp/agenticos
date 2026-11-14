@@ -147,8 +147,8 @@ export function StepAbout({ role, industry, teamSize, onChange }: StepAboutProps
                 )}
               >
                 <div className="space-y-0.5">
-                  <div className="text-foreground text-xs font-medium">{t(labelKey as any)}</div>
-                  <div className="text-muted-foreground text-[11px]">{t(descKey as any)}</div>
+                  <div className="text-foreground text-xs font-medium">{t(labelKey)}</div>
+                  <div className="text-muted-foreground text-[11px]">{t(descKey)}</div>
                 </div>
                 <div
                   className={cn(

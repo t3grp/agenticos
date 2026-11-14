@@ -92,7 +92,7 @@ from pydantic_ai.realtime import (
     WebRTCAnswer,
 )
 from pydantic_ai.run import AgentRun as AgentIteration
-from pydantic_ai.run import AgentRunResult
+from pydantic_ai.run import AgentRunResult as PydanticAgentRunResult
 from pydantic_ai.tools import DeferredToolRequests, DeferredToolResults, ToolApproved
 from pydantic_ai.toolsets import AbstractToolset
 from pydantic_ai.usage import UsageLimits
@@ -1790,7 +1790,7 @@ class PreparedRun:
         *,
         message_history: Sequence[ModelMessage] | None,
         deferred_tool_results: DeferredToolResults | None,
-    ) -> AgentRunResult[AgentOutput]:
+    ) -> PydanticAgentRunResult[AgentOutput]:
         """Run the agent to an answer, metered.
 
         The non-streaming half of :meth:`iterate`, and it exists for the same
@@ -1933,7 +1933,7 @@ class PreparedRun:
 
 def _outcome(
     agent_run: AgentIteration[AgentDeps, AgentOutput],
-) -> AgentRunResult[AgentOutput]:
+) -> PydanticAgentRunResult[AgentOutput]:
     """What the iterated run ended with.
 
     Raises:
@@ -2016,7 +2016,7 @@ def parked_secret_request_items(paused_state: dict[str, Any] | None) -> list[Par
 
 
 def _classify_output(
-    result: AgentRunResult[AgentOutput],
+    result: PydanticAgentRunResult[AgentOutput],
     *,
     parked: dict[str, str],
     history_revision: int | None = None,
@@ -8051,7 +8051,7 @@ class AgentRunnerService:
         message_history: Sequence[ModelMessage] | None,
         deferred_tool_results: DeferredToolResults | None,
         stream: RunStream | None,
-    ) -> AgentRunResult[Any]:
+    ) -> PydanticAgentRunResult[Any]:
         """One turn, streamed if the surface can show one arriving.
 
         Both halves settle through the same `_run` around this call - the same
