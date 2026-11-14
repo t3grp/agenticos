@@ -5,6 +5,7 @@ import type {
   RoomMessageCreate,
   RoomMessageResult,
   RoomRequestList,
+  RoomThreadPage,
 } from "@/types/room";
 
 const roomPath = (conversationId: string) => `/conversations/${conversationId}`;
@@ -30,4 +31,29 @@ export function cancelRoomRequest(
 
 export function createTeamRoom(projectId: string, title: string): Promise<Conversation> {
   return apiClient.post("/conversations", { project_id: projectId, title });
+}
+
+export async function getRoomThread(
+  conversationId: string,
+  rootMessageId: string,
+  before: string | null = null,
+): Promise<RoomThreadPage> {
+  const params = new URLSearchParams({ latest: "true", limit: "50" });
+  if (before !== null) params.set("before", before);
+  const page = await apiClient.get<RoomThreadPage>(
+    `${roomPath(conversationId)}/room-threads/${encodeURIComponent(rootMessageId)}?${params}`,
+  );
+  if (
+    page.root.id !== rootMessageId ||
+    page.root.conversation_id !== conversationId ||
+    page.root.thread_root_message_id != null ||
+    page.root.role === "system" ||
+    page.items.some(
+      (item) =>
+        item.conversation_id !== conversationId || item.thread_root_message_id !== rootMessageId,
+    )
+  ) {
+    throw new Error("The thread response belongs to another scope");
+  }
+  return page;
 }

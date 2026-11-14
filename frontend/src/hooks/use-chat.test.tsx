@@ -7449,3 +7449,155 @@ it("keeps the first granted computer continuation when a later delegate declines
     sent.mock.calls.filter(([frame]) => frame.message === "Access granted - please continue."),
   ).toHaveLength(1);
 });
+
+describe("explicit room thread stream scope", () => {
+  const scope = (root: string | null, rest: Record<string, unknown> = {}) => ({
+    conversation_id: "c-1",
+    thread_root_message_id: root,
+    ...rest,
+  });
+
+  it("tags prompts and assistant rows before their first upsert and resets to main room explicitly", () => {
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    const { result } = renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    receive("turn_attached", scope("root-a"));
+    receive(
+      "background_task_turn",
+      scope("root-a", { agent_id: "writer", resumed_run_id: "run-a" }),
+    );
+    receive(
+      "turn_prompt",
+      scope("root-a", {
+        message_id: "thread-prompt",
+        content: "Ask in thread",
+        agent_id: "writer",
+        sender: { user_id: "me", name: "Me", has_avatar: false, avatar_color: null },
+      }),
+    );
+    const observed: (string | undefined)[] = [];
+    const stop = useChatStore.subscribe((state) => {
+      for (const row of state.messages.filter((message) => message.role === "assistant"))
+        observed.push(row.threadRootMessageId);
+    });
+    receive("model_request_start", scope("root-a"));
+    receive("text_delta", scope("root-a", { index: 0, content: "Thread answer" }));
+    receive(
+      "message_saved",
+      scope("root-a", { message_id: "saved-thread", run_id: "run-a", run_status: "completed" }),
+    );
+    receive("complete", scope("root-a"));
+    stop();
+    expect(observed.length).toBeGreaterThan(0);
+    expect(observed.every((root) => root === "root-a")).toBe(true);
+    expect(
+      useChatStore.getState().messages.find((row) => row.id === "thread-prompt")
+        ?.threadRootMessageId,
+    ).toBe("root-a");
+    receive("turn_attached", scope(null));
+    receive("model_request_start", scope(null));
+    receive("text_delta", scope(null, { index: 0, content: "Main answer" }));
+    expect(useChatStore.getState().messages.at(-1)).toMatchObject({
+      content: "Main answer",
+      threadRootMessageId: undefined,
+    });
+    expect(result.current.activeThreadRootId).toBeNull();
+  });
+
+  it("can recover scope from model_request_start and rejects late frames from another conversation", () => {
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    const { result } = renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    receive("model_request_start", scope("root-a"));
+    receive("text_delta", {
+      conversation_id: "other",
+      thread_root_message_id: "foreign-root",
+      index: 0,
+      content: "Wrong",
+    });
+    receive("message_saved", {
+      conversation_id: "other",
+      thread_root_message_id: "foreign-root",
+      message_id: "wrong-id",
+    });
+    receive("text_delta", scope("root-a", { index: 0, content: "Right" }));
+    expect(streaming()).toMatchObject({ content: "Right", threadRootMessageId: "root-a" });
+    expect(result.current.activeThreadRootId).toBe("root-a");
+    expect(useChatStore.getState().messages.some((row) => row.id === "wrong-id")).toBe(false);
+    receive("room_request", scope("root-b", { request_id: "queued" }));
+    expect(result.current.activeThreadRootId).toBe("root-a");
+  });
+
+  it.each(["conversation", "account", "organization"] as const)(
+    "clears thread scope before ordinary legacy frames after a %s switch",
+    (boundary) => {
+      useConversationStore.getState().setCurrentConversationId("c-1");
+      const hook = renderHook(({ id }) => useChat({ conversationId: id }), {
+        wrapper,
+        initialProps: { id: "c-1" },
+      });
+      receive("model_request_start", scope("root-a"));
+      receive(
+        "ask_user",
+        scope("root-a", { questions: [{ question: "Which?", options: [{ label: "A" }] }] }),
+      );
+      expect(hook.result.current.actionThreadRoots.questions).toBe("root-a");
+      receive("complete", scope("root-a"));
+      act(() => {
+        useChatStore.getState().clearMessages();
+        if (boundary === "conversation")
+          useConversationStore.getState().setCurrentConversationId("c-2");
+        if (boundary === "account")
+          useAuthStore.setState({ user: { id: "another", email: "other@example.com" } as never });
+        if (boundary === "organization") useOrgStore.setState({ activeOrgId: "another-org" });
+      });
+      if (boundary === "conversation") hook.rerender({ id: "c-2" });
+      receive("model_request_start", {});
+      expect(useChatStore.getState().messages.at(-1)?.threadRootMessageId).toBeUndefined();
+      expect(hook.result.current.activeThreadRootId).toBeNull();
+      expect(hook.result.current.actionThreadRoots.questions).toBeNull();
+    },
+  );
+
+  it("restores a parked approval from its message scope while another root is active", async () => {
+    get.mockImplementation(async (url: string) =>
+      url.endsWith("/parked")
+        ? [
+            {
+              id: "approval-a",
+              tool_call_id: "tc-1",
+              tool_name: "send_email",
+              tool_args: {},
+            },
+          ]
+        : [],
+    );
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    useChatStore.getState().addMessage({ ...parkedTurn(), threadRootMessageId: "root-a" });
+    const { result } = renderHook(() => useChat({ conversationId: "c-1" }), { wrapper: decider });
+    await waitFor(() => expect(result.current.pendingApproval?.runId).toBe("r-1"));
+    receive("model_request_start", scope("root-b", { run_id: "run-b" }));
+    expect(result.current.activeThreadRootId).toBe("root-b");
+    expect(result.current.actionThreadRoots.approval).toBe("root-a");
+  });
+
+  it("keeps a durable question with the thread where it parked after the next turn starts", () => {
+    get.mockResolvedValue([]);
+    useConversationStore.getState().setCurrentConversationId("c-1");
+    const { result } = renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    receive("model_request_start", scope("root-a"));
+    receive(
+      "tool_call",
+      scope("root-a", { tool_name: "ask_user_question", tool_call_id: "ask-1", args: {} }),
+    );
+    receive("user_question_required", scope("root-a", { run_id: "r-1", questions: ASKED }));
+    receive(
+      "message_saved",
+      scope("root-a", { message_id: "parked-a", run_id: "r-1", run_status: "awaiting_answer" }),
+    );
+    receive("complete", scope("root-a"));
+    receive("turn_attached", scope("root-b"));
+    receive("model_request_start", scope("root-b"));
+    expect(result.current.pendingQuestions?.[0]?.question).toBe("How formal?");
+    expect(result.current.activeThreadRootId).toBe("root-b");
+    expect(result.current.actionThreadRoots.questions).toBe("root-a");
+  });
+});

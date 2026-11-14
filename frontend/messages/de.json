@@ -1243,6 +1243,28 @@
     "title": "Abrechnung"
   },
   "chat": {
+    "roomThread": {
+      "historyAudience": "Gespeicherter Gesprächsverlauf",
+      "readOnly": "Dieser Thread ist schreibgeschützt.",
+      "title": "Thread",
+      "start": "Im Thread antworten",
+      "replies": "{count, plural, one {# Antwort} other {# Antworten}}",
+      "message": "Im Thread antworten",
+      "placeholder": "Hier antworten. Alle im Raum können diesen Thread lesen.",
+      "post": "Antwort senden",
+      "close": "Thread schließen",
+      "earlier": "Frühere Antworten laden",
+      "audience": "Für alle in diesem Raum sichtbar",
+      "root": "Ursprüngliche Nachricht",
+      "loading": "Thread wird geladen…",
+      "unavailable": "Dieser Thread ist nicht verfügbar. Er wurde möglicherweise entfernt oder dein Zugriff auf den Raum hat sich geändert.",
+      "retry": "Erneut versuchen",
+      "empty": "Beginne die Unterhaltung in diesem Thread.",
+      "open": "Thread öffnen",
+      "pending": "Ein Agent wartet in einem Thread auf dich.",
+      "mainPending": "Ein Agent wartet im Hauptraum auf dich.",
+      "main": "Zurück zum Raum"
+    },
     "teamRoom": {
       "title": "Teamraum",
       "titleInProject": "Teamraum · {name}",
@@ -4677,6 +4699,14 @@
       "chat-your-connections": {
         "title": "Ihre eigenen Konten, dort wo der Agent sie nutzt",
         "body": "Ein Agent, der an das Konto jeder Person gebunden ist, spricht mit Notion oder Jira als Sie. Hier steht, welche seiner Dienste ein Konto von Ihnen brauchen, und hier verbinden Sie eines, ohne den Chat zu verlassen."
+      },
+      "chat-room-thread": {
+        "title": "Eine Nachricht besprechen",
+        "body": "Öffne einen Thread, um Antworten zusammenzuhalten, ohne den Hauptraum zu füllen. Die Anzahl der Antworten führt zurück zur Diskussion; Antworten zitiert weiterhin eine Nachricht."
+      },
+      "chat-room-thread-panel": {
+        "title": "Antworten mit eigenem Kontext",
+        "body": "Die ursprüngliche Nachricht bleibt über den Antworten. Alle im Raum können den Thread lesen. Wähle einen Agenten für Hilfe oder schließe den Thread, um zum Raum zurückzukehren."
       },
       "chat-team-room": {
         "title": "Der Raum deines Teams",
