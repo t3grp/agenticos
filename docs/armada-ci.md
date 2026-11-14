@@ -42,10 +42,14 @@ migration graph shape; it does not replace the database migration checks.
 
 The existing `t3grp/armada-runner-runtime` Worker accepts pushes to `t3` and
 same-repository pull requests on `opened`, `synchronize` and `reopened`; fork pull
-requests are rejected. The org-owned GitHub App's webhook sends Push and Pull
-request events to the Worker at `/webhooks/github/agenticos` with JSON content
-and SSL verification enabled. Install the App on `t3grp/agenticos` only. The
-runtime posts the `armada` status to the exact event head SHA.
+requests are rejected. Add one repository webhook manually in Settings → Webhooks:
+
+- Payload URL: `https://t3-armada-github-runners.sherman-tansx.workers.dev/webhooks/github/agenticos`
+- Content type: `application/json`
+- Events: Pushes and Pull requests only
+- SSL verification: on
+
+No webhook-administration token or webhook-creation script is used.
 
 Check the `armada` status on the pull request's exact head SHA. Open the status
 details for the task results; if no status appears, inspect recent webhook delivery
@@ -54,31 +58,30 @@ eight configured tasks passed for that commit.
 
 ## Credentials
 
-Keep secret values in Azure Key Vault `t3-secrets` and the Armada/GitHub App
-settings. Use these names only in operational configuration:
+Keep secret values in Azure Key Vault `t3-secrets` and the Armada/GitHub settings.
+Use these names only in operational configuration:
 
 - `agenticos-armada-ci-connection`
-- `agenticos-armada-app-id`
-- `agenticos-armada-app-installation-id`
-- `agenticos-armada-app-private-key`
-- `agenticos-armada-app-webhook-secret`
+- `agenticos-armada-ci-github-token`
+- `agenticos-armada-webhook-signing-secret`
 
-The GitHub App is org-owned, subscribed only to Push and Pull request events, and
-installed on `t3grp/agenticos` only. Give it Contents read, Metadata read, Pull
-requests read and Commit statuses read/write permissions; leave other permissions
-off. The Worker verifies `X-Hub-Signature-256` with the App webhook secret, signs
-a short-lived RS256 App JWT, and exchanges it for an installation token restricted
-to `agenticos` with Contents read and Commit statuses write. It caches that token
-in memory until shortly before expiry and posts the status on the exact commit
-SHA. CI tasks do not receive the App private key or installation token. The
-setup script stores the App ID, installation ID and private key in Armada under
-`AGENTICOS_ARMADA_APP_ID`, `AGENTICOS_ARMADA_APP_INSTALLATION_ID` and
-`AGENTICOS_ARMADA_APP_PRIVATE_KEY`; it configures the webhook secret directly on
-the runtime. No secret values are committed.
+The fine-grained CI token is restricted to `t3grp/agenticos` with Contents read and
+Commit statuses read/write (Metadata read is automatic). The Worker stores it in
+Armada as `AGENTICOS_ARMADA_CI_GITHUB_TOKEN` for fetching commits and posting
+statuses. CI tasks do not request this secret. The webhook signing secret is
+configured in the reusable Armada Worker; no secret values are committed.
+
+## Renewal
+
+The fine-grained PAT expires 90 days after it was created. Its exact expiry date is
+shown on GitHub's token settings page. The Key Vault entry itself has no expiry.
+Before the PAT expires, regenerate it with the same scopes, have Azure Ops update
+`agenticos-armada-ci-github-token` in `t3-secrets`, then confirm a green `armada`
+status on the next commit.
 
 ## Disable
 
-Suspend or uninstall the GitHub App in the org settings, then revoke its private
-key in the App settings. Remove the corresponding App credentials and webhook
-secret from Key Vault and the Armada runtime. Keep the Armada connection only if
-another integration uses it.
+Remove the repository webhook from GitHub and the Armada runtime. Revoke the PAT
+and signing secret in their respective settings and remove the corresponding
+`agenticos-armada-*` Key Vault entries when they are no longer needed. Keep the
+Armada connection only if another integration uses it.
