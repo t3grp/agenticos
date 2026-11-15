@@ -3595,6 +3595,31 @@
       }
    },
    "chat" : {
+      "roomLead" : {
+         "title" : "Room lead",
+         "enabled" : "Enable lead routing",
+         "lead" : "Pinned lead",
+         "none" : "None",
+         "specialists" : "Allowed specialists",
+         "save" : "Save policy",
+         "askLead" : "Ask lead",
+         "proposal" : "Review handoff",
+         "accept" : "Accept handoffs",
+         "discard" : "Discard",
+         "failed" : "Room routing is unavailable",
+         "specialist" : "Specialist: {name}",
+         "status" : {
+            "planned" : "Planned",
+            "in_progress" : "In progress",
+            "waiting_for_user" : "Waiting for review",
+            "blocked" : "Blocked",
+            "done" : "Done",
+            "cancelled" : "Cancelled"
+         },
+         "reviewDetails" : "Owner: {accountable}. Reviewer: {reviewer}. Version: {version}.",
+         "due" : "Due: {time}",
+         "ownership" : "Owner: {owner}. Reviewer: {reviewer}."
+      },
       "roomThread" : {
          "historyAudience" : "Saved conversation history",
          "readOnly" : "This thread is read-only.",

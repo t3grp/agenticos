@@ -1,7 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Agent } from "@/types/agents";
 
 /** Room requests run on the server, without a person's local or subscription context. */
@@ -21,13 +27,16 @@ export function TeamRoomResponder({
   value,
   onChange,
   disabled,
+  allowLead = false,
 }: {
   agents: readonly Agent[];
   value: string | null;
   onChange: (id: string | null) => void;
   disabled: boolean;
+  allowLead?: boolean;
 }) {
   const t = useTranslations("chat.teamRoom");
+  const lead = useTranslations("chat.roomLead");
   return (
     <Select
       value={value ?? "team"}
@@ -39,6 +48,7 @@ export function TeamRoomResponder({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="team">{t("humanOnly")}</SelectItem>
+        {allowLead && <SelectItem value="lead">{lead("askLead")}</SelectItem>}
         {agents.map((agent) => (
           <SelectItem key={agent.id} value={agent.id}>
             {t("askAgent", { name: agent.name })}

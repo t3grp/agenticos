@@ -337,3 +337,25 @@ An ownerless scheduled conversation in a project can be renamed, archived or del
 
 
 Deleting a project also erases its memory claims and derived shared copies, and attempts to remove its registered provider webhooks before cascading its routines. An unavailable provider is logged; it does not block deletion.
+
+
+### Room lead and reviewed handoffs
+
+A project editor can open **Room lead**, choose a published pinned lead and allowed
+specialists, and enable routing. Open the project's existing Tasks board first;
+routing does not install a board or tracking routine. **Team only** stays the
+default. Select **Ask lead** explicitly to request an answer or up to three
+handoff proposals. The lead answers without tools and cannot dispatch a proposal.
+
+The original requester reviews the expected result, pinned specialist, owner,
+reviewer and due time before accepting or discarding the proposal. Acceptance
+rechecks current room, board, agent and reviewer access. An existing task must
+match its reviewed revision and assignment. Repeated acceptance retains one
+canonical project task and one durable dispatch per selected item.
+
+Cards remain in their accepted room or side thread and read canonical task state.
+A successful run waits for review; the executing agent cannot accept its own
+result. The authorized reviewer completes or cancels through Tasks or Inbox.
+Private working chats, Inbox links and result bodies do not appear on room cards.
+Disabling routing stops new proposals and acceptance without cancelling accepted
+tasks. Reconnects only read state and never restart cancelled or uncertain work.

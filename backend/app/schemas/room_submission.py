@@ -35,6 +35,7 @@ class RoomMessageCreate(BaseSchema):
     reply_to_message_id: UUID | None = None
     thread_root_message_id: UUID | None = None
     agent_id: UUID | None = None
+    intent: Literal["ask_lead"] | None = None
 
 
 class RoomAgentRequestRead(BaseSchema):

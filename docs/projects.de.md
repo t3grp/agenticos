@@ -2,7 +2,7 @@
 title: Projekte
 seo_title: Projekte - gemeinsame Dateien und Anweisungen
 description: Ein Projekt gibt laufender Arbeit einen Container mit Dateien und eine Reihe von Anweisungen, die jeder Chat darin teilt, egal welcher Agent antwortet.
-source_sha: "2ad663e05982"
+source_sha: "c0c8fff6dc95"
 ---
 
 # Projekte { #projects }
@@ -368,3 +368,27 @@ Eine geplante Unterhaltung ohne Eigentümer in einem Projekt kann von Personen m
 
 
 Beim Löschen eines Projekts werden auch seine Gedächtniseinträge und abgeleiteten geteilten Kopien entfernt. Registrierte Provider-Webhooks werden vor der kaskadierenden Löschung der Routinen bestmöglich entfernt. Ein nicht erreichbarer Provider wird protokolliert und blockiert die Löschung nicht.
+
+
+### Raumleitung und geprüfte Übergaben { #room-lead-and-reviewed-handoffs }
+
+Projektbearbeiter wählen unter **Raumleitung** eine veröffentlichte, fixierte
+Leitung und erlaubte Spezialisten und aktivieren die Weiterleitung. Zuerst muss
+das bestehende Aufgabenboard des Projekts geöffnet werden. Die Weiterleitung
+installiert weder Board noch Routine. Nachrichten gehen standardmäßig nur an
+Menschen. **Leitung fragen** fordert ausdrücklich eine Antwort oder bis zu drei
+Übergabevorschläge an. Die Leitung verwendet keine Werkzeuge und startet keine Arbeit.
+
+Der ursprüngliche Auftraggeber prüft Ergebnis, Spezialistenversion, Verantwortung,
+Prüfer und Frist vor Annahme oder Verwerfen. Die Annahme prüft erneut den Zugriff
+auf Raum, Board, Agent und Prüfer. Eine bestehende Aufgabe muss der geprüften
+Revision und Zuweisung entsprechen. Wiederholte Annahme behält pro ausgewähltem
+Eintrag eine kanonische Projektaufgabe und einen dauerhaften Ausführungsauftrag.
+
+Karten bleiben im angenommenen Raum oder Unterthread und lesen den kanonischen
+Aufgabenstatus. Erfolgreiche Ausführung wartet auf Prüfung. Der Agent kann sein
+eigenes Ergebnis nicht annehmen. Der berechtigte Prüfer erledigt oder storniert
+über Aufgaben oder Posteingang. Private Arbeitschats, Posteingangslinks und
+Ergebnisinhalte erscheinen nicht auf Raumkarten. Deaktivieren blockiert neue
+Vorschläge und Annahmen, ohne angenommene Aufgaben zu stornieren. Erneutes Verbinden
+liest nur den Status und startet weder stornierte noch ungewisse Arbeit erneut.

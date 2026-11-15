@@ -132,6 +132,16 @@ async def execution_allows(db: AsyncSession, ctx: AuthContext, trigger_id: UUID)
     table = await virtual_table_repo.get_table(
         db, record.table_id, organization_id=ctx.organization_id
     )
+    from app.core.exceptions import AppException
+    from app.repositories import room_routing as routing_repo
+    from app.services.room_routing import RoomRoutingService
+
+    room_link = await routing_repo.for_task(db, ctx.organization_id, record.id)
+    if room_link is not None:
+        try:
+            await RoomRoutingService(db).execution_authority(ctx, room_link)
+        except AppException:
+            return False
     return (
         board is not None
         and table is not None

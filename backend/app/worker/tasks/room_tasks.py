@@ -14,6 +14,7 @@ from app.db.session import get_worker_db_context
 from app.repositories import conversation as conversation_repo
 from app.repositories import room_submission as room_repo
 from app.schemas.conversation import MessageRead
+from app.schemas.room_routing import RoutingOutput
 from app.services import chat_room, live_turn
 from app.services.agent_runner import AgentRunnerService, RunSegment
 from app.services.conversation import ConversationService
@@ -148,6 +149,10 @@ async def run_request(job: RoomRequestJob) -> None:
                 conversation_id, limit=60, room_request_message_id=message.id
             )
             prompt = await service.conversations.model_text(message, conversation)
+            if submission.ask_lead:
+                from app.services.room_routing import RoomRoutingService
+
+                prompt = await RoomRoutingService(db).prompt(ctx, submission) + prompt
             people = await conversation_repo.users_by_id(db, {submission.requester_id})
             sender = people.get(submission.requester_id)
             if sender is None:
@@ -192,6 +197,20 @@ async def run_request(job: RoomRequestJob) -> None:
             async def settled(segment: RunSegment) -> None:
                 nonlocal saved_segment
                 await _settle(db, job.request_id, segment.run)
+                if submission.ask_lead and segment.run.status == "completed":
+                    from app.services.room_routing import RoomRoutingService
+
+                    try:
+                        await RoomRoutingService(db).completed(
+                            submission, segment.output, segment.message_id
+                        )
+                    except AppException:
+                        submission.status = "failed"
+                        submission.error = (
+                            "The routing proposal is invalid or its reviewed authority changed."
+                        )
+                        await room_repo.save(db, submission)
+                        announce_request(db, submission)
                 saved_segment = segment
 
             try:
@@ -210,6 +229,10 @@ async def run_request(job: RoomRequestJob) -> None:
                             message_history=history,
                             acts_for_sender=True,
                             parks_questions=True,
+                            aside=submission.ask_lead,
+                            output_schema=(
+                                RoutingOutput.model_json_schema() if submission.ask_lead else None
+                            ),
                             on_run_open=opened,
                             check_model_request=check_model_request,
                             on_segment=settled,

@@ -86,6 +86,17 @@ class TaskExecution:
         *,
         publish_attention: bool = True,
     ) -> None:
+        from app.repositories import room_routing as routing_repo
+
+        room_link = await routing_repo.for_task(self.db, ctx.organization_id, record.id)
+        if (
+            room_link is not None
+            and fields.status == "done"
+            and ctx.subject_id != room_link.reviewer_user_id
+        ):
+            raise AuthorizationError(
+                message="The room handoff requires its review recipient's acceptance", details={}
+            )
         terminal = fields.status in _TERMINAL
         if (
             ctx.routine_id is not None
@@ -103,7 +114,11 @@ class TaskExecution:
                     if link.outcome_id is not None
                     else None
                 )
-                recipient = fields.assignee_user_id or link.creator_user_id
+                recipient = (
+                    room_link.reviewer_user_id
+                    if room_link
+                    else (fields.assignee_user_id or link.creator_user_id)
+                )
                 if recipient is not None and (
                     case is None
                     or case.user_id != recipient
@@ -205,6 +220,17 @@ class TaskExecution:
             resolved = await AgentRegistryService(self.db).get_runnable_spec(
                 ctx, fields.assignee_agent_id
             )
+            if room_link is not None:
+                from app.services.room_routing import RoomRoutingService
+
+                if fields.assignee_agent_id != room_link.agent_id:
+                    raise AuthorizationError(
+                        message="Review a new handoff before changing its specialist", details={}
+                    )
+                await RoomRoutingService(self.db).execution_authority(ctx, room_link)
+                resolved = await AgentRegistryService(self.db).get_pinned_spec(
+                    ctx, room_link.agent_id, room_link.version_id
+                )
             if link.conversation_id is None:
                 conversation = await ConversationService(self.db).create_conversation(
                     ConversationCreate(
@@ -463,7 +489,23 @@ class TaskExecution:
         if fields.status in _TERMINAL:
             return
         status = "waiting_for_user" if run.status == RunStatus.COMPLETED.value else "blocked"
-        recipient = fields.assignee_user_id or link.creator_user_id
+        from app.repositories import room_routing as routing_repo
+
+        room_link = await routing_repo.for_task(self.db, trigger.organization_id, record.id)
+        if room_link is not None:
+            from app.core.exceptions import AppException
+            from app.services.room_routing import RoomRoutingService
+
+            try:
+                await RoomRoutingService(self.db).execution_authority(ctx, room_link)
+            except AppException:
+                await self.unavailable(trigger)
+                return
+        recipient = (
+            room_link.reviewer_user_id
+            if room_link
+            else (fields.assignee_user_id or link.creator_user_id)
+        )
         reviewer = await member_context(
             self.db, organization_id=trigger.organization_id, user_id=recipient
         )
@@ -521,9 +563,16 @@ class TaskExecution:
             self.db, organization_id=outcome.organization_id, user_id=outcome.user_id
         )
         from app.core.permissions import Perm
+        from app.repositories import room_routing as routing_repo
         from app.services.task_access import board_allows
 
-        is_reviewer = outcome.user_id == (fields.assignee_user_id or link.creator_user_id) or (
+        room_link = await routing_repo.for_task(self.db, outcome.organization_id, record.id)
+        expected_reviewer = (
+            room_link.reviewer_user_id
+            if room_link
+            else (fields.assignee_user_id or link.creator_user_id)
+        )
+        is_reviewer = outcome.user_id == expected_reviewer or (
             fields.status == "blocked" and outcome.user_id == link.creator_user_id
         )
         if (

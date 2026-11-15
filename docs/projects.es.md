@@ -2,7 +2,7 @@
 title: Proyectos
 seo_title: Proyectos - archivos e instrucciones compartidos
 description: Un proyecto da al trabajo en curso un contenedor de archivos y unas instrucciones que comparte cada chat iniciado en él, responda el agent que responda.
-source_sha: "2ad663e05982"
+source_sha: "c0c8fff6dc95"
 ---
 
 # Proyectos { #projects }
@@ -364,3 +364,27 @@ Una conversación programada sin propietario dentro de un proyecto puede ser ren
 
 
 Eliminar un proyecto también borra sus entradas de memoria y copias compartidas derivadas e intenta retirar los webhooks registrados antes de eliminar sus rutinas en cascada. Un proveedor no disponible se registra y no bloquea la eliminación.
+
+
+### Responsable de sala y traspasos revisados { #room-lead-and-reviewed-handoffs }
+
+Un editor del proyecto abre **Responsable de sala**, elige una versión publicada
+y fijada del responsable y los especialistas permitidos y activa el enrutamiento.
+Primero debe abrir el tablero de tareas existente del proyecto. El enrutamiento
+no instala tableros ni rutinas. La opción predeterminada sigue siendo solo personas.
+**Preguntar al responsable** solicita expresamente una respuesta o hasta tres
+propuestas. El responsable no utiliza herramientas ni inicia el trabajo propuesto.
+
+El solicitante original revisa el resultado esperado, la versión del especialista,
+el responsable, el revisor y la fecha antes de aceptar o descartar. La aceptación
+vuelve a comprobar el acceso a la sala, tablero, agente y revisor. Una tarea
+existente debe coincidir con la revisión y asignación revisadas. Las aceptaciones
+repetidas conservan una tarea canónica del proyecto y un envío duradero por elemento.
+
+Las tarjetas permanecen en la sala o hilo aceptado y leen el estado canónico. Una
+ejecución correcta espera revisión. El agente no puede aceptar su propio resultado.
+El revisor autorizado completa o cancela desde Tareas o la bandeja de entrada.
+Las tarjetas no muestran chats privados, enlaces privados ni cuerpos de resultados.
+Desactivar el enrutamiento bloquea nuevas propuestas y aceptaciones, sin cancelar
+tareas aceptadas. Reconectar solo lee el estado y nunca reinicia trabajo cancelado
+o con resultado incierto.

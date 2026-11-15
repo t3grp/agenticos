@@ -72,6 +72,7 @@ def fingerprint(request: RoomMessageCreate) -> str:
             else None,
             "agent_id": str(request.agent_id) if request.agent_id else None,
             **scope,
+            **({"intent": request.intent} if request.intent else {}),
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -167,10 +168,23 @@ class RoomSubmissionService:
             )
 
         version_id = None
-        if request.agent_id is not None:
+        policy_revision = None
+        agent_id = request.agent_id
+        if request.intent is not None:
+            if agent_id is not None:
+                raise BadRequestError(
+                    message="Ask lead cannot also select another agent", details={}
+                )
+            from app.services.room_routing import RoomRoutingService
+
+            pin, policy_revision = await RoomRoutingService(self.db).lead(ctx, conversation_id)
+            agent_id, version_id = pin.agent_id, pin.version_id
+        if agent_id is not None:
             _, spec, version_id = await AgentRegistryService(self.db).get_runnable_spec(
-                ctx, request.agent_id
+                ctx, agent_id
             )
+            if request.intent is not None:
+                version_id = pin.version_id
             cloud_agent(spec)
             if await room_repo.active_count(self.db, conversation_id=conversation_id) >= MAX_ACTIVE:
                 raise AlreadyExistsError(
@@ -198,12 +212,14 @@ class RoomSubmissionService:
                 message_id=message.id,
                 client_message_id=request.client_message_id,
                 fingerprint=digest,
-                agent_id=request.agent_id,
+                agent_id=agent_id,
                 version_id=version_id,
-                status="queued" if request.agent_id is not None else "posted",
+                status="queued" if agent_id is not None else "posted",
+                ask_lead=request.intent is not None,
+                lead_policy_revision=policy_revision,
             ),
         )
-        if request.agent_id is not None:
+        if agent_id is not None:
             await self.queue(submission)
             announce_request(self.db, submission)
         spawn_after_commit(
@@ -263,10 +279,19 @@ class RoomSubmissionService:
             content=message.content,
             reply_to_message_id=message.reply_to_message_id,
             thread_root_message_id=message.thread_root_message_id,
-            agent_id=submission.agent_id,
+            agent_id=None if submission.ask_lead else submission.agent_id,
+            intent="ask_lead" if submission.ask_lead else None,
         )
         if fingerprint(saved) != submission.fingerprint:
             raise AlreadyExistsError(message="The original room message has changed")
+        if submission.ask_lead:
+            from app.services.room_routing import RoomRoutingService
+
+            pin, _ = await RoomRoutingService(self.db).lead(
+                ctx, submission.conversation_id, submission.lead_policy_revision
+            )
+            if pin.agent_id != submission.agent_id or pin.version_id != submission.version_id:
+                raise AlreadyExistsError(message="The pinned lead changed", details={})
         return ctx, conversation, message
 
     async def resume_authority(

@@ -70,6 +70,9 @@ def world(monkeypatch: pytest.MonkeyPatch) -> World:
     outcome = Outcome(
         id=uuid4(), organization_id=ctx.organization_id, user_id=ctx.user_id, status="open"
     )
+    from app.repositories import room_routing as routing_repo
+
+    monkeypatch.setattr(routing_repo, "for_task", AsyncMock(return_value=None))
     service = TaskExecution(AsyncMock(spec=AsyncSession))
     for name, value in {
         "record": record,
@@ -464,4 +467,49 @@ async def test_departed_creator_with_no_assignee_blocks_without_inventing_a_reci
         WakeTask(organization_id=world.ctx.organization_id, task_id=world.record.id, revision=1)
     )
     world.service._project.assert_awaited_once()
+    world.service._attention.assert_not_awaited()
+
+
+async def test_room_handoff_returns_to_the_review_recipient_and_never_auto_closes(
+    world, monkeypatch
+):
+    from types import SimpleNamespace
+
+    from app.repositories import room_routing as routing_repo
+    from app.services.room_routing import RoomRoutingService
+
+    reviewer = uuid4()
+    monkeypatch.setattr(
+        routing_repo, "for_task", AsyncMock(return_value=SimpleNamespace(reviewer_user_id=reviewer))
+    )
+    monkeypatch.setattr(RoomRoutingService, "execution_authority", AsyncMock())
+    await world.service.finished(world.trigger, AgentRun(status="completed"))
+    assert world.service._state.await_args.args[3].status == "waiting_for_user"
+    assert world.service._attention.await_args.args[3] == reviewer
+    world.service._state.reset_mock()
+    world.outcome.user_id = reviewer
+    world.outcome.status = "resolved"
+    world.fields.status = "waiting_for_user"
+    await world.service.settled(world.outcome)
+    assert world.service._project.await_args.args[2] == "done"
+
+
+async def test_room_revocation_during_execution_blocks_the_result_handoff(world, monkeypatch):
+    from types import SimpleNamespace
+
+    from app.repositories import room_routing as routing_repo
+    from app.services.room_routing import RoomRoutingService
+
+    monkeypatch.setattr(
+        routing_repo, "for_task", AsyncMock(return_value=SimpleNamespace(reviewer_user_id=uuid4()))
+    )
+    monkeypatch.setattr(
+        RoomRoutingService,
+        "execution_authority",
+        AsyncMock(side_effect=AuthorizationError(message="Revoked", details={})),
+    )
+    await world.service.finished(world.trigger, AgentRun(status="completed"))
+    world.service._project.assert_awaited_once_with(
+        world.board, world.record, "blocked", actor=None
+    )
     world.service._attention.assert_not_awaited()

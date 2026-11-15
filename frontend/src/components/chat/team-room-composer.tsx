@@ -7,6 +7,8 @@ import { Button, Textarea } from "@/components/ui";
 import { StartTeamRoom } from "@/components/projects/start-team-room";
 import { useAgents } from "@/hooks/use-agents";
 import { useProject } from "@/hooks/use-projects";
+import { useRoomRouting } from "@/hooks/use-room-routing";
+import { RoomLeadPanel } from "./room-lead-panel";
 import { useRoomRequests } from "@/hooks/use-room";
 import { useRoomDraft } from "@/hooks/use-room-draft";
 import { getErrorMessage } from "@/lib/api-error";
@@ -43,6 +45,7 @@ export function RoomComposer({
   const t = useTranslations("chat.teamRoom");
   const tErrors = useTranslations("errors");
   const requests = useRoomRequests(conversationId);
+  const routing = useRoomRouting(conversationId, threadRootMessageId);
   const { project, isLoading: loadingProject } = useProject(projectId);
   const { agents } = useAgents();
   const canPost = !readOnly && !requests.isError && requests.data?.can_post === true;
@@ -59,6 +62,12 @@ export function RoomComposer({
   }
   return (
     <div>
+      <RoomLeadPanel
+        key={`${conversationId}:${threadRootMessageId}`}
+        room={conversationId}
+        root={threadRootMessageId}
+        agents={roomResponders(agents)}
+      />
       <TeamRoomQueue
         conversationId={conversationId}
         requests={(requests.data?.items ?? []).filter(
@@ -90,6 +99,7 @@ export function RoomComposer({
           onTyping={onTyping}
           actionsSlot={actionsSlot}
           inThread={threadRootMessageId !== null}
+          allowLead={routing.data?.policy?.enabled === true}
         />
       )}
       {!canPost && actionsSlot && (
@@ -105,16 +115,20 @@ function TeamRoomForm({
   onTyping,
   actionsSlot,
   inThread,
+  allowLead,
 }: {
   draft: ReturnType<typeof useRoomDraft>;
   agents: readonly Agent[];
   onTyping: () => void;
   actionsSlot?: ReactNode;
   inThread: boolean;
+  allowLead: boolean;
 }) {
   const t = useTranslations("chat.teamRoom");
   const thread = useTranslations("chat.roomThread");
-  const available = draft.agentId === null || agents.some((agent) => agent.id === draft.agentId);
+  const available =
+    draft.agentId === null ||
+    (draft.agentId === "lead" ? allowLead : agents.some((agent) => agent.id === draft.agentId));
   const canSend =
     !draft.sending && draft.content.trim().length > 0 && (draft.retrying || available);
   return (
@@ -162,6 +176,7 @@ function TeamRoomForm({
           value={draft.agentId}
           onChange={draft.setAgentId}
           disabled={draft.locked}
+          allowLead={allowLead}
         />
         <div className="flex items-center gap-2">
           {actionsSlot}

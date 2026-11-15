@@ -19,7 +19,13 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- Optional pinned room leads, explicit Ask lead requests, and bounded human-reviewed handoffs to canonical project tasks. Room/thread cards show live ownership and review status without private working chats or result bodies.
+
 ### Upgrading
+
+- Room lead routing adds `0331_room_lead_handoffs.py`, revision `0331` after the Lead-reserved `0330`. The stacked #90 base does not yet contain 0327?0330; integrate the complete train before upgrading. The migration builds tenant linkage constraints and indexes in a maintenance window. Downgrade refuses while accepted room task links exist; reconcile provenance and retain canonical tasks before rollback. Engineer-owned #111 coordination must include #115/0331 after #110/0330 and reverse that order for rollback.
 
 - Thread storage uses migration `0326_room_threads.py` after `0325_merge_t3_rooms_v173.py`. Existing message and request identities remain valid. Once thread replies exist, retain a thread-aware application version or restore the matching pre-upgrade backup: an older reader or dropping the root column would mix those replies into the main transcript. Downgrading the thread migration refuses while replies exist; an empty downgrade returns to `0325_merge_t3_rooms_v173`.
 - Prepare the thread migration in a room read/write maintenance window, drain active turn workers, and rehearse it on a production-sized copy. The schema change remains transactional: a failed upgrade rolls back its column, constraints and revision together. Constraint attachment, validation and the remaining index build still take locks even when the composite index is prepared in advance.

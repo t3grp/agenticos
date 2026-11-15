@@ -430,3 +430,31 @@ async def test_room_invalidation_contains_only_identifiers_and_includes_the_send
     args, kwargs = announce.call_args
     assert args == (room_id, f"room_{kind}")
     assert kwargs == {f"{kind}_id": str(record)}
+
+
+async def test_ask_lead_runs_without_tools_and_commits_only_a_reviewable_proposal(
+    work, monkeypatch
+):
+    from app.services.room_routing import RoomRoutingService
+
+    work.row.ask_lead = True
+    monkeypatch.setattr(
+        RoomRoutingService, "prompt", AsyncMock(return_value="Routing instructions: ")
+    )
+    completed = AsyncMock()
+    monkeypatch.setattr(RoomRoutingService, "completed", completed)
+
+    async def execute(ctx, agent_id, prompt, **options):
+        assert options["aside"] is True
+        assert options["output_schema"]["properties"]["items"]["maxItems"] == 3
+        assert prompt.startswith("Routing instructions: ")
+        await options["on_run_open"](work.run)
+        await options["on_segment"](
+            SimpleNamespace(run=work.run, output='{"answer":"Review","items":[]}', message_id=None)
+        )
+        return "Review", work.run
+
+    work.execute.side_effect = execute
+    await module.run_request(work.job)
+    completed.assert_awaited_once_with(work.row, '{"answer":"Review","items":[]}', None)
+    assert work.row.status == "completed"

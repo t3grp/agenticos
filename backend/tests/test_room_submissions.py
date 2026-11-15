@@ -498,3 +498,31 @@ async def test_human_message_response_cannot_launder_an_assistant_turn(room) -> 
     room.message.role = "assistant"
     with pytest.raises(BadRequestError, match="human post"):
         await room.service.read_message(room.message, room.user)
+
+
+async def test_ask_lead_pins_the_policy_version_and_replays_without_resolving_it_again(
+    room, monkeypatch
+):
+    from app.schemas.room_routing import AgentPin
+    from app.services.room_routing import RoomRoutingService
+
+    pin = AgentPin(agent_id=uuid4(), version_id=uuid4())
+    lead = AsyncMock(return_value=(pin, 4))
+    monkeypatch.setattr(RoomRoutingService, "lead", lead)
+    body = request(intent="ask_lead")
+    first = await room.service.post(room.ctx, room.topic.id, body, room.user)
+    lead.side_effect = BadRequestError(message="Routing disabled", details={})
+    again = await room.service.post(room.ctx, room.topic.id, body, room.user)
+    assert first == again
+    assert len(room.rows) == room.enqueue.await_count == 1
+    assert room.rows[0].version_id == pin.version_id
+    assert room.rows[0].ask_lead is True and room.rows[0].lead_policy_revision == 4
+    lead.assert_awaited_once()
+
+
+async def test_ask_lead_and_an_explicit_responder_cannot_be_combined(room):
+    with pytest.raises(BadRequestError):
+        await room.service.post(
+            room.ctx, room.topic.id, request(intent="ask_lead", agent_id=uuid4()), room.user
+        )
+    assert not room.rows

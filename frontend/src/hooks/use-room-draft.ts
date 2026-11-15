@@ -40,7 +40,11 @@ export function useRoomDraft(
       input: {
         client_message_id: clientId(),
         content: held.content.trim(),
-        ...(held.agentId === null ? {} : { agent_id: held.agentId }),
+        ...(held.agentId === null
+          ? {}
+          : held.agentId === "lead"
+            ? { intent: "ask_lead" as const }
+            : { agent_id: held.agentId }),
         ...(selectedReply === null ? {} : { reply_to_message_id: selectedReply.messageId }),
         ...(threadRootMessageId === null ? {} : { thread_root_message_id: threadRootMessageId }),
       },

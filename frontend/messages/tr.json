@@ -2941,6 +2941,31 @@
       }
    },
    "chat" : {
+      "roomLead" : {
+         "title" : "Oda lideri",
+         "enabled" : "Lider yönlendirmesini etkinleştir",
+         "lead" : "Sabit lider",
+         "none" : "Yok",
+         "specialists" : "İzin verilen uzmanlar",
+         "save" : "Politikayı kaydet",
+         "askLead" : "Lidere sor",
+         "proposal" : "Devri incele",
+         "accept" : "Devirleri kabul et",
+         "discard" : "Reddet",
+         "failed" : "Oda yönlendirmesi kullanılamıyor",
+         "specialist" : "Uzman: {name}",
+         "status" : {
+            "planned" : "Planlandı",
+            "in_progress" : "Devam ediyor",
+            "waiting_for_user" : "İnceleme bekliyor",
+            "blocked" : "Engellendi",
+            "done" : "Tamamlandı",
+            "cancelled" : "İptal edildi"
+         },
+         "reviewDetails" : "Sorumlu: {accountable}. İnceleyen: {reviewer}. Sürüm: {version}.",
+         "due" : "Son tarih: {time}",
+         "ownership" : "Sorumlu: {owner}. İnceleyen: {reviewer}."
+      },
       "roomThread" : {
          "historyAudience" : "Kaydedilmiş sohbet geçmişi",
          "readOnly" : "Bu konu salt okunurdur.",

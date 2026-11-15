@@ -39,6 +39,7 @@ export interface RoomMessageCreate {
   thread_root_message_id?: string | null;
   /** Omitted for a human-only message; resource mentions never select a responder. */
   agent_id?: string | null;
+  intent?: "ask_lead";
 }
 
 export interface RoomMessageResult {

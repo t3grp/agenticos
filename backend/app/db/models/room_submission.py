@@ -9,6 +9,7 @@ import uuid
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     ForeignKey,
     ForeignKeyConstraint,
@@ -29,6 +30,9 @@ from app.db.models.conversation import Message
 class RoomSubmission(Base, TimestampMixin):
     __tablename__ = "room_submissions"
     __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "conversation_id", "id", name="uq_room_submission_scope_id"
+        ),
         ForeignKeyConstraint(
             ["organization_id", "conversation_id"],
             ["conversations.organization_id", "conversations.id"],
@@ -94,6 +98,8 @@ class RoomSubmission(Base, TimestampMixin):
     version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="posted")
     job_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    ask_lead: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    lead_policy_revision: Mapped[int | None] = mapped_column(nullable=True)
     run_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("agent_runs.id", ondelete="SET NULL"),

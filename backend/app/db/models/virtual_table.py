@@ -196,6 +196,7 @@ class VirtualTableRecord(Base, TimestampMixin):
     )
 
     __table_args__ = (
+        UniqueConstraint("organization_id", "id", name="uq_virtual_table_record_org_id"),
         ForeignKeyConstraint(
             ["organization_id", "table_id"],
             ["virtual_tables.organization_id", "virtual_tables.id"],

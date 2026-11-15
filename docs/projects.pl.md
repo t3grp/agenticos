@@ -2,7 +2,7 @@
 title: Projekty
 seo_title: Projekty - wspólne pliki i instrukcje czatów
 description: Projekt daje bieżącej pracy jeden kontener plików i jeden zestaw instrukcji, wspólne dla każdego czatu w nim, niezależnie od tego, który agent odpowiada.
-source_sha: "2ad663e05982"
+source_sha: "c0c8fff6dc95"
 ---
 
 # Projekty { #projects }
@@ -344,3 +344,26 @@ Rozmowę harmonogramową w projekcie, która nie ma właściciela, może zmieni�
 
 
 Usunięcie projektu usuwa również jego wpisy pamięci i pochodne udostępnione kopie oraz próbuje wyrejestrować webhooki u dostawców przed kaskadowym usunięciem rutyn. Niedostępność dostawcy jest logowana i nie blokuje usunięcia.
+
+
+### Lider pokoju i zatwierdzane przekazania { #room-lead-and-reviewed-handoffs }
+
+Edytor projektu otwiera **Lider pokoju**, wybiera opublikowanego lidera w określonej
+wersji i dozwolonych specjalistów, a następnie włącza kierowanie. Najpierw otwiera
+istniejącą tablicę zadań projektu. Kierowanie nie tworzy tablicy ani procedury
+śledzenia. Domyślna opcja nadal wysyła wiadomość tylko do ludzi. Jawne pytanie
+do lidera uruchamia odpowiedź lub do trzech propozycji przekazania. Lider nie
+używa narzędzi i nie uruchamia proponowanej pracy.
+
+Autor prośby sprawdza oczekiwany wynik, wersję specjalisty, osobę odpowiedzialną,
+recenzenta i termin przed zatwierdzeniem lub odrzuceniem. Zatwierdzenie ponownie
+sprawdza dostęp do pokoju, tablicy, agenta i recenzenta. Istniejące zadanie musi
+odpowiadać sprawdzonej rewizji i przypisaniu. Ponowne zatwierdzenie zachowuje jedno
+kanoniczne zadanie projektu i jedno trwałe uruchomienie na wybraną pozycję.
+
+Karty pozostają w zatwierdzonym pokoju lub wątku i odczytują stan zadania. Udane
+wykonanie czeka na sprawdzenie. Agent nie może zatwierdzić własnego wyniku.
+Uprawniony recenzent kończy lub anuluje zadanie w Zadaniach lub skrzynce odbiorczej.
+Karty nie pokazują prywatnych rozmów roboczych, odnośników skrzynki ani wyników.
+Wyłączenie kierowania blokuje nowe propozycje i zatwierdzenia, ale nie anuluje
+przyjętych zadań. Ponowne połączenie tylko odczytuje stan i nie wznawia pracy.

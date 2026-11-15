@@ -296,3 +296,40 @@ it("opens a new shared room before anyone asks an agent", async () => {
     title: "Team room",
   });
 });
+
+it("posts explicit Ask lead intent without selecting an agent id", async () => {
+  vi.mocked(apiClient.get).mockImplementation(async (path) =>
+    path.endsWith("/routing")
+      ? {
+          policy: {
+            revision: 1,
+            enabled: true,
+            lead: { agent_id: "Writer", version_id: "version" },
+            specialists: [],
+            max_items: 3,
+            can_edit: false,
+          },
+          proposals: [],
+          tasks: [],
+        }
+      : path === "/orgs"
+        ? { items: [] }
+        : { items: requestItems, total: requestItems.length, can_post: canPost },
+  );
+  const user = userEvent.setup();
+  render(room(), { wrapper });
+  await user.type(
+    await screen.findByRole("textbox", { name: "Message to the team" }),
+    "Please propose a handoff",
+  );
+  await user.click(screen.getByRole("combobox"));
+  await user.click(await screen.findByRole("option", { name: "Ask lead" }));
+  await user.click(screen.getByRole("button", { name: "Post message" }));
+  await waitFor(() =>
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/conversations/room-a/room-messages",
+      expect.objectContaining({ intent: "ask_lead", content: "Please propose a handoff" }),
+    ),
+  );
+  expect(vi.mocked(apiClient.post).mock.calls[0]?.[1]).not.toHaveProperty("agent_id");
+});

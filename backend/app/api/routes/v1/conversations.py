@@ -14,6 +14,7 @@ from app.api.deps import (
     CurrentUser,
     MessageRatingSvc,
     ProjectSvc,
+    RoomRoutingSvc,
     RoomSubmissionSvc,
     VisualSvc,
     WorkspaceSvc,
@@ -51,6 +52,13 @@ from app.schemas.conversation_task import ConversationTaskRead
 from app.schemas.message_rating import (
     MessageRatingCreate,
     MessageRatingRead,
+)
+from app.schemas.room_routing import (
+    LeadPolicyRead,
+    LeadPolicyUpdate,
+    RoomRoutingRead,
+    RoutingDecision,
+    RoutingProposalRead,
 )
 from app.schemas.room_submission import (
     RoomAgentRequestList,
@@ -964,3 +972,66 @@ async def download_workspace_folder(
         media_type="application/zip",
         headers={"Content-Disposition": content_disposition("attachment", folder.name)},
     )
+
+
+@router.get("/{conversation_id}/lead-policy", response_model=LeadPolicyRead)
+async def read_lead_policy(conversation_id: UUID, service: RoomRoutingSvc, ctx: Auth) -> Any:
+    """Read a room's optional lead, filtering agents by the reader's live access."""
+    return await service.policy(ctx, conversation_id)
+
+
+@router.put("/{conversation_id}/lead-policy", response_model=LeadPolicyRead)
+async def update_lead_policy(
+    conversation_id: UUID, body: LeadPolicyUpdate, service: RoomRoutingSvc, ctx: Auth
+) -> Any:
+    """Project editors configure published pins with optimistic revision control."""
+    return await service.update_policy(ctx, conversation_id, body)
+
+
+@router.get("/{conversation_id}/routing", response_model=RoomRoutingRead)
+async def read_room_routing(
+    conversation_id: UUID,
+    service: RoomRoutingSvc,
+    ctx: Auth,
+    thread_root_message_id: UUID | None = None,
+) -> Any:
+    """Read proposals and canonical status cards for exactly one accepted thread."""
+    return await service.read(ctx, conversation_id, thread_root_message_id)
+
+
+@router.post(
+    "/{conversation_id}/routing-proposals/{proposal_id}/accept", response_model=RoutingProposalRead
+)
+async def accept_room_proposal(
+    conversation_id: UUID,
+    proposal_id: UUID,
+    body: RoutingDecision,
+    service: RoomRoutingSvc,
+    ctx: Auth,
+) -> Any:
+    """Accept reviewed items once, committing task state and durable dispatch together."""
+    return await service.decide(ctx, conversation_id, proposal_id, body, accept=True)
+
+
+@router.post(
+    "/{conversation_id}/routing-proposals/{proposal_id}/discard", response_model=RoutingProposalRead
+)
+async def discard_room_proposal(
+    conversation_id: UUID,
+    proposal_id: UUID,
+    body: RoutingDecision,
+    service: RoomRoutingSvc,
+    ctx: Auth,
+) -> Any:
+    """Discard a proposal without creating tasks or dispatching work."""
+    return await service.decide(ctx, conversation_id, proposal_id, body, accept=False)
+
+
+@router.get(
+    "/{conversation_id}/routing-proposals/{proposal_id}", response_model=RoutingProposalRead
+)
+async def read_room_proposal(
+    conversation_id: UUID, proposal_id: UUID, service: RoomRoutingSvc, ctx: Auth
+) -> Any:
+    """Read one sanitized proposal under its room's current audience."""
+    return await service.read_one(ctx, conversation_id, proposal_id)

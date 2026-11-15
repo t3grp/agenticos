@@ -480,6 +480,10 @@ __all__ = [
     "GeneratedMedia",
     "GeneratedMediaReservation",
     "VoiceEndReason",
+    "RoomLeadPolicy",
+    "RoomRoutingProposal",
+    "RoomTaskLink",
 ]
 
 from app.db.models.telephony import PhoneCall, PhoneContact, PhoneEndpoint
+from app.db.models.room_routing import RoomLeadPolicy, RoomRoutingProposal, RoomTaskLink

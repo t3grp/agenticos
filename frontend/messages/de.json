@@ -3583,6 +3583,31 @@
       }
    },
    "chat" : {
+      "roomLead" : {
+         "title" : "Raumleitung",
+         "enabled" : "Weiterleitung aktivieren",
+         "lead" : "Fixierte Leitung",
+         "none" : "Keine",
+         "specialists" : "Zugelassene Spezialisten",
+         "save" : "Richtlinie speichern",
+         "askLead" : "Leitung fragen",
+         "proposal" : "?bergabe pr?fen",
+         "accept" : "?bergaben annehmen",
+         "discard" : "Verwerfen",
+         "failed" : "Raumweiterleitung ist nicht verf?gbar",
+         "specialist" : "Spezialist: {name}",
+         "status" : {
+            "planned" : "Geplant",
+            "in_progress" : "In Bearbeitung",
+            "waiting_for_user" : "Wartet auf Pr?fung",
+            "blocked" : "Blockiert",
+            "done" : "Erledigt",
+            "cancelled" : "Abgebrochen"
+         },
+         "reviewDetails" : "Verantwortlich: {accountable}. Prüfung: {reviewer}. Version: {version}.",
+         "due" : "Fällig: {time}",
+         "ownership" : "Verantwortlich: {owner}. Prüfung: {reviewer}."
+      },
       "roomThread" : {
          "historyAudience" : "Gespeicherter Gesprächsverlauf",
          "readOnly" : "Dieser Thread ist schreibgeschützt.",

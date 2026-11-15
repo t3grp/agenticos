@@ -18,6 +18,16 @@ export const qk = {
       root: string | null,
     ) => ["room-threads", account, tenant, conversation, root] as const,
   },
+  roomRouting: {
+    room: (account: string | undefined, tenant: string | null, room: string | null) =>
+      ["room-routing", account, tenant, room] as const,
+    list: (
+      account: string | undefined,
+      tenant: string | null,
+      room: string | null,
+      root: string | null,
+    ) => ["room-routing", account, tenant, room, root] as const,
+  },
   roomRequests: {
     list: (account: string | undefined, tenant: string | null, conversation: string | null) =>
       ["room-requests", account, tenant, conversation] as const,
