@@ -336,6 +336,36 @@ async def test_audit_uses_the_stored_ledger_pattern_key(
     assert details["content_sha256"] == _sha256(NEW_TEXT)
 
 
+@pytest.mark.security
+async def test_a_proposal_without_a_ledger_entry_audits_no_pattern_key(
+    _service: AutoSkillLearningService,
+) -> None:
+    skill = _row("refunds", BASE_TEXT)
+    _service.skills = _Skills([skill])  # type: ignore[attr-defined]
+    data = _proposal(skill_id=skill.id, ledger_entry_id=None, pattern_key="caller-supplied")
+
+    await _service.learn(_ctx(), uuid.uuid4(), data)
+
+    details = _service.audit.await_args.kwargs["details"]  # type: ignore[attr-defined]
+    assert details["pattern_key"] is None
+
+
+@pytest.mark.security
+async def test_a_missing_ledger_entry_audits_no_pattern_key(
+    _service: AutoSkillLearningService,
+) -> None:
+    skill = _row("refunds", BASE_TEXT)
+    _service.skills = _Skills([skill])  # type: ignore[attr-defined]
+    data = _proposal(skill_id=skill.id, pattern_key="caller-supplied")
+    assert data.ledger_entry_id is not None
+    del _LEDGER_PATTERN_KEYS[data.ledger_entry_id]
+
+    await _service.learn(_ctx(), uuid.uuid4(), data)
+
+    details = _service.audit.await_args.kwargs["details"]  # type: ignore[attr-defined]
+    assert details["pattern_key"] is None
+
+
 async def test_an_existing_skill_already_carrying_the_text_is_a_no_op(
     _service: AutoSkillLearningService,
 ) -> None:
