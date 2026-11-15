@@ -26,6 +26,17 @@ const account: CodingAccount = {
   secret_kind: "api_key",
   enabled: false,
   generation: "generation",
+  is_default: true,
+  pool_member: false,
+  usage: {
+    status: "unknown",
+    observed_at: null,
+    observation_age_seconds: null,
+    valid_until: null,
+    source: "unavailable",
+    windows: [],
+    reason_code: "provider_contract_unverified",
+  },
 };
 function mount() {
   const client = new QueryClient({

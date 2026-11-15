@@ -31,6 +31,17 @@ const account = {
   secret_kind: "api_key",
   enabled: false,
   generation: "g-1",
+  is_default: true,
+  pool_member: false,
+  usage: {
+    status: "unknown",
+    observed_at: null,
+    observation_age_seconds: null,
+    valid_until: null,
+    source: "unavailable",
+    windows: [],
+    reason_code: "provider_contract_unverified",
+  },
 };
 function mount(ui: ReactElement = <CodingAccounts />) {
   const client = new QueryClient({
@@ -81,6 +92,38 @@ it("changes consent with a generation check and disconnects only the selected ac
   );
   await userEvent.click(screen.getByRole("button", { name: "Disconnect" }));
   await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/coding-accounts/c-1"));
+});
+it("shows unknown provider usage and lets the owner choose a default and pool account", async () => {
+  const codex = {
+    ...account,
+    id: "c-2",
+    harness: "codex",
+    label: "Second Codex",
+    secret_kind: "openai_codex",
+    enabled: true,
+    generation: "g-2",
+    is_default: false,
+  };
+  vi.mocked(apiClient.get).mockResolvedValue({ items: [account, codex] });
+  mount();
+  expect(await screen.findByText("Provider usage: Unknown")).toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("button", { name: "Make default" }));
+  await waitFor(() =>
+    expect(apiClient.patch).toHaveBeenCalledWith("/coding-accounts/c-2", {
+      generation: "g-2",
+      enabled: true,
+      is_default: true,
+    }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Add to pool" }));
+  await waitFor(() =>
+    expect(apiClient.patch).toHaveBeenCalledWith("/coding-accounts/c-2", {
+      generation: "g-2",
+      enabled: true,
+      pool_member: true,
+    }),
+  );
+  expect(screen.getAllByText("Default").length).toBeGreaterThan(0);
 });
 it("starts a fresh ChatGPT flow and submits its callback", async () => {
   vi.mocked(apiClient.post).mockImplementation(async (path) =>
