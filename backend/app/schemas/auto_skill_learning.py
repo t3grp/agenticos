@@ -29,8 +29,18 @@ class LearnSkillCreate(BaseSchema):
         default=None,
         description="Optional expected target skill; must match the stored proposal when supplied",
     )
-    name: str | None = Field(default=None, max_length=64)
-    description: str | None = Field(default=None, max_length=500)
+    name: str | None = Field(
+        default=None,
+        max_length=64,
+        deprecated=True,
+        description="Deprecated: accepted and ignored. Learning never renames the target skill.",
+    )
+    description: str | None = Field(
+        default=None,
+        max_length=500,
+        deprecated=True,
+        description="Deprecated: accepted and ignored. Learning never changes the target skill's description.",
+    )
     content: str = Field(
         min_length=1,
         description="The learned text — the proposal's `new_text`, in full",
@@ -60,7 +70,11 @@ class LearnedSkillRead(BaseSchema):
     name: str
     version: int = Field(description="The catalog version after learning — see `Skill.version`")
     content_sha256: str = Field(description="SHA-256 of the learned content, as stored")
-    created: bool = Field(description="Whether learning created a new skill")
+    created: bool = Field(
+        ...,
+        deprecated=True,
+        description="Deprecated: always false. Learning updates an existing skill and never creates one.",
+    )
     already_learned: bool = Field(
         description=(
             "True when the skill already carried exactly this text: the call "
