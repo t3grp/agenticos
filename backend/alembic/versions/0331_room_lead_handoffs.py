@@ -1,7 +1,6 @@
 """Room lead policy and reviewed canonical task handoff provenance.
 
-Revision 0331 intentionally follows the Lead-reserved 0330. The PR #90 base
-contains only 0326; integrate the Engineer-owned 0327-0330 train before applying.
+Revision 0331 follows 0330_role_navigation in the integrated 0327-0330 train.
 Downgrade refuses accepted links: preserve canonical task responsibility and
 restore a matching backup or retain this schema until handoffs are reconciled.
 """
@@ -11,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0331"
-down_revision = "0330"
+down_revision = "0330_role_navigation"
 branch_labels = None
 depends_on = None
 

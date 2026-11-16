@@ -161,7 +161,7 @@ async def test_changed_policy_refuses_real_acceptance_without_creating_a_task(db
     assert await db.scalar(select(func.count()).select_from(RoomTaskLink)) == 0
 
 
-async def test_migration_body_upgrades_and_downgrades_without_fabricating_the_missing_parent(db):
+async def test_migration_body_upgrades_and_downgrades_after_role_navigation(db):
     import importlib.util
     from pathlib import Path
 
@@ -173,7 +173,7 @@ async def test_migration_body_upgrades_and_downgrades_without_fabricating_the_mi
     spec = importlib.util.spec_from_file_location("room_handoff_migration", filename)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-    assert migration.revision == "0331" and migration.down_revision == "0330"
+    assert migration.revision == "0331" and migration.down_revision == "0330_role_navigation"
 
     def cycle(connection):
         with Operations.context(MigrationContext.configure(connection)):

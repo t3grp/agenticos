@@ -1272,8 +1272,27 @@
       "yourAccounts" : "Bağlı hesaplarınız"
    },
    "appearance" : {
+      "accent" : "Vurgu rengi",
+      "radius" : "Köşeler",
+      "textSize" : "Metin boyutu",
+      "accents" : {"default":"Nötr","blue":"Mavi","violet":"Mor","green":"Yeşil","amber":"Kehribar","rose":"Pembe"},
+      "radii" : {"default":"Standart","square":"Hafif","rounded":"Yuvarlak"},
+      "textSizes" : {"default":"Standart","large":"Büyük"},
+      "preview" : "Canlı önizleme",
+      "previewTitle" : "Çalışma alanınız",
+      "previewText" : "Seçtiğiniz renklerin, köşelerin ve metin boyutunun bir örneği.",
+      "previewAction" : "Örnek işlem",
+      "previewHint" : "Uygula seçilene kadar yalnızca önizleme değişir. Sıfırla, hesabınızdaki varsayılanları geri yükler.",
+      "apply" : "Uygula",
+      "discard" : "Önizlemeyi iptal et",
+      "reset" : "Varsayılanlara sıfırla",
+      "saved" : "Görünüm kaydedildi",
+      "resetDone" : "Görünüm sıfırlandı",
+      "loading" : "Görünümünüz yükleniyor…",
+      "loadError" : "Kaydedilmiş görünümünüz yüklenemedi.",
+      "retry" : "Tekrar dene",
       "colour" : "Renkli",
-      "description" : "Konsolun sizin için nasıl görünüp davrandığı. Bu tarayıcıda saklanır ve hemen uygulanır.",
+      "description" : "Görünümünüzü seçin, önizleyin ve tüm cihazlarda hesabınıza uygulayın.",
       "full" : "Tam",
       "look" : "Görünüm stili",
       "lookHint" : "Her stilin açık ve koyu biçimi vardır; hangisinin kullanılacağını yukarıdaki tema belirler. Masaüstü uygulamasındaki Glass, masaüstünüzü saydam gösterir.",
@@ -4328,6 +4347,28 @@
       "workflowRun" : {
          "unnamed" : "Workflow",
          "viewSteps" : "Adımlarını görüntüle"
+      },
+      "roomThread": {
+         "historyAudience": "Kaydedilmiş sohbet geçmişi",
+         "readOnly": "Bu konu salt okunurdur.",
+         "title": "Konu",
+         "start": "Konuda yanıtla",
+         "replies": "{count, plural, one {# yanıt} other {# yanıt}}",
+         "message": "Konuya yanıt ver",
+         "placeholder": "Buradan yanıtlayın. Odadaki herkes bu konuyu okuyabilir.",
+         "post": "Yanıtı gönder",
+         "close": "Konuyu kapat",
+         "earlier": "Önceki yanıtları yükle",
+         "audience": "Bu odadaki herkes görebilir",
+         "root": "İlk mesaj",
+         "loading": "Konu yükleniyor…",
+         "unavailable": "Bu konu kullanılamıyor. Silinmiş veya odaya erişiminiz değişmiş olabilir.",
+         "retry": "Tekrar dene",
+         "empty": "Bu konuda sohbeti başlatın.",
+         "open": "Konuyu aç",
+         "pending": "Bir ajan bir konuda sizi bekliyor.",
+         "mainPending": "Bir ajan ana odada sizi bekliyor.",
+         "main": "Odaya dön"
       }
    },
    "claudeSubscription" : {
@@ -7384,14 +7425,6 @@
       },
       "saveFailed" : "Tanıtım turunu gördüğünüz bilgisi kaydedilemedi; bu nedenle bir dahaki gelişinizde yeniden gösterilebilir.",
       "steps" : {
-         "chat-room-thread" : {
-            "title" : "Bir mesajı tartışın",
-            "body" : "Ana odayı doldurmadan yanıtları bir arada tutmak için bir konu açın. Yanıt sayısı sizi tartışmaya geri götürür; Yanıtla bir mesajı alıntılamaya devam eder."
-         },
-         "chat-room-thread-panel" : {
-            "title" : "Kendi bağlamında yanıtlar",
-            "body" : "İlk mesaj yanıtların üstünde kalır. Odadaki herkes konuyu okuyabilir. Yardım istediğinizde bir ajan seçin veya odaya dönmek için konuyu kapatın."
-         },
          "activity-approvals" : {
             "body" : "İnsan kararı beklerken duran run’lar burada sıraya girer. Her birini onaylayın veya reddedin; run kaldığı yerden devam eder. Bu sekme yalnızca karar verme izniniz varsa görünür.",
             "title" : "Sizden yanıt bekleyenler"
@@ -8004,6 +8037,10 @@
             "body" : "Konuşmalar, run’lar, belgeler, bellek, yüklemeler ve denetim kaydı için ayrı saklama süreleri belirleyin. Günlük temizlik verileri kalıcı olarak siler ve dağıtımın belirlediği sınırları uygular. Denetim kaydının asgari süresi uzatılabilir, kısaltılamaz.",
             "title" : "Verilerin burada ne kadar kalacağı"
          },
+         "org-role-navigation" : {
+            "body" : "Bir rolün gezinme önizlemesini inceleyin ve göreceği bağlantıları seçin. Değişiklikleri bu kuruluş için kaydedin veya rolün varsayılan ayarlarını geri yükleyin. Verilere ve işlemlere erişimi izin matrisi belirlemeye devam eder.",
+            "title" : "Her rolün kenar çubuğunu seçin"
+         },
          "org-roles" : {
             "body" : "İzin matrisi, rol rol nelerin kullanılabileceğini ve erişimin sınırlarını gösterir. Tek bir kaynağı paylaşmak rolün erişimini genişletebilir ama daraltamaz.",
             "title" : "Her rol neler yapabilir?"
@@ -8219,6 +8256,14 @@
          "record-access": {
             "title": "Bu satırı paylaş",
             "body": "Yazma, Okuma ve normal hücreleri değiştirme hakkını içerir. Silme, erişim yönetimi veya tablo şemasını değiştirme izni vermez."
+         },
+         "chat-room-thread": {
+            "title": "Bir mesajı tartışın",
+            "body": "Ana odayı doldurmadan yanıtları bir arada tutmak için bir konu açın. Yanıt sayısı sizi tartışmaya geri götürür; Yanıtla bir mesajı alıntılamaya devam eder."
+         },
+         "chat-room-thread-panel": {
+            "title": "Kendi bağlamında yanıtlar",
+            "body": "İlk mesaj yanıtların üstünde kalır. Odadaki herkes konuyu okuyabilir. Yardım istediğinizde bir ajan seçin veya odaya dönmek için konuyu kapatın."
          }
       }
    },
@@ -9225,6 +9270,38 @@
          "membersCard" : "Üyeler",
          "membersDescription" : "Bu kuruluşa {count, plural, =1 {1 kişinin} other {# kişinin}} erişimi var. Sahipler ve yöneticiler ekip arkadaşlarını davet edip rolleri düzenleyebilir.",
          "nameAvatarShownAcross" : "Bu kuruluştaki herkese uygulama genelinde gösterilen ad ve avatar.",
+         "navigation" : {
+            "accessNotice" : "Bu ayarlar gezinme bağlantılarını gizler. Veri erişimi, doğrudan bağlantılar ve işlemler izin matrisine ve kaynak paylaşımına tabi olmaya devam eder.",
+            "alwaysShown" : "Her zaman gösterilir",
+            "controlsTitle" : "Gezinme öğeleri",
+            "description" : "Bu kuruluştaki her rolün hangi gezinme öğelerini göreceğini seçin.",
+            "discard" : "Değişiklikleri iptal et",
+            "general" : "Genel",
+            "hidden" : "Gizli",
+            "loadError" : "Kenar çubuğu ayarları yüklenemedi.",
+            "ownerProtected" : "Kuruluş ayarlarına her zaman yeniden erişilebilmesi için Sahip rolünün kenar çubuğu kullanılabilir kalır.",
+            "permissionUnavailable" : "Bu rol için kullanılamaz",
+            "previewHint" : "Bu önizleme rolün izinlerini kullanır. Sabitlenmiş uygulamalar ve projeler yalnızca erişilebilir içerik varsa görünür.",
+            "previewTitle" : "Kenar çubuğu önizlemesi",
+            "readOnly" : "Bu rolün önizlemesini görebilirsiniz. Yalnızca kendi rolünüzün altındaki rolleri düzenleyebilirsiniz.",
+            "reset" : "Varsayılanlara dön",
+            "retry" : "Yeniden dene",
+            "role" : "Rol",
+            "roles" : {
+               "admin" : "Yönetici",
+               "builder" : "Oluşturucu",
+               "member" : "Üye",
+               "operator" : "Operatör",
+               "owner" : "Sahip",
+               "viewer" : "Görüntüleyici"
+            },
+            "save" : "Kenar çubuğunu kaydet",
+            "saved" : "Kenar çubuğu kaydedildi",
+            "showItem" : "{item} öğesini göster",
+            "title" : "Kenar çubuğu görünürlüğü",
+            "unsaved" : "Kaydedilmemiş değişiklikler var. Rol değiştirmeden önce kaydedin veya iptal edin.",
+            "visible" : "Görünür"
+         },
          "newOrganization" : "Yeni kuruluş",
          "noMembersYet" : "Henüz üye yok",
          "noOrganizationsYet" : "Henüz kuruluş yok",
@@ -9261,7 +9338,7 @@
          "usedOfMax" : "{max} üzerinden {used} kullanıldı",
          "usersRoles" : "Kullanıcılar ve Roller",
          "waitingOnResponse" : "{count, plural, =1 {1 yanıt bekleniyor} other {# yanıt bekleniyor}}",
-         "whatEachRoleMay" : "Her rolün yapabilecekleri. İzinler kodda tanımlanır ve rollere eklenir; bir rol, platformun tanımlamadığı bir izni hiçbir zaman içeremez.",
+         "whatEachRoleMay" : "Rol izinlerini inceleyin ve bu kuruluştaki her rolün kenar çubuğunda hangi bağlantıları göreceğini seçin.",
          "workspaceAvatarUpdated" : "Kuruluş avatarı güncellendi",
          "workspaceName" : "Kuruluş adı",
          "workspaceProfile" : "Kuruluş profili",

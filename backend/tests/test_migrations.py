@@ -81,11 +81,16 @@ def _url(database: str) -> str:
 def _env() -> dict[str, str]:
     """The environment each alembic subprocess runs in.
 
-    `POSTGRES_DB` is forced rather than defaulted: a default is something an
-    outer environment can override, and what it would override is the guard
-    that keeps `downgrade base` away from a real database.
+    Both the ordinary database name and the optional migration-owner URL are
+    forced to this fixture's database. The operator URL takes precedence in
+    Alembic, so overriding only `POSTGRES_DB` would let a configured owner DSN
+    send `downgrade base` to a real database.
     """
-    return {**os.environ, "POSTGRES_DB": MIGRATION_DATABASE}
+    return {
+        **os.environ,
+        "POSTGRES_DB": MIGRATION_DATABASE,
+        "POSTGRES_MIGRATION_URL": _url(MIGRATION_DATABASE),
+    }
 
 
 def _alembic(*args: str) -> subprocess.CompletedProcess[str]:
@@ -181,6 +186,51 @@ def migration_database() -> Iterator[None]:
         # FORCE because a connection outliving its subprocess would otherwise
         # leave the database behind. Nobody else ever connects to it.
         _outside_a_transaction(maintenance, drop)
+
+
+def test_account_appearance_migration_preserves_existing_profiles() -> None:
+    """The nullable preference is additive and downgrade leaves profile fields intact."""
+    script = ScriptDirectory.from_config(Config("alembic.ini"))
+    revision = script.get_revision("0329_user_appearance")
+    assert revision is not None
+    parent = revision.down_revision
+    result = _alembic("upgrade", "head")
+    assert result.returncode == 0, result.stderr
+    result = _alembic("downgrade", parent)
+    assert result.returncode == 0, result.stderr
+    engine = create_engine(_url(MIGRATION_DATABASE))
+    person = uuid4()
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO users (id, email, full_name, locale, is_active, is_app_admin, notify_budget_alerts, notify_approval_requests, notify_usage_reports) VALUES (:id, :email, 'Saved name', 'en', true, false, true, true, true)"
+                ),
+                {"id": person, "email": f"{person}@example.com"},
+            )
+        result = _alembic("upgrade", "0329_user_appearance")
+        assert result.returncode == 0, result.stderr
+        with engine.begin() as connection:
+            row = connection.execute(
+                text("SELECT full_name, locale, appearance FROM users WHERE id = :id"),
+                {"id": person},
+            ).one()
+            assert tuple(row) == ("Saved name", "en", None)
+            connection.execute(
+                text("UPDATE users SET appearance = CAST(:preferences AS jsonb) WHERE id = :id"),
+                {"id": person, "preferences": '{"theme":"dark"}'},
+            )
+        result = _alembic("downgrade", parent)
+        assert result.returncode == 0, result.stderr
+        with engine.connect() as connection:
+            row = connection.execute(
+                text("SELECT full_name, locale FROM users WHERE id = :id"), {"id": person}
+            ).one()
+            assert tuple(row) == ("Saved name", "en")
+        result = _alembic("upgrade", "0329_user_appearance")
+        assert result.returncode == 0, result.stderr
+    finally:
+        engine.dispose()
 
 
 def test_coding_task_revert_columns_round_trip_without_changing_existing_diffs() -> None:
@@ -1796,7 +1846,19 @@ class TestRoomThreadMigration:
         revision = script.get_revision("0326_room_threads")
         assert revision is not None
         assert revision.down_revision == "0325_merge_t3_rooms_v173"
-        assert script.get_heads() == ["0326_room_threads"]
+        relations = script.get_revision("0327_virtual_table_relations")
+        assert relations is not None
+        assert relations.down_revision == "0326_room_threads"
+        rls = script.get_revision("0328_tables_tenant_rls")
+        assert rls is not None
+        assert rls.down_revision == "0327_virtual_table_relations"
+        appearance = script.get_revision("0329_user_appearance")
+        assert appearance is not None
+        assert appearance.down_revision == "0328_tables_tenant_rls"
+        navigation = script.get_revision("0330_role_navigation")
+        assert navigation is not None
+        assert navigation.down_revision == "0329_user_appearance"
+        assert script.get_heads() == ["0330_role_navigation"]
 
     def test_existing_quotes_survive_roundtrip_and_models_match_head(self) -> None:
         reset = _alembic("downgrade", "base")
@@ -1824,7 +1886,7 @@ class TestRoomThreadMigration:
             with engine.connect() as connection:
                 assert connection.scalars(
                     text("SELECT version_num FROM alembic_version")
-                ).all() == ["0326_room_threads"]
+                ).all() == ["0330_role_navigation"]
                 rows = connection.execute(
                     text(
                         "SELECT id,reply_to_message_id,thread_root_message_id FROM messages "
@@ -1894,7 +1956,7 @@ class TestRoomThreadMigration:
             with engine.begin() as connection:
                 assert connection.scalars(
                     text("SELECT version_num FROM alembic_version")
-                ).all() == ["0326_room_threads"]
+                ).all() == ["0330_role_navigation"]
                 assert (
                     connection.scalar(
                         text("SELECT thread_root_message_id FROM messages WHERE id=:id"),
@@ -1921,7 +1983,7 @@ class TestRoomThreadMigration:
             with engine.connect() as connection:
                 assert connection.scalars(
                     text("SELECT version_num FROM alembic_version")
-                ).all() == ["0326_room_threads"]
+                ).all() == ["0330_role_navigation"]
             check = _alembic("check")
             assert check.returncode == 0, check.stderr
         finally:
@@ -2124,7 +2186,7 @@ class TestRoomThreadMigration:
         assert resumed.returncode == 0, resumed.stderr
         with engine.connect() as connection:
             assert connection.scalars(text("SELECT version_num FROM alembic_version")).all() == [
-                "0326_room_threads"
+                "0330_role_navigation"
             ]
             assert connection.execute(
                 text("SELECT content, thread_root_message_id FROM messages WHERE id = :id"),

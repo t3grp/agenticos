@@ -18,6 +18,7 @@ somebody's machine long before CI's database ever sees it. `ScriptDirectory`
 reads the files, and the files are the whole of the question.
 """
 
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -172,3 +173,23 @@ def test_no_revision_id_is_too_long_for_the_version_table() -> None:
         "`alembic_version.version_num` is VARCHAR(32), so such a migration runs "
         "its DDL and then fails writing the version. Shorten the id."
     )
+
+
+def test_room_handoffs_follow_the_complete_ordered_migration_train() -> None:
+    chain = _chain()
+    expected = [
+        "0325_merge_t3_rooms_v173",
+        "0326_room_threads",
+        "0327_virtual_table_relations",
+        "0328_tables_tenant_rls",
+        "0329_user_appearance",
+        "0330_role_navigation",
+        "0331",
+    ]
+    assert chain.get_heads() == [expected[-1]]
+    for parent, child in pairwise(expected):
+        revision = chain.get_revision(child)
+        assert revision is not None
+        assert revision.down_revision == parent
+    pending = list(chain.iterate_revisions("0331", expected[0], implicit_base=True))
+    assert [revision.revision for revision in reversed(pending)] == expected[1:]
