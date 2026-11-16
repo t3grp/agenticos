@@ -95,20 +95,22 @@ beforeEach(() => {
 });
 
 describe("manual workspace launchers", () => {
-  it("keeps both rail controls linked to one unique target in every workspace state", async () => {
+  it("keeps all rail controls linked to one unique target in every workspace state", async () => {
     const props = defaults();
     const test = render(<WorkspacePanels {...props} />, { wrapper });
-    const controlIds = (): [string, string] => {
+    const controlIds = (): [string, string, string] => {
       const browser = screen.getByRole("button", { name: "Open Browser" });
       const computer = screen.getByRole("button", { name: "Open Computer" });
+      const settings = screen.getByRole("button", { name: "Open agent settings" });
       const browserId = browser.getAttribute("aria-controls");
       const computerId = computer.getAttribute("aria-controls");
-      if (browserId === null || computerId === null)
+      const settingsId = settings.getAttribute("aria-controls");
+      if (browserId === null || computerId === null || settingsId === null)
         throw new Error("Workspace controls need panel IDs");
-      return [browserId, computerId];
+      return [browserId, computerId, settingsId];
     };
-    const expectTargets = (ids: [string, string]) => {
-      expect(new Set(ids).size).toBe(2);
+    const expectTargets = (ids: [string, string, string]) => {
+      expect(new Set(ids).size).toBe(3);
       for (const id of ids) {
         const targets = [...document.querySelectorAll("[id]")].filter(
           (element) => element.id === id,
@@ -125,6 +127,20 @@ describe("manual workspace launchers", () => {
 
     const ids = controlIds();
     expectTargets(ids);
+    expect(document.getElementById(ids[2])).toHaveAttribute("hidden");
+    const settings = screen.getByRole("button", { name: "Open agent settings" });
+    expect(settings).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(settings);
+    expectTargets(ids);
+    expect(settings).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("complementary", { name: "Agent settings" })).toHaveAttribute(
+      "id",
+      ids[2],
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Close agent settings" }));
+    expectTargets(ids);
+    expect(settings).toHaveAttribute("aria-expanded", "false");
+    expect(document.getElementById(ids[2])).toHaveAttribute("hidden");
     await userEvent.click(screen.getByRole("button", { name: "Open Browser" }));
     expectTargets(ids);
     await userEvent.click(screen.getByRole("button", { name: "Open Computer" }));
@@ -203,6 +219,7 @@ describe("manual workspace launchers", () => {
 
     test.rerender(<WorkspacePanels {...props} compact />);
     expect(screen.queryByRole("navigation", { name: "Workspace" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open agent settings" })).toBeNull();
   });
 
   it("sends the chosen web destination only on submit and sends the hosted computer request explicitly", async () => {
@@ -481,6 +498,27 @@ describe("workspace selection ownership", () => {
       expect(useBrowserPanelStore.getState().surface).toBeNull();
     },
   );
+  it("clears an unavailable settings selection on mount and when opened later", () => {
+    const props = { ...defaults(), agentId: null };
+    useBrowserPanelStore.getState().openSurface("settings");
+    render(<WorkspacePanels {...props} />, { wrapper });
+    expect(useBrowserPanelStore.getState().surface).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open agent settings" })).toBeNull();
+    act(() => useBrowserPanelStore.getState().openSurface("settings"));
+    expect(useBrowserPanelStore.getState().surface).toBeNull();
+  });
+  it("closes settings when the selected agent disappears", () => {
+    const props = defaults();
+    const test = render(<WorkspacePanels {...props} />, { wrapper });
+    act(() => useBrowserPanelStore.getState().openSurface("settings"));
+    expect(useBrowserPanelStore.getState().surface).toBe("settings");
+    expect(screen.getByRole("complementary", { name: "Agent settings" })).toHaveAttribute(
+      "id",
+      screen.getByRole("button", { name: "Open agent settings" }).getAttribute("aria-controls"),
+    );
+    test.rerender(<WorkspacePanels {...props} agentId={null} />);
+    expect(useBrowserPanelStore.getState().surface).toBeNull();
+  });
   it("keeps an explicitly opened pane when its first turn gets a conversation ID", async () => {
     const props = { ...defaults(), conversationId: null };
     const test = render(<WorkspacePanels {...props} />, { wrapper });
@@ -527,6 +565,23 @@ describe("workspace selection ownership", () => {
     expect(first.getByRole("complementary")).toHaveAttribute("id", firstId);
     expect(second.getByRole("complementary")).toHaveAttribute("id", secondId);
     expect(firstId).not.toBe(secondId);
+    await userEvent.click(first.getByRole("button", { name: "Open agent settings" }));
+    await userEvent.click(second.getByRole("button", { name: "Open agent settings" }));
+    const firstSettingsId = first
+      .getByRole("button", { name: "Open agent settings" })
+      .getAttribute("aria-controls");
+    const secondSettingsId = second
+      .getByRole("button", { name: "Open agent settings" })
+      .getAttribute("aria-controls");
+    expect(first.getByRole("complementary", { name: "Agent settings" })).toHaveAttribute(
+      "id",
+      firstSettingsId,
+    );
+    expect(second.getByRole("complementary", { name: "Agent settings" })).toHaveAttribute(
+      "id",
+      secondSettingsId,
+    );
+    expect(firstSettingsId).not.toBe(secondSettingsId);
     expect(useBrowserPanelStore.getState().surface).toBeNull();
   });
 });

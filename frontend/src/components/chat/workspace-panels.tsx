@@ -15,6 +15,7 @@ import type { PageComment } from "./browser-comment";
 import { BrowserPanel } from "./browser-panel";
 import { WorkspaceFiles } from "./workspace-files";
 import { WorkspaceRail } from "./workspace-rail";
+import { ChatAgentSettingsPanel } from "./agent-settings-panel";
 
 interface WorkspacePanelsProps {
   teamRoom: boolean;
@@ -47,11 +48,14 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
   const surface = useBrowserPanelStore((state) => state.surface);
   const open = useBrowserPanelStore((state) => state.openSurface);
   const close = useBrowserPanelStore((state) => state.close);
+  // Room responders are selected independently of the personal-chat agent.
+  const settingsAgentId = props.teamRoom ? null : props.agentId;
   const [filesSlot, setFilesSlot] = useState<HTMLSpanElement | null>(null);
   const panelPrefix = useId();
   const panelIds = {
     browser: `${panelPrefix}-browser`,
     computer: `${panelPrefix}-computer`,
+    settings: `${panelPrefix}-settings`,
   };
   const localSelected = useWorkOnStore((state) =>
     Boolean(
@@ -81,7 +85,8 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
       before.account !== account ||
       before.organization !== organization ||
       before.agent !== props.agentId ||
-      (before.conversation !== props.conversationId && !adopted)
+      (before.conversation !== props.conversationId && !adopted) ||
+      (surface === "settings" && settingsAgentId === null)
     )
       close();
   }, [
@@ -91,6 +96,8 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
     props.conversationId,
     props.busy,
     props.loading,
+    surface,
+    settingsAgentId,
     close,
   ]);
   const access: WorkspaceStartAccess = {
@@ -127,6 +134,9 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
       />
       {surface !== "browser" && <div id={panelIds.browser} hidden aria-hidden="true" />}
       {surface !== "computer" && <div id={panelIds.computer} hidden aria-hidden="true" />}
+      {settingsAgentId !== null && surface !== "settings" && (
+        <div id={panelIds.settings} hidden aria-hidden="true" />
+      )}
       <WorkspaceFiles
         key={`${account}:${organization}:${props.agentId}:${props.conversationId}`}
         conversationId={props.conversationId}
@@ -137,7 +147,23 @@ export function WorkspacePanels(props: WorkspacePanelsProps) {
         onOpenChange={(shown) => (shown ? open("files") : close())}
         responsive
       />
-      {!props.compact && <WorkspaceRail filesSlot={setFilesSlot} panelIds={panelIds} />}
+      {settingsAgentId !== null && (
+        <ChatAgentSettingsPanel
+          key={`${account}:${organization}:${settingsAgentId}`}
+          panelId={panelIds.settings}
+          agentId={settingsAgentId}
+          open={surface === "settings"}
+          readOnly={props.readOnly || props.loading}
+          onClose={close}
+        />
+      )}
+      {!props.compact && (
+        <WorkspaceRail
+          filesSlot={setFilesSlot}
+          hasAgent={settingsAgentId !== null}
+          panelIds={panelIds}
+        />
+      )}
     </>
   );
 }

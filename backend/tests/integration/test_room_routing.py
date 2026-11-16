@@ -161,7 +161,7 @@ async def test_changed_policy_refuses_real_acceptance_without_creating_a_task(db
     assert await db.scalar(select(func.count()).select_from(RoomTaskLink)) == 0
 
 
-async def test_migration_body_upgrades_and_downgrades_after_role_navigation(db):
+async def test_migration_body_upgrades_and_downgrades_after_core_head(db):
     import importlib.util
     from pathlib import Path
 
@@ -169,11 +169,14 @@ async def test_migration_body_upgrades_and_downgrades_after_role_navigation(db):
     from alembic.operations import Operations
     from sqlalchemy import inspect
 
-    filename = Path(__file__).resolve().parents[2] / "alembic/versions/0331_room_lead_handoffs.py"
+    filename = Path(__file__).resolve().parents[2] / "alembic/versions/0337_room_lead_handoffs.py"
     spec = importlib.util.spec_from_file_location("room_handoff_migration", filename)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-    assert migration.revision == "0331" and migration.down_revision == "0330_role_navigation"
+    assert (
+        migration.revision == "0337_room_lead_handoffs"
+        and migration.down_revision == "0336_merge_core_v1761"
+    )
 
     def cycle(connection):
         with Operations.context(MigrationContext.configure(connection)):
@@ -204,7 +207,7 @@ async def test_downgrade_refuses_to_drop_accepted_dispatch_provenance(db):
         RoutingDecision(expected_revision=1, idempotency_key="retain", item_ids=[item.item_id]),
         accept=True,
     )
-    filename = Path(__file__).resolve().parents[2] / "alembic/versions/0331_room_lead_handoffs.py"
+    filename = Path(__file__).resolve().parents[2] / "alembic/versions/0337_room_lead_handoffs.py"
     spec = importlib.util.spec_from_file_location("room_handoff_migration_refusal", filename)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)

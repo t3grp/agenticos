@@ -515,6 +515,38 @@ describe("useChat - the streamed answer", () => {
     });
   });
 
+  it.each(["agenticos_set_my_appearance", "agenticos_reset_my_appearance"])(
+    "requests an authenticated appearance read after %s completes",
+    (toolName) => {
+      const changed = vi.fn();
+      window.addEventListener("account-appearance-changed", changed);
+      try {
+        renderHook(() => useChat(), { wrapper });
+        receive("model_request_start", {});
+        receive("tool_call", { tool_call_id: "appearance-1", tool_name: toolName, args: {} });
+        expect(changed).not.toHaveBeenCalled();
+        receive("tool_result", { tool_call_id: "appearance-1", content: '{"theme":"dark"}' });
+        expect(changed).toHaveBeenCalledOnce();
+      } finally {
+        window.removeEventListener("account-appearance-changed", changed);
+      }
+    },
+  );
+
+  it("does not treat another tool's appearance-like text as an account change", () => {
+    const changed = vi.fn();
+    window.addEventListener("account-appearance-changed", changed);
+    try {
+      renderHook(() => useChat(), { wrapper });
+      receive("model_request_start", {});
+      receive("tool_call", { tool_call_id: "search-1", tool_name: "web_search", args: {} });
+      receive("tool_result", { tool_call_id: "search-1", content: '{"theme":"dark"}' });
+      expect(changed).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("account-appearance-changed", changed);
+    }
+  });
+
   const SPEAKS_POLISH = {
     id: "u-1",
     email: "ada@example.com",
@@ -5533,6 +5565,29 @@ describe("useChat - coming back to a turn still being written", () => {
     expect(useChatStore.getState().messages.filter((m) => m.role === "user")).toHaveLength(1);
   });
 
+  it("replaces the previous socket's unsaved bubble when attachment replays the same turn", () => {
+    renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
+    storedQuestion();
+    act(() =>
+      useChatStore.getState().addMessage({
+        id: "abandoned-socket",
+        role: "assistant",
+        content: "Checking the page.",
+        timestamp: new Date(),
+        conversationId: "c-1",
+        isTemporaryId: true,
+        isStreaming: true,
+      }),
+    );
+    receive("turn_attached", { conversation_id: "c-1" });
+    receive("model_request_start", {});
+    receive("text_delta", { index: 0, content: "Checking the page." });
+    const answers = useChatStore.getState().messages.filter((m) => m.role === "assistant");
+    expect(answers).toHaveLength(1);
+    expect(answers[0]?.content).toBe("Checking the page.");
+    expect(answers[0]?.id).not.toBe("abandoned-socket");
+  });
+
   it("asks to follow the conversation's turn once its transcript is here", () => {
     renderHook(() => useChat({ conversationId: "c-1" }), { wrapper });
     expect(sent).not.toHaveBeenCalled();
@@ -7772,4 +7827,27 @@ it.each([
     ),
   );
   expect(useChatStore.getState().messages).toEqual([]);
+});
+
+it("ends an existing streaming segment when a resumed background turn attaches", () => {
+  useConversationStore.getState().setCurrentConversationId("c-resume");
+  useChatStore.getState().addMessage({
+    id: "old-segment",
+    role: "assistant",
+    content: "Earlier work",
+    timestamp: new Date(),
+    conversationId: "c-resume",
+    runId: "r-resume",
+    isStreaming: true,
+  });
+  renderHook(() => useChat(), { wrapper });
+  receive("turn_attached", { conversation_id: "c-resume" });
+  receive("background_task_turn", {
+    conversation_id: "c-resume",
+    agent_id: "a-1",
+    resumed_run_id: "r-resume",
+  });
+  expect(
+    useChatStore.getState().messages.find((message) => message.id === "old-segment")?.isStreaming,
+  ).toBe(false);
 });
