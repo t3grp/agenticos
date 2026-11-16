@@ -252,3 +252,63 @@ async def test_a_trigger_fires_for_a_bypass_publisher_on_any_row(monkeypatch):
         _TRIGGER_RUN,
         _TRIGGER_ENTRY,
     )
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("watched", [False, True])
+@pytest.mark.parametrize(
+    "change",
+    ["hidden", "hidden_added", "hidden_removed", "mixed", "visible_added", "visible_removed"],
+)
+async def test_trigger_changes_only_disclose_publisher_visible_links(
+    monkeypatch: pytest.MonkeyPatch, watched: bool, change: str
+) -> None:
+    consumer, trigger, event, _, admitted = _trigger_decide_setup(
+        monkeypatch, values=str(_TRIGGER_MEMBER)
+    )
+    link = ColumnDef(id=uuid.uuid4(), label="Related", type="link", link_table_id=uuid.uuid4())
+    name = ColumnDef(id=uuid.uuid4(), label="Name", type="text")
+    key = str(link.id)
+    hidden_before, hidden_after, visible = (str(uuid.uuid4()) for _ in range(3))
+    before_links = [hidden_before, visible] if change == "visible_removed" else [hidden_before]
+    after_links = [hidden_after, visible] if change == "visible_added" else [hidden_after]
+    snapshot = _Happened(
+        event="updated",
+        before={
+            **({key: before_links} if change != "hidden_added" else {}),
+            str(name.id): "Before",
+        },
+        values={
+            **({key: after_links} if change != "hidden_removed" else {}),
+            str(name.id): "After" if change == "mixed" else "Before",
+        },
+        author_id=_TRIGGER_MEMBER,
+    )
+    trigger.watched_column_ids = [key] if watched else []
+    monkeypatch.setattr(
+        _Consumer, "_columns", AsyncMock(return_value={link.id: link, name.id: name})
+    )
+    monkeypatch.setattr(
+        "app.services.virtual_tables.triggers.visible_link_ids",
+        AsyncMock(return_value={visible}),
+    )
+    monkeypatch.setattr(
+        "app.services.virtual_tables.triggers.may_view_row", AsyncMock(return_value=True)
+    )
+    result = await consumer._decide(trigger, event, snapshot, None)
+
+    if change.startswith("hidden") or (watched and change == "mixed"):
+        assert result is None
+        consumer.runs.admit_pinned.assert_not_awaited()
+        assert admitted.await_args.kwargs["status"] == _AdmissionStatus.FILTERED.value
+        assert admitted.await_args.kwargs["reason"] == _AdmissionReason.FILTER_MISMATCH.value
+        return
+
+    assert result == (_TRIGGER_RUN, _TRIGGER_ENTRY)
+    payload = consumer.runs.admit_pinned.await_args.kwargs["run_input"]
+    assert payload["values"][key] == ([visible] if change == "visible_added" else [])
+    assert payload["before"][key] == ([visible] if change == "visible_removed" else [])
+    assert payload["fields"]["Related"] == payload["values"][key]
+    assert payload["changed"] == (["Name"] if change == "mixed" else ["Related"])
+    assert hidden_before not in str(payload)
+    assert hidden_after not in str(payload)

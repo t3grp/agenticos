@@ -23,7 +23,7 @@ failed with a coarse reason - in a savepoint of its own. The unique
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, cast
@@ -589,14 +589,6 @@ class TableTriggerConsumer:
         if snapshot is None:
             await record(AdmissionStatus.FAILED, AdmissionReason.UNAVAILABLE)
             return None
-        changed = snapshot.changed()
-        if (
-            snapshot.event == "updated"
-            and trigger.watched_column_ids
-            and not changed & set(trigger.watched_column_ids)
-        ):
-            await record(AdmissionStatus.FILTERED, AdmissionReason.FILTER_MISMATCH)
-            return None
         # The trigger's table foreign key cascades, so the table is there while it is.
         table = cast(
             VirtualTable,
@@ -616,6 +608,22 @@ class TableTriggerConsumer:
             if snapshot.before is not None
             else None
         )
+        changed = replace(snapshot, values=values, before=before).changed()
+        # Cleared cells are absent in stored records; an empty visible link list
+        # reveals no change from that absence either.
+        changed -= {
+            str(column.id)
+            for column in columns.values()
+            if column.type == "link"
+            and not values.get(str(column.id))
+            and not (before or {}).get(str(column.id))
+        }
+        if snapshot.event == "updated" and (
+            not changed
+            or (trigger.watched_column_ids and not changed & set(trigger.watched_column_ids))
+        ):
+            await record(AdmissionStatus.FILTERED, AdmissionReason.FILTER_MISMATCH)
+            return None
         conditions = [RecordFilter.model_validate(item) for item in trigger.filters]
         if not all(
             column is not None and holds(column, condition, values)
