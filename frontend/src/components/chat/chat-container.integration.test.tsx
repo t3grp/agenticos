@@ -330,6 +330,9 @@ beforeEach(() => {
   useComposerIntentStore.setState({ intent: null, shared: null });
   useConversationStore.getState().reset();
   useChatStore.getState().clearMessages();
+  // Room drafts outlive a remount by design and are emptied only by a session
+  // reset, so a draft typed in one test would otherwise open the next one's composer.
+  useChatStore.getState().clearRoomDrafts();
   voiceCall.call = initialCall;
 });
 
