@@ -38,6 +38,7 @@ from app.services.file_storage import (
     sniff_image_header,
 )
 from app.services.file_upload import zip_has_too_many_members
+from app.services.media_types import sniff_av_header
 from app.services.workflow_execution import context
 from app.services.workflow_execution.exceptions import InvalidBindingError, WorkflowFileQuotaError
 from app.workflows.contracts.io import FileRef, file_refs
@@ -87,6 +88,9 @@ def sniff(data: bytes) -> str:
         return image
     if head.startswith(b"%PDF-"):
         return "application/pdf"
+    media = sniff_av_header(head)
+    if media is not None:
+        return media
     container = sniff_container(head)
     if container == "zip":
         return DOCX if _is_docx(data) else "application/zip"
@@ -169,6 +173,43 @@ async def open_stream(ref: FileRef) -> tuple[StoredFile, AsyncIterator[bytes]] |
     except FileNotFoundError:
         return not_found()
     return StoredFile(data=b"", content_type=row.content_type, filename=row.filename), chunks
+
+
+async def load_verified(ref: FileRef, *, max_bytes: int) -> StoredFile | Failed:
+    """Read one scoped file, verifying its reference and the actual streamed size.
+
+    Media consumers need metadata as well as authority. The row is still the
+    authority; a caller cannot relabel it or bypass the byte ceiling by forging a
+    FileRef. The stream is bounded independently of that row and always closed.
+    """
+    row = await _row_for(ref)
+    if row is None:
+        return not_found()
+    if row.byte_size != ref.byte_size or row.content_type != ref.content_type:
+        return failed(
+            "FILE_METADATA_MISMATCH", "The file reference does not match its stored metadata"
+        )
+    if row.byte_size > max_bytes:
+        return failed(FILE_TOO_LARGE, "The file exceeds this step's byte limit")
+    try:
+        chunks = await get_file_storage().open_stream(row.storage_path)
+    except FileNotFoundError:
+        return not_found()
+    data = bytearray()
+    try:
+        async for chunk in chunks:
+            if len(data) + len(chunk) > max_bytes:
+                return failed(FILE_TOO_LARGE, "The stored bytes exceed this step's byte limit")
+            data.extend(chunk)
+    except FileNotFoundError:
+        return not_found()
+    finally:
+        close = getattr(chunks, "aclose", None)
+        if close is not None:
+            await close()
+    if len(data) != row.byte_size:
+        return failed("FILE_METADATA_MISMATCH", "The stored file size could not be verified")
+    return StoredFile(data=bytes(data), content_type=row.content_type, filename=row.filename)
 
 
 def normalized_filename(filename: str | None) -> str | None:

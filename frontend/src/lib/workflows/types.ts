@@ -63,6 +63,8 @@ export interface NodeDefinition {
   effect_kind: "pure" | "read" | "write";
   retry_guarantee: "none" | "idempotent" | "at_least_once";
   scopes: string[];
+  /** Disabled versions remain readable but cannot be added for new use. */
+  available?: boolean;
   /** Whether the node exists only inside a `control.foreach` body (`loop.item`, `loop.yield`). */
   loop_body_only?: boolean;
   /** Whether the node leaves by exactly one output port per run, so a merge may rejoin its branches. */

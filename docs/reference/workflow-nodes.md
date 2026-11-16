@@ -1264,6 +1264,30 @@ leave by exactly one port, and a `logic.merge` can join the branches again.
 
 ::: app.workflows.nodes.table_create._handler.TableCreatedOutput
 
+## Asset { #asset-input }
+
+`asset.input@1` checks an image, audio recording or video that the run is allowed
+to read. Bind its `file` input to an admitted or produced `FileRef`; a filename,
+arbitrary URL or another run's unimported file is refused. The output retains
+the same durable file reference and adds metadata verified from its bytes.
+
+::: app.workflows.nodes.asset_input._handler.AssetInputConfig
+
+::: app.workflows.nodes.asset_input._handler.AssetInput
+
+::: app.workflows.nodes.asset_input._handler.AssetOutput
+
+It accepts still PNG, JPEG, WebP and GIF; WAV, FLAC, MP3 and recognized Ogg
+audio; and MP4 or WebM with one video stream and optional audio. Animated images,
+unsupported media, missing files and mismatched type or size are controlled
+failures. Optional `required_input_name` requires the same reference in the run
+input. Byte, pixel and duration limits apply to the actual content.
+
+`WORKFLOW_ASSET_INPUT_ENABLED` defaults to false. Disabled deployments retain
+the definition and stored outputs, hide it from the add palette and refuse new
+execution. Audio/video inspection requires `ffprobe`, provided by the backend
+image. This node makes no provider or model call.
+
 ## Files { #files }
 
 A file a step makes is stored as a file of its run and handed on as a `FileRef`: an

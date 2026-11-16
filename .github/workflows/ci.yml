@@ -315,6 +315,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --directory backend --dev
 
+      - name: Install the bounded media inspector
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Configure the disposable test database
         env:
           POSTGRES_CONTAINER: ${{ job.services.postgres.id }}

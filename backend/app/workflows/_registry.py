@@ -102,6 +102,7 @@ def load_builtins() -> None:
         ai_extract,
         ai_prompt,
         ai_rewrite,
+        asset_input,
         channel_find,
         channel_members,
         channel_read,

@@ -1034,6 +1034,11 @@ class Settings(BaseSettings):
     # would pass either ceiling fails with `FILE_QUOTA_EXCEEDED` and stores nothing.
     WORKFLOW_RUN_MAX_FILE_BYTES: int = Field(default=1_073_741_824, gt=0)
     WORKFLOW_ORG_MAX_FILE_BYTES: int = Field(default=21_474_836_480, gt=0)
+    # Permanent node versions remain readable while new media admissions are off.
+    # Generation is enabled only after separately authorized provider acceptance.
+    WORKFLOW_ASSET_INPUT_ENABLED: bool = False
+    WORKFLOW_IMAGE_GENERATION_ENABLED: bool = False
+    WORKFLOW_VIDEO_GENERATION_ENABLED: bool = False
     # How long a webhook delivery whose graph answers it (`webhook.respond`) holds
     # its request open for that answer. Past it the sender gets the `202` a
     # delivery without one gets, and the run goes on; a proxy in front with a

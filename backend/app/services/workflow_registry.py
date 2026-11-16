@@ -429,6 +429,7 @@ class WorkflowRegistryService:
                 effect_kind=definition.effect_kind,
                 retry_guarantee=definition.retry_guarantee,
                 scopes=sorted(definition.scopes),
+                available=definition.available() if definition.available else True,
                 loop_body_only=definition.loop_body_only,
                 exclusive_branches=definition.exclusive_branches,
             )

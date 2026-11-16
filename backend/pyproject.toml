@@ -889,6 +889,8 @@ include = [
     # would empty that picker without a single test failing.
     "app/services/decision_models.py",
     "app/services/image_models.py",
+    "app/services/media_inspection.py",
+    "app/services/media_types.py",
     "app/services/model_profile.py",
     "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
@@ -1860,6 +1862,8 @@ include = [
     # would empty that picker without a single test failing.
     "app/services/decision_models.py",
     "app/services/image_models.py",
+    "app/services/media_inspection.py",
+    "app/services/media_types.py",
     "app/services/model_profile.py",
     "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
