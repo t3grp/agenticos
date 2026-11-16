@@ -275,7 +275,9 @@ def test_openbot_join_applies_each_missing_revision_once_in_parent_order(
 
 def test_openbot_join_preserves_both_heads_and_has_no_schema_operations() -> None:
     chain = _chain()
-    assert chain.get_heads() == ["0337_merge_core_openbot"]
+    assert chain.get_heads() == ["0338_credential_continuations"]
+    continuation = chain.get_revision("0338_credential_continuations")
+    assert continuation is not None and continuation.down_revision == "0337_merge_core_openbot"
     join = chain.get_revision("0337_merge_core_openbot")
     assert join is not None
     assert join.down_revision == ("0336_merge_core_v1761", "0335_browser_teaching")

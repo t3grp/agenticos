@@ -3,7 +3,7 @@
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
-from contextlib import suppress
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, suppress
 from uuid import UUID, uuid4
 
 import anyio
@@ -16,6 +16,12 @@ from app.agents.capabilities.browser_use._page import CdpPage
 from app.agents.capabilities.browser_use._transport_privacy import require_private_transport
 from app.agents.deps import AgentDeps
 from app.clients.redis import RedisClient
+from app.core.browser_continuation import (
+    ACTIVE_CONTINUATION_STATES,
+    BrowserContinuationReason,
+    BrowserContinuationRefused,
+    BrowserContinuationState,
+)
 from app.core.browser_fill import (
     ACTIVE_FILL_STATES,
     BrowserFillOperation,
@@ -24,6 +30,7 @@ from app.core.browser_fill import (
     BrowserFillSelection,
     BrowserFillState,
 )
+from app.core.browser_session import ProtectedSignIn
 from app.core.browser_totp import browser_code
 from app.core.permissions import AuthContext
 from app.core.secret_kinds import BrowserLoginSecret, BrowserProfileSecret
@@ -32,11 +39,20 @@ from app.schemas.browser_credential import BrowserCredentialPlanRead, BrowserCre
 from app.services.access import member_context
 
 from . import _access
+from ._continuation import (
+    BrowserCredentialContinuationService,
+    ContinuationClaim,
+    NativeContinuation,
+)
 from ._lease import BrowserWriterLease, LiveBrowserIdentity
 from ._plans import PLAN_SECONDS, AuthorizedFill, BrowserCredentialPlanService, NativePlan
 
 IDLE_SECONDS = 150
 POLL_SECONDS = 0.5
+
+ContinuationOpener = Callable[
+    [ContinuationClaim, ProtectedSignIn], AbstractAsyncContextManager[None]
+]
 
 
 def fill_values(claim: AuthorizedFill, now: float) -> NativeFillValues:
@@ -76,6 +92,7 @@ class BrowserCredentialController:
         snapshot: Callable[[], Snapshot | None],
         protect: Callable[[str], Awaitable[None]],
         sink: BrowserEventSink,
+        continue_session: ContinuationOpener | None = None,
     ) -> None:
         self.identity, self.ctx, self.redis = identity, ctx, redis
         self.page, self.tab_lock, self.snapshot, self.protect, self.sink = (
@@ -91,6 +108,9 @@ class BrowserCredentialController:
         self._active: UUID | None = None
         self._closed = False
         self._used_at = time.monotonic()
+        self.continue_session = continue_session
+        self._continuation_prepared: UUID | None = None
+        self._continuation_active: UUID | None = None
 
     @classmethod
     async def create(
@@ -106,6 +126,7 @@ class BrowserCredentialController:
         snapshot: Callable[[], Snapshot | None],
         protect: Callable[[str], Awaitable[None]],
         sink: BrowserEventSink,
+        continue_session: ContinuationOpener | None = None,
     ) -> BrowserCredentialController | None:
         audience = deps.audience
         if (
@@ -135,6 +156,7 @@ class BrowserCredentialController:
                 tab_id=tab_id,
                 controller_id=uuid4(),
                 credential_ids=credential_ids,
+                inherited_credentials=page.inherited_credentials,
             )
             async with get_db_context() as db:
                 ctx = await member_context(
@@ -145,7 +167,9 @@ class BrowserCredentialController:
                 await _access.private_run(db, ctx, identity)
         except BrowserFillRefused:
             return None
-        controller = cls(identity, ctx, redis, page, tab_lock, snapshot, protect, sink)
+        controller = cls(
+            identity, ctx, redis, page, tab_lock, snapshot, protect, sink, continue_session
+        )
         try:
             await controller.lease.acquire()
             origin = await page.credentials.origin()
@@ -165,6 +189,7 @@ class BrowserCredentialController:
         return not self._closed and self._task is not None and not self._task.done()
 
     async def _receipt(self, reason: BrowserFillReason) -> None:
+        await self._continuation_receipt(BrowserContinuationReason.OWNERSHIP_LOST)
         plan_id = self._active or self._prepared
         if plan_id is None:
             return
@@ -200,6 +225,8 @@ class BrowserCredentialController:
                             self._prepared = None
                         finally:
                             self._active = None
+                    elif self.continue_session is not None:
+                        await self._poll_continuation()
                 await asyncio.sleep(POLL_SECONDS)
         except BrowserFillRefused as refused:
             await self._receipt(refused.reason)
@@ -215,7 +242,80 @@ class BrowserCredentialController:
             try:
                 await self.page.credentials.close()
             finally:
-                await self.lease.close()
+                try:
+                    if self.continue_session is not None:
+                        await self.page.continuation.close()
+                finally:
+                    await self.lease.close()
+
+    async def _continuation_receipt(self, reason: BrowserContinuationReason) -> None:
+        continuation_id = self._continuation_active or self._continuation_prepared
+        if continuation_id is None:
+            return
+        with anyio.move_on_after(10, shield=True):
+            async with get_db_context() as db:
+                await BrowserCredentialContinuationService(db, self.redis).refuse(
+                    self.identity, continuation_id, reason
+                )
+
+    async def _poll_continuation(self) -> None:
+        async with get_db_context() as db:
+            pending = await BrowserCredentialContinuationService(db, self.redis).pending(
+                self.ctx, self.identity
+            )
+        if pending is None:
+            return
+        self._used_at = time.monotonic()
+        self._continuation_active = pending.id
+        try:
+            await self._step_continuation(pending)
+        except BrowserContinuationRefused as refused:
+            await self._continuation_receipt(refused.reason)
+            await self.page.continuation.close()
+            self._continuation_prepared = None
+        finally:
+            self._continuation_active = None
+
+    async def _step_continuation(self, plan: NativeContinuation) -> None:
+        native = self.page.continuation
+        if plan.state == BrowserContinuationState.REQUESTED:
+            seen = await native.prepare()
+            async with get_db_context() as db:
+                await BrowserCredentialContinuationService(db, self.redis).prepare(
+                    self.ctx, self.identity, plan.id, seen
+                )
+            self._continuation_prepared = plan.id
+            return
+        if self._continuation_prepared != plan.id:
+            raise BrowserContinuationRefused(BrowserContinuationReason.DOCUMENT_CHANGED)
+        seen = await native.verify()
+        if plan.observation != seen:
+            raise BrowserContinuationRefused(BrowserContinuationReason.DOCUMENT_CHANGED)
+        if plan.state != BrowserContinuationState.APPROVED:
+            return
+        if self.continue_session is None:
+            raise BrowserContinuationRefused(BrowserContinuationReason.NOT_AVAILABLE)
+        require_private_transport()
+        await self.lease.check()
+        async with get_db_context() as db:
+            claim = await BrowserCredentialContinuationService(db, self.redis).claim(
+                self.ctx, self.identity, plan.id, seen
+            )
+        # Keep cleanup outside the DB context: a failed commit must close the new
+        # owned page too, while the already committed claim remains non-retryable.
+        with anyio.fail_after(40):
+            async with AsyncExitStack() as opened, get_db_context() as db:
+                service = BrowserCredentialContinuationService(db, self.redis)
+                await service.authorize_effect(self.ctx, self.identity, claim)
+                await self.lease.check()
+                require_private_transport()
+                cookies = await native.export(now=time.time())
+                state = ProtectedSignIn(provenance=claim.provenance, cookies=cookies)
+                await opened.enter_async_context(self.continue_session(claim, state))
+                await self.lease.check()
+                await service.finish(self.ctx, self.identity, claim, state)
+        await native.close()
+        self._continuation_prepared = None
 
     async def _step(self, plan: NativePlan) -> None:
         native = self.page.credentials
@@ -299,7 +399,9 @@ class BrowserCredentialController:
     async def wait(self, plan_id: UUID) -> str:
         """Keep native handles alive for human confirmation, then a separate optional submit."""
         notified: set[str] = set()
-        with anyio.move_on_after(2 * PLAN_SECONDS + 10):
+        with anyio.move_on_after(
+            (4 if self.continue_session is not None else 2) * PLAN_SECONDS + 10
+        ):
             while self.alive:
                 async with get_db_context() as db:
                     service = BrowserCredentialPlanService(db, self.redis)
@@ -341,6 +443,25 @@ class BrowserCredentialController:
                         )
                         notified.add("submit")
                     if submission is not None and submission.state not in ACTIVE_FILL_STATES:
+                        if (
+                            submission.state == BrowserFillState.SUBMITTED
+                            and self.continue_session is not None
+                        ):
+                            async with get_db_context() as db:
+                                continuation = await BrowserCredentialContinuationService(
+                                    db, self.redis
+                                ).get(self.ctx, self.identity.run_id, submission.id)
+                            if (
+                                continuation is None
+                                or continuation.state in ACTIVE_CONTINUATION_STATES
+                            ):
+                                await asyncio.sleep(POLL_SECONDS)
+                                continue
+                            return (
+                                f"Protected session continuation: {continuation.state.value}. "
+                                f"Protected tab: {continuation.continuation_tab_id or 'unavailable'}. "
+                                "Page output remains hidden; authentication was not inferred."
+                            )
                         return f"Protected browser submission: {submission.state.value}. Page output remains hidden."
                 elif row.state not in ACTIVE_FILL_STATES:
                     return f"Browser credential operation: {row.state.value}. No automatic retry was made."
@@ -360,4 +481,8 @@ class BrowserCredentialController:
             try:
                 await self.page.credentials.close()
             finally:
-                await self.lease.close()
+                try:
+                    if self.continue_session is not None:
+                        await self.page.continuation.close()
+                finally:
+                    await self.lease.close()

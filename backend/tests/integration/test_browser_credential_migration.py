@@ -34,11 +34,13 @@ _MIGRATION = load_revision("0333_browser_credential_plans")
 _DESCENDANTS = (
     load_revision("0334_workflow_media_operations"),
     load_revision("0335_browser_teaching"),
+    load_revision("0338_credential_continuations"),
 )
-assert tuple(migration.down_revision for migration in _DESCENDANTS) == (
+assert tuple(migration.down_revision for migration in _DESCENDANTS[:2]) == (
     _MIGRATION.revision,
     _DESCENDANTS[0].revision,
 )
+assert _DESCENDANTS[2].down_revision == "0337_merge_core_openbot"
 _TABLES = (
     "browser_credential_policies",
     "browser_credential_agent_grants",

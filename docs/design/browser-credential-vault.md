@@ -1,13 +1,15 @@
 # Browser credential Vault
 
-**Status: default-disabled runtime and UI checkpoint; issue #112 remains open.**
+**Status: default-disabled runtime, UI and protected-session continuation; issue #112 remains open.**
 Typed storage, owner-scoped selection, durable plans, a single live native writer,
 explicit shared-use policy and synthetic Chromium acceptance are implemented.
 The Vault forms, policy controls, published browser binding, exact plan review,
 separate Submit action and protected browser views are implemented in the UI.
+An explicit, separately confirmed continuation can export bounded cookies,
+optionally seal them for later use, and open a fresh permanently protected context.
 Rendered desktop/mobile review and deployment acceptance remain release
-requirements. General automation after a credential fill and saving a new
-cookie session from a protected tab are not supported by this checkpoint.
+requirements. Unrestricted post-login automation and ordinary page output are
+still an accepted-scope gap; this checkpoint does not declassify a derived session.
 
 Browser records use the existing secret create, replacement, listing and delete
 routes. Creation defaults to `usage_scope=personal` and `visibility=private`;
@@ -78,7 +80,13 @@ the rendered and deployment acceptance below is complete.
    action; it does not establish that sign-in succeeded.
 7. A later same-origin TOTP challenge needs fresh observed handles, a new document
    identity and another confirmation. Output remains protected.
-8. If the page requires CAPTCHA, SSO, ambiguous controls or unrestricted
+8. After a known successful native Submit receipt, **Prepare continuation** asks
+   the owning controller to observe the current document. Review that exact
+   canonical origin and deadline, then choose **Continue in protected browser**.
+   **Keep me signed in** is a separate unchecked choice. A continued receipt
+   establishes only that a fresh protected context exists, never that the site
+   authenticated the user. Its output remains hidden.
+9. If the page requires CAPTCHA, SSO, ambiguous controls or unrestricted
    interaction, use **Stop** in the originating chat to end the hosted run and
    open the canonical site in a separate browser session. **Close view** only
    disconnects the view. This handoff does not transfer the hosted cookie jar or
@@ -90,13 +98,15 @@ submit those values themselves. The separate submission guarantee covers the
 T3OS writer; it does not promise to stop a compromised approved website from
 acting on values it has received.
 
-Protected tabs do not offer **Keep me signed in**, screenshots or free-text page
-reading. Existing saved cookie sessions remain separate and are not removed when
-a password is deleted. The UI must explain this limitation rather than imply
-that filling a login enables general post-login automation. The protected view
-can show fixed control roles, canonical origin and bounded receipts, and lets the
-person decline or close. It cannot show unrestricted page content for human
-takeover either: that content may already contain reflected values.
+Protected tabs do not offer the generic **Keep me signed in** action, screenshots
+or free-text page reading. Only the dedicated continuation consent can persist
+credential-derived cookies. Existing manually saved sessions retain their
+separate semantics. Deleting or rotating a contributing credential prevents a
+derived saved session from restoring; it does not silently convert or remove a
+manual session. The protected view shows fixed control roles, canonical origin
+and bounded receipts, and lets the person decline or close. It cannot show
+unrestricted page content for human takeover: that content may contain reflected
+values even in a new context.
 
 ## Stored payloads and origins
 
@@ -190,6 +200,9 @@ cross-origin controls are refused.
 | `POST /v1/runs/{run_id}/browser-credential-plans/{id}/confirmation` | Exact `document_id`, `authorization_generation` and `approve`; confirm or decline as the acting person. |
 | `POST /v1/runs/{run_id}/browser-credential-plans/{filled_id}/submission` | Separate explicit human action with new `request_id`, exact filled document and generation; return its child plan. |
 | `GET /v1/runs/{run_id}/browser-credential-plans/{filled_id}/submission` | Read the one existing submission child or `null`; never confirms, creates or retries an attempt. |
+| `GET /v1/runs/{run_id}/browser-credential-plans/{submission_id}/continuation` | Read the one continuation receipt or `null`; never exports cookies, saves state or opens a context. |
+| `POST /v1/runs/{run_id}/browser-credential-plans/{submission_id}/continuation` | Request preparation using only `request_id`; return 202. The receipt ID equals that UUID. |
+| `POST /v1/runs/{run_id}/browser-credential-plans/{submission_id}/continuation/{id}/confirmation` | Exact current `document_id`, `authorization_generation`, `approve` and explicit `keep_signed_in`; no destination or cookie input. |
 | `GET/PUT /v1/secrets/{secret_id}/browser-policy` | Immutable-owner-only policy. PUT requires `generation`, `mode` and both `agent_ids`/`member_ids` for shared use. |
 | `browser_credential_options` | Eligible metadata from the owning live controller. |
 | `browser_fill_credential` | Request by IDs and keep that controller alive during a bounded wait for dedicated human confirmation. |
@@ -217,9 +230,11 @@ Native handles are never parked for unrelated approvals or resumed after restart
 
 Plans expire in 60 seconds. The controller lease lasts 90 seconds and renews
 every 20; advertised current origin lasts at most five seconds. The request tool
-waits at most 130 seconds and the controller closes after 150 idle seconds.
-Effects have a 20-second bound and individual protocol requests a five-second
-bound. Closing or parking the owning native tab tears down its controller.
+waits at most 130 seconds, or 250 seconds when its protected continuation path is
+available, and the controller closes after 150 idle seconds. Fill/Submit effects
+have a 20-second bound; continuation export, owned context creation and publication
+share a 40-second bound. Individual protocol requests have a five-second bound.
+Closing or parking the owning native tab tears down its controller.
 Disconnecting a viewing WebSocket only closes that view; use the existing Stop
 run action to end the hosted run during a human handoff.
 The `POST /runs/{run_id}/cancel` HTTP route cancels parked runs and refuses a
@@ -232,6 +247,130 @@ A timeout, cancellation or lost acknowledgement after claiming becomes terminal
 `unknown`; it never retries automatically. A successful fill may have only one
 submission child. An unknown submission cannot be reopened. A fresh process,
 document, lease or credential generation requires new observation and confirmation.
+
+## Explicit protected continuation and saved-session provenance
+
+A fresh browser context is not evidence that its output is safe. A website can
+copy a supplied password into cookies, server-rendered text, titles, images, URL
+paths, errors or later pages. This implementation preserves protection for the
+original tab and every derived context. It transfers only an exact-origin,
+bounded cookie projection; it does not transfer the old URL, local storage,
+IndexedDB, DOM, screenshots or a user's browser profile.
+
+The source must be a known `submitted` child of a protected successful fill.
+An unknown fill or Submit cannot satisfy that admission check. The person first
+requests preparation using one UUID, which becomes the continuation receipt ID.
+The owning controller observes the current document after submission. Its exact
+HTTPS origin must equal the source fill/Submit origin and be allowed by every
+contributing credential. A redirect to another allowed origin still refuses.
+The observation authorizes nothing until the person confirms its current
+document UUID, generation, approval choice and explicit persistence choice.
+
+Each source Submit permits at most one continuation, including a declined,
+expired or unknown one. Repeating the preparation request can return that row
+only with the same request UUID. The first confirmation fixes all four consent
+fields. Later identical calls only reconcile that decision; they cannot change
+`keep_signed_in=false` to true. The canonical always-asks approval contains
+exactly `continuation_id` and `source_submission_id`, plus the run identity
+already on its approval record. The queue opens dedicated consent. A generic
+approval cannot replace the stored document/generation/persistence decision.
+Request UUID collisions, including an ID used in another organization, produce
+the same fixed already-consumed refusal without exposing the other receipt.
+The insertion uses a savepoint, preserves the caller's transaction and only
+normalizes the named ID/source uniqueness constraints; unrelated integrity
+failures remain errors.
+
+The controller commits a one-winner `claimed` transition before any cookie read
+or new context is opened. A second transaction rechecks the exact native owner,
+run, actor, member, current published binding and every contributing credential
+generation. It acquires credential rows in stable UUID order and retains those
+locks through bounded export, restore and final publication. A second controller
+cannot claim the same operation. Claim expiry, cancellation, lost ownership or a
+lost acknowledgement becomes terminal `unknown`; it never automatically exports
+again, resubmits a form or opens a replacement context.
+
+The provenance set deliberately includes earlier claimed writes with unknown
+outcomes and every protected view of the source tab. A later TOTP/profile step
+does not erase an earlier login's provenance. The sealed record carries at most
+50 distinct source credential/generation pairs, the final source fill/Submit,
+actor, organization, agent, continuation ID, exact origin, lifetime and a fixed
+`output_protected=true` marker. Conflicting generations for one source refuse.
+Revoking a nonfinal contributor, removing a shared grant or deleting its owner
+membership blocks export and restore just as revoking the final credential does.
+
+The native adapter reads cookies only from a nonempty, server-owned browser
+context identity. Missing, empty or wrong-type context responses refuse before a
+target or cookie write, with no default-context fallback. It selects only secure,
+host-only cookies whose domain exactly equals the approved origin's host;
+parent-domain, child-domain and partitioned cookies are excluded. At most 100
+cookies and 65,536 encoded bytes are admitted, with bounded names, paths and
+values. Cookie values, names and paths are masked in representations. The
+installed SDK receives only the validated native projection. A fixed refusal
+replaces native payloads, page errors and uncertain cookie responses.
+
+The new context has fresh server-minted call and tab IDs. Its output guard is
+active before cookie restoration or navigation, and its event sink receives the
+same guard before publication. Every network request, including redirects and
+subresources, remains restricted to the exact origin plus the existing public
+destination policy. Protected output is never cleared by a new document or
+context. A failed database commit or final authority check closes only the newly
+owned context; the original protected tab remains intact. The saved row and
+continued receipt commit together, after the final authority check.
+
+**Keep me signed in** starts unchecked. If selected, the existing sign-in table
+stores a closed cookie-only payload sealed with
+`VaultScope.browser_member(organization_id, user_id)`. The seven-day maximum is
+a retention ceiling, not a claim that cookies remain valid: the site's expiry
+and current access can shorten it. The existing vault rotation path preserves
+that scope and all provenance. A protected saved row is explicitly classified
+`protection_kind=credential`; the legacy loader refuses it before decryption.
+Only the current private run's protected restore path may open it, after checking
+the complete provenance and current agent/member/secret authority. Its locks
+remain held through restore and the final recheck. Forgetting the saved row does
+not erase the completed continuation receipt.
+
+Manually saved sign-ins keep `protection_kind=manual`, their original sealed
+bytes, existing scope and existing authorized behavior. There is no automatic
+conversion between the two kinds. Protected pages cannot enter generic
+checkpoint, capture or remember paths. A saved cookie or `continued` receipt
+does not prove authentication.
+
+The consent UI begins with a successful GET of the source Submit's continuation.
+A null response permits an explicit preparation request. A current
+`awaiting_confirmation` response exposes the canonical origin, confirmation
+deadline, separate unchecked persistence choice and dedicated Continue/Decline
+actions. The UI retains the exact request tuple before sending. A failed or
+malformed reply hides actions and freezes the saved choice until a fresh,
+successful GET reconciles it. Polling and **Check continuation** only read.
+After that settled read, an explicit retry can use only the same pending tuple;
+approved, claimed, continued, unknown and other terminal states expose no retry.
+A continued receipt links to the fresh protected view and, when saved, to
+**My sign-ins**, without abandoning the originating run.
+
+Migration `0338_credential_continuations` follows the real
+`0337_merge_core_openbot` join. It adds the tenant-scoped receipt table and the
+explicit sign-in classification without rewriting published migrations or old
+ciphertext. Native downgrade refuses any continuation or protected saved-state
+evidence, including an unresolved attempt. It does not use CASCADE or delete
+evidence to force rollback. The standalone 0333 migration fixture removes and
+restores the real dependent 0338 tables in dependency order; the pure 0337
+no-DDL planner check remains meaningful beneath the new head.
+
+The context/cookie command behavior was checked against the primary Chrome
+DevTools Protocol [Storage domain](https://chromedevtools.github.io/devtools-protocol/tot/Storage/)
+and [Network CookieParam](https://chromedevtools.github.io/devtools-protocol/tot/Network/#type-CookieParam)
+contracts. `Storage.getCookies` enumerates a context, so origin filtering belongs
+to this boundary; a new context alone never establishes provenance or safe output.
+
+**Remaining accepted-scope decision:** unrestricted ordinary-output continuation
+after credential use is not implemented. Allowing it would require an explicit
+declassification contract covering every derived output channel and persisted
+session, or a knowingly revised secret-output guarantee. A fresh context,
+HttpOnly cookies, successful Submit or an empty password field is insufficient.
+Complete integration, synthetic rendered acceptance and deployment checks for
+the protected feature first; keep this requirement open for the user's concrete
+declassification decision rather than silently weakening protection.
+
 
 ## Sticky plaintext and output boundary
 
@@ -306,9 +445,12 @@ recovery reads, unknown outcomes, finite polling and protected cache clearing.
 Browser integration checks must still render the final integrated source at
 desktop and mobile widths. The clearly named visual-fixture cases use synthetic
 metadata on the actual Vault, approval and browser surfaces; they do not prove a
-live credential fill or deployment output purge. Broader safe post-login
-automation and cookie persistence require a separately reviewed continuation
-design. This checkpoint does not complete that part of #112.
+live credential fill or deployment output purge. The protected continuation cases
+add actual context-scoped cookie export, the installed SDK's protected restore
+path, hostile output after restore, empty-context refusal, generation revocation
+and failed-commit cleanup. Unrestricted post-login automation still needs an
+explicit declassification decision. This checkpoint does not complete that part
+of #112.
 
 ## Frontend consent and recovery
 

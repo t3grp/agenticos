@@ -12,6 +12,7 @@ from redis.exceptions import RedisError
 from app.clients.redis import RedisClient
 from app.core.browser_fill import BrowserFillReason, BrowserFillRefused
 from app.core.browser_origins import browser_origin
+from app.core.browser_session import CredentialGeneration
 
 LEASE_SECONDS = 90
 RENEW_SECONDS = 20
@@ -52,6 +53,7 @@ class LiveBrowserIdentity(BaseModel):
     call_id: str = Field(min_length=1, max_length=200)
     controller_id: UUID
     credential_ids: tuple[UUID, ...] = Field(min_length=1, max_length=50)
+    inherited_credentials: tuple[CredentialGeneration, ...] = Field(default=(), max_length=50)
 
 
 class ObservedOrigin(BaseModel):
@@ -74,7 +76,7 @@ async def discover(redis: RedisClient, run_id: UUID, call_id: str) -> LiveBrowse
     try:
         with anyio.fail_after(REDIS_SECONDS):
             raw = await redis.get(_key(run_id, call_id))
-        if raw is None or len(raw) > 8192:
+        if raw is None or len(raw) > 16384:
             return None
         identity = LiveBrowserIdentity.model_validate_json(raw)
     except RedisError, OSError, TimeoutError, ValidationError:

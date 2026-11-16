@@ -25,6 +25,7 @@ from app.db.models.sync_source import SyncSource
 from app.db.models.conversation_favourite import ConversationFavourite
 from app.db.models.conversation_last_read import ConversationLastRead
 from app.db.models.browser_sign_in import BrowserSignIn
+from app.db.models.browser_credential_continuation import BrowserCredentialContinuation
 from app.db.models.browser_teaching import (
     BrowserTeachingPolicy,
     BrowserTeachingPreference,
@@ -269,6 +270,7 @@ __all__ = [
     "BrowserCredentialAgentGrant",
     "BrowserCredentialMemberGrant",
     "BrowserCredentialPlan",
+    "BrowserCredentialContinuation",
     "BrowserCredentialPolicy",
     "CodingAccount",
     "OrganizationAssistant",

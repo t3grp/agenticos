@@ -79,7 +79,9 @@ class Harness:
             close=AsyncMock(),
             origin=AsyncMock(return_value=ORIGIN),
         )
-        self.page = SimpleNamespace(credentials=self.native, output_guard=BrowserOutputGuard())
+        self.page = SimpleNamespace(
+            credentials=self.native, output_guard=BrowserOutputGuard(), inherited_credentials=()
+        )
         self.events = []
         self.value_factories = 0
         self.effect_result = True

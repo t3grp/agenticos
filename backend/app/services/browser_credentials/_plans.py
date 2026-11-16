@@ -18,6 +18,7 @@ from app.core.browser_fill import (
     BrowserFillSelection,
     BrowserFillState,
 )
+from app.core.browser_session import CredentialGeneration, credential_generations
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.core.permissions import AuthContext
@@ -26,6 +27,7 @@ from app.db.models.agent_run import ApprovalStatus
 from app.db.models.browser_credential import BrowserCredentialPlan
 from app.repositories import agent_run as run_repo
 from app.repositories import browser_credential as repo
+from app.repositories import browser_credential_continuation as continuation_repo
 from app.schemas.browser_credential import (
     BrowserCredentialConfirmation,
     BrowserCredentialEligible,
@@ -242,6 +244,13 @@ class BrowserCredentialPlanService:
                 raise NotFoundError(message="Browser credential plan not found")
             await self.expire(current, existing)
             return read_plan(existing)
+        if (
+            await continuation_repo.active_for_view(
+                self.db, identity.organization_id, run_id, identity.call_id
+            )
+            is not None
+        ):
+            raise BrowserFillRefused(BrowserFillReason.ALREADY_CONSUMED)
         active = await repo.active_for_view(
             self.db, identity.organization_id, run_id, request.call_id
         )
@@ -710,11 +719,21 @@ class BrowserCredentialPlanService:
         ):
             raise BrowserFillRefused(BrowserFillReason.ALREADY_CONSUMED)
         current, _ = await _access.private_run(self.db, ctx, identity)
-        await _access.credential(
-            self.db,
-            current,
-            secret_id=claim.secret_id,
-            agent_id=identity.agent_id,
-            generation=claim.generation,
-            locked=True,
+        contributors = credential_generations(
+            [
+                *identity.inherited_credentials,
+                CredentialGeneration(
+                    secret_id=claim.secret_id, authorization_generation=claim.generation
+                ),
+            ]
         )
+        for contributor in contributors:
+            await _access.credential(
+                self.db,
+                current,
+                secret_id=contributor.secret_id,
+                agent_id=identity.agent_id,
+                generation=contributor.authorization_generation,
+                locked=True,
+            )
+        await _access.private_run(self.db, current, identity)
