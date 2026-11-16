@@ -271,6 +271,7 @@ async def test_concurrent_prepared_calls_only_one_submits(operation_store, monke
     assert state["operation"].phase == "stored"
 
 
+@pytest.mark.security
 async def test_a_submission_error_hides_secret_response_and_url(operation_store, caplog):
     state, _current = operation_store
     adapter = _FakeAdapter(

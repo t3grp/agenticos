@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import JsonValue
 from sqlalchemy import (
     CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
     Numeric,
@@ -70,7 +71,7 @@ class WorkflowMediaOperation(Base, TimestampMixin):
     estimated_cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
     reported_cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
     cost_is_partial: Mapped[bool] = mapped_column(nullable=False, default=False)
-    submitted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __table_args__ = (

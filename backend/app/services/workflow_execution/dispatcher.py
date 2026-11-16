@@ -1812,10 +1812,13 @@ async def _settle_loaded(
                 cost_is_partial=outcome.cost_is_partial or child.cost_is_partial,
             )
     if begun.definition.id in {"image.generate", "video.generate"}:
+        # The run row lock serializes this read with both attempts' cost writes:
+        # cached output and a late original report one physical provider bill.
         booked = await workflow_run_repo.sum_attempt_costs(db, node_run_id=node_run.id)
         outcome = replace(
             outcome,
             cost=attempt.cost + max(Decimal(0), outcome.cost - booked),
+            cost_is_partial=outcome.cost_is_partial or attempt.cost_is_partial,
         )
     # An outcome describes this handler invocation's cumulative spend. A duplicate
     # delivery adds nothing; a late result can refine what was known of the same try.

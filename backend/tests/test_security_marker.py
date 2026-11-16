@@ -41,6 +41,8 @@ KEYWORDS = ("tenant", "permission", "budget", "approval", "secret", "plaintext")
 # honest by `TestNoStaleExemptions`, which fails if an entry no longer exists or
 # no longer matches the net.
 EXEMPT: dict[str, str] = {
+    "tests/test_workflow_media_nodes.py::test_api_key_unseals_only_a_currently_usable_secret": "authorized key unsealing, not a permission refusal",
+    "tests/test_workflow_media_operation_repository.py::test_get_for_node_run_returns_the_tenant_scoped_operation": "repository result plumbing, not a cross-tenant refusal",
     "tests/api/test_workflow_run_routes.py::TestNodesRoute::test_an_approval_step_says_who_decided_and_when": "decision metadata serialization, not an authorization refusal",
     "tests/test_sandbox_workspace.py::TestRecordedTaskWorkspace::test_reading_undo_permissions_never_opens_a_provider_client": "authorized metadata reads must not create a provider client; no access refusal",
     "tests/test_coverage_edges.py::TestRunNotifications::test_a_budget_stop_hands_its_limit_and_spend_to_the_notification": "budget notification values, not spend enforcement",

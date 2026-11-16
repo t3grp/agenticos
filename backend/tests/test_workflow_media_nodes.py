@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 from PIL import Image
-from pydantic import ValidationError, SecretStr
+from pydantic import SecretStr, ValidationError
 
 from app.agents.capabilities.budget import BudgetScope, SpendLimit, record_ambient_cost
 from app.core.config import settings
@@ -51,7 +51,9 @@ def _video_catalog(monkeypatch, *, api: str = "xai_videos"):
         base_url="https://video.invalid",
         model=lambda model_id: model if model_id == model.id else None,
     )
-    monkeypatch.setattr(media, "video_provider", lambda provider: entry if provider == "synthetic" else None)
+    monkeypatch.setattr(
+        media, "video_provider", lambda provider: entry if provider == "synthetic" else None
+    )
     return entry, model
 
 
@@ -443,6 +445,7 @@ def test_video_chosen_model_refuses_a_model_removed_after_validation(monkeypatch
         (SecretKind.API_KEY.value, "synthetic", SecretKind.API_KEY, True, True),
     ],
 )
+@pytest.mark.security
 async def test_usable_provider_key_requires_the_right_tenant_secret_and_permission(
     monkeypatch, kind, row_purpose, purpose_kind, allowed, usable
 ):
@@ -452,7 +455,9 @@ async def test_usable_provider_key_requires_the_right_tenant_secret_and_permissi
     row = (
         None
         if kind is None
-        else SimpleNamespace(kind=kind, purpose=row_purpose, sealed_secret=b"ciphertext", key_version=2)
+        else SimpleNamespace(
+            kind=kind, purpose=row_purpose, sealed_secret=b"ciphertext", key_version=2
+        )
     )
     purpose = None if purpose_kind is None else SimpleNamespace(kind=purpose_kind)
     monkeypatch.setattr(
@@ -465,7 +470,10 @@ async def test_usable_provider_key_requires_the_right_tenant_secret_and_permissi
 
     result = await media._usable_api_key(object(), auth, secret_id, "synthetic")
 
-    assert (result is row) is usable
+    if usable:
+        assert result is row
+    else:
+        assert result is None
 
 
 async def test_api_key_unseals_only_a_currently_usable_secret(monkeypatch):
@@ -555,6 +563,7 @@ def test_priced_image_usage_keeps_the_metered_cost():
     assert media._image_cost(ledger, Decimal("0.50")) == (Decimal("0.12"), False)
 
 
+@pytest.mark.security
 async def test_image_budget_reservation_denial_happens_before_provider_call(monkeypatch):
     provider = image_providers()[0]
     config = media.GenerateImageConfig(
@@ -615,6 +624,7 @@ def test_generation_nodes_are_spenders_and_keep_their_versioned_contracts():
     )
 
 
+@pytest.mark.security
 async def test_parallel_reservations_leave_only_unreserved_workflow_budget(monkeypatch):
     async def held(_db, *, workflow_run_id):
         return Decimal("0.60")

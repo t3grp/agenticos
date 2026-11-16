@@ -1437,8 +1437,9 @@ class TestSettleCompleted:
 
 class TestSettleBooksCost:
     @pytest.mark.parametrize("node_id", ["image.generate", "video.generate"])
+    @pytest.mark.parametrize("previously_partial", [False, True])
     async def test_media_generation_cost_is_recorded_for_organization_spend(
-        self, repo, event_log, node_id
+        self, repo, event_log, node_id, previously_partial
     ):
         load_builtins()
         node = _node_instance(node_id)
@@ -1454,7 +1455,11 @@ class TestSettleBooksCost:
             node_instance_id=node.id,
             status=NodeRunStatus.RUNNING.value,
         )
-        attempt = _attempt(node_run_id=node_run.id, retry_guarantee=RetryGuarantee.NONE.value)
+        attempt = _attempt(
+            node_run_id=node_run.id,
+            retry_guarantee=RetryGuarantee.NONE.value,
+            cost_is_partial=previously_partial,
+        )
         begun = _begun(
             node, definition, attempt_id=attempt.id, node_run_id=node_run.id, workflow_run_id=run.id
         )
@@ -1484,8 +1489,9 @@ class TestSettleBooksCost:
             organization_id=run.organization_id,
             attempt_id=attempt.id,
             cost_usd=Decimal("0.25"),
-            cost_is_partial=False,
+            cost_is_partial=previously_partial,
         )
+        assert attempt.cost_is_partial is previously_partial
 
     @pytest.mark.parametrize("replay_first", [False, True])
     async def test_media_recovery_books_one_operation_cost_across_attempts(

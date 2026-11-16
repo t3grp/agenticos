@@ -95,7 +95,11 @@ async def _phase(
     reported_cost_usd: Decimal | None = None,
     cost_is_partial: bool = False,
 ) -> bool:
-    """Commit one phase before the next external effect."""
+    """Commit one phase before the next external effect.
+
+    An expected phase claims the transition under the operation row lock. A
+    losing worker must return before calling the provider or changing the phase.
+    """
     current = context.current()
     async with get_worker_db_context() as db:
         operation = await operation_repo.get_for_node_run_for_update(
