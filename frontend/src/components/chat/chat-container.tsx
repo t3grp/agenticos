@@ -37,6 +37,7 @@ import { SheetRow } from "./composer-sheet";
 import { ChatEmptyState } from "./chat-empty-state";
 import { ChatRoomBar } from "./chat-room-bar";
 import { TeamRoomHeader, TeamRoomEmpty } from "./team-room-header";
+import { RoomRoutingPanel } from "./room-routing-panel";
 import { TeamRoomComposer } from "./team-room-composer";
 import { RoomThreadPanel } from "./room-thread-panel";
 import { useRoomRequests, useRoomSync } from "@/hooks/use-room";
@@ -1792,7 +1793,16 @@ function ChatUI({
               {/* Who else has this chat open, held at the top while the transcript scrolls:
                 a project's chat is several people's at once. */}
               {roomProjectId !== null ? (
-                <TeamRoomHeader projectId={roomProjectId} present={present} />
+                <>
+                  <TeamRoomHeader projectId={roomProjectId} present={present} />
+                  {conversationId && !isLoadingConversation && (
+                    <RoomRoutingPanel
+                      conversationId={conversationId}
+                      readOnly={readOnly}
+                      onOpenThread={onOpenThread}
+                    />
+                  )}
+                </>
               ) : (
                 conversationId &&
                 !compact && (

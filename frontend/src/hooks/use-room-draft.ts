@@ -31,16 +31,22 @@ export function useRoomDraft(
     else change((held) => ({ ...held, reply: value }));
   };
 
-  async function submit() {
+  async function submit(leadPolicyRevision?: number) {
     const generation = chatApi.getState().roomDraftGeneration;
     const held = chatApi.getState().roomDrafts[key] ?? EMPTY_ROOM_DRAFT;
     if (held.sending || !isCurrent() || held.content.trim().length === 0) return;
+    if (held.attempt === null && held.intent === "ask_lead" && leadPolicyRevision === undefined)
+      return;
     const selectedReply = threadRootMessageId === null ? chatApi.getState().replyTo : held.reply;
     const snapshot = held.attempt ?? {
       input: {
         client_message_id: clientId(),
         content: held.content.trim(),
-        ...(held.agentId === null ? {} : { agent_id: held.agentId }),
+        ...(held.intent === "ask_lead"
+          ? { intent: "ask_lead" as const, expected_policy_revision: leadPolicyRevision }
+          : held.agentId === null
+            ? {}
+            : { agent_id: held.agentId }),
         ...(selectedReply === null ? {} : { reply_to_message_id: selectedReply.messageId }),
         ...(threadRootMessageId === null ? {} : { thread_root_message_id: threadRootMessageId }),
       },
@@ -100,7 +106,10 @@ export function useRoomDraft(
     content: draft.content,
     setContent: (content: string) => change((value) => ({ ...value, content })),
     agentId: draft.agentId,
-    setAgentId: (agentId: string | null) => change((value) => ({ ...value, agentId })),
+    intent: draft.intent,
+    setAgentId: (agentId: string | null) =>
+      change((value) => ({ ...value, agentId, intent: "message" })),
+    setAskLead: () => change((value) => ({ ...value, agentId: null, intent: "ask_lead" })),
     reply: draft.attempt === null ? reply : draft.attempt.reply,
     setReply,
     clearReply: () => setReply(null),

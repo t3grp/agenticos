@@ -35,6 +35,15 @@ vi.mock("@/hooks/use-projects", () => ({
 let client: QueryClient;
 let canPost: boolean;
 let requestItems: RoomAgentRequest[];
+let leadPolicy: {
+  enabled: boolean;
+  revision: number;
+  lead: { agent_id: string; version_id: string; name: string; current: boolean } | null;
+  specialists: never[];
+  max_items: number;
+  can_edit: boolean;
+  can_ask: boolean;
+};
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
@@ -125,10 +134,21 @@ beforeEach(() => {
   };
   canPost = true;
   requestItems = [];
+  leadPolicy = {
+    enabled: false,
+    revision: 0,
+    lead: null,
+    specialists: [],
+    max_items: 3,
+    can_edit: true,
+    can_ask: false,
+  };
   vi.mocked(apiClient.get).mockImplementation(async (path) =>
     path === "/orgs"
       ? { items: [] }
-      : { items: requestItems, total: requestItems.length, can_post: canPost },
+      : path.endsWith("/lead-policy")
+        ? leadPolicy
+        : { items: requestItems, total: requestItems.length, can_post: canPost },
   );
   vi.mocked(apiClient.post).mockResolvedValue(saved);
 });
@@ -136,6 +156,13 @@ afterEach(() => client.clear());
 
 describe("the room composer", () => {
   it("defaults to people and does not treat typed @names as responder selection", async () => {
+    leadPolicy = {
+      ...leadPolicy,
+      enabled: true,
+      revision: 7,
+      lead: { agent_id: "Writer", version_id: "pinned-version", name: "Writer", current: true },
+      can_ask: true,
+    };
     const user = userEvent.setup();
     render(room(), { wrapper });
     await user.type(
@@ -149,6 +176,55 @@ describe("the room composer", () => {
       content: "Hello @Writer",
     });
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveValue(""));
+  });
+
+  it("asks the configured lead with its policy revision and no client-selected agent", async () => {
+    leadPolicy = {
+      ...leadPolicy,
+      enabled: true,
+      revision: 7,
+      lead: { agent_id: "Writer", version_id: "pinned-version", name: "Writer", current: false },
+      can_ask: true,
+    };
+    const user = userEvent.setup();
+    render(room(), { wrapper });
+    await user.click(await screen.findByRole("combobox", { name: "Who should answer" }));
+    await user.click(await screen.findByRole("option", { name: "Ask lead: Writer" }));
+    expect(apiClient.post).not.toHaveBeenCalled();
+    await user.type(screen.getByRole("textbox"), "Propose the next steps");
+    await user.click(screen.getByRole("button", { name: "Ask lead" }));
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith("/conversations/room-a/room-messages", {
+        client_message_id: expect.any(String),
+        content: "Propose the next steps",
+        intent: "ask_lead",
+        expected_policy_revision: 7,
+      }),
+    );
+  });
+
+  it("retries the frozen lead intent after a lost acknowledgement and policy change", async () => {
+    leadPolicy = {
+      ...leadPolicy,
+      enabled: true,
+      revision: 7,
+      lead: { agent_id: "Writer", version_id: "pinned-version", name: "Writer", current: true },
+      can_ask: true,
+    };
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new TypeError("Connection lost"));
+    const user = userEvent.setup();
+    render(room(), { wrapper });
+    await user.click(await screen.findByRole("combobox", { name: "Who should answer" }));
+    await user.click(await screen.findByRole("option", { name: "Ask lead: Writer" }));
+    await user.type(screen.getByRole("textbox"), "Plan this once");
+    await user.click(screen.getByRole("button", { name: "Ask lead" }));
+    await screen.findByRole("button", { name: "Retry same message" });
+    const first = vi.mocked(apiClient.post).mock.calls[0]![1];
+    expect(first).toMatchObject({ intent: "ask_lead", expected_policy_revision: 7 });
+    leadPolicy = { ...leadPolicy, revision: 8, enabled: false, can_ask: false };
+    act(changed);
+    await user.click(screen.getByRole("button", { name: "Retry same message" }));
+    await waitFor(() => expect(vi.mocked(apiClient.post).mock.calls[1]![1]).toEqual(first));
   });
 
   it("requires explicit selection of a published runnable cloud responder", async () => {
