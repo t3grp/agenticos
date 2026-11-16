@@ -42,7 +42,7 @@ separate paths. A cookie session is not converted into a password.
 | `app/services/organization_secret.py` | Owner-checked creation, replacement and deletion; browser values never use generic transport readers. |
 | `app/services/browser_credentials/` | Policy, authority, IDs-only plans, lease and single native writer. |
 | `app/agents/capabilities/browser_use/` | Existing owned view, input lease, observed elements, protected output and bounded credential request tool. |
-| `app/services/live_browse.py` | Strict cache purge and protected event publication before values open. |
+| `app/services/live_browse.py` | Strict cache purge and protected event publication before values reach the page. |
 | `app/services/browser_sign_in.py` | Separate member-sealed cookie/local-storage sessions. |
 | Vault forms and hosted browser panel | Dedicated picker, exact destination/field confirmation, protected state and explicit human handoff; required UI integration. |
 
@@ -66,7 +66,7 @@ controls must be integrated before enabling it for end users.
 4. The owning controller prepares the real controls and exposes the exact
    canonical origin and selected field names for the acting person to confirm.
    A generic tool approval cannot authorize the secret write.
-5. Before opening values, stop previews, erase cached frames and enable protected
+5. Before writing values, stop previews, erase cached frames and enable protected
    output. The owning controller fills only those selected native controls.
    The writer does not call form submission during this step.
 6. To submit, choose a separate **Submit this form** action tied to the exact
@@ -175,7 +175,7 @@ zero; request IDs address that exact observation, never an arbitrary selector.
 The live controller stores actual node references in an isolated-world closure
 and produces opaque document and field identities. It checks visibility,
 connection, hit-testing, native control type, exact form action and same-document
-identity again before opening values. Hidden, readonly, replaced, ambiguous or
+identity again before delivering selected values. Hidden, readonly, replaced, ambiguous or
 cross-origin controls are refused.
 
 | Surface | Contract |
@@ -217,13 +217,17 @@ document, lease or credential generation requires new observation and confirmati
 
 ## Sticky plaintext and output boundary
 
-Values travel from the vault reader to the native writer in memory. They do not
-enter model arguments, tools results, messages, audit payloads, exports, stored
-plans or error details. Only explicitly selected fields are opened for filling.
+The server decrypts typed payloads in memory when it derives origin and field
+metadata during eligibility, request, preparation and claim checks. Decryption
+is not deferred until the final native call. Those decrypted values never enter
+model arguments, tool results, API or event output, messages, audit payloads,
+exports, stored plans or error details. Only explicitly selected fields are
+delivered to the page, after confirmation, output protection, durable claim and
+the final current-authority and generation checks.
 
 Before the first write, stop and join the preview stream, clear the cached last
 image, and transactionally remove Redis frame, location and trace caches.
-Publish a fixed `browser_protected` event before values open. Failure refuses
+Publish a fixed `browser_protected` event before writing values. Failure refuses
 the write. Cached publication and teardown share a lock: an in-flight old frame
 finishes before the purge and cannot be replayed during later teardown.
 
