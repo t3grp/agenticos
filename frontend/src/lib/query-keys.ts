@@ -46,6 +46,8 @@ export const qk = {
   codingAccounts: {
     all: () => ["coding-accounts"] as const,
     mine: (scope: string) => ["coding-accounts", scope] as const,
+    usage: (scope: string, account: string, generation: string) =>
+      ["coding-accounts", scope, "usage", account, generation] as const,
   },
   durableTasks: {
     root: () => ["durable-tasks"] as const,
