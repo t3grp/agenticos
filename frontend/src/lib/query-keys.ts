@@ -253,6 +253,26 @@ export const qk = {
     runNodes: (runId: string) => ["workflows", "run", runId, "nodes"] as const,
     runGraph: (runId: string) => ["workflows", "run", runId, "graph"] as const,
     runFiles: (runId: string) => ["workflows", "run", runId, "files"] as const,
+    runFilePreview: (
+      runId: string,
+      fileId: string,
+      scope: string,
+      contentType: string,
+      byteSize: number,
+      generation: string,
+    ) =>
+      [
+        "workflows",
+        "run",
+        runId,
+        "files",
+        fileId,
+        "preview",
+        scope,
+        contentType,
+        byteSize,
+        generation,
+      ] as const,
     // The decisions workflow steps wait on. Under "workflows" so a decision's
     // invalidation of every run refreshes the queue with them.
     approvals: () => ["workflows", "approvals"] as const,
