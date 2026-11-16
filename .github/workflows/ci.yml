@@ -290,6 +290,7 @@ jobs:
     # below already does it. Four identical copies is four places to forget one.
     env:
       PYTEST_XDIST_AUTO_NUM_WORKERS: "4"
+      T3OS_TEST_CHROMIUM_EXECUTABLE: /usr/bin/google-chrome
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       POSTGRES_USER: postgres
@@ -319,6 +320,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Verify the native browser acceptance runtime
+        timeout-minutes: 2
+        run: |
+          test -x "$T3OS_TEST_CHROMIUM_EXECUTABLE"
+          "$T3OS_TEST_CHROMIUM_EXECUTABLE" --version
 
       - name: Configure the disposable test database
         env:

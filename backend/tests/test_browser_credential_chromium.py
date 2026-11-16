@@ -1,7 +1,8 @@
 """Real isolated-world acceptance on one disposable, synthetic Chromium.
 
-Set T3OS_TEST_CHROMIUM_EXECUTABLE to a reviewed Chromium executable to run this
-optional browser batch. The normal suite does not install or launch a browser.
+Set T3OS_TEST_CHROMIUM_EXECUTABLE to a reviewed Chromium executable locally.
+Full CI verifies its runner-provided browser and requires these acceptance cases;
+an absent executable setting is a failure there, not an optional skipped batch.
 No user profile, CDP endpoint, real website, provider or credential is used. Fetch
 fulfills only the exact synthetic URLs and refuses every other page request.
 The CDP bridge carries real commands through CdpPage._credential_command; it
@@ -71,6 +72,8 @@ class ChromiumProcess:
 def chromium_process(tmp_path_factory: pytest.TempPathFactory) -> Generator[ChromiumProcess]:
     executable = os.environ.get("T3OS_TEST_CHROMIUM_EXECUTABLE")
     if not executable:
+        if os.environ.get("CI"):
+            pytest.fail("CI must provide a reviewed Chromium acceptance executable")
         pytest.skip("Real Chromium acceptance requires T3OS_TEST_CHROMIUM_EXECUTABLE")
     binary = Path(executable).resolve(strict=True)
     assert binary.is_file(), "The explicit Chromium executable must be a file"
