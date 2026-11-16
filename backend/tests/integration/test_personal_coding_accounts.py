@@ -17,6 +17,7 @@ from pydantic_ai.tools import RunContext
 from pydantic_ai.usage import RunUsage
 from pydantic_ai.workspaces import Workspace
 from pydantic_ai.workspaces.local import LocalWorkspaceBackend
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.agents.audience import acting_impersonated
@@ -35,6 +36,7 @@ from app.core.exceptions import (
 from app.core.permissions import AuthContext
 from app.core.secret_kinds import ApiKeySecret, OpenAICodexSecret, SecretKind, unseal_secret
 from app.core.vault import VaultScope
+from app.db.models.audit_log import AppAdminAuditLog
 from app.db.models.coding_account import CodingAccount
 from app.db.models.organization import Organization, OrganizationMember
 from app.db.models.user import User
@@ -129,6 +131,16 @@ async def test_an_administrator_or_another_tenant_cannot_use_or_disconnect_the_a
         row = await service.create(context(owner, org), request(enabled=True))
         for ctx in (context(other, org), context(owner, elsewhere)):
             assert await service.mine(ctx) == []
+            assert (
+                await account_repo.get(
+                    db,
+                    organization_id=ctx.organization_id,
+                    user_id=account_owner(ctx),
+                    harness="claude_code",
+                    default_only=True,
+                )
+                is None
+            )
             with pytest.raises(NotFoundError):
                 await service.own(ctx, row.id)
             with pytest.raises(NotFoundError):
@@ -256,6 +268,12 @@ async def test_codex_accounts_keep_explicit_defaults_and_reject_duplicate_provid
         first_generation = first.generation
         assert first.is_default and not second.is_default
         assert first.provider_identity_fingerprint != second.provider_identity_fingerprint
+        assert (
+            await account_repo.get(
+                db, organization_id=org.id, user_id=user.id, harness="codex", default_only=True
+            )
+            is first
+        )
 
         with pytest.raises(AlreadyExistsError, match="already connected"):
             await connect("account-1", "Duplicate")
@@ -272,6 +290,17 @@ async def test_codex_accounts_keep_explicit_defaults_and_reject_duplicate_provid
         )
         assert first.is_default and not second.is_default and second.pool_member
         assert second.generation != second_generation
+        second_generation = second.generation
+        with pytest.raises(BadRequestError, match="disabled account cannot be the default"):
+            await service.update(
+                ctx,
+                second.id,
+                CodingAccountUpdate(generation=second_generation, enabled=False, is_default=True),
+            )
+        await db.refresh(first)
+        await db.refresh(second)
+        assert first.is_default and not second.is_default
+        assert second.enabled and second.pool_member and second.generation == second_generation
         await service.update(
             ctx,
             second.id,
@@ -285,6 +314,58 @@ async def test_codex_accounts_keep_explicit_defaults_and_reject_duplicate_provid
         assert not first.is_default and second.is_default and second.pool_member
         assert first.generation == first_generation
         assert second.generation != first_generation
+        assert (
+            await account_repo.get(
+                db, organization_id=org.id, user_id=user.id, harness="codex", default_only=True
+            )
+            is second
+        )
+
+        audit_query = (
+            select(AppAdminAuditLog.id)
+            .where(AppAdminAuditLog.organization_id == org.id)
+            .order_by(AppAdminAuditLog.seq)
+        )
+        previous_audit = list(await db.scalars(audit_query))
+        second_generation = second.generation
+        await service.update(
+            ctx,
+            second.id,
+            CodingAccountUpdate(
+                generation=second_generation, enabled=True, is_default=True, pool_member=True
+            ),
+        )
+        await db.refresh(first)
+        await db.refresh(second)
+        assert not first.is_default and second.is_default and second.enabled and second.pool_member
+        assert first.generation == first_generation and second.generation == second_generation
+        assert list(await db.scalars(audit_query)) == previous_audit
+
+
+async def test_claude_accounts_cannot_join_a_pool(engine: AsyncEngine) -> None:
+    async with AsyncSession(engine, expire_on_commit=False) as db:
+        user = await person(db)
+        org = await organization(db, user)
+        ctx = context(user, org)
+        service = CodingAccountService(db)
+        account = await service.create(ctx, request(enabled=True))
+        generation = account.generation
+        with pytest.raises(BadRequestError, match="verified account identity"):
+            await service.update(
+                ctx,
+                account.id,
+                CodingAccountUpdate(generation=generation, enabled=True, pool_member=True),
+            )
+        await db.refresh(account)
+        assert account.enabled and account.is_default and not account.pool_member
+        assert account.generation == generation
+        assert list(
+            await db.scalars(
+                select(AppAdminAuditLog.action)
+                .where(AppAdminAuditLog.organization_id == org.id)
+                .order_by(AppAdminAuditLog.seq)
+            )
+        ) == ["coding_account.connected"]
 
 
 async def test_accounts_without_provider_identity_cannot_join_a_pool_or_expand_it(
