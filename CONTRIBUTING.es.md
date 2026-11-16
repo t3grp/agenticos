@@ -2,7 +2,7 @@
 source_sha: "7cb876b5ef26"
 ---
 
-<!-- source_sha: f18100260aaf -->
+<!-- source_sha: cd2b76cc88df -->
 
 # Contribuir a AgenticOS
 
@@ -112,10 +112,15 @@ supervisión.
 - Los bugs se entregan con un test de regresión que falla sin el arreglo.
 - Cuenta en la descripción qué decidiste y por qué. El qué ya lo enseña el
   código.
-- La CI rápida se ejecuta en cada pull request. La CI completa se ejecuta por
-  lotes: aproximadamente cada 10 merges, haz push del último commit de `t3` a
-  `ci/batch`, y en cada publicación (push de una etiqueta `v*`). Si un lote
-  falla, corrige primero el merge que lo rompió.
+- La CI no se ejecuta en los pull requests. Antes de hacer push, ejecuta la
+  comprobación rápida (lint, comprobación de tipos, tests relacionados) y pega
+  el comando y su salida en el pull request. Cada merge a `t3` y cada etiqueta
+  `v*` ejecutan la CI completa; si una ejecución de `t3` falla, reviértela o
+  corrígela antes del siguiente merge. Un despliegue a producción la necesita
+  en verde.
+- Si T3 no está disponible, añade en su lugar la etiqueta `quick-check` al
+  pull request. El workflow Quick check ejecuta entonces la misma comprobación
+  en la CI, y el pull request se fusiona cuando pasa.
 
 ## Seguridad
 
