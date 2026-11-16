@@ -334,6 +334,7 @@ describe("stepsForPage", () => {
       "chat-agent-picker",
       "chat-composer",
       "chat-workspace",
+      "browser-protected-continuation",
       "chat-agent-settings",
       "chat-team-room",
       "chat-team-composer",

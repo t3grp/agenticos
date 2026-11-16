@@ -1,4 +1,67 @@
 {
+  "browserContinuation": {
+    "approvalConsent": "Tam olarak güncel siteyi ve çerez kaydetme seçimini inceleyin. Yalnızca bu özel onay üzerinden devam edin.",
+    "reviewContinuation": "Devamı incele",
+    "title": "Korunan çerezlerle devam et",
+    "protectionPersists": "Her iki tarayıcı görünümü de korumalı kalır. Sayfa metni, görseller ve normal tarayıcı kontrolleri gizli kalır.",
+    "preparationOnly": "Gönderilen bu sayfa için bir inceleme hazırla. Bu adım çerezleri dışa aktarmaz, oturum kaydetmez veya başka bir oturum açmaz.",
+    "prepare": "Devamı hazırla",
+    "retryPreparation": "Aynı hazırlığı yeniden dene",
+    "preparationRetained": "İlk hazırlık isteği saklanır. Açıkça yeniden denediğinizde aynı istek kullanılır.",
+    "storageUnavailable": "Bu tarayıcı kurtarılabilir bir kararı saklayamıyor. Yeni bir işlem gönderilmeyecek.",
+    "consent": "Yalnızca izin verilen çerezleri kullanarak bu tam sitede, yeni ve korumalı bir tarayıcı bağlamında devam et.",
+    "confirmationDeadline": "Son onay zamanı",
+    "keepSignedIn": "Oturumum açık kalsın",
+    "keepDuration": "Bu çerezleri en fazla yedi gün boyunca özel olarak kaydet. Sitenin çerez süresi veya erişimin kaybedilmesi bu süreyi kısaltabilir. Bu seçenek başlangıçta kapalıdır.",
+    "accessRechecked": "Bu oturumda kullanılan tüm kimlik bilgilerine güncel erişim yeniden denetlenir. Yerel depolama, sayfa metni veya form değerleri kaydedilmez.",
+    "confirmationExpired": "Onay süresi doldu. Durumu kontrol etmek bu süreyi yenilemez.",
+    "continueDecisionRetained": "İlk Devam kararınız ve çerez kaydetme seçiminiz saklanır. Yeniden deneme bunları değiştiremez.",
+    "declineDecisionRetained": "İlk Reddet kararınız saklanır. Yeniden deneme bunu onaya dönüştüremez.",
+    "retryDecision": "Aynı kararı yeniden dene",
+    "continueProtected": "Korumalı tarayıcıda devam et",
+    "decline": "Devamı reddet",
+    "readUnavailable": "Güncel devam kaydı doğrulanamadı. Özel ayrıntılar ve yeni işlemler kullanılamıyor.",
+    "checking": "Devam durumu kontrol ediliyor…",
+    "unknownOutcome": "İşlemin etkisi belirsiz. Bu devam işlemi yinelenemez ve bu gönderim için yeni bir deneme oluşturulmaz.",
+    "continuedMeaning": "Yeni ve korumalı bir tarayıcı bağlamı oluşturuldu. Bu, oturum açmanın başarılı olduğunu kanıtlamaz.",
+    "cookiesSaved": "Çerezler açık onayınızla kaydedildi. Gelecekte kullanımları yine güncel erişim gerektirir.",
+    "cookiesNotSaved": "Çerezler yalnızca bu devam işlemi için kullanıldı. Yeniden kullanılabilir bir oturum kaydedilmedi.",
+    "openProtectedView": "Korumalı görünümü aç",
+    "manageSignIns": "Kayıtlı oturumları yönet",
+    "writeUncertain": "Yanıt doğrulanamadı. Başka bir işlemden önce kaydı kontrol edin; kontroller yazma işlemini yinelemez.",
+    "pollingEnded": "Otomatik durum kontrolleri durdu. En güncel kaydı okumak için devam durumunu kontrol edin.",
+    "checkAgain": "Devam durumunu kontrol et",
+    "checksOnlyRead": "Durum kontrolleri yalnızca kaydı okur. Çerezleri dışa aktarmaz, oturum kaydetmez veya bağlam açmaz.",
+    "states": {
+      "requested": "Hazırlık istendi",
+      "preparing": "Güncel sayfa hazırlanıyor",
+      "awaiting_confirmation": "Devam kararınız bekleniyor",
+      "approved": "Karar kaydedildi",
+      "claimed": "Onaylanan devam işlemi uygulanıyor",
+      "continued": "Korumalı devam oluşturuldu",
+      "refused": "Devam işlemi engellendi",
+      "expired": "Devam süresi doldu",
+      "declined": "Devam reddedildi",
+      "unknown": "Devam sonucu bilinmiyor"
+    },
+    "reasons": {
+      "continuation_disabled": "Korumalı devam bu kurulumda kullanılamıyor.",
+      "continuation_unavailable": "Bu devam işlemi kullanılamıyor.",
+      "source_not_submitted": "Onaylanmış ve alındığı bildirilmiş bir gönderim gerekiyor.",
+      "confirmation_required": "Tam olarak bu güncel sayfa için kararınız gerekiyor.",
+      "confirmation_expired": "Onay süresi doldu.",
+      "document_changed": "Sayfa hazırlıktan sonra değişti.",
+      "destination_refused": "Güncel site onaylanamadı.",
+      "authority_changed": "Kullanılan kimlik bilgilerinden birine erişim değişti.",
+      "browser_ownership_lost": "Bu çalıştırma artık tarayıcının sahibi değil.",
+      "output_protection_unavailable": "Korunan çıktı oluşturulamadı.",
+      "session_state_refused": "Oturum durumu güvenli biçimde kabul edilemedi.",
+      "session_cookie_missing": "Bu site için izin verilen çerez bulunmuyor.",
+      "browser_unavailable": "Sahip tarayıcı kullanılamıyor.",
+      "uncertain_continuation": "Devam işleminin etkisi doğrulanamadı.",
+      "continuation_already_consumed": "Bu gönderimin tek devam denemesi zaten var."
+    }
+  },
   "sharedAttribution": {
     "cta": "Kendi AgenticOS’unuzu çalıştırın",
     "ctaShort": "GitHub",
@@ -8659,6 +8722,10 @@
       "my-memory": {
         "body": "Agent’lar konuşmalar arasında not saklar. Bunlar sizin notlarınızdır: okuyun, silmeden kullanılmalarını durdurun veya tamamen silin. Harici bir bellek servisindeki not burada listelenir ama içeriği gösterilmez.",
         "title": "Agent’ların sizinle ilgili hatırladıkları"
+      },
+      "browser-protected-continuation": {
+        "title": "Sayfayı açığa çıkarmadan devam et",
+        "body": "Alındığı bildirilen bir gönderimden sonra ayrı bir devam incelemesi hazırla. Çerezleri saklamak isteğe bağlıdır ve en fazla yedi gün sürer. Her iki görünüm de korumalı kalır; durum kontrolü bir işlemi asla yinelemez."
       },
       "my-sign-ins": {
         "body": "Bir sitede gezinirken oturum açıp açık kalmasını sağlarsanız agent’larınızın tarayıcısı bir sonraki gelişinde de oturum açmış olur. Bir siteyi unutursanız sonraki gezinme oturumu kapalı başlar.",

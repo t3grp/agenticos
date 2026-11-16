@@ -375,6 +375,12 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   { id: "chat-composer", page: ROUTES.CHAT, target: "chat-composer", optional: true },
   { id: "chat-workspace", page: ROUTES.CHAT, target: "chat-workspace" },
+  {
+    id: "browser-protected-continuation",
+    page: ROUTES.CHAT,
+    target: "browser-protected-continuation",
+    optional: true,
+  },
   { id: "chat-agent-settings", page: ROUTES.CHAT, target: "chat-agent-settings", optional: true },
   { id: "chat-team-room", page: ROUTES.CHAT, target: "chat-team-room", optional: true },
   { id: "chat-team-composer", page: ROUTES.CHAT, target: "chat-team-composer", optional: true },

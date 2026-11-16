@@ -40,10 +40,15 @@ The supported wire contract is pinned to OpenAI Codex commit
 - [`catalog_processor.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/app-server/src/request_processors/catalog_processor.rs) implements native model listing.
 - [`manager.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/models-manager/src/manager.rs) and [`cache.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/models-manager/src/cache.rs) establish the fallback and fresh-cache provenance checks.
 
+Profile includes an explicit usage refresh control for supported accounts, with
+pending, freshness and unknown states. Authorization refusals clear private usage
+and model metadata; a late response cannot restore the refused evidence.
+
 Fake-process and disposable-database tests establish the integration boundaries;
-they do not substitute for a real-provider acceptance receipt. That receipt and
-the Profile refresh control remain outstanding. Model vendor compatibility still
-validates the coding-agent spec; no catalog record guarantees a future call.
+they do not substitute for a real-provider acceptance receipt. That receipt remains
+outstanding in [issue #130](https://github.com/t3grp/agenticos/issues/130). Model
+vendor compatibility still validates the coding-agent spec; no catalog record
+guarantees a future call.
 
 Manual selection sets the account default in Profile or the private chat
 controls. Pool members are selected in stable order, with at most three lease

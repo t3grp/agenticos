@@ -1,4 +1,67 @@
 {
+  "browserContinuation": {
+    "approvalConsent": "Sprawdź dokładną bieżącą witrynę i wybór zapisu plików cookie. Kontynuuj wyłącznie przez to osobne potwierdzenie.",
+    "reviewContinuation": "Przejrzyj kontynuację",
+    "title": "Kontynuuj z chronionymi plikami cookie",
+    "protectionPersists": "Oba widoki przeglądarki pozostają chronione. Tekst strony, obrazy i zwykłe elementy sterowania pozostają ukryte.",
+    "preparationOnly": "Przygotuj przegląd tej wysłanej strony. Ten krok nie eksportuje plików cookie, nie zapisuje logowania ani nie otwiera kolejnej sesji.",
+    "prepare": "Przygotuj kontynuację",
+    "retryPreparation": "Ponów to samo przygotowanie",
+    "preparationRetained": "Pierwotne żądanie przygotowania zostało zachowane. Świadome ponowienie używa tego samego żądania.",
+    "storageUnavailable": "Ta przeglądarka nie może zachować decyzji do późniejszego odtworzenia. Nowa akcja nie zostanie wysłana.",
+    "consent": "Kontynuuj w tej dokładnej witrynie, w nowym chronionym kontekście przeglądarki, używając wyłącznie dozwolonych plików cookie.",
+    "confirmationDeadline": "Potwierdź przed",
+    "keepSignedIn": "Nie wylogowuj mnie",
+    "keepDuration": "Zapisz te pliki cookie prywatnie na maksymalnie siedem dni. Ich wygaśnięcie lub utrata dostępu może skrócić ten czas. Ta opcja jest początkowo wyłączona.",
+    "accessRechecked": "Bieżący dostęp do wszystkich danych logowania użytych w tej sesji jest sprawdzany ponownie. Pamięć lokalna, tekst strony i wartości formularza nie są zapisywane.",
+    "confirmationExpired": "Termin potwierdzenia minął. Sprawdzenie stanu go nie przedłuża.",
+    "continueDecisionRetained": "Pierwotna decyzja o kontynuacji i zapisie plików cookie została zachowana. Ponowienie nie może jej zmienić.",
+    "declineDecisionRetained": "Pierwotna decyzja o odmowie została zachowana. Ponowienie nie może zmienić jej w zgodę.",
+    "retryDecision": "Ponów tę samą decyzję",
+    "continueProtected": "Kontynuuj w chronionej przeglądarce",
+    "decline": "Odrzuć kontynuację",
+    "readUnavailable": "Nie można zweryfikować bieżącego potwierdzenia kontynuacji. Prywatne szczegóły i nowe akcje są niedostępne.",
+    "checking": "Sprawdzanie kontynuacji…",
+    "unknownOutcome": "Skutek jest niepewny. Tej kontynuacji nie można powtórzyć ani utworzyć kolejnej próby dla tego wysłania.",
+    "continuedMeaning": "Utworzono nowy chroniony kontekst przeglądarki. Nie oznacza to, że logowanie się powiodło.",
+    "cookiesSaved": "Pliki cookie zapisano za Twoją wyraźną zgodą. Ich przyszłe użycie nadal wymaga aktualnego dostępu.",
+    "cookiesNotSaved": "Pliki cookie użyto wyłącznie do tej kontynuacji. Nie zapisano logowania do ponownego użycia.",
+    "openProtectedView": "Otwórz chroniony widok",
+    "manageSignIns": "Zarządzaj zapisanymi logowaniami",
+    "writeUncertain": "Nie można zweryfikować odpowiedzi. Sprawdź potwierdzenie przed kolejną akcją; sprawdzenie nie powtarza zapisu.",
+    "pollingEnded": "Automatyczne sprawdzanie stanu zakończono. Sprawdź kontynuację, aby odczytać aktualne potwierdzenie.",
+    "checkAgain": "Sprawdź kontynuację",
+    "checksOnlyRead": "Sprawdzanie stanu tylko odczytuje potwierdzenie. Nigdy nie eksportuje plików cookie, nie zapisuje logowania ani nie otwiera kontekstu.",
+    "states": {
+      "requested": "Zażądano przygotowania",
+      "preparing": "Przygotowywanie bieżącej strony",
+      "awaiting_confirmation": "Oczekiwanie na decyzję o kontynuacji",
+      "approved": "Decyzja zapisana",
+      "claimed": "Wykonywanie potwierdzonej kontynuacji",
+      "continued": "Chroniona kontynuacja utworzona",
+      "refused": "Kontynuacja niedozwolona",
+      "expired": "Kontynuacja wygasła",
+      "declined": "Kontynuacja odrzucona",
+      "unknown": "Wynik kontynuacji nieznany"
+    },
+    "reasons": {
+      "continuation_disabled": "Chroniona kontynuacja jest niedostępna w tej instalacji.",
+      "continuation_unavailable": "Ta kontynuacja jest niedostępna.",
+      "source_not_submitted": "Wymagane jest potwierdzone i przyjęte wysłanie.",
+      "confirmation_required": "Ta dokładna bieżąca strona wymaga Twojej decyzji.",
+      "confirmation_expired": "Termin potwierdzenia minął.",
+      "document_changed": "Strona zmieniła się po przygotowaniu.",
+      "destination_refused": "Nie można zatwierdzić bieżącej witryny.",
+      "authority_changed": "Zmienił się dostęp do użytych danych logowania.",
+      "browser_ownership_lost": "To uruchomienie nie jest już właścicielem przeglądarki.",
+      "output_protection_unavailable": "Nie udało się zapewnić ochrony wyjścia.",
+      "session_state_refused": "Nie można bezpiecznie przyjąć stanu sesji.",
+      "session_cookie_missing": "Brak dozwolonych plików cookie dla tej witryny.",
+      "browser_unavailable": "Właściwa przeglądarka jest niedostępna.",
+      "uncertain_continuation": "Nie można zweryfikować skutku kontynuacji.",
+      "continuation_already_consumed": "To wysłanie ma już swoją jedyną próbę kontynuacji."
+    }
+  },
   "sharedAttribution": {
     "cta": "Uruchom własny AgenticOS",
     "ctaShort": "GitHub",
@@ -7693,6 +7756,10 @@
       "my-memory": {
         "body": "Agenci trzymają notatki między rozmowami. To są twoje: przeczytaj, co zapisano, przestań używać notatki bez jej niszczenia albo usuń ją zupełnie. Notatka w zewnętrznej usłudze pamięci jest tu nazwana, ale nie pokazana.",
         "title": "Co agenci pamiętają o tobie"
+      },
+      "browser-protected-continuation": {
+        "title": "Kontynuuj bez ujawniania strony",
+        "body": "Po przyjętym wysłaniu przygotuj osobny przegląd kontynuacji. Zapis plików cookie jest opcjonalny i trwa maksymalnie siedem dni. Oba widoki pozostają chronione; sprawdzanie stanu nigdy nie powtarza akcji."
       },
       "my-sign-ins": {
         "body": "Gdy zalogujesz się podczas przeglądania i zapamiętasz logowanie, przeglądarka Twoich agentów następnym razem startuje tam zalogowana. Zapomnij stronę, a kolejne przeglądanie zacznie się wylogowane.",

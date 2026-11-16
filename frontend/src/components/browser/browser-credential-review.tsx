@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui";
 import { useBrowserCredentialAudience } from "@/hooks/use-browser-credentials";
 import { useBrowserCredentialPlan } from "@/hooks/use-browser-credential-plan";
+import { isBrowserContinuationSource } from "@/lib/browser-credential-continuation";
 import {
   browserCredentialDeadlineLive,
   browserCredentialFields,
@@ -19,12 +20,14 @@ import {
   retainBrowserSubmissionAttempt,
 } from "@/lib/browser-credential-review";
 import type { BrowserCredentialPlan, BrowserCredentialState } from "@/types/browser-credentials";
+import { BrowserCredentialContinuationPanel } from "./browser-credential-continuation";
 
 interface ReviewProps {
   runId: string;
   planId: string;
   callId?: string;
   tabId?: string;
+  continuationId?: string;
   onProtected?: () => void;
 }
 const STATES: readonly BrowserCredentialState[] = [
@@ -53,13 +56,21 @@ export function BrowserCredentialReview(props: ReviewProps) {
         props.planId,
         props.callId,
         props.tabId,
+        props.continuationId,
       ])}
       {...props}
     />
   );
 }
 
-function CredentialReview({ runId, planId, callId, tabId, onProtected }: ReviewProps) {
+function CredentialReview({
+  runId,
+  planId,
+  callId,
+  tabId,
+  continuationId,
+  onProtected,
+}: ReviewProps) {
   const t = useTranslations("browserCredentials");
   const state = useBrowserCredentialPlan(runId, planId, callId, tabId);
   const { plan, submission } = state;
@@ -72,7 +83,7 @@ function CredentialReview({ runId, planId, callId, tabId, onProtected }: ReviewP
     if (protectedOutput) onProtected?.();
   }, [protectedOutput, onProtected]);
 
-  if (!plan)
+  if (!plan || (continuationId !== undefined && !isBrowserContinuationSource(plan)))
     return (
       <section aria-label={t("reviewTitle")} className="space-y-3 p-4">
         <h3 className="font-medium">{t("reviewTitle")}</h3>
@@ -99,6 +110,7 @@ function CredentialReview({ runId, planId, callId, tabId, onProtected }: ReviewP
       state={state}
       plan={plan}
       child={child}
+      continuationId={continuationId}
     />
   );
 }
@@ -144,10 +156,12 @@ function CredentialReceipt({
   state,
   plan,
   child,
+  continuationId,
 }: {
   state: ReturnType<typeof useBrowserCredentialPlan>;
   plan: BrowserCredentialPlan;
   child: BrowserCredentialPlan | null;
+  continuationId?: string;
 }) {
   const t = useTranslations("browserCredentials");
   const slotKey = browserSubmissionKey(state.audience, plan);
@@ -372,6 +386,17 @@ function CredentialReceipt({
         <p role="status" className="text-muted-foreground">
           {t("pollingEnded")}
         </p>
+      )}
+      {(child?.state === "submitted" ||
+        (plan.operation === "submit" && plan.state === "submitted")) && (
+        <BrowserCredentialContinuationPanel
+          source={child ?? plan}
+          continuationId={continuationId}
+          sourceCurrent={
+            receiptCurrent &&
+            (!child || (!state.submission.isError && !state.submission.isFetching))
+          }
+        />
       )}
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" disabled={busy} onClick={() => void checkAgain()}>

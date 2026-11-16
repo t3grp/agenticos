@@ -88,6 +88,7 @@ from app.services.mfa import MfaService
 from app.services.personal_data import PersonalDataService
 from app.services.browser_sign_in import BrowserSignInService
 from app.services.browser_credentials import (
+    BrowserCredentialContinuationService,
     BrowserCredentialPlanService,
     BrowserCredentialPolicyService,
 )
@@ -1311,6 +1312,17 @@ def get_browser_credential_plan_service(
 
 BrowserCredentialPlanSvc = Annotated[
     BrowserCredentialPlanService, Depends(get_browser_credential_plan_service)
+]
+
+
+def get_browser_credential_continuation_service(
+    db: DBSession, redis: Redis
+) -> BrowserCredentialContinuationService:
+    return BrowserCredentialContinuationService(db, redis)
+
+
+BrowserCredentialContinuationSvc = Annotated[
+    BrowserCredentialContinuationService, Depends(get_browser_credential_continuation_service)
 ]
 
 

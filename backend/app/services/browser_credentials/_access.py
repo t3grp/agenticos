@@ -134,6 +134,16 @@ async def private_run(
             current_spec = version.spec
     if not set(identity.credential_ids) <= set(configured_ids(current_spec)):
         raise BrowserFillRefused(BrowserFillReason.AUTHORITY_CHANGED)
+    for contributor in identity.inherited_credentials:
+        if contributor.secret_id not in identity.credential_ids:
+            raise BrowserFillRefused(BrowserFillReason.AUTHORITY_CHANGED)
+        await credential(
+            db,
+            current,
+            secret_id=contributor.secret_id,
+            agent_id=identity.agent_id,
+            generation=contributor.authorization_generation,
+        )
     return current, run
 
 

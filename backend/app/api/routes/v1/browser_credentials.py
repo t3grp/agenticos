@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import (
     Auth,
+    BrowserCredentialContinuationSvc,
     BrowserCredentialPlanSvc,
     BrowserCredentialPolicySvc,
     no_store_response,
@@ -19,6 +20,11 @@ from app.schemas.browser_credential import (
     BrowserCredentialPolicyWrite,
     BrowserCredentialRequest,
     BrowserCredentialSubmission,
+)
+from app.schemas.browser_credential_continuation import (
+    BrowserCredentialContinuationConfirmation,
+    BrowserCredentialContinuationRead,
+    BrowserCredentialContinuationRequest,
 )
 
 router = APIRouter(dependencies=[Depends(no_store_response)])
@@ -118,3 +124,46 @@ async def read_submission(
 ) -> BrowserCredentialPlanRead | None:
     """Recover the one existing attempt without granting consent or performing an action."""
     return await service.submitted(ctx, run_id, plan_id)
+
+
+@router.get(
+    "/runs/{run_id}/browser-credential-plans/{submission_id}/continuation",
+    response_model=BrowserCredentialContinuationRead | None,
+)
+async def read_continuation(
+    run_id: UUID, submission_id: UUID, ctx: Auth, service: BrowserCredentialContinuationSvc
+) -> BrowserCredentialContinuationRead | None:
+    """Reconcile the one existing receipt; this never prepares or performs a browser action."""
+    return await service.get(ctx, run_id, submission_id)
+
+
+@router.post(
+    "/runs/{run_id}/browser-credential-plans/{submission_id}/continuation",
+    response_model=BrowserCredentialContinuationRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def prepare_continuation(
+    run_id: UUID,
+    submission_id: UUID,
+    data: BrowserCredentialContinuationRequest,
+    ctx: Auth,
+    service: BrowserCredentialContinuationSvc,
+) -> BrowserCredentialContinuationRead:
+    """Request a current-document observation, without permission to export, save or continue."""
+    return await service.request(ctx, run_id, submission_id, data)
+
+
+@router.post(
+    "/runs/{run_id}/browser-credential-plans/{submission_id}/continuation/{continuation_id}/confirmation",
+    response_model=BrowserCredentialContinuationRead,
+)
+async def confirm_continuation(
+    run_id: UUID,
+    submission_id: UUID,
+    continuation_id: UUID,
+    data: BrowserCredentialContinuationConfirmation,
+    ctx: Auth,
+    service: BrowserCredentialContinuationSvc,
+) -> BrowserCredentialContinuationRead:
+    """One exact document decision; persistence is a separate explicit boolean."""
+    return await service.confirm(ctx, run_id, submission_id, continuation_id, data)
