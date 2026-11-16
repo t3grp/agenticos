@@ -19,7 +19,8 @@ from click.testing import CliRunner
 from app.commands import vault_rotate as sweep
 from app.commands.vault_rotate import SEALED_TABLES, Report, _rotate_table, _run, vault_rotate
 from app.core.config import settings
-from app.core.vault import VaultScope, seal, unseal
+from app.core.secret_kinds import BrowserLoginSecret, SecretKind, seal_secret, unseal_kind
+from app.core.vault import VaultScope, browser_credential_scope, seal, unseal
 from app.db.models.browser_sign_in import BrowserSignIn
 from app.db.models.channel_bot import ChannelBot
 from app.db.models.deployment_settings import DeploymentSettings
@@ -425,6 +426,46 @@ class TestRun:
 
         assert db.execute.await_count == len(SEALED_TABLES)
         assert report.rotated == 1 and secret.key_version == 2
+
+    async def test_it_rewraps_a_personal_browser_login_with_its_member_scope(self, monkeypatch):
+        monkeypatch.setattr(settings, "VAULT_MASTER_KEYS", {1: KEY_A, 2: KEY_B})
+        organization_id = uuid.uuid4()
+        owner_user_id = uuid.uuid4()
+        scope = browser_credential_scope(organization_id, owner_user_id, personal=True)
+        value = BrowserLoginSecret(
+            username="synthetic-user@example.test",
+            password="synthetic-password-value",
+            allowed_origins=["https://portal.example.test"],
+        )
+        sealed = seal_secret(value, scope=scope, key_version=1)
+        secret = OrganizationSecret(
+            id=uuid.uuid4(),
+            organization_id=organization_id,
+            name="Synthetic portal",
+            kind=SecretKind.BROWSER_LOGIN.value,
+            purpose="custom",
+            visibility="private",
+            owner_user_id=owner_user_id,
+            usage_scope="personal",
+            sealed_secret=sealed.ciphertext,
+            hint="",
+            key_version=1,
+        )
+        db = _db_returning([secret], *[[] for _ in SEALED_TABLES[1:]])
+
+        with patch.object(sweep, "get_db_context", self._db_context(db)):
+            report = await _run(dry_run=False)
+
+        assert report.rotated == 1 and secret.key_version == 2
+        assert (
+            unseal_kind(
+                secret.sealed_secret,
+                model=BrowserLoginSecret,
+                scope=scope,
+                key_version=2,
+            )
+            == value
+        )
 
 
 class TestEntryPoint:

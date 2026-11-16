@@ -290,7 +290,13 @@ class ConfigurationService:
             base, new = staged.base, staged.new
             applied = authoring_fields.apply(spec, change.path, change.op, base, new)
             assert applied is not None, "stage() applied it already"
-            if await self.registry.reference_problems(ctx, applied, path=change.path, op=change.op):
+            if await self.registry.reference_problems(
+                ctx,
+                applied,
+                path=change.path,
+                op=change.op,
+                agent_id=agent_id,
+            ):
                 refused.append((change, Rejection.NOT_GRANTABLE))
                 continue
             kept, dropped = pack.verify(change.evidence)

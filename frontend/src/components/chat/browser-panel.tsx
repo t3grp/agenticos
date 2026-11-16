@@ -123,7 +123,12 @@ function OpenBrowser({
               browse={browse}
               control={
                 mine && live.status === "live"
-                  ? { canControl: live.canControl, canRemember: live.canRemember, send: live.send }
+                  ? {
+                      canControl: live.canControl,
+                      canConfirmFill: live.canConfirmFill,
+                      canRemember: live.canRemember,
+                      send: live.send,
+                    }
                   : null
               }
               maximized={fullscreen}

@@ -6,6 +6,14 @@ import { SecretFields, isSecretComplete, secretFieldNames, toSecretPayload } fro
 import type { JsonSchema } from "@/types/agents";
 import type { SecretKindInfo } from "@/types/secrets";
 
+vi.mock("@/hooks", () => ({
+  useAgents: () => ({
+    agents: [{ id: "agent-1", name: "Support agent", kind: "agent", status: "published" }],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 /** `AwsCredentialsSecret`, as `GET /secrets/kinds` really serves it. */
 const AWS_SCHEMA: JsonSchema = {
   type: "object",
@@ -33,6 +41,34 @@ const AWS: SecretKindInfo = {
   name: "AWS credentials",
   description: "An access key id, its secret access key and a region.",
   json_schema: AWS_SCHEMA,
+};
+
+const BROWSER_LOGIN: SecretKindInfo = {
+  kind: "browser_login",
+  name: "Browser login",
+  description: "A login for approved browser origins.",
+  json_schema: {
+    type: "object",
+    properties: {
+      kind: { const: "browser_login", type: "string" },
+      username: { type: "string", format: "password", title: "Username" },
+      password: { type: "string", format: "password", title: "Password" },
+      allowed_origins: { type: "array", items: { type: "string" }, title: "Allowed origins" },
+      totp: { type: "object", title: "TOTP" },
+      account_policy: {
+        type: "string",
+        enum: ["personal", "named_agents"],
+        default: "personal",
+        title: "Account use",
+      },
+      authorized_agent_ids: {
+        type: "array",
+        items: { type: "string" },
+        title: "Authorized agents",
+      },
+    },
+    required: ["username", "password", "allowed_origins"],
+  },
 };
 
 const filled = {
@@ -114,6 +150,61 @@ describe("SecretFields", () => {
       expect(label.htmlFor, `"${label.textContent}" names no control`).not.toBe("");
       expect(document.getElementById(label.htmlFor)).not.toBeNull();
     }
+  });
+
+  it("masks an optional TOTP seed and shows settings after a seed is entered", async () => {
+    const onChange = vi.fn();
+    render(<SecretFields info={BROWSER_LOGIN} value={{}} onChange={onChange} idPrefix="secret" />);
+
+    const seed = screen.getByLabelText("TOTP seed (optional)", { selector: "input" });
+    expect(seed).toHaveAttribute("type", "password");
+    expect(screen.queryByRole("combobox", { name: "Algorithm" })).toBeNull();
+
+    await userEvent.type(seed, "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      totp: {
+        seed: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        algorithm: "SHA1",
+        digits: 6,
+        period_seconds: 30,
+      },
+    });
+    expect(screen.getByRole("combobox", { name: "Algorithm" })).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Code length" })).toBeVisible();
+  });
+
+  it("offers named agents by name and requires one for a shared account", async () => {
+    const onChange = vi.fn();
+    const browserValue = {
+      username: "synthetic-user",
+      password: "synthetic-password",
+      allowed_origins: ["https://portal.example.test"],
+      account_policy: "named_agents",
+    };
+    render(
+      <SecretFields
+        info={BROWSER_LOGIN}
+        value={browserValue}
+        onChange={onChange}
+        idPrefix="secret"
+      />,
+    );
+
+    expect(isSecretComplete(BROWSER_LOGIN.json_schema, browserValue, "browser_login")).toBe(false);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Support agent" }));
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...browserValue,
+      authorized_agent_ids: ["agent-1"],
+    });
+    expect(
+      isSecretComplete(
+        BROWSER_LOGIN.json_schema,
+        { ...browserValue, authorized_agent_ids: ["agent-1"] },
+        "browser_login",
+      ),
+    ).toBe(true);
+    expect(screen.queryByLabelText("Authorized agents", { selector: "input" })).toBeNull();
   });
 });
 

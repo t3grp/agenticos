@@ -36,7 +36,7 @@ import json
 import os
 from dataclasses import dataclass
 from enum import StrEnum
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
@@ -61,6 +61,7 @@ class VaultScopeKind(StrEnum):
 
     ORGANIZATION = "org"
     USER = "user"
+    BROWSER_MEMBER = "browser_member"
     DEPLOYMENT = "deployment"
 
 
@@ -88,6 +89,12 @@ class VaultScope:
         return cls(kind=VaultScopeKind.USER, subject_id=user_id)
 
     @classmethod
+    def browser_member(cls, organization_id: UUID, user_id: UUID) -> VaultScope:
+        """Bind a browser credential to both its organization and its member."""
+        subject = uuid5(NAMESPACE_URL, f"agenticos:browser:{organization_id}:{user_id}")
+        return cls(kind=VaultScopeKind.BROWSER_MEMBER, subject_id=subject)
+
+    @classmethod
     def deployment(cls) -> VaultScope:
         """The installation itself, for the few secrets no tenant owns - the Web
         Push signing key (#2097). One deployment per database, so one subject."""
@@ -95,6 +102,17 @@ class VaultScope:
 
     def __str__(self) -> str:
         return f"{self.kind.value}:{self.subject_id}"
+
+
+def browser_credential_scope(
+    organization_id: UUID, owner_user_id: UUID | None, *, personal: bool
+) -> VaultScope:
+    """Resolve the one vault scope used for browser credential storage and rotation."""
+    if not personal:
+        return VaultScope.organization(organization_id)
+    if owner_user_id is None:
+        raise BadRequestError(message="A personal browser credential needs an owner")
+    return VaultScope.browser_member(organization_id, owner_user_id)
 
 
 @dataclass(frozen=True)

@@ -90,7 +90,14 @@ from app.core.exceptions import (
 )
 from app.core.field_errors import field_problems, refused_field
 from app.core.permissions import AuthContext, Perm, Scope
-from app.core.secret_kinds import SecretKind
+from app.core.secret_kinds import (
+    BROWSER_SECRET_KINDS,
+    BrowserLoginSecret,
+    BrowserProfileSecret,
+    SecretKind,
+    unseal_kind,
+)
+from app.core.vault import browser_credential_scope
 from app.db.locks import LockScope, hold_subject, hold_subject_shared
 from app.db.models.agent import Agent, AgentKind, AgentStatus, AgentVersion
 from app.db.models.agent_environment import AgentEnvironment
@@ -2218,7 +2225,7 @@ class AgentRegistryService:
         problems = _SpecProblems()
 
         for binding in spec.capabilities:
-            problems.merge(await self._binding_problems(ctx, binding))
+            problems.merge(await self._binding_problems(ctx, binding, agent_id=agent_id))
         problems.add(_rename_clash_problems(spec))
 
         # A model, named. There is no organization-wide default to fall back
@@ -2305,7 +2312,13 @@ class AgentRegistryService:
         ]
 
     async def reference_problems(
-        self, ctx: AuthContext, spec: AgentSpec, *, path: str, op: str
+        self,
+        ctx: AuthContext,
+        spec: AgentSpec,
+        *,
+        path: str,
+        op: str,
+        agent_id: UUID | None = None,
     ) -> list[str]:
         """What a proposed change to `path` adds that the caller may not grant.
 
@@ -2329,7 +2342,7 @@ class AgentRegistryService:
             )
             problems = _SpecProblems()
             for binding in bindings:
-                problems.merge(await self._binding_problems(ctx, binding))
+                problems.merge(await self._binding_problems(ctx, binding, agent_id=agent_id))
             return problems.messages
         if pattern == "collection_ids":
             return await self._collection_problems(ctx, spec.collection_ids[-1:])
@@ -2342,7 +2355,7 @@ class AgentRegistryService:
         return []
 
     async def _binding_problems(
-        self, ctx: AuthContext, binding: CapabilityBindingSpec
+        self, ctx: AuthContext, binding: CapabilityBindingSpec, *, agent_id: UUID | None = None
     ) -> _SpecProblems:
         """Everything wrong with one capability binding.
 
@@ -2376,6 +2389,12 @@ class AgentRegistryService:
             problems.add(_computer_use_problems(config))
             if isinstance(config, WebBrowserConfig) and config.step_model_profile_id is not None:
                 problems.add(await self.model_profile_problems(ctx, config.step_model_profile_id))
+            if isinstance(config, WebBrowserConfig) and config.browser_credential_ids:
+                problems.merge(
+                    await self._browser_credential_problems(
+                        ctx, config, binding_id=binding.id, agent_id=agent_id
+                    )
+                )
             if isinstance(config, FollowUpsConfig) and config.model_profile_id is not None:
                 problems.add(await self.model_profile_problems(ctx, config.model_profile_id))
             if isinstance(config, PhoneCallsConfig):
@@ -2405,6 +2424,94 @@ class AgentRegistryService:
             )
         problems.add(_tool_override_problems(binding, definition))
         problems.add(await self._secret_problems(ctx, binding, definition))
+        return problems
+
+    async def _browser_credential_problems(
+        self,
+        ctx: AuthContext,
+        config: WebBrowserConfig,
+        *,
+        binding_id: str,
+        agent_id: UUID | None,
+    ) -> _SpecProblems:
+        """Check each browser credential belongs to this publisher and named agent."""
+        field_name = f"capabilities.{binding_id}.config.browser_credential_ids"
+        if config.connection != "built_in":
+            return _SpecProblems.at(
+                field_name,
+                "Saved browser credentials are available only in the deployment's built-in browser.",
+            )
+        if agent_id is None:
+            return _SpecProblems.at(field_name, "Publish this browser credential on a named agent.")
+        found = await organization_secret_repo.get_many(
+            self.db, config.browser_credential_ids, organization_id=ctx.organization_id
+        )
+        problems = _SpecProblems()
+        for secret_id in config.browser_credential_ids:
+            secret = found.get(secret_id)
+            if (
+                secret is None
+                or secret.organization_id != ctx.organization_id
+                or not await resolve_access(
+                    self.db, ctx, secret, Perm.SECRETS_VIEW, resource_type=SECRET
+                )
+            ):
+                problems.refuse(
+                    field_name, "A selected browser credential is not available to this publisher."
+                )
+                continue
+            if secret.kind not in {kind.value for kind in BROWSER_SECRET_KINDS}:
+                problems.refuse(
+                    field_name, "Select browser login or browser profile credentials only."
+                )
+                continue
+            personal = secret.usage_scope == "personal"
+            if personal and (
+                secret.visibility != Visibility.PRIVATE.value or secret.owner_user_id != ctx.user_id
+            ):
+                problems.refuse(
+                    field_name, "A personal browser login can only be bound by its owner."
+                )
+                continue
+            if not personal and (
+                secret.usage_scope != "organization"
+                or secret.visibility != Visibility.ORG.value
+                or secret.owner_user_id is not None
+            ):
+                problems.refuse(
+                    field_name, "A shared browser account must be organization-visible."
+                )
+                continue
+            try:
+                model = (
+                    BrowserLoginSecret
+                    if secret.kind == SecretKind.BROWSER_LOGIN.value
+                    else BrowserProfileSecret
+                )
+                value = unseal_kind(
+                    secret.sealed_secret,
+                    model=model,
+                    scope=browser_credential_scope(
+                        ctx.organization_id, secret.owner_user_id, personal=personal
+                    ),
+                    key_version=secret.key_version,
+                )
+            except BadRequestError, ValueError:
+                problems.refuse(
+                    field_name, "A selected browser credential cannot be opened safely."
+                )
+                continue
+            if personal:
+                if value.account_policy != "personal" or value.authorized_agent_ids:
+                    problems.refuse(
+                        field_name, "The personal browser credential policy is invalid."
+                    )
+            elif (
+                value.account_policy != "named_agents" or agent_id not in value.authorized_agent_ids
+            ):
+                problems.refuse(
+                    field_name, "The shared account does not authorize this named agent."
+                )
         return problems
 
     async def _mirage_problems(self, ctx: AuthContext, config: MirageConfig) -> list[str]:
@@ -3276,7 +3383,9 @@ class AgentRegistryService:
         ]
         for specialist in config.inline:
             names.append(specialist.name)
-            problems.merge(await self._specialist_problems(ctx, specialist, shared=shared))
+            problems.merge(
+                await self._specialist_problems(ctx, specialist, shared=shared, agent_id=agent_id)
+            )
         problems.add(_share_problems(spec, config), fix=STOP_SHARING_UNBOUND)
 
         pins = await self._resolve_pins(ctx, spec.subagents)
@@ -3355,7 +3464,12 @@ class AgentRegistryService:
         return problems, [found[ref_id].slug for ref_id in ids if ref_id in found]
 
     async def _specialist_problems(
-        self, ctx: AuthContext, specialist: SpecialistSpec, *, shared: list[CapabilityBindingSpec]
+        self,
+        ctx: AuthContext,
+        specialist: SpecialistSpec,
+        *,
+        shared: list[CapabilityBindingSpec],
+        agent_id: UUID | None,
     ) -> _SpecProblems:
         """Everything wrong with a specialist defined inside this agent.
 
@@ -3375,7 +3489,7 @@ class AgentRegistryService:
         """
         problems = _SpecProblems()
         for binding in specialist.capabilities:
-            problems.merge(await self._binding_problems(ctx, binding))
+            problems.merge(await self._binding_problems(ctx, binding, agent_id=agent_id))
         problems.add(await self._collection_problems(ctx, specialist.collection_ids))
         problems.add(
             await self.skill_problems(ctx, specialist.skill_ids, specialist.skill_bindings)

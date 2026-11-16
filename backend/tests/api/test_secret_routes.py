@@ -116,6 +116,8 @@ class TestListing:
         kinds = {entry["kind"] for entry in response.json()["items"]}
         assert kinds == {
             "api_key",
+            "browser_login",
+            "browser_profile",
             "azure_openai",
             "aws_credentials",
             "gcp_service_account",

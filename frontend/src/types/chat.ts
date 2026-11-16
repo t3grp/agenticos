@@ -381,7 +381,8 @@ export type WSEventType =
   | "browser_released"
   | "browser_needs_person"
   | "browser_pointer"
-  | "browser_control_error";
+  | "browser_control_error"
+  | "browser_credential_confirmation";
 
 /**
  * How a browse ended, and all four are ordinary.
@@ -412,7 +413,8 @@ export interface BrowserFrame {
     | "browser_released"
     | "browser_needs_person"
     | "browser_pointer"
-    | "browser_control_error";
+    | "browser_control_error"
+    | "browser_credential_confirmation";
   /** Which `browse_web` call this belongs to; one turn can browse twice. */
   call_id: string;
   step: number;
@@ -444,6 +446,13 @@ export interface BrowserFrame {
   /** On `browser_frame`: the viewport as a `data:` URL. */
   image?: string | null;
   outcome?: BrowseOutcome | null;
+  confirmation_id?: string | null;
+  credential_name?: string | null;
+  credential_origin?: string | null;
+  credential_fields?: string[];
+  confirmation_status?: "pending" | "cleared" | "writing" | "filled" | "uncertain" | null;
+  /** The live view must hide its saved frame after a sensitive fill begins. */
+  sensitive?: boolean;
   /** Page-derived text, so it is rendered as data and never as markup. */
   detail?: string | null;
 }

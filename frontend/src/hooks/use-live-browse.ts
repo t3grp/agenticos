@@ -18,7 +18,8 @@ export type BrowserCommand =
   | { type: "type"; text: string }
   | { type: "key"; key: string }
   | { type: "scroll"; dy: number }
-  | { type: "resize"; width: number; height: number; scale: 1 | 2 };
+  | { type: "resize"; width: number; height: number; scale: 1 | 2 }
+  | { type: "confirm_fill" | "cancel_fill"; confirmation_id: string };
 
 /** Where the live view stands: still connecting, live, or refused and why. */
 export type LiveBrowseStatus = "connecting" | "live" | "gone" | "forbidden" | "unavailable";
@@ -27,6 +28,7 @@ interface Snapshot {
   type: "browser_snapshot";
   task: string;
   can_control: boolean;
+  can_confirm_fill: boolean;
   /** Whether this viewer may keep the sign-in they make here - their own browse (#2129). */
   can_remember?: boolean;
   trace: BrowserFrame[];
@@ -58,6 +60,7 @@ export function useLiveBrowse(runId: string, callId: string, enabled = true) {
   const [browses, setBrowses] = useState<Browse[]>([]);
   const [task, setTask] = useState("");
   const [canControl, setCanControl] = useState(false);
+  const [canConfirmFill, setCanConfirmFill] = useState(false);
   const [canRemember, setCanRemember] = useState(false);
   const [status, setStatus] = useState<LiveBrowseStatus>("connecting");
 
@@ -81,6 +84,7 @@ export function useLiveBrowse(runId: string, callId: string, enabled = true) {
         setBrowses(next);
         setTask(data.task);
         setCanControl(data.can_control);
+        setCanConfirmFill(data.can_confirm_fill);
         setCanRemember(data.can_remember === true);
         setStatus("live");
         return;
@@ -116,5 +120,5 @@ export function useLiveBrowse(runId: string, callId: string, enabled = true) {
 
   const send = useCallback((command: BrowserCommand) => sendMessage(command), [sendMessage]);
 
-  return { browse, task, canControl, canRemember, status, send };
+  return { browse, task, canControl, canConfirmFill, canRemember, status, send };
 }

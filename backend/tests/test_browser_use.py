@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any, get_args
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import anyio
 import httpx
@@ -47,6 +47,7 @@ from app.agents.capabilities.browser_use import (
     validate_cdp_url,
 )
 from app.agents.capabilities.browser_use import _route as _route_module
+from app.agents.capabilities.browser_use import _toolset as _toolset_module
 from app.agents.capabilities.browser_use._decision import (
     INSTRUCTIONS,
     AskPerson,
@@ -580,6 +581,8 @@ BROWSER_TOOLS = (
     "browser_select",
     "browser_scroll",
     "browser_back",
+    "browser_list_credentials",
+    "browser_fill_credential",
 )
 """The whole task handed off, then the agent's own hands on the same tab."""
 
@@ -1606,14 +1609,16 @@ def _tool_context(model: Any, sink: Any = None) -> RunContext[AgentDeps]:
 class _Opener:
     """A page factory that hands out one fake tab and counts how often it was asked."""
 
-    def __init__(self, page: _FakePage | None = None, *, fails: BaseException | None = None):
+    def __init__(
+        self, page: _FakePage | CdpPage | None = None, *, fails: BaseException | None = None
+    ):
         self.page = page or _FakePage(_snapshot(_element(0)))
         self.fails = fails
         self.opened: list[dict[str, Any]] = []
         self.closed = 0
 
     @asynccontextmanager
-    async def __call__(self, **kwargs: Any) -> AsyncGenerator[_FakePage]:
+    async def __call__(self, **kwargs: Any) -> AsyncGenerator[_FakePage | CdpPage]:
         self.opened.append(kwargs)
         if self.fails is not None:
             raise self.fails
@@ -1623,12 +1628,19 @@ class _Opener:
             self.closed += 1
 
 
-def _toolset(opener: _Opener | None, *, cdp_url: str = "http://browser:9222", **policy: Any):
+def _toolset(
+    opener: _Opener | None,
+    *,
+    cdp_url: str = "http://browser:9222",
+    credential_ids: tuple[UUID, ...] = (),
+    **policy: Any,
+):
     return build_toolset(
         cdp_url=cdp_url,
         page_policy=PagePolicy(allowed_domains=None, candidate_cap=60, preview_width=1024),
         loop_policy=_policy(**policy),
         page_factory=opener,
+        credential_ids=credential_ids,
     )
 
 
@@ -2090,12 +2102,12 @@ def _build_capability(config: dict[str, Any], resources: dict[str, Any] | None =
 
 
 class TestRegistrationAndTheCapability:
-    def test_it_acts_on_the_world_and_its_tool_is_not_gated_by_default(self):
+    def test_only_credential_fill_is_marked_as_side_effecting(self):
         definition = get("browser_use")
         assert definition.name == "Web browser"
         assert definition.side_effecting is True
         assert [(tool.id, tool.side_effecting) for tool in definition.tools] == [
-            (tool_id, False) for tool_id in BROWSER_TOOLS
+            (tool_id, tool_id == "browser_fill_credential") for tool_id in BROWSER_TOOLS
         ]
 
     def test_the_built_in_browser_needs_no_key_and_a_scope_granted_by_default(self):
@@ -3218,3 +3230,183 @@ def test_regular_pages_are_not_load_error_pages(url):
 def test_chromium_network_errors_do_not_claim_the_domain_was_refused():
     with pytest.raises(_endpoint.EndpointError, match="could not load"):
         _endpoint.check_navigation("chrome-error://chromewebdata/")
+
+
+async def test_approved_credential_fill_restores_the_tab_and_confirms_live_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.agents.capabilities.browser_use import _sessions
+    from app.services.organization_secret import (
+        BrowserCredentialOption,
+        BrowserCredentialValues,
+        OrganizationSecretService,
+    )
+
+    owner_id, organization_id, agent_id, run_id = (uuid4() for _ in range(4))
+    conversation_id, credential_id, authorization_generation = (uuid4() for _ in range(3))
+    origin = "https://portal.example.test"
+    snapshot = _snapshot(
+        _element(
+            0,
+            role="email",
+            label="Work email",
+            input_type="email",
+            autocomplete="username",
+            form_action_origin=origin,
+        ),
+        _element(
+            1,
+            role="password",
+            label="Password",
+            input_type="password",
+            autocomplete="current-password",
+            form_action_origin=origin,
+        ),
+        url=f"{origin}/login?next=%2Fhome",
+        generation=7,
+        document_generation="1730000000.0",
+    )
+    page = CdpPage(
+        client=object(),
+        session_id="synthetic",
+        policy=PagePolicy(allowed_domains=None, candidate_cap=60, preview_width=1024),
+    )
+    page.snapshot = AsyncMock(return_value=snapshot)
+    page.location = AsyncMock(return_value=(snapshot.url, snapshot.title))
+    page.fill_sensitive_fields = AsyncMock()
+    opener = _Opener(page)
+    toolset = _toolset(opener, credential_ids=(credential_id,), preview=False)
+    frames = _Frames()
+
+    class ConfirmControl:
+        async def poll(self) -> BrowserCommand | None:
+            return None
+
+        async def wait(self, _timeout: float) -> BrowserCommand:
+            pending = frames.of("browser_credential_confirmation")[0]
+            assert pending.confirmation_id is not None
+            return BrowserCommand(
+                type="confirm_fill",
+                confirmation_id=pending.confirmation_id,
+                by_user_id=str(owner_id),
+            )
+
+    control = ConfirmControl()
+
+    async def live_view(_deps: AgentDeps, _call_id: str, _task: str) -> tuple[Any, Any, str]:
+        return frames, control, str(run_id)
+
+    state = _sessions.SavedBrowser(
+        scope="saved-conversation",
+        tabs=[_sessions.SavedTab(id="main", url=snapshot.url)],
+        active="main",
+    )
+    monkeypatch.setattr(_sessions, "load", AsyncMock(return_value=state))
+    monkeypatch.setattr(browser_sign_in, "load_for", AsyncMock(return_value=[]))
+    monkeypatch.setattr(_toolset_module, "_live", live_view)
+
+    @asynccontextmanager
+    async def db_context() -> AsyncGenerator[object]:
+        yield object()
+
+    monkeypatch.setattr(_toolset_module, "get_db_context", db_context)
+    option = BrowserCredentialOption(
+        id=credential_id,
+        name="Work account",
+        kind="browser_login",
+        origin=origin,
+        authorization_generation=authorization_generation,
+    )
+    credential_values = BrowserCredentialValues(
+        fields={
+            "username": SecretStr("synthetic-user@example.test"),
+            "password": SecretStr("synthetic-password-value"),
+        }
+    )
+
+    async def list_credentials(
+        self: OrganizationSecretService, **_kwargs: Any
+    ) -> list[BrowserCredentialOption]:
+        return [option]
+
+    async def open_credential(
+        self: OrganizationSecretService, **_kwargs: Any
+    ) -> BrowserCredentialValues:
+        return credential_values
+
+    monkeypatch.setattr(OrganizationSecretService, "browser_credentials", list_credentials)
+    monkeypatch.setattr(OrganizationSecretService, "fill_browser_credential", open_credential)
+    deps = AgentDeps(
+        organization_id=organization_id,
+        user_id=str(owner_id),
+        agent_id=agent_id,
+        run_id=run_id,
+        conversation_id=conversation_id,
+        run_person=owner_id,
+        audience=RunAudience(user_id=owner_id, browses_signed_in=True),
+    )
+    ctx = RunContext(
+        deps=deps,
+        model=_browsing_model(DONE_ARGS),
+        usage=RunUsage(),
+        tool_call_id="approved-fill-resume",
+    )
+    tools = await toolset.get_tools(ctx)
+
+    result = await toolset.call_tool(
+        "browser_fill_credential",
+        {
+            "credential_id": credential_id,
+            "authorization_generation": authorization_generation,
+            "origin": origin,
+            "snapshot_generation": 4,
+            "fields": {"username": 0, "password": 1},
+        },
+        ctx,
+        tools["browser_fill_credential"],
+    )
+
+    assert "Filled username, password" in str(result)
+    assert opener.opened[0]["start_url"] == snapshot.url
+    page.fill_sensitive_fields.assert_awaited_once()
+    pending = frames.of("browser_credential_confirmation")[0]
+    assert pending.credential_fields == [
+        "username · Work email · field 1",
+        "password · Password · field 2",
+    ]
+    rendered_events = " ".join(event.model_dump_json() for event in frames.frames)
+    assert "synthetic-user@example.test" not in str(result) + rendered_events
+    assert "synthetic-password-value" not in str(result) + rendered_events
+    await toolset.close()
+
+
+async def test_sensitive_browser_writer_binds_each_write_to_the_observed_document() -> None:
+    client = MagicMock()
+    client.send.Runtime.evaluate = AsyncMock(return_value={"result": {"value": "filled"}})
+    page = CdpPage(
+        client=client,
+        session_id="synthetic",
+        policy=PagePolicy(allowed_domains=None, candidate_cap=60, preview_width=1024),
+    )
+    element = _element(
+        0,
+        role="password",
+        label="Password",
+        input_type="password",
+        autocomplete="current-password",
+        form_action_origin="https://portal.example.test",
+    )
+
+    await page.fill_sensitive_fields(
+        [(element, "synthetic-password-value")],
+        expected_url="https://portal.example.test/login",
+        expected_origin="https://portal.example.test",
+        document_generation="1730000000.0",
+    )
+
+    expression = client.send.Runtime.evaluate.await_args.kwargs["params"]["expression"]
+    assert 'location.href !== "https://portal.example.test/login"' in expression
+    assert 'location.origin !== "https://portal.example.test"' in expression
+    assert 'String(performance.timeOrigin) !== "1730000000.0"' in expression
+    assert "window.frames" in expression and "el.form.action" in expression
+    assert "Input.insertText" not in expression

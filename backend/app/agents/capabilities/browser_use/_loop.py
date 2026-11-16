@@ -222,6 +222,9 @@ class BrowseSession:
     last: Snapshot | None = None
     """The page as the agent last read it, whose element numbers a direct action names."""
 
+    sensitive: bool = False
+    """This tab has received a credential; do not retain its teaching plan."""
+
     def restart(self) -> None:
         """Forget the task, keep the tab - for a call that starts a new one in it."""
         self.history = ()

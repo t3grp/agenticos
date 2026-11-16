@@ -1167,7 +1167,9 @@ class AuthoringService:
                 {"accepted_value": {"skill_id": str(skill.id)}},
             )
         elif decision.action == "accept" and hunk.kind == HunkKind.SPEC_FIELD.value:
-            written, values = await self._accepted_field(ctx, spec, batch, hunk, decision)
+            written, values = await self._accepted_field(
+                ctx, spec, batch, hunk, decision, agent_id=agent.id
+            )
             moved = await self._move(ctx, hunk, HunkStatus.PENDING, HunkStatus.ACCEPTED, values)
         elif decision.action == "accept":
             written, values = self._accepted(spec, hunk, decision.text)
@@ -1368,6 +1370,8 @@ class AuthoringService:
         batch: SpecProposalBatch,
         hunk: SpecProposalHunk,
         decision: HunkDecision,
+        *,
+        agent_id: UUID,
     ) -> tuple[AgentSpec, dict[str, Any]]:
         """The draft with a field change accepted, as the person accepting it.
 
@@ -1405,7 +1409,11 @@ class AuthoringService:
         if written is None:
             raise self._stale()
         problems = await self.registry.reference_problems(
-            ctx, written, path=hunk.path or "", op=hunk.op or ""
+            ctx,
+            written,
+            path=hunk.path or "",
+            op=hunk.op or "",
+            agent_id=agent_id,
         )
         if problems:
             raise AuthorizationError(

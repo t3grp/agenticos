@@ -46,6 +46,21 @@ const PURPOSES = {
   ],
   total: 4,
 };
+const AGENTS = {
+  items: [
+    {
+      id: "agent-1",
+      name: "Support agent",
+      kind: "agent",
+      status: "published",
+      can_run: true,
+      visibility: "org",
+      owner_user_id: null,
+      current_version_id: "version-1",
+    },
+  ],
+  total: 1,
+};
 
 vi.mock("@/lib/api-client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api-client")>("@/lib/api-client");
@@ -56,7 +71,11 @@ vi.mock("@/lib/api-client", async () => {
       get: vi
         .fn()
         .mockImplementation(async (path: string) =>
-          path === "/secrets/purposes" ? PURPOSES : { items: [], total: 0 },
+          path === "/secrets/purposes"
+            ? PURPOSES
+            : path.startsWith("/agents")
+              ? AGENTS
+              : { items: [], total: 0 },
         ),
     },
   };
@@ -118,7 +137,35 @@ const GITHUB_OAUTH_APP: SecretKindInfo = {
   },
 };
 
-const KINDS = [API_KEY, GCP, GITHUB_OAUTH_APP];
+const BROWSER_LOGIN: SecretKindInfo = {
+  kind: "browser_login",
+  name: "Browser login",
+  description: "A login for approved browser origins.",
+  json_schema: {
+    type: "object",
+    properties: {
+      kind: { const: "browser_login", type: "string" },
+      username: { type: "string", format: "password", title: "Username" },
+      password: { type: "string", format: "password", title: "Password" },
+      allowed_origins: { type: "array", items: { type: "string" }, title: "Allowed origins" },
+      totp: { type: "object", title: "TOTP" },
+      account_policy: {
+        type: "string",
+        enum: ["personal", "named_agents"],
+        default: "personal",
+        title: "Account use",
+      },
+      authorized_agent_ids: {
+        type: "array",
+        items: { type: "string" },
+        title: "Authorized agents",
+      },
+    },
+    required: ["username", "password", "allowed_origins"],
+  },
+};
+
+const KINDS = [API_KEY, GCP, GITHUB_OAUTH_APP, BROWSER_LOGIN];
 
 const STORED: Secret = {
   id: "s1",
@@ -143,6 +190,69 @@ describe("AddSecretDialog with the kind fixed", () => {
     );
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("CRM token");
     expect(screen.getByLabelText(/Api Key/, { selector: "input" })).toHaveValue("k-1");
+  });
+
+  it("stores a personal browser login with its owner-only scope", async () => {
+    const onSubmit = vi.fn().mockResolvedValue({});
+    render(
+      <AddSecretDialog
+        open
+        onOpenChange={vi.fn()}
+        kinds={KINDS}
+        kind="browser_login"
+        onSubmit={onSubmit}
+        isPending={false}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Synthetic portal");
+    await userEvent.type(screen.getByLabelText("Username", { selector: "input" }), "user");
+    await userEvent.type(screen.getByLabelText("Password", { selector: "input" }), "pass");
+    await userEvent.type(screen.getByLabelText("Allowed origins"), "https://portal.example.test");
+    await userEvent.click(screen.getByRole("button", { name: "Store key" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage_scope: "personal",
+        visibility: "private",
+        value: expect.objectContaining({ kind: "browser_login" }),
+      }),
+    );
+  });
+
+  it("stores a shared browser login only for selected named agents", async () => {
+    const onSubmit = vi.fn().mockResolvedValue({});
+    render(
+      <AddSecretDialog
+        open
+        onOpenChange={vi.fn()}
+        kinds={KINDS}
+        kind="browser_login"
+        onSubmit={onSubmit}
+        isPending={false}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Synthetic shared portal");
+    await userEvent.type(screen.getByLabelText("Username", { selector: "input" }), "user");
+    await userEvent.type(screen.getByLabelText("Password", { selector: "input" }), "pass");
+    await userEvent.type(screen.getByLabelText("Allowed origins"), "https://portal.example.test");
+    await userEvent.click(screen.getByRole("combobox", { name: "Account use" }));
+    await userEvent.click(screen.getByRole("option", { name: "Shared with selected agents" }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Support agent" }));
+    await userEvent.click(screen.getByRole("button", { name: "Store key" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage_scope: "organization",
+        visibility: "org",
+        value: expect.objectContaining({
+          kind: "browser_login",
+          account_policy: "named_agents",
+          authorized_agent_ids: ["agent-1"],
+        }),
+      }),
+    );
   });
 
   it("asks no service, and stores the field's kind as custom", async () => {
@@ -373,6 +483,27 @@ describe("RotateSecretDialog", () => {
     expect(onSubmit).toHaveBeenCalledWith({
       id: "s1",
       value: { kind: "api_key", api_key: "sk-new" },
+    });
+  });
+
+  it("keeps a shared browser login on its account policy during rotation", async () => {
+    const shared = { ...STORED, id: "browser-1", name: "Shared portal", kind: "browser_login" as const, usage_scope: "organization" as const };
+    const onSubmit = open(vi.fn().mockResolvedValue({}), shared);
+
+    expect(screen.queryByRole("combobox", { name: "Account use" })).toBeNull();
+    await userEvent.type(screen.getByLabelText("Username", { selector: "input" }), "user");
+    await userEvent.type(screen.getByLabelText("Password", { selector: "input" }), "pass");
+    await userEvent.type(screen.getByLabelText("Allowed origins"), "https://portal.example.test");
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Support agent" }));
+    await userEvent.click(screen.getByRole("button", { name: "Rotate" }));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      id: "browser-1",
+      value: expect.objectContaining({
+        kind: "browser_login",
+        account_policy: "named_agents",
+        authorized_agent_ids: ["agent-1"],
+      }),
     });
   });
 

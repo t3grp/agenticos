@@ -67,6 +67,7 @@ class BrowserEvent(BaseModel):
         "browser_needs_person",
         "browser_pointer",
         "browser_control_error",
+        "browser_credential_confirmation",
     ]
 
     call_id: str = Field(
@@ -185,6 +186,16 @@ class BrowserEvent(BaseModel):
     outcome: BrowseOutcome | None = Field(
         default=None, description="How the browse ended, on the finish frame only."
     )
+    confirmation_id: str | None = Field(default=None, max_length=64)
+    credential_name: str | None = Field(default=None, max_length=200)
+    credential_origin: str | None = Field(default=None, max_length=512)
+    credential_fields: list[str] = Field(default_factory=list, max_length=10)
+    confirmation_status: Literal["pending", "cleared", "writing", "filled", "uncertain"] | None = (
+        None
+    )
+    sensitive: bool = False
+    """Whether this event pauses browser output to protect filled values."""
+
     detail: str | None = Field(
         default=None,
         description=(
@@ -261,6 +272,8 @@ class BrowserCommand(BaseModel):
         "back",
         "forward",
         "reload",
+        "confirm_fill",
+        "cancel_fill",
     ]
     url: str | None = Field(default=None, max_length=8192)
     x: float | None = Field(default=None, ge=0, le=4000)
@@ -283,6 +296,7 @@ class BrowserCommand(BaseModel):
             "browser, so later browses acting as them start signed in (#2129)."
         ),
     )
+    confirmation_id: str | None = Field(default=None, max_length=64)
     by: str | None = Field(default=None, max_length=200)
     by_user_id: str | None = Field(
         default=None,

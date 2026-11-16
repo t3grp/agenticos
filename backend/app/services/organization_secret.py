@@ -13,11 +13,22 @@ and :meth:`OrganizationSecretService.oauth_app`, which hands
 an OAuth client's secret to the provider's own token endpoint inside the connect
 flow and to nowhere else. `smtp_email_service` opens one permitted SMTP account
 straight into its transport, never returning credentials to an API caller.
+fill_browser_credential opens one eligible browser login or profile as masked
+values for the provisioned browser writer; it never returns them to the model.
 """
 
+import asyncio
+import base64
+import hashlib
+import hmac
+import struct
+import time
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, cast
 from uuid import UUID, uuid4
 
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import secret_purposes
@@ -31,7 +42,11 @@ from app.core.exceptions import (
 from app.core.field_errors import refused_field
 from app.core.permissions import AuthContext, Perm
 from app.core.secret_kinds import (
+    BROWSER_SECRET_KINDS,
     ApiKeySecret,
+    BrowserLoginSecret,
+    BrowserProfileSecret,
+    BrowserTotpSecret,
     GithubOAuthAppSecret,
     GoogleOAuthAppSecret,
     MicrosoftOAuthAppSecret,
@@ -39,15 +54,17 @@ from app.core.secret_kinds import (
     SecretValue,
     SmtpAccountSecret,
     StorableSecret,
+    canonical_browser_origin,
     describe_kind,
     seal_secret,
     unseal_kind,
     unseal_secret,
 )
 from app.core.secret_purposes import CUSTOM
-from app.core.vault import VaultScope
+from app.core.vault import VaultScope, browser_credential_scope
 from app.db.models.organization_secret import OrganizationSecret
 from app.db.models.resource_grant import Visibility
+from app.repositories import agent as agent_repo
 from app.repositories import member_repo, organization_secret_repo, resource_grant_repo
 from app.schemas.resource_grant import as_visibility
 from app.schemas.secret import SecretSummary, SecretUsage
@@ -67,6 +84,26 @@ if TYPE_CHECKING:
 # The credentials a connect flow spends: separate kinds even where the fields are
 # identical, because a kind names what a credential is for.
 OAuthAppSecret = GithubOAuthAppSecret | GoogleOAuthAppSecret | MicrosoftOAuthAppSecret
+
+
+@dataclass(frozen=True)
+class BrowserCredentialOption:
+    """Safe metadata for an agent's currently eligible browser credential."""
+
+    id: UUID
+    name: str
+    kind: Literal["browser_login", "browser_profile"]
+    origin: str
+    authorization_generation: UUID
+    has_totp: bool = False
+    fields: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class BrowserCredentialValues:
+    """Secret values for the browser toolset, always wrapped in masked strings."""
+
+    fields: Mapping[str, SecretStr]
 
 
 class OrganizationSecretService:
@@ -230,11 +267,34 @@ class OrganizationSecretService:
             BadRequestError: If the purpose is not one this deployment offers,
                 or wants a different shape of credential than was given.
         """
-        if usage_scope == "personal":
+        if isinstance(value, (BrowserLoginSecret, BrowserProfileSecret)):
+            expected_scope = "personal" if value.account_policy == "personal" else "organization"
+            expected_visibility = (
+                Visibility.PRIVATE if expected_scope == "personal" else Visibility.ORG
+            )
+            if usage_scope != expected_scope or visibility is not expected_visibility:
+                raise refused_field(
+                    "value.account_policy",
+                    "Personal browser credentials must be private and owner-only; shared accounts must be organization-visible.",
+                )
+        if usage_scope == "personal" and not isinstance(
+            value, (BrowserLoginSecret, BrowserProfileSecret)
+        ):
             self._check_personal_connection(ctx, value, purpose=purpose, visibility=visibility)
+        await self._validate_browser_agents(ctx.organization_id, value)
         self._check_purpose(purpose, value.kind)
         await self._refuse_duplicate_name(ctx, name)
-        sealed = seal_secret(value, scope=VaultScope.organization(ctx.organization_id))
+        owner_user_id = ctx.user_id if visibility is Visibility.PRIVATE else None
+        scope = (
+            browser_credential_scope(
+                ctx.organization_id,
+                owner_user_id,
+                personal=usage_scope == "personal",
+            )
+            if isinstance(value, (BrowserLoginSecret, BrowserProfileSecret))
+            else VaultScope.organization(ctx.organization_id)
+        )
+        sealed = seal_secret(value, scope=scope)
         secret = await organization_secret_repo.create(
             self.db,
             organization_id=ctx.organization_id,
@@ -246,7 +306,7 @@ class OrganizationSecretService:
             # A private key needs an owner or nobody can reach it - the
             # database refuses that combination, and this is where it is made
             # impossible rather than caught.
-            owner_user_id=ctx.user_id if visibility is Visibility.PRIVATE else None,
+            owner_user_id=owner_user_id,
             sealed_secret=sealed.ciphertext,
             hint=sealed.hint,
             key_version=sealed.key_version,
@@ -328,11 +388,34 @@ class OrganizationSecretService:
             update_data["description"] = description
         if value is not None:
             self._refuse_kind_change(secret, value)
-            if secret.usage_scope == "personal":
+            if secret.usage_scope == "personal" and not isinstance(
+                value, (BrowserLoginSecret, BrowserProfileSecret)
+            ):
                 self._check_personal_connection(
                     ctx, value, purpose=secret.purpose, visibility=Visibility.PRIVATE
                 )
-            sealed = seal_secret(value, scope=VaultScope.organization(ctx.organization_id))
+            if isinstance(value, (BrowserLoginSecret, BrowserProfileSecret)):
+                if secret.usage_scope == "personal" and (
+                    value.account_policy != "personal" or secret.owner_user_id != ctx.user_id
+                ):
+                    raise refused_field(
+                        "value.account_policy",
+                        "A browser credential cannot change its owner or sharing policy.",
+                    )
+                if secret.usage_scope != "personal" and value.account_policy != "named_agents":
+                    raise refused_field(
+                        "value.account_policy",
+                        "A shared browser account must keep its named-agent policy.",
+                    )
+                await self._validate_browser_agents(ctx.organization_id, value)
+                scope = browser_credential_scope(
+                    ctx.organization_id,
+                    secret.owner_user_id,
+                    personal=secret.usage_scope == "personal",
+                )
+            else:
+                scope = VaultScope.organization(ctx.organization_id)
+            sealed = seal_secret(value, scope=scope)
             update_data["authorization_generation"] = uuid4()
             update_data["sealed_secret"] = sealed.ciphertext
             update_data["hint"] = sealed.hint
@@ -415,7 +498,252 @@ class OrganizationSecretService:
             )
             for secret_id, row in rows.items()
             if row.usage_scope != "personal"
+            and row.kind not in {kind.value for kind in BROWSER_SECRET_KINDS}
         }
+
+    async def browser_credentials(
+        self,
+        *,
+        organization_id: UUID,
+        user_id: UUID,
+        agent_id: UUID,
+        secret_ids: tuple[UUID, ...],
+        origin: str,
+    ) -> list[BrowserCredentialOption]:
+        """Return safe metadata for credentials this member and current agent may use."""
+        try:
+            canonical_origin = canonical_browser_origin(origin)
+        except ValueError:
+            return []
+        if not await member_repo.get_active(
+            self.db, organization_id=organization_id, user_id=user_id
+        ):
+            return []
+        bound_secret_ids = await self._agent_browser_secret_ids(
+            organization_id, agent_id, set(secret_ids)
+        )
+        if not bound_secret_ids:
+            return []
+        rows = await organization_secret_repo.get_many(
+            self.db, list(bound_secret_ids), organization_id=organization_id
+        )
+        options: list[BrowserCredentialOption] = []
+        for secret_id in secret_ids:
+            if secret_id not in bound_secret_ids:
+                continue
+            row = rows.get(secret_id)
+            if (
+                row is None
+                or row.organization_id != organization_id
+                or row.kind not in {kind.value for kind in BROWSER_SECRET_KINDS}
+            ):
+                continue
+            if not self._browser_row_scope_allowed(
+                row, organization_id=organization_id, user_id=user_id
+            ):
+                continue
+            value = self._unseal_browser_row(row, organization_id=organization_id)
+            if not self._browser_use_allowed(row, value, user_id=user_id, agent_id=agent_id):
+                continue
+            if canonical_origin not in value.allowed_origins:
+                continue
+            options.append(
+                BrowserCredentialOption(
+                    id=row.id,
+                    name=row.name,
+                    kind=cast(Literal["browser_login", "browser_profile"], row.kind),
+                    origin=canonical_origin,
+                    authorization_generation=row.authorization_generation,
+                    has_totp=isinstance(value, BrowserLoginSecret) and value.totp is not None,
+                    fields=(
+                        ()
+                        if isinstance(value, BrowserLoginSecret)
+                        else tuple(
+                            field
+                            for field in _BROWSER_PROFILE_FIELDS
+                            if getattr(value, field) is not None
+                        )
+                    ),
+                )
+            )
+        return options
+
+    async def fill_browser_credential(
+        self,
+        *,
+        organization_id: UUID,
+        user_id: UUID,
+        agent_id: UUID,
+        run_id: UUID,
+        secret_id: UUID,
+        expected_generation: UUID,
+        origin: str,
+        fields: Mapping[str, int],
+    ) -> BrowserCredentialValues:
+        """Open values for one admitted fill; its caller must pass them straight to CDP."""
+        try:
+            canonical_origin = canonical_browser_origin(origin)
+        except ValueError:
+            raise AuthorizationError(
+                message="Browser credential is not available for this run"
+            ) from None
+        if not await member_repo.get_active(
+            self.db, organization_id=organization_id, user_id=user_id
+        ) or secret_id not in await self._agent_browser_secret_ids(
+            organization_id, agent_id, {secret_id}
+        ):
+            raise AuthorizationError(message="Browser credential is not available for this run")
+        row = await organization_secret_repo.get(
+            self.db, secret_id, organization_id=organization_id
+        )
+        if (
+            row is None
+            or row.organization_id != organization_id
+            or row.kind not in {kind.value for kind in BROWSER_SECRET_KINDS}
+            or row.authorization_generation != expected_generation
+            or not self._browser_row_scope_allowed(
+                row, organization_id=organization_id, user_id=user_id
+            )
+        ):
+            raise AuthorizationError(message="Browser credential is not available for this run")
+        value = self._unseal_browser_row(row, organization_id=organization_id)
+        if not self._browser_use_allowed(row, value, user_id=user_id, agent_id=agent_id):
+            raise AuthorizationError(message="Browser credential is not available for this run")
+        if canonical_origin not in value.allowed_origins:
+            raise AuthorizationError(message="Browser credential is not available for this run")
+        if "totp" in fields:
+            if not isinstance(value, BrowserLoginSecret) or value.totp is None:
+                raise BadRequestError(message="This browser login has no stored TOTP seed")
+            await _wait_for_totp_window(value.totp)
+        values = _browser_fill_values(value, fields)
+        await record_audit(
+            self.db,
+            actor_user_id=user_id,
+            organization_id=organization_id,
+            action="secret.browser_fill_admitted",
+            target_type="secret",
+            target_id=str(secret_id),
+            details={
+                "agent_id": str(agent_id),
+                "run_id": str(run_id),
+                "origin": canonical_origin,
+                "fields": sorted(fields),
+                "authorization_generation": str(expected_generation),
+                "result": "admitted",
+            },
+        )
+        return BrowserCredentialValues(fields=values)
+
+    def _unseal_browser_row(
+        self, row: OrganizationSecret, *, organization_id: UUID
+    ) -> BrowserLoginSecret | BrowserProfileSecret:
+        """Open a browser kind only through its dedicated owner-bound scope."""
+        scope = browser_credential_scope(
+            organization_id,
+            row.owner_user_id,
+            personal=row.usage_scope == "personal",
+        )
+        model = (
+            BrowserLoginSecret
+            if row.kind == SecretKind.BROWSER_LOGIN.value
+            else BrowserProfileSecret
+        )
+        return unseal_kind(
+            row.sealed_secret,
+            model=model,
+            scope=scope,
+            key_version=row.key_version,
+        )
+
+    @staticmethod
+    def _browser_row_scope_allowed(
+        row: OrganizationSecret, *, organization_id: UUID, user_id: UUID
+    ) -> bool:
+        if row.organization_id != organization_id:
+            return False
+        if row.usage_scope == "personal":
+            return row.visibility == Visibility.PRIVATE.value and row.owner_user_id == user_id
+        return (
+            row.usage_scope == "organization"
+            and row.visibility == Visibility.ORG.value
+            and row.owner_user_id is None
+        )
+
+    @staticmethod
+    def _browser_use_allowed(
+        row: OrganizationSecret,
+        value: BrowserLoginSecret | BrowserProfileSecret,
+        *,
+        user_id: UUID,
+        agent_id: UUID,
+    ) -> bool:
+        if row.usage_scope == "personal":
+            return (
+                row.visibility == Visibility.PRIVATE.value
+                and row.owner_user_id == user_id
+                and value.account_policy == "personal"
+                and not value.authorized_agent_ids
+            )
+        return (
+            row.usage_scope == "organization"
+            and row.visibility == Visibility.ORG.value
+            and row.owner_user_id is None
+            and value.account_policy == "named_agents"
+            and agent_id in value.authorized_agent_ids
+        )
+
+    async def _agent_browser_secret_ids(
+        self, organization_id: UUID, agent_id: UUID, secret_ids: set[UUID]
+    ) -> set[UUID]:
+        """Return only requested ids in the latest published browser binding."""
+        if not secret_ids:
+            return set()
+        agent = await agent_repo.get(self.db, agent_id, organization_id=organization_id)
+        if agent is None or agent.current_version_id is None:
+            return set()
+        version = await agent_repo.get_version(
+            self.db, agent.current_version_id, organization_id=organization_id
+        )
+        if version is None:
+            return set()
+        from app.agents.spec import AgentSpec
+
+        try:
+            spec = AgentSpec.model_validate(version.spec)
+        except ValueError:
+            return set()
+        bound: set[UUID] = set()
+        for binding in spec.capabilities:
+            if binding.id != "browser_use" or binding.config.get("connection") != "built_in":
+                continue
+            bound.update(
+                secret_ids.intersection(
+                    UUID(str(secret_id))
+                    for secret_id in binding.config.get("browser_credential_ids", [])
+                )
+            )
+        return bound
+
+    async def _validate_browser_agents(
+        self,
+        organization_id: UUID,
+        value: StorableSecret,
+    ) -> None:
+        """Keep every named shared-account agent inside the secret's organization."""
+        if not isinstance(value, (BrowserLoginSecret, BrowserProfileSecret)):
+            return
+        if value.account_policy != "named_agents":
+            return
+        found = await agent_repo.get_many(
+            self.db,
+            list(value.authorized_agent_ids),
+            organization_id=organization_id,
+        )
+        if set(found) != set(value.authorized_agent_ids):
+            raise refused_field(
+                "value.authorized_agent_ids",
+                "Each authorized browser agent must belong to this organization.",
+            )
 
     async def require_view(self, ctx: AuthContext, secret_id: UUID) -> OrganizationSecret:
         """The secret, if this caller may view it — otherwise refused.
@@ -791,13 +1119,87 @@ class OrganizationSecretService:
             )
 
 
+_BROWSER_PROFILE_FIELDS = (
+    "full_name",
+    "email",
+    "phone",
+    "address_line1",
+    "address_line2",
+    "city",
+    "region",
+    "postal_code",
+    "country",
+)
+
+
+def _browser_fill_values(
+    value: BrowserLoginSecret | BrowserProfileSecret, fields: Mapping[str, int]
+) -> dict[str, SecretStr]:
+    """Select values for requested field roles; never return an unselected profile field."""
+    if not fields or any(type(index) is not int or index < 0 for index in fields.values()):
+        raise BadRequestError(message="Choose observed browser fields for this fill")
+    if isinstance(value, BrowserLoginSecret):
+        roles = set(fields)
+        if roles == {"password"}:
+            return {"password": value.password}
+        if roles == {"username", "password"}:
+            return {
+                "username": value.username,
+                "password": value.password,
+            }
+        if roles == {"totp"}:
+            if value.totp is None:
+                raise BadRequestError(message="This browser login has no stored TOTP seed")
+            return {"totp": SecretStr(_totp_code(value))}
+        raise BadRequestError(
+            message="Choose password and optional username fields, or one TOTP field"
+        )
+    if not set(fields).issubset(_BROWSER_PROFILE_FIELDS):
+        raise BadRequestError(message="Choose available profile fields only")
+    selected = {field: getattr(value, field) for field in fields}
+    if any(stored is None for stored in selected.values()):
+        raise BadRequestError(message="One or more selected profile fields are unavailable")
+    return {field: stored for field, stored in selected.items() if stored is not None}
+
+
+async def _wait_for_totp_window(value: BrowserTotpSecret) -> None:
+    """Wait briefly when a TOTP code would expire while the page receives it."""
+    remaining = value.period_seconds - time.time() % value.period_seconds
+    if remaining < 2:
+        await asyncio.sleep(remaining + 0.01)
+
+
+def _totp_code(value: BrowserLoginSecret) -> str:
+    """Generate a fresh TOTP code for one explicit fill request."""
+    assert value.totp is not None
+    totp = value.totp
+    raw_seed = totp.seed.get_secret_value()
+    key = base64.b32decode(raw_seed.upper() + "=" * (-len(raw_seed) % 8))
+    counter = int(time.time() // totp.period_seconds)
+    digest = hmac.new(
+        key,
+        struct.pack(">Q", counter),
+        digestmod=getattr(hashlib, totp.algorithm.lower()),
+    ).digest()
+    offset = digest[-1] & 0x0F
+    truncated = int.from_bytes(digest[offset : offset + 4], "big") & 0x7FFFFFFF
+    return str(truncated % (10**totp.digits)).zfill(totp.digits)
+
+
 class SecretSharingGuard:
-    """Personal model connections remain owner-only even when the owner can edit them."""
+    """Keep personal connections private and browser credentials on their named-agent path."""
 
     async def before_visibility(
         self, db: AsyncSession, ctx: AuthContext, resource: OwnedResource, visibility: Visibility
     ) -> None:
         assert isinstance(resource, OrganizationSecret)
+        if (
+            resource.kind in {kind.value for kind in BROWSER_SECRET_KINDS}
+            and visibility.value != resource.visibility
+        ):
+            raise BadRequestError(
+                message="Change browser credential policy through its typed replacement, not visibility."
+            )
         if resource.usage_scope == "personal" and visibility is not Visibility.PRIVATE:
             raise BadRequestError(message="Personal model connections cannot be shared")
 
@@ -805,6 +1207,10 @@ class SecretSharingGuard:
         self, db: AsyncSession, ctx: AuthContext, resource: OwnedResource, change: ShareChange
     ) -> Deferred | None:
         assert isinstance(resource, OrganizationSecret)
+        if resource.kind in {kind.value for kind in BROWSER_SECRET_KINDS}:
+            raise BadRequestError(
+                message="Browser credentials use their named-agent policy and cannot use resource grants."
+            )
         if resource.usage_scope == "personal" and (
             change.visibility is not Visibility.PRIVATE
             or change.subject_user_id is not None
@@ -816,6 +1222,8 @@ class SecretSharingGuard:
     async def adopt(self, db: AsyncSession, ctx: AuthContext, resource: OwnedResource) -> None:
         """Preserve the existing ownership claim for ordinary private vault entries."""
         assert isinstance(resource, OrganizationSecret)
+        if resource.kind in {kind.value for kind in BROWSER_SECRET_KINDS}:
+            raise BadRequestError(message="Browser credential ownership cannot be transferred.")
         resource.owner_user_id = ctx.subject_id
         await record_audit(
             db,

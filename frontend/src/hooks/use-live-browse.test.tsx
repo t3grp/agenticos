@@ -84,6 +84,7 @@ describe("useLiveBrowse", () => {
       type: "browser_snapshot",
       task: "Sign in to the portal",
       can_control: true,
+      can_confirm_fill: true,
       trace: [frame({ kind: "browser_opened", step: 0, goal: "Sign in" }), frame({ step: 1 })],
       frame: frame({ kind: "browser_frame", step: 1, image: "data:image/jpeg;base64,A" }),
     });
@@ -91,6 +92,7 @@ describe("useLiveBrowse", () => {
     expect(result.current).toMatchObject({
       task: "Sign in to the portal",
       canControl: true,
+      canConfirmFill: true,
       status: "live",
     });
     expect(result.current.browse?.image).toBe("data:image/jpeg;base64,A");
@@ -103,6 +105,7 @@ describe("useLiveBrowse", () => {
       type: "browser_snapshot",
       task: "t",
       can_control: false,
+      can_confirm_fill: false,
       trace: [frame({ kind: "browser_opened", step: 0 })],
       frame: null,
     });
@@ -144,6 +147,7 @@ it("fetches a completed snapshot once, releases the socket and retains the final
     type: "browser_snapshot",
     task: "done",
     can_control: true,
+    can_confirm_fill: true,
     trace: [
       frame({ kind: "browser_opened", step: 0 }),
       frame({ kind: "browser_finished", outcome: "done" }),
@@ -164,6 +168,7 @@ it("keeps a delayed first picture after newer metadata and through completion", 
     type: "browser_snapshot",
     task: "page",
     can_control: true,
+    can_confirm_fill: false,
     trace: [frame({ kind: "browser_opened", step: 0 })],
     frame: null,
   });

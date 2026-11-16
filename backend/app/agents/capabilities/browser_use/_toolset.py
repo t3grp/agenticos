@@ -22,9 +22,10 @@ import asyncio
 import base64
 import functools
 import hashlib
+import json
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AbstractAsyncContextManager, AsyncExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -33,6 +34,7 @@ from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 import httpx
+from pydantic import BaseModel
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.messages import UserContent
 from pydantic_ai.models import Model
@@ -67,7 +69,7 @@ from app.agents.capabilities.browser_use._direct import (
     open_view,
     page_report,
 )
-from app.agents.capabilities.browser_use._elements import Snapshot
+from app.agents.capabilities.browser_use._elements import Element, Snapshot
 from app.agents.capabilities.browser_use._endpoint import EndpointError, is_renderer
 from app.agents.capabilities.browser_use._loop import (
     BrowseResult,
@@ -75,11 +77,15 @@ from app.agents.capabilities.browser_use._loop import (
     LoopPolicy,
     PageSession,
     RememberSignIn,
+    between_steps,
+    held,
     run_browse,
 )
 from app.agents.capabilities.browser_use._native import NativePage
 from app.agents.capabilities.browser_use._page import (
     MISSING_EXTRA,
+    BrowserFillUncertain,
+    CdpPage,
     DomainRefused,
     PagePolicy,
     StaleElement,
@@ -89,8 +95,15 @@ from app.agents.capabilities.browser_use._plans import plan_key
 from app.agents.capabilities.browser_use._preview import Preview
 from app.agents.capabilities.browser_use._route import BrowserRoute, recheck
 from app.agents.deps import AgentDeps
+from app.core.exceptions import AuthorizationError, BadRequestError
 from app.core.sanitize import UrlRefusedError
+from app.core.secret_kinds import browser_page_origin, canonical_browser_origin
+from app.db.session import get_db_context
 from app.services import browse_plans, browser_sign_in, live_browse
+from app.services.organization_secret import (
+    BrowserCredentialOption,
+    OrganizationSecretService,
+)
 
 BROWSER_TAB_REQUIREMENT = "agenticos_browser_tab_requirement"
 
@@ -186,6 +199,8 @@ async def _live(
 
     async def sink(event: BrowserEvent) -> bool:
         nonlocal checked_at, viewers, last_image
+        if event.kind == "browser_credential_confirmation" and event.sensitive:
+            last_image = None
         if event.kind == "browser_frame":
             if event.image is not None:
                 last_image = event
@@ -234,16 +249,202 @@ def _remembering(person: _Person) -> RememberSignIn:
     return remember
 
 
-async def _keep_plan(person: _Person, kept_as: str, result: BrowseResult) -> None:
+async def _keep_plan(
+    person: _Person, kept_as: str, result: BrowseResult, session: BrowseSession
+) -> None:
     """Keep a finished browse's steps; drop a replay that did not finish.
 
     A replay that ended anywhere but `done` was following a page that changed, so
     the next browse starts from the model rather than from the same dead end.
     """
-    if result.outcome == "done" and result.plan:
+    if session.sensitive:
+        await browse_plans.forget(person.organization_id, person.user_id, kept_as)
+    elif result.outcome == "done" and result.plan:
         await browse_plans.keep(person.organization_id, person.user_id, kept_as, result.plan)
     elif result.replayed:
         await browse_plans.forget(person.organization_id, person.user_id, kept_as)
+
+
+def _credential_actor(deps: AgentDeps) -> _Person | None:
+    """The real person alone in a private, non-impersonated run."""
+    person = _signed_in_as(deps)
+    audience = deps.audience
+    if (
+        person is None
+        or audience is None
+        or not audience.browses_signed_in
+        or audience.shared_transcript
+        or audience.user_id != person.user_id
+        or deps.run_person != person.user_id
+        or deps.agent_id is None
+        or deps.run_id is None
+        or deps.impersonated
+        or deps.delegated
+    ):
+        return None
+    return person
+
+
+def _credential_options_text(
+    origin: str, snapshot_generation: int, options: list[BrowserCredentialOption]
+) -> str:
+    """The only credential metadata the model may read, for this exact page origin."""
+    return json.dumps(
+        {
+            "origin": origin,
+            "snapshot_generation": snapshot_generation,
+            "credentials": [option.__dict__ for option in options],
+        },
+        default=str,
+        separators=(",", ":"),
+    )
+
+
+async def _describe_browser_fill(
+    deps: AgentDeps, args: Mapping[str, object], config: BaseModel | None
+) -> dict[str, str] | None:
+    """Name one eligible credential and the origin shown in the fill approval."""
+    person = _credential_actor(deps)
+    credential_id = args.get("credential_id")
+    generation = args.get("authorization_generation")
+    origin = args.get("origin")
+    fields = args.get("fields")
+    if (
+        person is None
+        or deps.agent_id is None
+        or not isinstance(config, BaseModel)
+        or not isinstance(credential_id, UUID)
+        or not isinstance(generation, UUID)
+        or not isinstance(origin, str)
+        or not isinstance(fields, dict)
+    ):
+        return None
+    credential_ids = getattr(config, "browser_credential_ids", ())
+    if credential_id not in credential_ids:
+        return None
+    try:
+        canonical_origin = canonical_browser_origin(origin)
+    except ValueError:
+        return None
+    async with get_db_context() as db:
+        options = await OrganizationSecretService(db).browser_credentials(
+            organization_id=person.organization_id,
+            user_id=person.user_id,
+            agent_id=deps.agent_id,
+            secret_ids=tuple(credential_ids),
+            origin=canonical_origin,
+        )
+    option = next(
+        (
+            entry
+            for entry in options
+            if entry.id == credential_id and entry.authorization_generation == generation
+        ),
+        None,
+    )
+    if option is None:
+        return None
+    return {
+        "credential": option.name,
+        "origin": option.origin,
+        "fields": ", ".join(f"{field} #{index}" for field, index in fields.items()),
+    }
+
+
+_FILL_CONFIRMATION_TIMEOUT = 60.0
+
+
+async def _request_browser_fill_confirmation(
+    view: DirectView,
+    *,
+    person: _Person,
+    credential: BrowserCredentialOption,
+    fields: Mapping[str, Element],
+    step: int,
+) -> tuple[
+    Literal["confirmed", "cancelled", "expired", "take_over", "unavailable"],
+    BrowserCommand | None,
+]:
+    """Wait for the run's person to confirm this one origin and field set."""
+    if view.control is None or view.sink is None:
+        return "unavailable", None
+    confirmation_id = str(uuid4())
+    await view.emit(
+        BrowserEvent(
+            kind="browser_credential_confirmation",
+            call_id=view.call_id,
+            step=step,
+            confirmation_id=confirmation_id,
+            credential_name=credential.name,
+            credential_origin=credential.origin,
+            credential_fields=_credential_field_labels(fields),
+            confirmation_status="pending",
+        )
+    )
+    deadline = time.monotonic() + _FILL_CONFIRMATION_TIMEOUT
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return "expired", None
+            command = await view.control.wait(min(1.0, remaining))
+            if command is None:
+                continue
+            if command.type == "take_over":
+                return "take_over", command
+            if (
+                command.type not in {"confirm_fill", "cancel_fill"}
+                or command.confirmation_id != confirmation_id
+                or command.by_user_id != str(person.user_id)
+            ):
+                continue
+            return ("confirmed" if command.type == "confirm_fill" else "cancelled"), command
+    finally:
+        await view.emit(
+            BrowserEvent(
+                kind="browser_credential_confirmation",
+                call_id=view.call_id,
+                step=step,
+                confirmation_id=confirmation_id,
+                confirmation_status="cleared",
+            )
+        )
+
+
+def _credential_field_labels(fields: Mapping[str, Element]) -> list[str]:
+    """Show the current observed field names on the one-time confirmation card."""
+    return [
+        f"{role.replace('_', ' ')} · {element.label or 'unlabeled'} · field {element.index + 1}"
+        for role, element in fields.items()
+    ]
+
+
+def _browser_field_matches(role: str, element: Element) -> bool:
+    """Keep each secret value on an input with the matching observed HTML role."""
+    input_type = element.input_type
+    autocomplete = set(element.autocomplete.split())
+    if role == "username":
+        return input_type in {"text", "email"} and element.role in {"textbox", "email"}
+    if role == "password":
+        return input_type == "password" and element.role == "password"
+    if role == "totp":
+        return (
+            "one-time-code" in autocomplete
+            and input_type in {"text", "number", "tel"}
+            and element.editable
+        )
+    expected = {
+        "full_name": ("name", {"text"}),
+        "email": ("email", {"text", "email"}),
+        "phone": ("tel", {"text", "tel"}),
+        "address_line1": ("address-line1", {"text"}),
+        "address_line2": ("address-line2", {"text"}),
+        "city": ("address-level2", {"text"}),
+        "region": ("address-level1", {"text"}),
+        "postal_code": ("postal-code", {"text"}),
+        "country": ("country", {"text"}),
+    }.get(role)
+    return expected is not None and expected[0] in autocomplete and input_type in expected[1]
 
 
 def _image(data_url: str | None) -> BinaryContent | None:
@@ -422,6 +623,7 @@ def build_toolset(
     step_model: Model | None = None,
     route: BrowserRoute | None = None,
     resume_local: bool = False,
+    credential_ids: tuple[UUID, ...] = (),
 ) -> BrowserToolset:
     """`browse_web` and the agent's own browser tools, bound to the browser seam."""
     open_browser = page_factory if page_factory is not None else open_page
@@ -550,7 +752,7 @@ def build_toolset(
                 plan=plan,
             )
             if person is not None and kept_as is not None:
-                await _keep_plan(person, kept_as, result)
+                await _keep_plan(person, kept_as, result, session)
         except (DomainRefused, EndpointError) as exc:
             # The tab is no use after either: the browser left the allowlist or
             # stopped answering. Closed, so the next call opens a fresh one.
@@ -688,6 +890,27 @@ def build_toolset(
             preview=loop_policy.preview,
         )
         return toolset.view, True
+
+    async def hand_browser_to_person(
+        session: BrowseSession, view: DirectView, command: BrowserCommand
+    ) -> str:
+        """Yield before any further agent action when a person requests control."""
+        if view.control is None:
+            return "The browser cannot be handed to a person on this surface. No values were sent."
+        await held(
+            session,
+            view.control,
+            view.emit,
+            call_id=view.call_id,
+            by=command.by,
+            by_user_id=command.by_user_id,
+            remember=view.remember,
+        )
+        try:
+            session.last = await session.page.snapshot()
+        except DomainRefused, EndpointError:
+            session.last = None
+        return "A person took over the browser. No saved credential values were sent."
 
     async def drive(ctx: RunContext[AgentDeps], action: Action) -> str:
         """One action of the agent's own on the open tab, or why it could not be taken."""
@@ -921,6 +1144,313 @@ def build_toolset(
         """
         return await drive(ctx, GoBack(action="back"))
 
+    async def browser_list_credentials(ctx: RunContext[AgentDeps]) -> str:
+        """List eligible saved browser credential metadata for the current page.
+
+        Use when a page needs a saved login, a one-time code, or selected profile
+        fields. This returns labels and policy metadata only; it never returns a
+        username, password, TOTP seed, code, or profile value.
+
+        Returns:
+            A JSON list scoped to the current origin and page snapshot, or a safe
+            message when this run cannot use a saved credential.
+        """
+        person = _credential_actor(ctx.deps)
+        session = toolset.session
+        if person is None or ctx.deps.agent_id is None or not credential_ids:
+            return "No saved browser credentials are available to this run."
+        if session is None:
+            failure = await restore_tabs(ctx)
+            if failure:
+                return "No managed browser tab is available for saved credentials."
+            session = toolset.session
+        if session is None:
+            return "No managed browser tab is open. Read the page before selecting credentials."
+        view, fresh = await direct_view(ctx, WORKING)
+        if view.control is None or view.sink is None:
+            return "Saved browser credentials need a live confirmation panel."
+        if fresh:
+            try:
+                await open_view(view, session, WORKING)
+                await toolset.watch(view)
+            except DomainRefused, EndpointError:
+                return "The current browser page cannot use saved credentials."
+        try:
+            snapshot = await session.page.snapshot()
+        except DomainRefused, EndpointError:
+            return "The current browser page cannot use saved credentials."
+        if snapshot.has_cross_origin_frames:
+            return "Saved browser credentials are unavailable on pages with cross-origin frames."
+        session.last = snapshot
+        try:
+            origin = browser_page_origin(snapshot.url)
+        except ValueError:
+            return "The current browser page cannot use saved credentials."
+        async with get_db_context() as db:
+            options = await OrganizationSecretService(db).browser_credentials(
+                organization_id=person.organization_id,
+                user_id=person.user_id,
+                agent_id=ctx.deps.agent_id,
+                secret_ids=credential_ids,
+                origin=origin,
+            )
+        if not options:
+            return "No eligible saved browser credentials are allowed at this origin."
+        return _credential_options_text(origin, snapshot.generation, options)
+
+    async def browser_fill_credential(
+        ctx: RunContext[AgentDeps],
+        credential_id: UUID,
+        authorization_generation: UUID,
+        origin: str,
+        snapshot_generation: int,
+        fields: dict[str, int],
+    ) -> str:
+        """Fill approved values into observed login fields without submitting.
+
+        Use only fields from the latest browser_list_credentials and page read.
+        The browser panel asks this person to approve the named account, exact
+        origin, and field handles before any value reaches the page.
+
+        Args:
+            credential_id: Id from browser_list_credentials.
+            authorization_generation: Generation returned by that same listing.
+            origin: Exact origin returned by that listing.
+            snapshot_generation: Page snapshot id returned by that listing.
+            fields: Field role to observed element number, such as username and password.
+
+        Returns:
+            A bounded success or refusal. No credential values are returned, and
+            the form is never submitted.
+        """
+        person = _credential_actor(ctx.deps)
+        if (
+            person is None
+            or ctx.deps.agent_id is None
+            or ctx.deps.run_id is None
+            or credential_id not in credential_ids
+        ):
+            return "The saved credential plan is no longer available. Read the page and list credentials again."
+        session = toolset.session
+        restored = False
+        if session is None:
+            failure = await restore_tabs(ctx)
+            if failure:
+                return "The approved browser tab could not be restored. Read the page and list credentials again."
+            session = toolset.session
+            restored = session is not None
+        if session is None:
+            return "The approved browser tab is no longer available. Read the page and list credentials again."
+        view, fresh = await direct_view(ctx, WORKING)
+        if fresh:
+            try:
+                await open_view(view, session, WORKING)
+                await toolset.watch(view)
+            except DomainRefused, EndpointError:
+                return "The approved browser tab could not be restored. Read the page and list credentials again."
+        if view.control is None or view.sink is None or not isinstance(session.page, CdpPage):
+            return "This surface cannot confirm a saved credential fill. No values were sent."
+        observed = session.last
+        if observed is None:
+            try:
+                observed = await session.page.snapshot()
+            except DomainRefused, EndpointError:
+                return "The browser page changed or is unavailable. No values were sent."
+            session.last = observed
+        # Approval may rebuild the toolset after its original browser tab closed.
+        # A restored tab gets a new observation and a new confirmation below.
+        if not restored and snapshot_generation != observed.generation:
+            return "The saved credential plan is stale. Read the page and list credentials again."
+        try:
+            requested_origin = canonical_browser_origin(origin)
+            current = await session.page.snapshot()
+            current_origin = browser_page_origin(current.url)
+        except DomainRefused, EndpointError, ValueError:
+            return "The browser page changed or is unavailable. No values were sent."
+        if (
+            current.has_cross_origin_frames
+            or requested_origin != current_origin
+            or current.url != observed.url
+            or current.document_generation != observed.document_generation
+        ):
+            return "The browser page changed after the plan. No values were sent. Read it and list credentials again."
+        if not fields or any(type(index) is not int or index < 0 for index in fields.values()):
+            return "Choose observed fields from the latest page read. No values were sent."
+
+        def selected_fields(old: Snapshot, fresh: Snapshot) -> dict[str, Element] | None:
+            current_by_path = {element.path: element for element in fresh.elements if element.path}
+            selected: dict[str, Element] = {}
+            for role, index in fields.items():
+                if index >= len(old.elements):
+                    return None
+                prior = old.elements[index]
+                element = current_by_path.get(prior.path)
+                if (
+                    element is None
+                    or (element.role, element.label, element.input_type, element.autocomplete)
+                    != (prior.role, prior.label, prior.input_type, prior.autocomplete)
+                    or element.form_action_origin not in (None, requested_origin)
+                    or not _browser_field_matches(role, element)
+                ):
+                    return None
+                selected[role] = element
+            return selected
+
+        chosen = selected_fields(observed, current)
+        if chosen is None:
+            return (
+                "A selected field is hidden or changed. No values were sent. Read the page again."
+            )
+        async with get_db_context() as db:
+            options = await OrganizationSecretService(db).browser_credentials(
+                organization_id=person.organization_id,
+                user_id=person.user_id,
+                agent_id=ctx.deps.agent_id,
+                secret_ids=credential_ids,
+                origin=requested_origin,
+            )
+        option = next(
+            (
+                item
+                for item in options
+                if item.id == credential_id
+                and item.authorization_generation == authorization_generation
+            ),
+            None,
+        )
+        if option is None:
+            return "This saved credential is no longer eligible. No values were sent."
+
+        waiting, _ = await between_steps(session.page, view.control)
+        if waiting is not None:
+            return await hand_browser_to_person(session, view, waiting)
+        status, command = await _request_browser_fill_confirmation(
+            view, person=person, credential=option, fields=chosen, step=session.steps
+        )
+        if status == "take_over" and command is not None:
+            return await hand_browser_to_person(session, view, command)
+        if status == "cancelled":
+            return "The saved credential fill was cancelled. No values were sent."
+        if status == "expired":
+            return "The saved credential confirmation expired. Read the page and make a new plan."
+        if status != "confirmed":
+            return "This surface cannot confirm a saved credential fill. No values were sent."
+
+        waiting, _ = await between_steps(session.page, view.control)
+        if waiting is not None:
+            return await hand_browser_to_person(session, view, waiting)
+        try:
+            current = await session.page.snapshot()
+            current_origin = browser_page_origin(current.url)
+        except DomainRefused, EndpointError, ValueError:
+            return "The browser page changed or is unavailable. No values were sent."
+        if (
+            current.has_cross_origin_frames
+            or requested_origin != current_origin
+            or current.url != observed.url
+            or current.document_generation != observed.document_generation
+        ):
+            return (
+                "The browser page changed after confirmation. No values were sent. Read it again."
+            )
+        chosen = selected_fields(observed, current)
+        if chosen is None:
+            return (
+                "A selected field is hidden or changed. No values were sent. Read the page again."
+            )
+
+        try:
+            async with get_db_context() as db:
+                authorized = await OrganizationSecretService(db).fill_browser_credential(
+                    organization_id=person.organization_id,
+                    user_id=person.user_id,
+                    agent_id=ctx.deps.agent_id,
+                    run_id=ctx.deps.run_id,
+                    secret_id=credential_id,
+                    expected_generation=authorization_generation,
+                    origin=requested_origin,
+                    fields=fields,
+                )
+        except AuthorizationError, BadRequestError:
+            return "This saved credential is no longer eligible. No values were sent."
+
+        waiting, _ = await between_steps(session.page, view.control)
+        if waiting is not None:
+            return await hand_browser_to_person(session, view, waiting)
+        await toolset.stop_watching()
+        session.sensitive = True
+        await view.emit(
+            BrowserEvent(
+                kind="browser_credential_confirmation",
+                call_id=view.call_id,
+                step=session.steps,
+                credential_name=option.name,
+                credential_origin=requested_origin,
+                credential_fields=_credential_field_labels(chosen),
+                confirmation_status="writing",
+                sensitive=True,
+            )
+        )
+        values = {role: authorized.fields[role].get_secret_value() for role in fields}
+        write_url = session.page.sensitive_page_url or current.url
+        session.page.mark_sensitive(
+            list(values.values()),
+            expected_url=write_url,
+            expected_origin=requested_origin,
+            document_generation=current.document_generation,
+        )
+        try:
+            await session.page.fill_sensitive_fields(
+                [(chosen[role], values[role]) for role in fields],
+                expected_url=write_url,
+                expected_origin=requested_origin,
+                document_generation=current.document_generation,
+            )
+        except BrowserFillUncertain:
+            session.last = None
+            await view.emit(
+                BrowserEvent(
+                    kind="browser_credential_confirmation",
+                    call_id=view.call_id,
+                    step=session.steps,
+                    credential_origin=requested_origin,
+                    credential_fields=_credential_field_labels(chosen),
+                    confirmation_status="uncertain",
+                    sensitive=True,
+                )
+            )
+            return "The fill outcome is uncertain. Read the page again before deciding whether to try a new approved fill."
+        except StaleElement, EndpointError:
+            session.last = None
+            await view.emit(
+                BrowserEvent(
+                    kind="browser_credential_confirmation",
+                    call_id=view.call_id,
+                    step=session.steps,
+                    credential_origin=requested_origin,
+                    credential_fields=_credential_field_labels(chosen),
+                    confirmation_status="uncertain",
+                    sensitive=True,
+                )
+            )
+            return "The browser lost the observed field or its ownership. Read the page again."
+        session.last = current
+        await view.emit(
+            BrowserEvent(
+                kind="browser_credential_confirmation",
+                call_id=view.call_id,
+                step=session.steps,
+                credential_origin=requested_origin,
+                credential_fields=_credential_field_labels(chosen),
+                confirmation_status="filled",
+                sensitive=True,
+            )
+        )
+        return (
+            f"Filled {', '.join(fields)} at {requested_origin}. "
+            "The form was not submitted. Browser preview is paused to protect the entered values."
+        )
+
     def on_the_tab(tool: Callable[..., Awaitable[str]]) -> Callable[..., Awaitable[str]]:
         @functools.wraps(tool)
         async def holding(ctx: RunContext[AgentDeps], *args: Any, **kwargs: Any) -> str:
@@ -947,6 +1477,8 @@ def build_toolset(
         browser_select,
         browser_scroll,
         browser_back,
+        browser_list_credentials,
+        browser_fill_credential,
     ):
         metadata = None
         if direct in (browser_switch_tab, browser_close_tab):
@@ -957,6 +1489,8 @@ def build_toolset(
             browser_select,
             browser_scroll,
             browser_back,
+            browser_list_credentials,
+            browser_fill_credential,
         ):
             metadata = {BROWSER_TAB_REQUIREMENT: "active"}
         toolset.add_function(on_the_tab(direct), takes_ctx=True, metadata=metadata)

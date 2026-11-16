@@ -68,11 +68,15 @@ store. That difference is what keeps "a secret with no value" out of the API
 schema.
 """
 
+import base64
+import binascii
+import ipaddress
 import json
 from dataclasses import replace
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from pydantic import (
     AfterValidator,
@@ -110,6 +114,11 @@ class SecretKind(StrEnum):
     SMTP_ACCOUNT = "smtp_account"
     MICROSOFT_OAUTH_APP = "microsoft_oauth_app"
     OPENAI_CODEX = "openai_codex"
+    BROWSER_LOGIN = "browser_login"
+    BROWSER_PROFILE = "browser_profile"
+
+
+BROWSER_SECRET_KINDS = frozenset({SecretKind.BROWSER_LOGIN, SecretKind.BROWSER_PROFILE})
 
 
 def _reveal(value: SecretStr) -> str:
@@ -420,6 +429,210 @@ class HttpCredentialSecret(_SecretBase):
         return origin is not None and origin in self.origins
 
 
+class BrowserTotpSecret(BaseModel):
+    """A TOTP seed and its public generation settings."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    seed: SealedStr = Field(min_length=16, max_length=128, title="TOTP seed")
+    algorithm: Literal["SHA1", "SHA256", "SHA512"] = Field(default="SHA1", title="Algorithm")
+    digits: Literal[6, 8] = Field(default=6, title="Code length")
+    period_seconds: int = Field(default=30, ge=15, le=120, title="Code period in seconds")
+
+    @field_validator("seed")
+    @classmethod
+    def _valid_base32_seed(cls, value: SecretStr) -> SecretStr:
+        try:
+            base64.b32decode(value.get_secret_value().upper() + "=" * (-len(value) % 8))
+        except binascii.Error, ValueError:
+            raise ValueError("Enter a valid Base32 TOTP seed") from None
+        return value
+
+
+def _browser_origins(origins: tuple[str, ...]) -> tuple[str, ...]:
+    normalized = tuple(canonical_browser_origin(origin) for origin in origins)
+    if len(set(normalized)) != len(normalized):
+        raise ValueError("Allowed origins must be unique")
+    return normalized
+
+
+def _check_browser_policy(policy: str, agent_ids: tuple[UUID, ...]) -> None:
+    if len(set(agent_ids)) != len(agent_ids):
+        raise ValueError("Authorized agent ids must be unique")
+    if policy == "personal" and agent_ids:
+        raise ValueError("Personal browser credentials cannot name shared agents")
+    if policy == "named_agents" and not agent_ids:
+        raise ValueError("Select at least one agent for a shared browser account")
+
+
+class BrowserLoginSecret(_SecretBase):
+    """A site login, sealed separately from saved browser sessions."""
+
+    kind: Literal[SecretKind.BROWSER_LOGIN] = SecretKind.BROWSER_LOGIN
+    username: SealedStr = Field(min_length=1, max_length=1024, title="Username")
+    password: SealedStr = Field(min_length=1, max_length=4096, title="Password")
+    allowed_origins: tuple[str, ...] = Field(
+        min_length=1,
+        max_length=10,
+        title="Allowed HTTPS origins",
+        description="Exact HTTPS origins that may receive this login.",
+    )
+    totp: BrowserTotpSecret | None = Field(default=None, title="TOTP")
+    account_policy: Literal["personal", "named_agents"] = Field(
+        default="personal",
+        title="Account use",
+        description="Personal use is owner-only. Shared use names each authorized agent.",
+    )
+    authorized_agent_ids: tuple[UUID, ...] = Field(
+        default=(), max_length=50, title="Authorized agents"
+    )
+
+    @field_validator("allowed_origins")
+    @classmethod
+    def _valid_origins(cls, origins: tuple[str, ...]) -> tuple[str, ...]:
+        return _browser_origins(origins)
+
+    @model_validator(mode="after")
+    def _validate_account_policy(self) -> BrowserLoginSecret:
+        _check_browser_policy(self.account_policy, self.authorized_agent_ids)
+        return self
+
+    @property
+    def hint(self) -> str:
+        return ""
+
+
+class BrowserProfileSecret(_SecretBase):
+    """Selected contact fields for forms, with each value masked at rest and in reprs."""
+
+    kind: Literal[SecretKind.BROWSER_PROFILE] = SecretKind.BROWSER_PROFILE
+    full_name: SealedStr | None = Field(
+        default=None, min_length=1, max_length=255, title="Full name"
+    )
+    email: SealedStr | None = Field(default=None, min_length=1, max_length=255, title="Email")
+    phone: SealedStr | None = Field(default=None, min_length=1, max_length=64, title="Phone")
+    address_line1: SealedStr | None = Field(
+        default=None, min_length=1, max_length=255, title="Address"
+    )
+    address_line2: SealedStr | None = Field(
+        default=None, min_length=1, max_length=255, title="Address line 2"
+    )
+    city: SealedStr | None = Field(default=None, min_length=1, max_length=128, title="City")
+    region: SealedStr | None = Field(
+        default=None, min_length=1, max_length=128, title="State or region"
+    )
+    postal_code: SealedStr | None = Field(
+        default=None, min_length=1, max_length=32, title="Postal code"
+    )
+    country: SealedStr | None = Field(
+        default=None, min_length=1, max_length=2, title="Country code"
+    )
+    allowed_origins: tuple[str, ...] = Field(
+        min_length=1, max_length=10, title="Allowed HTTPS origins"
+    )
+    account_policy: Literal["personal", "named_agents"] = Field(
+        default="personal", title="Account use"
+    )
+    authorized_agent_ids: tuple[UUID, ...] = Field(
+        default=(), max_length=50, title="Authorized agents"
+    )
+
+    @field_validator("allowed_origins")
+    @classmethod
+    def _valid_origins(cls, origins: tuple[str, ...]) -> tuple[str, ...]:
+        return _browser_origins(origins)
+
+    @field_validator("country")
+    @classmethod
+    def _country_code(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and len(value) != 2:
+            raise ValueError("Use a two-letter country code")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_profile_and_policy(self) -> BrowserProfileSecret:
+        if not any(
+            getattr(self, field).get_secret_value()
+            for field in (
+                "full_name",
+                "email",
+                "phone",
+                "address_line1",
+                "address_line2",
+                "city",
+                "region",
+                "postal_code",
+                "country",
+            )
+            if getattr(self, field) is not None
+        ):
+            raise ValueError("Add at least one profile field")
+        _check_browser_policy(self.account_policy, self.authorized_agent_ids)
+        return self
+
+    @property
+    def hint(self) -> str:
+        return ""
+
+
+def canonical_browser_origin(value: str) -> str:
+    """Canonical HTTPS origin; reject local, private and ambiguous destinations."""
+    parts = urlsplit(value.strip())
+    if (
+        parts.scheme.lower() != "https"
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+        or parts.path not in ("", "/")
+        or parts.query
+        or parts.fragment
+        or "*" in parts.hostname
+    ):
+        raise ValueError("Use an exact HTTPS origin with no path, query, fragment or wildcard")
+    host = parts.hostname.rstrip(".").lower()
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+        raise ValueError("Local and internal hosts are not allowed")
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        try:
+            host = host.encode("idna").decode("ascii")
+        except UnicodeError:
+            raise ValueError("Use a valid hostname") from None
+    else:
+        if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+            address = address.ipv4_mapped
+        if (
+            address.is_private
+            or address.is_loopback
+            or address.is_link_local
+            or address.is_multicast
+            or address.is_reserved
+            or address.is_unspecified
+        ):
+            raise ValueError("Private and local network addresses are not allowed")
+        host = f"[{address}]" if address.version == 6 else str(address)
+    try:
+        port = parts.port
+    except ValueError:
+        raise ValueError("Use a valid HTTPS port") from None
+    return f"https://{host}" if port in (None, 443) else f"https://{host}:{port}"
+
+
+def browser_page_origin(value: str) -> str:
+    """Return the canonical origin of a page URL, without its path or query."""
+    parts = urlsplit(value.strip())
+    if (
+        parts.scheme.lower() != "https"
+        or not parts.netloc
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+    ):
+        raise ValueError("The browser page must use a public HTTPS origin")
+    return canonical_browser_origin(f"https://{parts.netloc}")
+
+
 def _origin_of(url: str, *, strip_path: bool = False) -> str | None:
     """`scheme://host[:port]` of `url`, lower-cased with a default port dropped.
 
@@ -653,7 +866,9 @@ StorableSecret = Annotated[
     | SmtpAccountSecret
     | HttpCredentialSecret
     | MicrosoftOAuthAppSecret
-    | OpenAICodexSecret,
+    | OpenAICodexSecret
+    | BrowserLoginSecret
+    | BrowserProfileSecret,
     Field(discriminator="kind"),
 ]
 """Every shape a person can actually save."""
@@ -669,7 +884,9 @@ TypedSecret = Annotated[
     | GitTokenSecret
     | EntraAppSecret
     | SmtpAccountSecret
-    | HttpCredentialSecret,
+    | HttpCredentialSecret
+    | BrowserLoginSecret
+    | BrowserProfileSecret,
     Field(discriminator="kind"),
 ]
 """What a person may type into the vault: :data:`StorableSecret` but a ChatGPT sign-in.
@@ -694,7 +911,9 @@ SecretValue = Annotated[
     | SmtpAccountSecret
     | HttpCredentialSecret
     | MicrosoftOAuthAppSecret
-    | OpenAICodexSecret,
+    | OpenAICodexSecret
+    | BrowserLoginSecret
+    | BrowserProfileSecret,
     Field(discriminator="kind"),
 ]
 """What the runtime holds - :data:`StorableSecret` plus "there is no credential"."""
@@ -838,9 +1057,19 @@ _KIND_MODELS: dict[SecretKind, type[BaseModel]] = {
     SecretKind.SMTP_ACCOUNT: SmtpAccountSecret,
     SecretKind.MICROSOFT_OAUTH_APP: MicrosoftOAuthAppSecret,
     SecretKind.OPENAI_CODEX: OpenAICodexSecret,
+    SecretKind.BROWSER_LOGIN: BrowserLoginSecret,
+    SecretKind.BROWSER_PROFILE: BrowserProfileSecret,
 }
 
 _KIND_LABELS: dict[SecretKind, tuple[str, str]] = {
+    SecretKind.BROWSER_LOGIN: (
+        "Browser login",
+        "Fill an approved HTTPS login form in the provisioned browser without exposing values to the model.",
+    ),
+    SecretKind.BROWSER_PROFILE: (
+        "Browser profile",
+        "Fill selected contact fields on approved HTTPS origins in the provisioned browser.",
+    ),
     SecretKind.SMTP_ACCOUNT: (
         "SMTP account",
         "Send workflow emails through your own mail server. Server, sender and credentials are stored together.",

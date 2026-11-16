@@ -23,7 +23,9 @@ export type SecretKind =
   | "http_credential"
   | "smtp_account"
   | "microsoft_oauth_app"
-  | "openai_codex";
+  | "openai_codex"
+  | "browser_login"
+  | "browser_profile";
 
 /**
  * Every kind a person can save. `none` is not one of them: it says "there is no

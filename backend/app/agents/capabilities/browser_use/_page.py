@@ -17,9 +17,10 @@ import asyncio
 import ipaddress
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -55,6 +56,7 @@ from app.agents.capabilities.browser_use._endpoint import (
 )
 from app.agents.capabilities.browser_use._route import BrowserRoute
 from app.core.config import settings
+from app.core.secret_kinds import browser_page_origin
 
 MISSING_EXTRA = (
     "Browser automation is bound to this agent but the 'browser' extra is not "
@@ -195,6 +197,9 @@ _COLLECT_JS = r"""
       role: roleOf(el),
       label: labelOf(el),
       path: pathOf(el),
+      inputType: (el.type || '').toLowerCase(),
+      autocomplete: (el.autocomplete || '').toLowerCase(),
+      formActionOrigin: el.form ? new URL(el.form.action || location.href).origin : null,
       // What a *field* holds never leaves the browser. Only whether it holds
       // anything does. The history line stopped carrying a typed value, and
       // that was half the fix: the next snapshot copied `el.value` straight back
@@ -220,6 +225,10 @@ _COLLECT_JS = r"""
   return JSON.stringify({
     url: location.href,
     title: document.title,
+    documentGeneration: String(performance.timeOrigin),
+    hasCrossOriginFrames: Array.from(window.frames).some((frame) => {
+      try { return frame.location.origin !== location.origin; } catch (e) { return true; }
+    }),
     // Cut here, in the page, and not in Python afterwards. A browsed page is
     // untrusted, and one with a megabyte of visible text would have had the
     // whole of it serialised into the CDP response and carried across the socket
@@ -501,6 +510,43 @@ _FOCUS_AND_SELECT_JS = r"""
 """
 """Putting the caret in a field with its whole contents selected."""
 
+_FILL_SENSITIVE_FIELD_JS = r"""
+(() => {
+%(naming)s  const el = document.querySelector(%(path)s);
+  if (
+    location.href !== %(url)s ||
+    location.origin !== %(origin)s ||
+    String(performance.timeOrigin) !== %(document_generation)s ||
+    !el || !el.isConnected || el.disabled || el.type === 'hidden'
+  ) return 'stale';
+  if (Array.from(window.frames).some((frame) => {
+    try { return frame.location.origin !== location.origin; } catch (e) { return true; }
+  })) return 'stale';
+  const rect = el.getBoundingClientRect();
+  const style = window.getComputedStyle(el);
+  if (
+    rect.width < 1 || rect.height < 1 || rect.bottom < 0 || rect.top > window.innerHeight ||
+    style.visibility === 'hidden' || style.display === 'none'
+  ) return 'stale';
+  const formOrigin = el.form ? new URL(el.form.action || location.href).origin : location.origin;
+  if (formOrigin !== %(origin)s) return 'stale';
+  const center = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  if (center !== el && !el.contains(center)) return 'stale';
+  if (
+    (el.type || '').toLowerCase() !== %(input_type)s ||
+    (el.autocomplete || '').toLowerCase() !== %(autocomplete)s ||
+    roleOf(el) !== %(role)s || labelOf(el) !== %(label)s
+  ) return 'stale';
+  const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
+  if (!setter) return 'stale';
+  setter.call(el, %(value)s);
+  el.dispatchEvent(new Event('input', {bubbles: true}));
+  el.dispatchEvent(new Event('change', {bubbles: true}));
+  return 'filled';
+})()
+"""
+"""Write one value only if its observed page and element remain unchanged."""
+
 _SELECT_JS = """
 (() => {
   const el = document.querySelector(%(path)s);
@@ -526,6 +572,8 @@ VERIFY_JS = r"""
   const r = el.getBoundingClientRect();
   return JSON.stringify({
     found: true,
+    url: location.href,
+    documentGeneration: String(performance.timeOrigin),
     role: roleOf(el),
     label: labelOf(el),
     x: r.left + r.width / 2,
@@ -587,6 +635,13 @@ def parse_snapshot(raw: object, cap: int) -> Snapshot:
             value=clean_label(str(item["value"])) if item.get("value") else None,
             filled=bool(item.get("filled")),
             options=tuple(clean_label(str(option)) for option in item.get("options") or ()),
+            input_type=str(item.get("inputType", "")),
+            autocomplete=str(item.get("autocomplete", "")),
+            form_action_origin=(
+                str(item["formActionOrigin"])
+                if isinstance(item.get("formActionOrigin"), str)
+                else None
+            ),
         )
         for index, item in enumerate(found)
     )
@@ -598,6 +653,8 @@ def parse_snapshot(raw: object, cap: int) -> Snapshot:
         scroll_y=float(payload.get("scrollY", 0.0)),
         scroll_height=float(payload.get("scrollHeight", 0.0)),
         viewport_height=float(payload.get("viewportHeight", 0.0)),
+        document_generation=str(payload.get("documentGeneration", "")),
+        has_cross_origin_frames=bool(payload.get("hasCrossOriginFrames")),
     )
 
 
@@ -655,6 +712,10 @@ class StaleElement(RuntimeError):
     """
 
 
+class BrowserFillUncertain(RuntimeError):
+    """A field write may have reached the page; inspect it before another fill."""
+
+
 class _HistoryEntry(BaseModel):
     id: int
     url: str
@@ -677,6 +738,11 @@ class CdpPage:
 
     native_id: str | None = None
 
+    @property
+    def sensitive_page_url(self) -> str:
+        """The internal full URL needed to validate a sensitive write."""
+        return self._sensitive_url
+
     def __init__(
         self, client: Any, session_id: str, policy: PagePolicy, *, context_id: str = ""
     ) -> None:
@@ -691,6 +757,12 @@ class CdpPage:
         self._height = round(policy.preview_width * _VIEWPORT_RATIO)
         self._scale = 1
         self._streaming = False
+        self._snapshot_generation = 0
+        self._sensitive_capture = False
+        self._sensitive_values: set[str] = set()
+        self._sensitive_url = ""
+        self._sensitive_origin = ""
+        self._sensitive_document_generation = ""
 
     async def _evaluate(  # pragma: no cover - needs a live browser
         self, expression: str, *, await_promise: bool = False
@@ -752,7 +824,8 @@ class CdpPage:
                 # one thing worth quoting.
                 described = (thrown.get("exception") or {}).get("description")
                 raise EndpointError(
-                    f"The page refused to run this: {described or thrown.get('text')}"
+                    f"The page refused to run this: "
+                    f"{self._redact(str(described or thrown.get('text') or ''))}"
                 )
             return answer.get("result", {})
         raise RuntimeError(_CONTEXT_GONE)  # unreachable; the loop returns or raises
@@ -773,10 +846,53 @@ class CdpPage:
         check_navigation(snapshot.url)
         if not domain_allowed(snapshot.url, self._policy.allowed_domains):
             raise DomainRefused(
-                f"The browser navigated to {snapshot.url}, which this agent's "
+                f"The browser navigated to {self._redact(snapshot.url)}, which this agent's "
                 f"allowed domains do not cover."
             )
-        return snapshot
+        if self._sensitive_capture:
+            current_origin = browser_page_origin(snapshot.url)
+            self._sensitive_url = snapshot.url
+            self._sensitive_document_generation = snapshot.document_generation
+            snapshot = replace(snapshot, url=current_origin)
+        self._snapshot_generation += 1
+        return replace(self._redact_snapshot(snapshot), generation=self._snapshot_generation)
+
+    def mark_sensitive(
+        self,
+        values: Sequence[str],
+        *,
+        expected_url: str,
+        expected_origin: str,
+        document_generation: str,
+    ) -> None:
+        """Stop preview capture and scrub these values from later page reports."""
+        self._sensitive_capture = True
+        self._sensitive_values.update(value for value in values if value)
+        self._sensitive_url = expected_url
+        self._sensitive_origin = expected_origin
+        self._sensitive_document_generation = document_generation
+
+    def _redact(self, value: str) -> str:
+        for secret in sorted(self._sensitive_values, key=len, reverse=True):
+            value = re.sub(re.escape(secret), "[redacted]", value, flags=re.IGNORECASE)
+        return value
+
+    def _redact_snapshot(self, snapshot: Snapshot) -> Snapshot:
+        return replace(
+            snapshot,
+            url=self._redact(snapshot.url),
+            title=self._redact(snapshot.title),
+            text=self._redact(snapshot.text),
+            elements=tuple(
+                replace(
+                    element,
+                    label=self._redact(element.label),
+                    value=None if element.value is None else self._redact(element.value),
+                    options=tuple(self._redact(option) for option in element.options),
+                )
+                for element in snapshot.elements
+            ),
+        )
 
     async def _locate(  # pragma: no cover - needs a live browser
         self, element: Element
@@ -813,6 +929,11 @@ class CdpPage:
             raise StaleElement(
                 f"{element.role}: {element.label} is no longer on the page where it was offered."
             )
+        if self._sensitive_capture and (
+            found.get("url") != self._sensitive_url
+            or found.get("documentGeneration") != self._sensitive_document_generation
+        ):
+            raise StaleElement("The sensitive page changed. Read it again before acting.")
         if not found.get("hit"):
             raise StaleElement(
                 f"Something is covering {element.role}: {element.label}; a click "
@@ -885,6 +1006,60 @@ class CdpPage:
         # what was typed, which is what its listeners are waiting for.
         await self._evaluate(_FOCUS_AND_SELECT_JS % {"path": json.dumps(element.path)})
         await self._client.send.Input.insertText(params={"text": text}, session_id=self._session)
+
+    async def fill_sensitive_fields(
+        self,
+        fields: Sequence[tuple[Element, str]],
+        *,
+        expected_url: str,
+        expected_origin: str,
+        document_generation: str,
+    ) -> None:
+        """Write each approved value to its exact observed element, without submitting."""
+        if not fields or any(not element.editable for element, _ in fields):
+            raise StaleElement("Choose visible text fields for the approved fill.")
+        if any(element.form_action_origin not in (None, expected_origin) for element, _ in fields):
+            raise StaleElement("A selected form posts to another origin.")
+        self.mark_sensitive(
+            [value for _, value in fields],
+            expected_url=expected_url,
+            expected_origin=expected_origin,
+            document_generation=document_generation,
+        )
+        completed = False
+        for element, value in fields:
+            expression = _FILL_SENSITIVE_FIELD_JS % {
+                "naming": _NAMING_JS,
+                "path": json.dumps(element.path),
+                "url": json.dumps(expected_url),
+                "origin": json.dumps(expected_origin),
+                "document_generation": json.dumps(document_generation),
+                "input_type": json.dumps(element.input_type),
+                "autocomplete": json.dumps(element.autocomplete),
+                "role": json.dumps(element.role),
+                "label": json.dumps(element.label),
+                "value": json.dumps(value),
+            }
+            try:
+                answer = await asyncio.wait_for(
+                    self._client.send.Runtime.evaluate(
+                        params={"expression": expression, "returnByValue": True},
+                        session_id=self._session,
+                    ),
+                    timeout=_COMMAND_TIMEOUT,
+                )
+            except RuntimeError, TimeoutError, OSError:
+                raise BrowserFillUncertain() from None
+            if answer.get("exceptionDetails") is not None:
+                raise BrowserFillUncertain() from None
+            state = (answer.get("result") or {}).get("value")
+            if state == "stale":
+                if completed:
+                    raise BrowserFillUncertain() from None
+                raise StaleElement("The browser page or selected field changed before the fill.")
+            if state != "filled":
+                raise BrowserFillUncertain() from None
+            completed = True
 
     async def select(  # pragma: no cover - needs a live browser
         self, element: Element, value: str
@@ -1038,7 +1213,12 @@ class CdpPage:
         url, title = result["url"], result["title"]
         if not domain_allowed(url, self._policy.allowed_domains):
             raise DomainRefused("This page is outside the agent's allowed domains.")
-        return url, title
+        if self._sensitive_capture:
+            try:
+                return browser_page_origin(url), ""
+            except ValueError:
+                return self._sensitive_origin, ""
+        return self._redact(url), self._redact(title)
 
     async def screenshot(self) -> str | None:  # pragma: no cover - needs a live browser
         """The viewport as a JPEG `data:` URL, or `None` when the browser sent none.
@@ -1049,6 +1229,8 @@ class CdpPage:
         and how wide the picture is, which is also what keeps the frame a person
         watches identical to the page the model was shown.
         """
+        if self._sensitive_capture:
+            return None
         shot = await self._client.send.Page.captureScreenshot(
             params={
                 "format": "jpeg",
@@ -1080,6 +1262,9 @@ class CdpPage:
         slow socket gets the page as it is now rather than a queue of the past.
         The stream is a preview: a failure ends the stream and nothing else.
         """
+        if self._sensitive_capture:
+            yield
+            return
         parked: list[dict[str, Any]] = []
         arrived = asyncio.Event()
         streaming = True
@@ -1248,11 +1433,11 @@ class CdpPage:
         url = (await self._evaluate("location.href")).get("value")
         if not domain_allowed(str(url or ""), self._policy.allowed_domains):
             return (
-                f"[The browse ended on {url}, which this agent's allowed domains "
+                f"[The browse ended on {self._redact(str(url or ''))}, which this agent's allowed domains "
                 f"do not cover. Its content was not read.]"
             )
         result = await self._evaluate("document.body ? document.body.innerText : ''")
-        return str(result.get("value") or "")[:READ_LIMIT]
+        return self._redact(str(result.get("value") or ""))[:READ_LIMIT]
 
 
 async def _resolve(cdp_url: str) -> str | None:  # pragma: no cover - needs a resolver

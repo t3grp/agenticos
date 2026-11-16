@@ -161,7 +161,14 @@ export function AddSecretDialog({
   // The one shape nobody types: it is stored by signing in, and it is somebody's
   // own subscription - so it starts private, where every other key starts shared.
   const signsIn = effectiveKind === "openai_codex";
-  const visibility = chosenVisibility ?? (signsIn ? "private" : "org");
+  const browserCredential =
+    effectiveKind === "browser_login" || effectiveKind === "browser_profile";
+  const browserPolicy = value.account_policy === "named_agents" ? "named_agents" : "personal";
+  const visibility = browserCredential
+    ? browserPolicy === "named_agents"
+      ? "org"
+      : "private"
+    : (chosenVisibility ?? (signsIn ? "private" : "org"));
   const pending = isPending || chatgpt.create.isPending;
   // What the field shows: what was typed, or the service's own name. Switching
   // from OpenAI to Anthropic with the field still reading "OpenAI" leaves a key
@@ -172,7 +179,9 @@ export function AddSecretDialog({
   const complete =
     shownName.trim().length > 0 &&
     info !== null &&
-    (signsIn ? callbackUrl.trim() !== "" : isSecretComplete(info.json_schema, value));
+    (signsIn
+      ? callbackUrl.trim() !== ""
+      : isSecretComplete(info.json_schema, value, effectiveKind));
 
   function reset() {
     setCategory(null);
@@ -237,6 +246,9 @@ export function AddSecretDialog({
           value: toSecretPayload(effectiveKind, value),
           purpose: fixedKind === undefined ? (chosen?.id ?? "custom") : "custom",
           visibility,
+          ...(browserCredential
+            ? { usage_scope: browserPolicy === "personal" ? "personal" : "organization" }
+            : {}),
         });
       }
       onOpenChange(false);
@@ -436,7 +448,8 @@ export function AddSecretDialog({
               )}
             </div>
 
-            <div className="space-y-2">
+            {!browserCredential && (
+              <div className="space-y-2">
               <Label htmlFor="secret-visibility">{t("whoCanUse")}</Label>
               <Select
                 value={visibility}
@@ -454,7 +467,8 @@ export function AddSecretDialog({
                 {visibility === "org" ? t("sharedAccountAnyoneHere") : t("yoursAloneYouCan")}{" "}
                 {t("eitherWayAgentRunsWithIt")}
               </p>
-            </div>
+              </div>
+            )}
 
             <MoreOptions label={t("moreOptions")}>
               <FormField
@@ -526,10 +540,21 @@ export function RotateSecretDialog({
   // A ChatGPT sign-in is rotated by signing in again: there is no value to type,
   // and the grant a refused refresh left behind is the thing being replaced.
   const reconnects = secret?.kind === "openai_codex";
+  const browserCredential =
+    secret?.kind === "browser_login" || secret?.kind === "browser_profile";
+  const rotationValue =
+    browserCredential && secret
+      ? {
+          ...value,
+          account_policy: secret.usage_scope === "personal" ? "personal" : "named_agents",
+        }
+      : value;
   const pending = isPending || chatgpt.reconnect.isPending;
   const complete =
     info !== null &&
-    (reconnects ? callbackUrl.trim() !== "" : isSecretComplete(info.json_schema, value));
+    (reconnects
+      ? callbackUrl.trim() !== ""
+      : isSecretComplete(info.json_schema, rotationValue, secret?.kind));
 
   function clear() {
     setValue({});
@@ -549,7 +574,7 @@ export function RotateSecretDialog({
       if (reconnects) {
         await chatgpt.reconnect.mutateAsync({ id: secret.id, callback_url: callbackUrl.trim() });
       } else {
-        await onSubmit({ id: secret.id, value: toSecretPayload(secret.kind, value) });
+        await onSubmit({ id: secret.id, value: toSecretPayload(secret.kind, rotationValue) });
       }
       onOpenChange(false);
       clear();
@@ -592,11 +617,12 @@ export function RotateSecretDialog({
               ) : (
                 <SecretFields
                   info={info}
-                  value={value}
+                  value={rotationValue}
                   onChange={setValue}
                   disabled={pending}
                   idPrefix="rotate"
                   errors={errors}
+                  hiddenFields={browserCredential ? ["account_policy"] : []}
                 />
               )}
             </fieldset>

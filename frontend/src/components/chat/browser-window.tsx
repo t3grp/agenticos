@@ -29,6 +29,7 @@ import {
 import { useAuthStore } from "@/stores";
 import { BrowserNavigation } from "./browser-navigation";
 import { BrowserCommentLayer, type PageComment } from "./browser-comment";
+import { BrowserCredentialConfirmationCard } from "./browser-credential-confirmation";
 import type { BrowseOutcome } from "@/types/chat";
 import { OUTCOME_TONE, StepTimeline } from "./browser-view";
 import { LiveViewport } from "./live-viewport";
@@ -37,6 +38,8 @@ import { LiveViewport } from "./live-viewport";
 export interface BrowseControl {
   /** Whether this person may drive the browser at all - the server's answer. */
   canControl: boolean;
+  /** Whether this person is the run's owner and may confirm a saved credential fill. */
+  canConfirmFill?: boolean;
   /** Whether a sign-in they make while holding it may be kept for later browses (#2129). */
   canRemember?: boolean;
   send: (command: BrowserCommand) => void;
@@ -477,6 +480,13 @@ export function BrowserWindow({
           {/* Model-written - rendered as text. */}
           <span className="text-foreground/80">{browse.needs}</span>
         </div>
+      )}
+      {browse.credentialConfirmation && running && control?.canConfirmFill === true && (
+        <BrowserCredentialConfirmationCard
+          key={browse.credentialConfirmation.id}
+          confirmation={browse.credentialConfirmation}
+          send={control.send}
+        />
       )}
       {browse.heldBy && !hold.holding && running && (
         <p className="text-muted-foreground border-border border-b px-3 py-1.5 text-xs">

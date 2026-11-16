@@ -67,6 +67,35 @@ const API_KEY_SECRET: Secret = {
   hint: "P7KD",
 };
 
+const BROWSER_LOGIN_SECRET: Secret = {
+  id: "sec-browser-login",
+  name: "Work portal login",
+  description: null,
+  kind: "browser_login",
+  hint: "",
+  usage_scope: "organization",
+  visibility: "org",
+  owner_user_id: null,
+};
+
+const BROWSER_USE: CapabilityCatalogEntry = {
+  ...WEATHER,
+  id: "browser_use",
+  name: "Web browser",
+  requires_secret: null,
+  config_schema: {
+    type: "object",
+    properties: {
+      browser_credential_ids: {
+        type: "array",
+        title: "Saved browser credentials",
+        description: "Vault logins or profiles this named agent may fill after your approval.",
+        items: { type: "string", format: "uuid" },
+      },
+    },
+  },
+};
+
 /** Web search, which needs a key for some methods and none for others. */
 const SEARCH: CapabilityCatalogEntry = {
   ...WEATHER,
@@ -173,6 +202,33 @@ beforeEach(() => {
  * capability that cannot run without a credential gets one.
  */
 describe("CapabilitySettings secret picker", () => {
+  it("lets an author bind a saved browser credential by its Vault name", async () => {
+    state.permissions = [Perm.secretsEdit, Perm.secretsView];
+    serve([BROWSER_LOGIN_SECRET]);
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    mount(
+      binding({
+        id: "browser_use",
+        config: { connection: "built_in", browser_credential_ids: [] },
+      }),
+      { definition: BROWSER_USE, onChange },
+    );
+
+    const login = await screen.findByRole("checkbox", { name: /Work portal login/ });
+    await user.click(login);
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "browser_use",
+        config: expect.objectContaining({ browser_credential_ids: ["sec-browser-login"] }),
+      }),
+    );
+    expect(
+      screen.queryByRole("textbox", { name: /Saved browser credentials/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the secret the spec stored, by name and by hint", async () => {
     serve([API_KEY_SECRET]);
     mount(binding({ secret_id: "sec-1" }));

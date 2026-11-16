@@ -336,6 +336,24 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "goingBack",
     displayNameKey: "goBack",
   },
+  browser_list_credentials: {
+    kind: "web",
+    render: "generic",
+    captionKey: "listingSavedCredentials",
+    displayNameKey: "listSavedCredentials",
+    staysClosed: true,
+  },
+  browser_fill_credential: {
+    kind: "web",
+    render: "generic",
+    captionKey: "fillingSavedCredential",
+    displayNameKey: "fillSavedCredential",
+    staysClosed: true,
+    approvalSummary: {
+      key: "approveBrowserCredentialFill",
+      needs: ["credential", "origin", "fields"],
+    },
+  },
 
   // computer_use - a desktop worked through screenshots. Like `browse_web`, the live
   // view is the browse panel, fed by frames rather than by these calls; what comes

@@ -389,6 +389,7 @@ class TestStreaming:
         assert snapshot["task"] == "Sign in to the supplier portal"
         assert snapshot["started_at"] == "2026-10-13T09:30:00+00:00"
         assert snapshot["can_control"] is False
+        assert snapshot["can_confirm_fill"] is False
         assert [frame["step"] for frame in snapshot["trace"]] == [1]
         assert snapshot["frame"]["kind"] == "browser_frame"
         assert live["step"] == 2
@@ -416,6 +417,7 @@ class TestStreaming:
             BrowserCommand(type="type", text="agent", by="Ada Lovelace", by_user_id="user-ada"),
         ]
         assert socket.sent[0]["can_control"] is True
+        assert socket.sent[0]["can_confirm_fill"] is False
         assert socket.sent[0]["frame"] is None
 
     @pytest.mark.security
@@ -463,7 +465,7 @@ class TestStreaming:
         assert socket.closed == (4403, "Not allowed to watch")
 
     @pytest.mark.parametrize(
-        ("own", "remembers", "can"),
+        ("own", "remembers", "can_remember"),
         [(True, True, True), (True, False, False), (False, True, False)],
     )
     async def test_only_the_person_the_run_acts_for_is_offered_to_keep_a_sign_in(
@@ -472,7 +474,7 @@ class TestStreaming:
         monkeypatch: pytest.MonkeyPatch,
         own: bool,
         remembers: bool,
-        can: bool,
+        can_remember: bool,
     ) -> None:
         """And only on a run that may keep one for them (#2129)."""
         await live_browse.open_view(RUN, CALL, _meta(remembers=remembers))
@@ -482,7 +484,8 @@ class TestStreaming:
 
         await live_browse.stream(socket, auth_token="t", run_id=RUN, call_id=CALL)
 
-        assert socket.sent[0]["can_remember"] is can
+        assert socket.sent[0]["can_remember"] is can_remember
+        assert socket.sent[0]["can_confirm_fill"] is own
 
     @pytest.mark.security
     async def test_a_viewer_who_may_only_watch_cannot_drive(

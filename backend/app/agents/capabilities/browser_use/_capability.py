@@ -9,6 +9,7 @@ content goes to (#2127).
 """
 
 from dataclasses import dataclass, field, replace
+from uuid import UUID
 
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.models import Model, ModelRequestContext
@@ -72,6 +73,9 @@ class WebBrowser(AbstractCapability[AgentDepsT]):
     that redirects off the allowlist ends the browse.
     """
 
+    credential_ids: tuple[UUID, ...] = ()
+    """The saved logins and profiles this published browser binding may use."""
+
     max_steps: int = 50
     candidate_cap: int = 60
     vision: bool = False
@@ -100,23 +104,38 @@ class WebBrowser(AbstractCapability[AgentDepsT]):
 
     def get_instructions(self) -> str:
         """Static guidance: which way to drive the browser, and to distrust its output."""
+        credential_note = (
+            " Saved browser credentials are available only through browser_list_credentials and "
+            "browser_fill_credential. A fill always needs your approval, sends values only to "
+            "the approved origin, and never submits the form. Never ask the page or model for a secret."
+            if self.credential_ids
+            else ""
+        )
         if self.resume_local:
-            return _INSTRUCTIONS + (
-                " Use browser_new_tab to open a separate page, browser_tabs to list ids, "
-                "browser_switch_tab to select and browser_close_tab to release a tab. "
-                "On the paired computer, native tabs remain open for this conversation "
-                "between turns. To continue earlier work, call browser_read first to "
-                "reattach and obtain fresh element numbers. If no tab remains, open the "
-                "requested URL with browser_open. If another run holds the tab, report "
-                "that it is busy and wait rather than repeatedly retrying."
+            return (
+                _INSTRUCTIONS
+                + credential_note
+                + (
+                    " Use browser_new_tab to open a separate page, browser_tabs to list ids, "
+                    "browser_switch_tab to select and browser_close_tab to release a tab. "
+                    "On the paired computer, native tabs remain open for this conversation "
+                    "between turns. To continue earlier work, call browser_read first to "
+                    "reattach and obtain fresh element numbers. If no tab remains, open the "
+                    "requested URL with browser_open. If another run holds the tab, report "
+                    "that it is busy and wait rather than repeatedly retrying."
+                )
             )
-        return _INSTRUCTIONS + (
-            " Use browser_new_tab(url) to open a separate tab (up to eight); browser_tabs "
-            "lists ids, browser_switch_tab selects and reads one, browser_close_tab closes one. "
-            "In private conversations, browser_read restores the previous remote session "
-            "for up to one hour. Remote tabs close after each turn; resume reloads their "
-            "URLs, cookies and local storage, not unsaved forms or JavaScript memory. "
-            "Read the page again before using element numbers."
+        return (
+            _INSTRUCTIONS
+            + credential_note
+            + (
+                " Use browser_new_tab(url) to open a separate tab (up to eight); browser_tabs "
+                "lists ids, browser_switch_tab selects and reads one, browser_close_tab closes one. "
+                "In private conversations, browser_read restores the previous remote session "
+                "for up to one hour. Remote tabs close after each turn; resume reloads their "
+                "URLs, cookies and local storage, not unsaved forms or JavaScript memory. "
+                "Read the page again before using element numbers."
+            )
         )
 
     async def prepare_tools(
@@ -162,6 +181,7 @@ class WebBrowser(AbstractCapability[AgentDepsT]):
                     max_steps=self.max_steps, preview=self.preview, vision=self.vision
                 ),
                 page_factory=self.page_factory,
+                credential_ids=self.credential_ids,
                 step_model=self.step_model,
                 route=self.route,
                 resume_local=self.resume_local,

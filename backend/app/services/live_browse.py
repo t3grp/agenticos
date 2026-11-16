@@ -181,6 +181,8 @@ async def publish(run_id: str, call_id: str, event: BrowserEvent) -> None:
     body = event.model_dump_json()
     try:
         pipe = _redis.raw.pipeline()
+        if event.kind == "browser_credential_confirmation" and event.sensitive:
+            pipe.delete(_key(run_id, call_id, "frame"))
         if event.kind == "browser_frame":
             if event.image is not None:
                 pipe.set(_key(run_id, call_id, "frame"), body, ex=TTL_SECONDS)
@@ -496,6 +498,7 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
                     "task": meta.task,
                     "started_at": meta.started_at.astimezone(UTC).isoformat(),
                     "can_control": access.control,
+                    "can_confirm_fill": access.own,
                     "can_remember": access.own and meta.remembers,
                     "trace": [json.loads(item) for item in trace],
                     "frame": json.loads(frame) if frame else None,

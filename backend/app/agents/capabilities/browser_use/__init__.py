@@ -23,6 +23,7 @@ from app.agents.capabilities.browser_use._route import (
     route_for,
     timezone_problem,
 )
+from app.agents.capabilities.browser_use._toolset import _describe_browser_fill
 from app.core.config import settings
 from app.core.sanitize import UrlRefusedError
 from app.core.secret_kinds import ApiKeySecret, SecretCondition, SecretKind, SecretRequirement
@@ -135,6 +136,16 @@ class WebBrowserConfig(BaseModel):
             "Allowed browser hosts. No restriction allows any domain; an empty domain list blocks all. "
             "Patterns such as *.example.com are supported. Checked on every step."
         ),
+    )
+    browser_credential_ids: list[UUID] = Field(
+        default_factory=list,
+        max_length=50,
+        title="Saved browser credentials",
+        description=(
+            "Vault browser logins or profiles this named agent may ask a person to fill. "
+            "Each credential must also authorize this agent."
+        ),
+        json_schema_extra={"x-multiline": True},
     )
     max_steps: int = Field(
         title="Steps per call at most",
@@ -264,6 +275,13 @@ class WebBrowserConfig(BaseModel):
     def _blank_is_unset(cls, value: object) -> object:
         """An emptied field in the Builder arrives as `""`, which means none."""
         return None if value == "" else value
+
+    @field_validator("browser_credential_ids")
+    @classmethod
+    def _unique_browser_credentials(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("A browser credential may appear only once")
+        return value
 
 
 def connection_problems(config: WebBrowserConfig, *, has_secret: bool) -> list[str]:
@@ -447,6 +465,18 @@ def validate_cdp_url(config: WebBrowserConfig) -> None:
             description="Go back to the previous page in the open tab.",
             side_effecting=False,
         ),
+        CapabilityToolInfo(
+            id="browser_list_credentials",
+            description="List safe metadata for saved browser credentials eligible at this origin.",
+            side_effecting=False,
+            read_only=True,
+        ),
+        CapabilityToolInfo(
+            id="browser_fill_credential",
+            description="Fill approved saved credential fields in the open page without submitting.",
+            side_effecting=True,
+            read_only=False,
+        ),
     ),
     config_schema=WebBrowserConfig,
     side_effecting=True,
@@ -459,6 +489,7 @@ def validate_cdp_url(config: WebBrowserConfig) -> None:
         required_when=SecretCondition(field="connection", equals=("hosted",)),
         optional_when=SecretCondition(field="connection", equals=("proxy",)),
     ),
+    describers={"browser_fill_credential": _describe_browser_fill},
 )
 def _build(ctx: CapabilityBuildContext) -> AbstractCapability[object]:
     """Build the capability from the agent's config.
@@ -487,6 +518,11 @@ def _build(ctx: CapabilityBuildContext) -> AbstractCapability[object]:
     }
     return WebBrowser(
         report_tool_names=frozenset(aliases.get(tool, tool) for tool in BROWSER_REPORT_TOOLS),
+        credential_ids=(
+            tuple(config.browser_credential_ids)
+            if config.connection == "built_in" and local_session is None
+            else ()
+        ),
         resume_local=isinstance(local_session, UUID) and native_local,
         page_factory=local_page_factory(local_session, native=native_local)
         if isinstance(local_session, UUID)

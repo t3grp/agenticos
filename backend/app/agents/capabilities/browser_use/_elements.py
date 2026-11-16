@@ -99,6 +99,15 @@ class Element:
     is - which is also how a person describes it: choose Poland from the list.
     """
 
+    input_type: str = ""
+    """The observed input type, used to keep credential roles on matching controls."""
+
+    autocomplete: str = ""
+    """The browser's autocomplete token, used for one-time codes and profile fields."""
+
+    form_action_origin: str | None = None
+    """The containing form's destination origin, when this field has a form."""
+
     @property
     def editable(self) -> bool:
         """Whether `TYPE_TEXT` can be carried out against this element."""
@@ -129,6 +138,15 @@ class Snapshot:
     scroll_y: float = 0.0
     scroll_height: float = 0.0
     viewport_height: float = 0.0
+
+    generation: int = 0
+    """A fresh sequence number for one observed DOM snapshot."""
+
+    document_generation: str = ""
+    """Chromium's document time origin, which changes on navigation."""
+
+    has_cross_origin_frames: bool = False
+    """Whether the page contains a frame whose origin differs from the top page."""
 
     @property
     def at_bottom(self) -> bool:

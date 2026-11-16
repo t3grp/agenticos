@@ -8,6 +8,7 @@ import { CODING_AGENT_ID, capabilityConfigErrors } from "@/lib/agent-spec";
 import { getErrorMessage } from "@/lib/api-error";
 import type { FieldProblem } from "@/lib/api-error";
 import { useCapabilityFieldCopy } from "@/components/agents/capability-field-copy";
+import { BrowserCredentialBindingsField } from "@/components/agents/browser-credential-bindings-field";
 import { CouncilMembersField } from "@/components/agents/council-members-field";
 import { SchemaForm } from "@/components/agents/schema-form";
 import { ContextHelp } from "@/components/ui/context-help";
@@ -334,6 +335,8 @@ export function CapabilityDetail({
               ? ["file_settings"]
               : binding.id === "council"
                 ? ["members"]
+                : binding.id === "browser_use"
+                  ? ["browser_credential_ids"]
                 : undefined
           }
           idPrefix={binding.id}
@@ -343,6 +346,23 @@ export function CapabilityDetail({
           errors={configErrors}
           copyFor={copyFor}
           onChange={(config) => onChange({ ...binding, config })}
+        />
+      )}
+
+      {binding.id === "browser_use" && (
+        <BrowserCredentialBindingsField
+          idPrefix={binding.id}
+          connection={binding.config.connection}
+          value={binding.config.browser_credential_ids}
+          copy={copyFor("browser_credential_ids")}
+          error={configErrors.browser_credential_ids}
+          disabled={disabled}
+          onChange={(browser_credential_ids) =>
+            onChange({
+              ...binding,
+              config: { ...binding.config, browser_credential_ids },
+            })
+          }
         />
       )}
 

@@ -30,7 +30,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.commands import command, error, info, success
 from app.core.exceptions import AppException
-from app.core.vault import VaultScope, current_key_version, needs_rotation, rewrap, unseal
+from app.core.secret_kinds import BROWSER_SECRET_KINDS
+from app.core.vault import (
+    VaultScope,
+    browser_credential_scope,
+    current_key_version,
+    needs_rotation,
+    rewrap,
+    unseal,
+)
 from app.db.models.agent_embed import AgentEmbed
 from app.db.models.agent_trigger import AgentTrigger
 from app.db.models.browser_sign_in import BrowserSignIn
@@ -48,6 +56,14 @@ from app.services.mcp_connection import connection_scope
 def _org_scope(
     row: OrganizationSecret | ChannelBot | AgentEmbed | AgentTrigger | WorkflowExposure,
 ) -> VaultScope:
+    if isinstance(row, OrganizationSecret) and row.kind in {
+        kind.value for kind in BROWSER_SECRET_KINDS
+    }:
+        return browser_credential_scope(
+            row.organization_id,
+            row.owner_user_id,
+            personal=row.usage_scope == "personal",
+        )
     return VaultScope.organization(row.organization_id)
 
 

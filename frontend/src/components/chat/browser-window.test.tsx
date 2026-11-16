@@ -133,6 +133,43 @@ describe("BrowserWindow - the agent's browser, drawn as a browser", () => {
     expect(screen.queryByText("The agent needs you")).toBeNull();
   });
 
+  it("shows a safe fill plan only to the person who may confirm it", async () => {
+    const live = control();
+    const confirmation = {
+      id: "confirmation-1",
+      credential: "Synthetic portal",
+      origin: "https://portal.example.test",
+      fields: ["username · field 1", "password · field 2"],
+    };
+    const { rerender } = render(
+      <BrowserWindow
+        browse={browse({ credentialConfirmation: confirmation })}
+        control={{ ...live, canConfirmFill: true }}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: "Approve saved credential fill" })).toBeVisible();
+    expect(screen.getByText("Synthetic portal")).toBeVisible();
+    expect(screen.getByText("https://portal.example.test")).toBeVisible();
+    expect(screen.getByText("password · field 2")).toBeVisible();
+    expect(screen.getByText("Only these fields will be filled. The form will not be submitted."))
+      .toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Fill these fields" }));
+    expect(live.send).toHaveBeenCalledWith({
+      type: "confirm_fill",
+      confirmation_id: "confirmation-1",
+    });
+
+    rerender(
+      <BrowserWindow
+        browse={browse({ credentialConfirmation: confirmation })}
+        control={{ ...live, canConfirmFill: false }}
+      />,
+    );
+    expect(screen.queryByRole("region", { name: "Approve saved credential fill" })).toBeNull();
+  });
+
   it("offers no take-over to somebody who may only watch, or once the browse is over", () => {
     const { rerender } = render(<BrowserWindow browse={browse()} control={control(false)} />);
     expect(screen.queryByRole("button", { name: /Take over/ })).toBeNull();

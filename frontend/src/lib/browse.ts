@@ -16,6 +16,14 @@ export interface BrowseStep {
   url: string | null;
 }
 
+/** Safe confirmation details shown before one saved credential fill. */
+export interface BrowserCredentialConfirmation {
+  id: string;
+  credential: string;
+  origin: string;
+  fields: string[];
+}
+
 /**
  * The tools that drive a desktop rather than a browser. Each run that uses one
  * draws the desktop in a window named after its first call - a screenshot, or
@@ -66,6 +74,8 @@ export interface Browse {
   controlError?: string | null;
   outcome: BrowseOutcome | null;
   detail: string | null;
+  credentialConfirmation?: BrowserCredentialConfirmation | null;
+  sensitive?: boolean;
   /** The site a person kept their sign-in to when they handed the browser back (#2129). */
   kept?: string | null;
   /**
@@ -98,6 +108,8 @@ function opened(frame: BrowserFrame): Browse {
     controlError: null,
     outcome: null,
     detail: null,
+    credentialConfirmation: null,
+    sensitive: false,
   };
 }
 
@@ -135,6 +147,22 @@ function applyTo(browse: Browse, frame: BrowserFrame): Browse {
     }
     case "browser_control_error":
       return { ...browse, controlError: frame.detail ?? null };
+    case "browser_credential_confirmation":
+      return {
+        ...browse,
+        credentialConfirmation:
+          frame.confirmation_status === "pending" && frame.confirmation_id
+            ? {
+                id: frame.confirmation_id,
+                credential: frame.credential_name ?? "",
+                origin: frame.credential_origin ?? "",
+                fields: frame.credential_fields ?? [],
+              }
+            : null,
+        sensitive: browse.sensitive === true || frame.sensitive === true,
+        image: frame.sensitive === true ? null : browse.image,
+        imageStep: frame.sensitive === true ? -1 : browse.imageStep,
+      };
     case "browser_needs_person":
       return { ...browse, needs: frame.detail ?? null };
     case "browser_pointer":

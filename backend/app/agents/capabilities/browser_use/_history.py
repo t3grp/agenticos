@@ -20,6 +20,7 @@ BROWSER_REPORT_TOOLS = frozenset(
         "browser_select",
         "browser_scroll",
         "browser_back",
+        "browser_fill_credential",
     }
 )
 
