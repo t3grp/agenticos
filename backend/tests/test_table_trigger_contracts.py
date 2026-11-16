@@ -6,7 +6,7 @@ here is one branch of `_predicate` in `app/repositories/virtual_table.py`.
 """
 
 import uuid
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -288,23 +288,35 @@ async def test_trigger_changes_only_disclose_publisher_visible_links(
     monkeypatch.setattr(
         _Consumer, "_columns", AsyncMock(return_value={link.id: link, name.id: name})
     )
+    visible_links = AsyncMock(return_value={visible})
     monkeypatch.setattr(
         "app.services.virtual_tables.triggers.visible_link_ids",
-        AsyncMock(return_value={visible}),
+        visible_links,
     )
-    monkeypatch.setattr(
-        "app.services.virtual_tables.triggers.may_view_row", AsyncMock(return_value=True)
-    )
+    row_access = AsyncMock(return_value=True)
+    monkeypatch.setattr("app.services.virtual_tables.triggers.may_view_row", row_access)
     result = await consumer._decide(trigger, event, snapshot, None)
+    publisher = consumer._fire_context.return_value[0]
+    for call in visible_links.await_args_list:
+        assert call.args[1] is publisher
 
     if change.startswith("hidden") or (watched and change == "mixed"):
         assert result is None
+        row_access.assert_not_awaited()
         consumer.runs.admit_pinned.assert_not_awaited()
         assert admitted.await_args.kwargs["status"] == _AdmissionStatus.FILTERED.value
         assert admitted.await_args.kwargs["reason"] == _AdmissionReason.FILTER_MISMATCH.value
         return
 
     assert result == (_TRIGGER_RUN, _TRIGGER_ENTRY)
+    table = await _vt_repo.get_table(
+        consumer.db, trigger.table_id, organization_id=trigger.organization_id
+    )
+    row_access.assert_awaited_once_with(
+        consumer.db, publisher, table, [link, name], snapshot.values
+    )
+    assert row_access.await_args is not None
+    assert row_access.await_args.args[-1] is snapshot.values
     payload = consumer.runs.admit_pinned.await_args.kwargs["run_input"]
     assert payload["values"][key] == ([visible] if change == "visible_added" else [])
     assert payload["before"][key] == ([visible] if change == "visible_removed" else [])
@@ -312,3 +324,74 @@ async def test_trigger_changes_only_disclose_publisher_visible_links(
     assert payload["changed"] == (["Name"] if change == "mixed" else ["Related"])
     assert hidden_before not in str(payload)
     assert hidden_after not in str(payload)
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("event_name", ["created", "updated", "deleted"])
+@pytest.mark.parametrize("hidden_filter", [False, True])
+async def test_trigger_row_policy_reads_raw_project_links_without_disclosing_them(
+    monkeypatch: pytest.MonkeyPatch,
+    event_name: Literal["created", "updated", "deleted"],
+    hidden_filter: bool,
+) -> None:
+    consumer, trigger, event, _, admitted = _trigger_decide_setup(
+        monkeypatch, values=str(_TRIGGER_OTHER)
+    )
+    project = uuid.uuid4()
+    link = ColumnDef(id=uuid.uuid4(), label="Project", type="link", link_table_id=uuid.uuid4())
+    name = ColumnDef(id=uuid.uuid4(), label="Name", type="text")
+    table = await _vt_repo.get_table(
+        consumer.db, trigger.table_id, organization_id=trigger.organization_id
+    )
+    assert table is not None
+    table.row_policy = _RowPolicy(
+        rule="assignee",
+        view_column_id=_TRIGGER_ASSIGNEE,
+        edit_column_id=_TRIGGER_ASSIGNEE,
+        view_project_link_column_id=link.id,
+        view_projects_table_id=link.link_table_id,
+        view_project_members_column_id=uuid.uuid4(),
+    ).model_dump(mode="json")
+    values = {str(_TRIGGER_ASSIGNEE): str(_TRIGGER_OTHER), str(link.id): [str(project)]}
+    snapshot = _Happened(
+        event=event_name,
+        values={**values, str(name.id): "After"},
+        before=None if event_name == "created" else {**values, str(name.id): "Before"},
+        author_id=_TRIGGER_OTHER,
+    )
+    monkeypatch.setattr(
+        _Consumer,
+        "_columns",
+        AsyncMock(return_value={_TRIGGER_ASSIGNEE: _TRIGGER_COLUMN, link.id: link, name.id: name}),
+    )
+    monkeypatch.setattr(
+        "app.services.virtual_tables.row_policy.visible_project_ids",
+        AsyncMock(return_value=[project]),
+    )
+    monkeypatch.setattr(
+        "app.services.virtual_tables.triggers.visible_link_ids", AsyncMock(return_value=set())
+    )
+    if hidden_filter:
+        trigger.filters = [
+            RecordFilter(column_id=link.id, op="contains", value=str(project)).model_dump(
+                mode="json"
+            )
+        ]
+
+    result = await consumer._decide(trigger, event, snapshot, None)
+    if hidden_filter:
+        assert result is None
+        consumer.runs.admit_pinned.assert_not_awaited()
+        assert admitted.await_args.kwargs["status"] == _AdmissionStatus.FILTERED.value
+        assert admitted.await_args.kwargs["reason"] == _AdmissionReason.FILTER_MISMATCH.value
+        return
+
+    assert result == (_TRIGGER_RUN, _TRIGGER_ENTRY)
+    assert admitted.await_args.kwargs["status"] == _AdmissionStatus.QUEUED.value
+    payload = consumer.runs.admit_pinned.await_args.kwargs["run_input"]
+    assert payload["values"][str(link.id)] == []
+    assert payload["fields"]["Project"] == []
+    if event_name != "created":
+        assert payload["before"][str(link.id)] == []
+    assert "Project" not in payload["changed"]
+    assert str(project) not in str(payload)
