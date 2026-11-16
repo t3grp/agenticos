@@ -19,6 +19,10 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Upgrading
+
+- Migration `backend/alembic/versions/0332_merge_media_account_pools.py` joins `0326_workflow_media_operations` and `0326_provider_account_pools` without changing either parent's schema operations. Both existing 0326 revisions remain intact.
+
 ### Changed
 
 - Sync upstream to v1.73.0 while preserving the T3 overlay; migration histories join at 0324_merge_t3_upstream_v173. CI and downstream compatibility remain unverified.
