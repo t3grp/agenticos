@@ -58,7 +58,8 @@ async def test_media_catalog_requires_one_editor_permission(
     assert models
     if path == "/image-models":
         assert models["gpt-image-1"]["workflow"] is None
-        support = models["gpt-image-2"]["workflow"]
+        assert models["gpt-image-2"]["workflow"] is None
+        support = models["gpt-image-1.5"]["workflow"]
         assert support["reference_image"] is False
         assert support["defaults"]["size"] in support["sizes"]
         assert support["max_output_tokens"] == 8192

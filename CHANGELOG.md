@@ -33,6 +33,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Changed
 
+- Workflow image generation excludes GPT Image 2 until its provider documents a hard output-cost bound. Existing agent bindings remain available. The admitted Image 1.5 and 1 Mini output ceilings are checked against their documented token counts; unresolved native-tool input remains a separate hold rather than an invented charge.
 - Sync upstream to v1.73.0 while preserving the T3 overlay; migration histories join at `0324_merge_t3_upstream_v173` and `0325_merge_t3_rooms_v173`.
 
 ### Security

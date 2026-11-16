@@ -193,14 +193,34 @@ The reservation includes the GPT-5.4 caller's whole 1,050,000-token context at i
 long-context input rate, its capped output at the long-context output rate, and
 the separate image tool's input and output. A tool prompt is limited to 32,000
 Unicode characters; four UTF-8 bytes per character conservatively bounds its
-byte-level input tokens. The per-size/quality image output table is model-specific;
-one displayed price unit ($0.001) is added above its published rounded estimate.
-The older GPT Image token table is not applied to GPT Image 2. For example, a
-medium 1024×1024 GPT Image 2 request reserves $6.128320, which deliberately exceeds
-the expected cost of a short prompt. Sources: [GPT-5.4 limits](https://developers.openai.com/api/docs/models/gpt-5.4),
+byte-level input tokens. GPT Image 1.5 and 1 Mini have the documented pre-2
+size/quality output-token table; tests verify every advertised ceiling covers
+those counts at their respective $32 and $8 per million image-output-token
+rates, as well as their model-specific displayed price plus one rounding unit.
+For example, a medium 1024×1024 GPT Image 1.5 request reserves $6.109320, which
+deliberately exceeds the expected cost of a short prompt.
+
+GPT Image 2 has `workflow: null`. Its current guide calls its output costs
+estimates and explicitly excludes it from the fixed output-token table.
+Adding a rounding unit to an estimate does not establish a hard upper bound.
+The legacy agent binding remains available; workflow admission requires a
+documented output bound before this model can be enabled. Sources:
+[GPT Image 1.5 pricing](https://developers.openai.com/api/docs/models/gpt-image-1.5),
+[GPT Image 1 Mini pricing](https://developers.openai.com/api/docs/models/gpt-image-1-mini),
+[GPT Image 2](https://developers.openai.com/api/docs/models/gpt-image-2),
+[GPT-5.4 limits](https://developers.openai.com/api/docs/models/gpt-5.4),
 [API pricing](https://developers.openai.com/api/docs/pricing),
 [image generation](https://developers.openai.com/api/docs/guides/image-generation)
 and [the image API prompt limit](https://developers.openai.com/api/reference/resources/images/methods/generate).
+
+Returned usage and the selected image output may support a `catalog_estimate`
+of incurred fees. A returned `revised_prompt` does not establish that it includes
+all billed image-tool input. That tool-input component therefore remains held
+until provider evidence reconciles it, including after a verified image is
+stored. Neither a reservation nor an unproven maximum is booked as incurred
+spend, and an estimate is never mislabeled as an exact bill or a partial lower
+bound. The durable record retains its original dated price basis, without
+storing prompt text or raw provider responses.
 
 Video workflow metadata reuses the current dated per-second catalog rates, with
 all advertised resolutions priced before admission. The same helper supplies

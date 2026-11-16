@@ -30,7 +30,7 @@ pytestmark = pytest.mark.security
 
 def image_config(**changes: object) -> ImageGenerateConfig:
     return ImageGenerateConfig.model_validate(
-        {"provider": "openai", "model": "gpt-image-2", "secret_id": uuid4(), **changes}
+        {"provider": "openai", "model": "gpt-image-1.5", "secret_id": uuid4(), **changes}
     )
 
 
@@ -62,8 +62,8 @@ def test_openai_hold_includes_the_caller_and_the_separate_single_image_tool() ->
     # Long-context caller input + capped caller output + the maximum UTF-8
     # tool prompt + the rounded-up, explicitly chosen image output price.
     expected = Decimal(1_050_000) * 5 + Decimal(8192) * Decimal("22.5") + 128_000 * 5
-    expected = expected / 1_000_000 + Decimal("0.054")
-    assert config.reservation_usd() == expected == Decimal("6.128320")
+    expected = expected / 1_000_000 + Decimal("0.035")
+    assert config.reservation_usd() == expected == Decimal("6.109320")
     request = config.request_config()
     assert (request.size, request.quality, request.background, request.output_format) == (
         "1024x1024",
@@ -71,8 +71,33 @@ def test_openai_hold_includes_the_caller_and_the_separate_single_image_tool() ->
         "opaque",
         "png",
     )
-    assert image_config(quality="high").reservation_usd() == Decimal("6.286320")
+    assert image_config(quality="high").reservation_usd() == Decimal("6.208320")
     assert not config.workflow_support().reference_image
+
+
+def test_gpt_image_2_estimates_do_not_establish_a_workflow_reservation_bound() -> None:
+    # The provider's fixed output-token table explicitly excludes Image 2.
+    # Its existing agent binding stays readable, but no workflow may spend on
+    # the assumption that a displayed image estimate is a hard ceiling.
+    assert ImageGenerationConfig(provider="openai", model="gpt-image-2").model == "gpt-image-2"
+    with pytest.raises(ValidationError, match="verified workflow"):
+        image_config(model="gpt-image-2")
+    with pytest.raises(ValueError, match="verified workflow"):
+        image_support("openai", "gpt-image-2")
+
+
+@pytest.mark.parametrize("model,rate", [("gpt-image-1.5", "32"), ("gpt-image-1-mini", "8")])
+def test_openai_output_hold_covers_the_documented_pre_2_token_table(model, rate) -> None:
+    tokens = {
+        "low": {"1024x1024": 272, "1024x1536": 408, "1536x1024": 400},
+        "medium": {"1024x1024": 1056, "1024x1536": 1584, "1536x1024": 1568},
+        "high": {"1024x1024": 4160, "1024x1536": 6240, "1536x1024": 6208},
+    }
+    for price in image_support("openai", model).output_prices:
+        assert (
+            price.output_ceiling_usd
+            >= tokens[price.quality][price.size] * Decimal(rate) / 1_000_000
+        )
 
 
 @pytest.mark.parametrize(
@@ -115,7 +140,7 @@ def test_missing_catalog_metadata_does_not_mean_free_or_supported() -> None:
         image_support("missing", "missing")
     with pytest.raises(ValueError, match="verified workflow"):
         image_support("openai", "missing")
-    support = image_support("openai", "gpt-image-2")
+    support = image_support("openai", "gpt-image-1.5")
     with pytest.raises(ValueError, match="verified output ceiling"):
         support.reservation_usd(size="auto", quality="high")
 
@@ -133,13 +158,13 @@ def test_missing_catalog_metadata_does_not_mean_free_or_supported() -> None:
     ],
 )
 def test_invalid_catalog_bounds_fail_closed(change: dict[str, object]) -> None:
-    data = image_support("openai", "gpt-image-2").model_dump()
+    data = image_support("openai", "gpt-image-1.5").model_dump()
     with pytest.raises(ValidationError):
         ImageWorkflowSupport.model_validate({**data, **change})
 
 
 def test_duplicate_or_understated_output_prices_are_refused() -> None:
-    data = image_support("openai", "gpt-image-2").model_dump()
+    data = image_support("openai", "gpt-image-1.5").model_dump()
     rows = data["output_prices"]
     with pytest.raises(ValidationError, match="Duplicate image output"):
         ImageWorkflowSupport.model_validate({**data, "output_prices": [*rows, rows[0]]})
@@ -152,7 +177,7 @@ def test_duplicate_or_understated_output_prices_are_refused() -> None:
 def graph_with_reference(
     *,
     provider: str | None = "openai",
-    model: str = "gpt-image-2",
+    model: str = "gpt-image-1.5",
     kind: str = "image.generate",
     source: object = "file",
     disabled: bool = False,
