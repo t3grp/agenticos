@@ -3,8 +3,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.db.models.browser_teaching import (
     BrowserTeachingPolicy,
@@ -75,6 +76,50 @@ async def active(
         .with_for_update()
         .execution_options(populate_existing=True)
     )
+
+
+async def owned_page(
+    db: AsyncSession,
+    organization_id: UUID,
+    owner_user_id: UUID,
+    *,
+    limit: int,
+    before: tuple[datetime, UUID] | None,
+) -> list[BrowserTeachingSession]:
+    """Read one bounded metadata page without loading captured material or locking rows."""
+    row = BrowserTeachingSession
+    statement = (
+        select(row)
+        .where(row.organization_id == organization_id, row.owner_user_id == owner_user_id)
+        .options(
+            load_only(
+                row.id,
+                row.agent_id,
+                row.target_skill_id,
+                row.title,
+                row.allowed_origins,
+                row.source,
+                row.verified_success,
+                row.status,
+                row.revision,
+                row.reason_code,
+                row.generation_state,
+                row.proposal_id,
+                row.created_at,
+                row.expires_at,
+                row.capture_ends_at,
+                raiseload=True,
+            )
+        )
+    )
+    if before is not None:
+        statement = statement.where(tuple_(row.created_at, row.id) < before)
+    rows = await db.scalars(
+        statement.order_by(row.created_at.desc(), row.id.desc())
+        .limit(limit + 1)
+        .execution_options(populate_existing=True)
+    )
+    return list(rows)
 
 
 async def owner_open_count(db: AsyncSession, organization_id: UUID, user_id: UUID) -> int:

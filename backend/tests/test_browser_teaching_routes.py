@@ -13,7 +13,7 @@ from app.api.deps import Auth, BrowserTeachingDraftSvc, BrowserTeachingPolicySvc
 from app.api.routes.v1 import browser_teaching as routes
 from app.core.exceptions import BadRequestError
 from app.core.permissions import AuthContext
-from app.schemas.browser_teaching import TeachingPolicyRead, TeachingPreferenceRead
+from app.schemas.browser_teaching import TeachingList, TeachingPolicyRead, TeachingPreferenceRead
 from tests.test_browser_teaching_capture import receipt
 from tests.test_browser_teaching_contracts import ORIGIN, SECRET
 from tests.test_browser_teaching_native import identity
@@ -32,6 +32,7 @@ async def api():
             for name in ("start", "get", "change", "stop", "discard", "propose")
         }
     )
+    service.list = AsyncMock(return_value=TeachingList(items=(), next_cursor=None))
     policy = TeachingPolicyRead(enabled=False, generation=None, deployment_enabled=True)
     preference = TeachingPreferenceRead(
         agent_id=held.agent_id, enabled=False, generation=None, allowed=True
@@ -71,6 +72,27 @@ def start_body(a):
         "title": "Synthetic procedure",
         "allowed_origins": [ORIGIN],
     }
+
+
+async def test_owner_collection_passes_only_the_bounded_page_arguments(api):
+    response = await api.client.get("/browser-teachings")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {"items": [], "next_cursor": None}
+    api.service.list.assert_awaited_once_with(api.context, limit=20, cursor=None)
+    api.service.list.reset_mock()
+    response = await api.client.get("/browser-teachings", params={"limit": 100, "cursor": "opaque"})
+    assert response.status_code == 200
+    api.service.list.assert_awaited_once_with(api.context, limit=100, cursor="opaque")
+
+
+@pytest.mark.parametrize(
+    "params", [{"limit": 0}, {"limit": 101}, {"limit": "x"}, {"cursor": "x" * 513}]
+)
+async def test_unbounded_owner_pages_are_refused_before_the_service(api, params):
+    response = await api.client.get("/browser-teachings", params=params)
+    assert response.status_code == 422
+    api.service.list.assert_not_awaited()
 
 
 @pytest.mark.parametrize("skill", [False, True])

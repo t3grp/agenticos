@@ -1,10 +1,10 @@
 """Owner-scoped capture metadata and explicit review; no client append or replay endpoint."""
 
 import re
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import (
     Auth,
@@ -18,6 +18,7 @@ from app.core.exceptions import BadRequestError
 from app.core.permissions import Perm
 from app.schemas.browser_teaching import (
     TeachingChange,
+    TeachingList,
     TeachingPolicyRead,
     TeachingPolicyWrite,
     TeachingPreferenceRead,
@@ -65,6 +66,23 @@ async def start_for_skill(
     skill_id: UUID, data: TeachingStart, ctx: Auth, service: BrowserTeachingSvc, response: Response
 ) -> TeachingRead:
     return _read(response, await service.start(ctx, data, skill_id=skill_id))
+
+
+@router.get("/browser-teachings", response_model=TeachingList)
+async def list_sessions(
+    ctx: Auth,
+    service: BrowserTeachingSvc,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    cursor: Annotated[str | None, Query(max_length=512)] = None,
+) -> Any:
+    """Find the current personal owner's captures, newest first in the active organization.
+
+    A page carries only closed summary metadata. Opening a capture or making a
+    decision still requires its per-ID owner read and existing effect authority.
+    Cursors are opaque and audience-bound; an invalid cursor returns
+    BAD_REQUEST with details.reason_code=invalid_cursor. Start again without it.
+    """
+    return await service.list(ctx, limit=limit, cursor=cursor)
 
 
 @router.get("/browser-teachings/{session_id}", response_model=TeachingRead)
