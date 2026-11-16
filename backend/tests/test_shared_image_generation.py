@@ -8,6 +8,7 @@ import httpx2
 import pytest
 from pydantic_ai.exceptions import ModelUnavailableError, UnexpectedModelBehavior, UserError
 from pydantic_ai.messages import BinaryContent, BinaryImage
+from pydantic_ai.models.openai import OpenAIResponsesModelSettings
 from pydantic_ai.native_tools import ImageGenerationTool
 from pydantic_ai.settings import ModelSettings
 
@@ -95,6 +96,7 @@ async def test_one_image_request_uses_the_fixed_endpoint_and_authorized_referenc
     assert body["tools"][0]["type"] == "image_generation"
     assert body["tools"][0]["model"] == "gpt-image-2"
     assert body["max_output_tokens"] == 4096 and body["max_tool_calls"] == 1
+    assert body["service_tier"] == "default"
     references = [
         content
         for item in body["input"]
@@ -106,6 +108,49 @@ async def test_one_image_request_uses_the_fixed_endpoint_and_authorized_referenc
     if reference:
         assert references[0]["image_url"] == "data:image/png;base64,cmVmZXJlbmNl"
     assert clients[0].is_closed
+
+
+@pytest.mark.security
+@pytest.mark.parametrize(
+    "single_request,requested,expected",
+    [
+        (True, None, "default"),
+        (True, "priority", "default"),
+        (False, None, None),
+        (False, "priority", "priority"),
+    ],
+)
+async def test_workflow_pins_standard_pricing_while_agent_requests_keep_their_tier(
+    monkeypatch, single_request, requested, expected
+):
+    requests = []
+
+    def answer(request):
+        requests.append(request)
+        return httpx2.Response(200, json=response())
+
+    clients = openai_transport(monkeypatch, answer)
+    supplied = OpenAIResponsesModelSettings(max_tokens=4096)
+    if requested is not None:
+        supplied["openai_service_tier"] = requested
+    original = dict(supplied)
+    # Both cases own this synthetic transport; generate_image alone decides
+    # whether workflow request restrictions apply to the shared SDK call.
+    async with images.open_image_model("openai-responses:gpt-5.4", "test-key") as model:
+        result = await images.generate_image(
+            model,
+            prompt="A synthetic sample",
+            tool=ImageGenerationTool(model="gpt-image-1.5"),
+            instrument=False,
+            model_settings=supplied,
+            single_request=single_request,
+        )
+    assert result.data == IMAGE and len(requests) == 1
+    body = json.loads(requests[0].content)
+    assert body.get("service_tier") == expected
+    assert ("service_tier" in body) is (expected is not None)
+    assert body.get("max_tool_calls") == (1 if single_request else None)
+    assert supplied == original and clients[0].is_closed
 
 
 @pytest.mark.parametrize("failure", ["server", "missing_image"])

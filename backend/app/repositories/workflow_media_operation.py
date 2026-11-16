@@ -123,6 +123,47 @@ async def current_for_node(
     return (await db.execute(query)).scalar_one_or_none()
 
 
+async def current_for_nodes(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    workflow_run_id: UUID,
+    node_run_ids: list[UUID],
+) -> dict[UUID, tuple[WorkflowMediaOperation, Decimal]]:
+    """One bounded query for an already authorized page, including superseded holds."""
+    if not node_run_ids:
+        return {}
+    operation = WorkflowMediaOperation
+    totals = (
+        select(
+            operation.node_run_id,
+            func.sum(operation.held_usd + operation.incurred_usd - operation.booked_usd).label(
+                "unresolved_usd"
+            ),
+        )
+        .where(
+            operation.organization_id == organization_id,
+            operation.workflow_run_id == workflow_run_id,
+            operation.node_run_id.in_(node_run_ids),
+        )
+        .group_by(operation.node_run_id)
+        .subquery()
+    )
+    query = (
+        select(operation, totals.c.unresolved_usd)
+        .join(totals, totals.c.node_run_id == operation.node_run_id)
+        .where(
+            operation.organization_id == organization_id,
+            operation.workflow_run_id == workflow_run_id,
+            operation.node_run_id.in_(node_run_ids),
+            operation.superseded_at.is_(None),
+        )
+    )
+    return {
+        row.node_run_id: (row, Decimal(total)) for row, total in (await db.execute(query)).tuples()
+    }
+
+
 async def change(
     db: AsyncSession,
     operation_id: UUID,
@@ -205,6 +246,19 @@ async def outstanding_usd(
     if workflow_run_id is not None:
         query = query.where(operation.workflow_run_id == workflow_run_id)
     return Decimal((await db.execute(query)).scalar_one())
+
+
+async def unbooked_nodes(db: AsyncSession, *, limit: int) -> list[tuple[UUID, UUID, UUID]]:
+    """Bounded worker scan for facts left after a crash or a late collector."""
+    operation = WorkflowMediaOperation
+    query = (
+        select(operation.organization_id, operation.workflow_run_id, operation.node_run_id)
+        .where(operation.incurred_usd > operation.booked_usd)
+        .group_by(operation.organization_id, operation.workflow_run_id, operation.node_run_id)
+        .order_by(func.min(operation.created_at), operation.node_run_id)
+        .limit(limit)
+    )
+    return list((await db.execute(query)).tuples())
 
 
 async def held_bytes(

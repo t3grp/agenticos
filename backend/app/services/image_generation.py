@@ -118,9 +118,10 @@ async def generate_image(
         # Per-request settings otherwise override the owned client's retry policy.
         model_settings["max_retries"] = 0
         if model.system == "openai":
-            # Pydantic AI 2.66 does not expose Responses' native-tool call limit.
-            # The official SDK merges this body field into the single request.
-            model_settings["extra_body"] = {"max_tool_calls": 1}
+            # The SDK merges these fields last, including over caller settings.
+            # An omitted tier inherits project defaults, which may cost more
+            # than the workflow's standard-price reservation.
+            model_settings["extra_body"] = {"max_tool_calls": 1, "service_tier": "default"}
     agent: PydanticAgent[None, BinaryImage] = PydanticAgent(
         model,
         output_type=BinaryImage,

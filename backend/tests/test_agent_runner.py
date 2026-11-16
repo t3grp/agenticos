@@ -46,8 +46,10 @@ from app.agents.capabilities.approval import ApprovalGranted, ApprovalRejected
 from app.agents.capabilities.browser_use import BROWSER_STEP_MODEL_RESOURCE
 from app.agents.capabilities.budget import (
     BudgetExceeded,
+    BudgetGuard,
     BudgetScope,
     SpendLedger,
+    SpendLimit,
     assert_ambient_budget,
     can_afford_ambient_call,
 )
@@ -1392,6 +1394,10 @@ class TestPrepare:
                 "app.services.spend.workflow_run_repo.node_spend_since",
                 new=AsyncMock(return_value=Decimal("0")),
             ),
+            patch(
+                "app.services.spend.media_repo.outstanding_usd",
+                new=AsyncMock(return_value=Decimal("0")),
+            ),
         ):
             spent = await built["org_period_spend"]()
 
@@ -1403,6 +1409,56 @@ class TestPrepare:
         # The organization-wide sum narrows to no agent - that absence is the
         # difference between this lookup and the one above it.
         assert total.call_args.kwargs.get("agent_id") is None
+
+    @pytest.mark.anyio
+    @pytest.mark.security
+    async def test_an_ordinary_agent_request_is_refused_when_media_holds_exhaust_its_org_cap(self):
+        ctx = _ctx()
+        built = await self._period_lookups(ctx)
+        guard = BudgetGuard(
+            limits=[
+                SpendLimit(
+                    scope=BudgetScope.ORGANIZATION,
+                    limit_usd=Decimal("5"),
+                    period_spend=built["org_period_spend"],
+                )
+            ]
+        )
+        requests = []
+
+        async def answer(_messages, _info):
+            requests.append(1)
+            return ModelResponse(parts=[TextPart("A request must not reach the model")])
+
+        agent = Agent(FunctionModel(answer), capabilities=[guard])
+        with (
+            patch(
+                "app.services.spend.agent_run_repo.sum_cost_since",
+                new=AsyncMock(return_value=Decimal("4")),
+            ),
+            patch(
+                "app.services.spend.ingestion_spend_repo.sum_cost_since",
+                new=AsyncMock(return_value=Decimal(0)),
+            ),
+            patch(
+                "app.services.spend.retention_repo.sum_purged_cost_since",
+                new=AsyncMock(return_value=Decimal(0)),
+            ),
+            patch(
+                "app.services.spend.workflow_run_repo.node_spend_since",
+                new=AsyncMock(return_value=Decimal(0)),
+            ),
+            patch(
+                "app.services.spend.media_repo.outstanding_usd",
+                new=AsyncMock(return_value=Decimal("1")),
+            ) as unresolved,
+            pytest.raises(BudgetExceeded) as refused,
+        ):
+            await agent.run("Synthetic request")
+        assert requests == [] and guard.ledger.total_usd == 0
+        assert refused.value.scope is BudgetScope.ORGANIZATION
+        assert refused.value.spent_usd == refused.value.limit_usd == Decimal("5")
+        assert unresolved.await_args.kwargs == {"organization_id": ctx.organization_id}
 
     @pytest.mark.anyio
     @pytest.mark.security
@@ -1488,6 +1544,10 @@ class TestPrepare:
             ),
             patch(
                 "app.services.spend.workflow_run_repo.node_spend_since",
+                new=AsyncMock(return_value=Decimal("0")),
+            ),
+            patch(
+                "app.services.spend.media_repo.outstanding_usd",
                 new=AsyncMock(return_value=Decimal("0")),
             ),
         ):
@@ -4649,7 +4709,7 @@ class TestResume:
                 new=AsyncMock(return_value=Decimal("0")),
             ) as runs,
             patch(
-                "app.services.agent_runner.organization_spend_since",
+                "app.services.agent_runner.organization_budget_usage_since",
                 new=AsyncMock(return_value=Decimal("0")),
             ) as organization,
         ):

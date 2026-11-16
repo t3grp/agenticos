@@ -117,6 +117,7 @@ async def test_cancelled_collector_cannot_remove_a_competing_committed_output(
     assert list(tmp_path.iterdir()) == [target]
 
 
+@pytest.mark.security
 async def test_replacement_keeps_the_existing_file_permissions(tmp_path: Path) -> None:
     storage = LocalFileStorage(tmp_path)
     target = tmp_path / "output.bin"

@@ -442,8 +442,8 @@ from app.services.skills import SkillService
 from app.services.spend import (
     budget_window,
     month_start,
+    organization_budget_usage_since,
     organization_monthly_spend,
-    organization_spend_since,
 )
 from app.services.transcript import (
     STOPPED_TOOL_RESULT,
@@ -4948,7 +4948,7 @@ class AgentRunnerService:
 
         async def org_period_spend() -> Decimal:
             async with spend_session("organization")() as db:
-                return await organization_spend_since(
+                return await organization_budget_usage_since(
                     db, ctx.organization_id, since, until=until, exclude_run_id=run.id
                 )
 
