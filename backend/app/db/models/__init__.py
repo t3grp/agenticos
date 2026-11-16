@@ -14,6 +14,7 @@ from app.db.models.session import Session
 from app.db.models.conversation import Conversation, Message, ToolCall
 from app.db.models.conversation_task import ConversationTask, ConversationTurnClaim
 from app.db.models.room_submission import RoomSubmission
+from app.db.models.room_routing import RoomLeadPolicy, RoomRoutingProposal, RoomTaskLink
 from app.db.models.coding_task_change import CodingTaskChange
 from app.db.models.chat_file import ChatFile
 from app.db.models.message_rating import MessageRating
@@ -24,6 +25,12 @@ from app.db.models.sync_source import SyncSource
 from app.db.models.conversation_favourite import ConversationFavourite
 from app.db.models.conversation_last_read import ConversationLastRead
 from app.db.models.browser_sign_in import BrowserSignIn
+from app.db.models.browser_credential import (
+    BrowserCredentialAgentGrant,
+    BrowserCredentialMemberGrant,
+    BrowserCredentialPlan,
+    BrowserCredentialPolicy,
+)
 from app.db.models.coding_account import CodingAccount
 from app.db.models.conversation_share import ConversationShare
 from app.db.models.channel_bot import ChannelBot
@@ -250,6 +257,10 @@ __all__ = [
     "Visual",
     "ApiKey",
     "BrowserSignIn",
+    "BrowserCredentialAgentGrant",
+    "BrowserCredentialMemberGrant",
+    "BrowserCredentialPlan",
+    "BrowserCredentialPolicy",
     "CodingAccount",
     "OrganizationAssistant",
     "ChannelPrompt",
@@ -286,6 +297,9 @@ __all__ = [
     "ConversationTask",
     "ConversationTurnClaim",
     "RoomSubmission",
+    "RoomLeadPolicy",
+    "RoomRoutingProposal",
+    "RoomTaskLink",
     "Message",
     "ToolCall",
     "ChatFile",

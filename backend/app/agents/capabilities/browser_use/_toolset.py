@@ -22,6 +22,7 @@ import asyncio
 import base64
 import functools
 import hashlib
+import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -80,6 +81,7 @@ from app.agents.capabilities.browser_use._loop import (
 from app.agents.capabilities.browser_use._native import NativePage
 from app.agents.capabilities.browser_use._page import (
     MISSING_EXTRA,
+    CdpPage,
     DomainRefused,
     PagePolicy,
     StaleElement,
@@ -87,10 +89,15 @@ from app.agents.capabilities.browser_use._page import (
 )
 from app.agents.capabilities.browser_use._plans import plan_key
 from app.agents.capabilities.browser_use._preview import Preview
+from app.agents.capabilities.browser_use._protected import BrowserOutputGuard
 from app.agents.capabilities.browser_use._route import BrowserRoute, recheck
 from app.agents.deps import AgentDeps
+from app.core.browser_fill import BrowserFillRefused, BrowserFillSelection
 from app.core.sanitize import UrlRefusedError
+from app.db.session import get_db_context
 from app.services import browse_plans, browser_sign_in, live_browse
+from app.services.browser_credentials import BrowserCredentialPlanService
+from app.services.browser_credentials._controller import BrowserCredentialController
 
 BROWSER_TAB_REQUIREMENT = "agenticos_browser_tab_requirement"
 
@@ -148,7 +155,10 @@ def _signed_in_as(deps: AgentDeps) -> _Person | None:
 
 
 async def _live(
-    deps: AgentDeps, call_id: str, task: str
+    deps: AgentDeps,
+    call_id: str,
+    task: str,
+    get_guard: Callable[[], BrowserOutputGuard | None] | None = None,
 ) -> tuple[BrowserEventSink | None, BrowserControl | None, str | None]:
     """Where this browse's frames go, where its people's commands come from, and its run.
 
@@ -159,33 +169,66 @@ async def _live(
     chat's own sink, which is what a test or the CLI gets.
     """
     chat = deps.browser_events
+    run: str | None = None
     if not live_browse.available() or deps.run_id is None or deps.organization_id is None:
-        return chat, None, None
-    run = str(deps.run_id)
-    signed_in = _signed_in_as(deps) is not None
-    await live_browse.open_view(
-        run,
-        call_id,
-        live_browse.BrowseMeta(
-            organization_id=deps.organization_id,
-            agent_id=deps.agent_id,
-            user_id=deps.user_id,
-            remembers=signed_in,
-            # A browse carrying its person's kept sign-ins is theirs to watch and
-            # drive alone: the pages are their accounts, whoever else may see runs
-            # or edit the agent.
-            personal=signed_in,
-            task=task,
-            started_at=datetime.now(UTC),
-        ),
-    )
+        if chat is None:
+            return None, None, None
+    else:
+        run = str(deps.run_id)
+        signed_in = _signed_in_as(deps) is not None
+        await live_browse.open_view(
+            run,
+            call_id,
+            live_browse.BrowseMeta(
+                organization_id=deps.organization_id,
+                agent_id=deps.agent_id,
+                user_id=deps.user_id,
+                remembers=signed_in,
+                # A browse carrying its person's kept sign-ins is theirs to watch
+                # and drive alone, whoever else may see runs or edit the agent.
+                personal=signed_in,
+                task=task,
+                started_at=datetime.now(UTC),
+            ),
+        )
 
     checked_at = float("-inf")
     viewers = False
     last_image: BrowserEvent | None = None
+    event_lock = asyncio.Lock()
+    view_token = object()
+    bound_guard: BrowserOutputGuard | None = None
+    last_step = 0
+    tab_id: str | None = None
 
-    async def sink(event: BrowserEvent) -> bool:
+    async def announce_protection() -> None:
+        nonlocal last_image
+        assert bound_guard is not None
+        last_image = None
+        event = bound_guard.event(
+            BrowserEvent(
+                kind="browser_protected",
+                call_id=call_id,
+                step=last_step,
+                tab_id=tab_id,
+                run_id=run,
+            )
+        )
+        if run is not None:
+            await live_browse.protect_view(run, call_id, event)
+        if chat is not None:
+            await chat(event)
+
+    async def publish_event(event: BrowserEvent) -> bool:
         nonlocal checked_at, viewers, last_image
+        if run is None:
+            return await chat(event) if chat is not None else False
+        if event.kind == "browser_protected":
+            last_image = None
+            await live_browse.protect_view(run, call_id, event)
+            if chat is not None:
+                await chat(event)
+            return True
         if event.kind == "browser_frame":
             if event.image is not None:
                 last_image = event
@@ -210,7 +253,27 @@ async def _live(
             await chat(event)
         return True
 
-    return sink, live_browse.LiveControl(run, call_id), run
+    async def sink(event: BrowserEvent) -> bool:
+        nonlocal last_image, bound_guard, last_step, tab_id
+        async with event_lock:
+            guard = None if get_guard is None else get_guard()
+            if guard is None:
+                return await publish_event(event)
+            bound_guard = guard
+            last_step, tab_id = event.step, event.tab_id or tab_id
+            guard.bind_view(view_token, announce_protection)
+            async with guard.publication_lock:
+                if guard.active:
+                    # Announce to every earlier call while holding the shared
+                    # fence, so no page-bound cache can survive secret delivery.
+                    last_image = None
+                    await guard.announce()
+                    event = guard.event(event)
+                    if event.kind == "browser_protected":
+                        return True
+                return await publish_event(event)
+
+    return sink, None if run is None else live_browse.LiveControl(run, call_id), run
 
 
 def _remembering(person: _Person) -> RememberSignIn:
@@ -280,6 +343,7 @@ class BrowserToolset(FunctionToolset[Any]):
         self.parked: dict[str, tuple[BrowseSession, AsyncExitStack]] = {}
         self.checkpoint: Callable[[], Awaitable[None]] | None = None
         self._preview_stack: AsyncExitStack | None = None
+        self.credential_controller: BrowserCredentialController | None = None
 
     async def __aenter__(self) -> BrowserToolset:
         self._entered += 1
@@ -289,6 +353,7 @@ class BrowserToolset(FunctionToolset[Any]):
         self._entered -= 1
         if self._entered == 0:
             try:
+                await self.stop_credentials()
                 if self.checkpoint is not None:
                     await self.checkpoint()
             finally:
@@ -318,6 +383,7 @@ class BrowserToolset(FunctionToolset[Any]):
             or not view.preview
             or view.sink is None
             or self.session is None
+            or (isinstance(self.session.page, CdpPage) and self.session.page.output_guard.active)
         ):
             return
         session = self.session
@@ -342,6 +408,7 @@ class BrowserToolset(FunctionToolset[Any]):
 
     async def park(self) -> None:
         """End the selected view and pause its paints, retaining its isolated page."""
+        await self.stop_credentials()
         await self.stop_watching()
         if self.view is not None:
             await close_view(self.view, self.session)
@@ -377,6 +444,7 @@ class BrowserToolset(FunctionToolset[Any]):
         end is its finish - said before the tab goes, while the page is still
         there to name.
         """
+        await self.stop_credentials()
         view, self.view = self.view, None
         stack, self._stack = self._stack, None
         session, self.session = self.session, None
@@ -387,6 +455,11 @@ class BrowserToolset(FunctionToolset[Any]):
         finally:
             if stack is not None:
                 await stack.aclose()
+
+    async def stop_credentials(self) -> None:
+        controller, self.credential_controller = self.credential_controller, None
+        if controller is not None:
+            await controller.close()
 
 
 logger = logging.getLogger(__name__)
@@ -422,6 +495,7 @@ def build_toolset(
     step_model: Model | None = None,
     route: BrowserRoute | None = None,
     resume_local: bool = False,
+    credential_ids: tuple[UUID, ...] = (),
 ) -> BrowserToolset:
     """`browse_web` and the agent's own browser tools, bound to the browser seam."""
     open_browser = page_factory if page_factory is not None else open_page
@@ -462,9 +536,14 @@ def build_toolset(
         if page_factory is None and not cdp_url and (route is None or route.remote_url is None):
             return NO_ENDPOINT
 
+        await toolset.stop_credentials()
         await toolset.stop_watching()
         call_id = ctx.tool_call_id or str(uuid4())
-        sink, control, run_id = await _live(ctx.deps, call_id, task)
+        current_page = None if toolset.session is None else toolset.session.page
+        guard = current_page.output_guard if isinstance(current_page, CdpPage) else None
+        # This invocation pins one owning page, including the page that is about
+        # to open. Never look up the toolset's selected tab from a late event.
+        sink, control, run_id = await _live(ctx.deps, call_id, task, lambda: guard)
         person = _signed_in_as(ctx.deps)
         remember = None if person is None else _remembering(person)
         # The agent's own step model where it named one - a cheaper or
@@ -521,6 +600,7 @@ def build_toolset(
                 if isinstance(opened, str):
                     return await fail(opened)
                 session = opened
+                guard = session.page.output_guard if isinstance(session.page, CdpPage) else None
             elif start_url:
                 session.restart()
                 try:
@@ -631,6 +711,8 @@ def build_toolset(
             async def checkpoint() -> None:
                 tabs: list[_sessions.SavedTab] = []
                 for tab_id, session in toolset.sessions().items():
+                    if isinstance(session.page, CdpPage) and session.page.output_guard.active:
+                        continue
                     try:
                         url, _ = await session.page.location()
                         if not url or urlsplit(url).scheme not in ("http", "https"):
@@ -675,7 +757,9 @@ def build_toolset(
         if toolset.view is not None:
             return toolset.view, False
         call_id = ctx.tool_call_id or str(uuid4())
-        sink, control, run_id = await _live(ctx.deps, call_id, goal)
+        page = None if toolset.session is None else toolset.session.page
+        guard = page.output_guard if isinstance(page, CdpPage) else None
+        sink, control, run_id = await _live(ctx.deps, call_id, goal, lambda: guard)
         person = _signed_in_as(ctx.deps)
         toolset.view = DirectView(
             call_id=call_id,
@@ -685,9 +769,109 @@ def build_toolset(
             else control,
             run_id=run_id,
             remember=None if person is None else _remembering(person),
-            preview=loop_policy.preview,
+            preview=loop_policy.preview and not (guard is not None and guard.active),
         )
+        await start_credentials(ctx, toolset.view)
         return toolset.view, True
+
+    async def start_credentials(ctx: RunContext[AgentDeps], view: DirectView) -> None:
+        current = toolset.credential_controller
+        if current is not None and current.alive:
+            return
+        session = toolset.session
+        redis = live_browse.credential_redis()
+        if (
+            not credential_ids
+            or session is None
+            or not isinstance(session.page, CdpPage)
+            or redis is None
+            or view.sink is None
+        ):
+            return
+        page = session.page
+
+        async def protect(origin: str) -> None:
+            await toolset.stop_watching()
+            page.protect_credentials(origin)
+            view.preview = False
+            session.last = page.output_guard.snapshot()
+            session.resumable = False
+            await view.emit(
+                BrowserEvent(
+                    kind="browser_protected",
+                    call_id=view.call_id,
+                    step=session.steps,
+                    tab_id=session.tab_id,
+                    run_id=view.run_id,
+                )
+            )
+
+        toolset.credential_controller = await BrowserCredentialController.create(
+            deps=ctx.deps,
+            credential_ids=credential_ids,
+            tab_id=toolset.tab_id,
+            call_id=view.call_id,
+            redis=redis,
+            page=page,
+            tab_lock=toolset.tab,
+            snapshot=lambda: session.last,
+            protect=protect,
+            sink=view.sink,
+        )
+        if page.output_guard.active:
+            await protect(page.output_guard.location()[0])
+
+    async def browser_credential_options(ctx: RunContext[AgentDeps]) -> str:
+        """List saved credential IDs, generations and field names eligible on this private page.
+
+        No username, password, TOTP seed/code or profile value is returned. Use the
+        references only with browser_fill_credential and the page's current field numbers.
+        """
+        if toolset.session is None:
+            return NO_TAB
+        view, _ = await direct_view(ctx, WORKING)
+        await start_credentials(ctx, view)
+        controller = toolset.credential_controller
+        if controller is None or not controller.alive:
+            return "Saved credential filling is unavailable in this browser session."
+        try:
+            async with get_db_context() as db:
+                items = await BrowserCredentialPlanService(db, controller.redis).eligible(
+                    controller.ctx,
+                    controller.identity.run_id,
+                    controller.identity.call_id,
+                    controller.identity.tab_id,
+                )
+        except BrowserFillRefused:
+            return "Saved credential filling is unavailable in this browser session."
+        return json.dumps([item.model_dump(mode="json") for item in items])
+
+    async def browser_fill_credential(
+        ctx: RunContext[AgentDeps],
+        secret_id: UUID,
+        authorization_generation: UUID,
+        selection: BrowserFillSelection,
+    ) -> str:
+        """Request a saved credential fill and keep the live page for the owner's review.
+
+        Choose only an ID/generation returned by browser_credential_options and fields
+        from the current numbered page. The person confirms the destination in the UI.
+        This never submits automatically; submission needs a separate explicit action.
+        The wait is bounded and expired or resumed native handles cannot be reused.
+        """
+        try:
+            async with toolset.tab:
+                if toolset.session is None:
+                    return NO_TAB
+                view, _ = await direct_view(ctx, WORKING)
+                await start_credentials(ctx, view)
+                controller = toolset.credential_controller
+                if controller is None or not controller.alive:
+                    return "Browser credential request refused: live_browser_required."
+                plan = await controller.request(secret_id, authorization_generation, selection)
+            return await controller.wait(plan.id)
+        except BrowserFillRefused as refused:
+            return f"Browser credential request refused: {refused.reason.value}."
 
     async def drive(ctx: RunContext[AgentDeps], action: Action) -> str:
         """One action of the agent's own on the open tab, or why it could not be taken."""
@@ -934,6 +1118,18 @@ def build_toolset(
     # the page in turns with a direct action instead.
     toolset.add_function(
         on_the_tab(browse_web), takes_ctx=True, metadata=BACKGROUND, sequential=False
+    )
+    toolset.add_function(
+        on_the_tab(browser_credential_options),
+        takes_ctx=True,
+        metadata={BROWSER_TAB_REQUIREMENT: "credential"},
+    )
+    # The owner task takes the lock for preparation/effect; holding it while the
+    # human decides would prevent that task from making progress.
+    toolset.add_function(
+        browser_fill_credential,
+        takes_ctx=True,
+        metadata={BROWSER_TAB_REQUIREMENT: "credential"},
     )
     for direct in (
         browser_open,

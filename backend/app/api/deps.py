@@ -87,6 +87,10 @@ from app.services.mentions import MentionService
 from app.services.mfa import MfaService
 from app.services.personal_data import PersonalDataService
 from app.services.browser_sign_in import BrowserSignInService
+from app.services.browser_credentials import (
+    BrowserCredentialPlanService,
+    BrowserCredentialPolicyService,
+)
 from app.services.user import UserService
 from app.services.session import SessionService
 from app.services.web_push import WebPushService
@@ -100,6 +104,7 @@ from app.services.conversation import ConversationService
 from app.services.coding_task_changes import CodingTaskChangeService
 from app.services.conversation_tasks import ConversationTaskService
 from app.services.room_submission import RoomSubmissionService
+from app.services.room_routing import RoomRoutingService
 from app.services.tasks import TaskService
 from app.services.visual import VisualService
 from app.services.local_service import LocalServiceService
@@ -205,6 +210,13 @@ def get_room_submission_service(db: DBSession) -> RoomSubmissionService:
 
 
 RoomSubmissionSvc = Annotated[RoomSubmissionService, Depends(get_room_submission_service)]
+
+
+def get_room_routing_service(db: DBSession) -> RoomRoutingService:
+    return RoomRoutingService(db)
+
+
+RoomRoutingSvc = Annotated[RoomRoutingService, Depends(get_room_routing_service)]
 
 
 def get_coding_task_change_service(db: DBSession) -> CodingTaskChangeService:
@@ -1286,6 +1298,26 @@ def get_browser_sign_in_service(db: DBSession) -> BrowserSignInService:
 
 
 BrowserSignInSvc = Annotated[BrowserSignInService, Depends(get_browser_sign_in_service)]
+
+
+def get_browser_credential_plan_service(
+    db: DBSession, redis: Redis
+) -> BrowserCredentialPlanService:
+    return BrowserCredentialPlanService(db, redis)
+
+
+BrowserCredentialPlanSvc = Annotated[
+    BrowserCredentialPlanService, Depends(get_browser_credential_plan_service)
+]
+
+
+def get_browser_credential_policy_service(db: DBSession) -> BrowserCredentialPolicyService:
+    return BrowserCredentialPolicyService(db)
+
+
+BrowserCredentialPolicySvc = Annotated[
+    BrowserCredentialPolicyService, Depends(get_browser_credential_policy_service)
+]
 
 
 def get_skill_proposal_service(db: DBSession) -> SkillProposalService:

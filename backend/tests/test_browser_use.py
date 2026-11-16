@@ -577,11 +577,15 @@ BROWSER_TOOLS = (
     "browser_read",
     "browser_click",
     "browser_type",
+    "browser_credential_options",
+    "browser_fill_credential",
     "browser_select",
     "browser_scroll",
     "browser_back",
 )
 """The whole task handed off, then the agent's own hands on the same tab."""
+
+CREDENTIAL_TOOLS = {"browser_credential_options", "browser_fill_credential"}
 
 
 class TestOneStep:

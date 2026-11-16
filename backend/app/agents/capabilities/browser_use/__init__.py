@@ -136,6 +136,16 @@ class WebBrowserConfig(BaseModel):
             "Patterns such as *.example.com are supported. Checked on every step."
         ),
     )
+    browser_credential_ids: list[UUID] = Field(
+        default_factory=list,
+        max_length=50,
+        title="Browser credentials",
+        description=(
+            "Saved browser logins or contact profiles this agent may request in your private "
+            "console chat. Each fill requires a live destination confirmation."
+        ),
+        json_schema_extra={"x-visible-when": {"field": "connection", "equals": ["built_in"]}},
+    )
     max_steps: int = Field(
         title="Steps per call at most",
         default=50,
@@ -264,6 +274,13 @@ class WebBrowserConfig(BaseModel):
     def _blank_is_unset(cls, value: object) -> object:
         """An emptied field in the Builder arrives as `""`, which means none."""
         return None if value == "" else value
+
+    @field_validator("browser_credential_ids")
+    @classmethod
+    def _distinct_browser_credentials(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Select each browser credential only once")
+        return value
 
 
 def connection_problems(config: WebBrowserConfig, *, has_secret: bool) -> list[str]:
@@ -433,6 +450,18 @@ def validate_cdp_url(config: WebBrowserConfig) -> None:
             side_effecting=False,
         ),
         CapabilityToolInfo(
+            id="browser_credential_options",
+            description="List eligible saved credential references for this private browser page.",
+            side_effecting=False,
+        ),
+        CapabilityToolInfo(
+            id="browser_fill_credential",
+            description="Request and wait for the owner's exact destination confirmation of a saved credential fill.",
+            # The dedicated live plan always asks through ApprovalService at the actual
+            # effect. A generic tool decision cannot authorize or resume a native fill.
+            side_effecting=False,
+        ),
+        CapabilityToolInfo(
             id="browser_select",
             description="Choose one of a dropdown's options on the open page.",
             side_effecting=False,
@@ -486,6 +515,9 @@ def _build(ctx: CapabilityBuildContext) -> AbstractCapability[object]:
         if override.name is not None
     }
     return WebBrowser(
+        browser_credential_ids=tuple(config.browser_credential_ids)
+        if config.connection == "built_in" and not isinstance(local_session, UUID)
+        else (),
         report_tool_names=frozenset(aliases.get(tool, tool) for tool in BROWSER_REPORT_TOOLS),
         resume_local=isinstance(local_session, UUID) and native_local,
         page_factory=local_page_factory(local_session, native=native_local)
