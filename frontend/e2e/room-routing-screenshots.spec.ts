@@ -1,9 +1,28 @@
 import { randomUUID } from "node:crypto";
+import type { APIRequestContext } from "@playwright/test";
 import type { RoomLeadPolicy, RoomRoutingProposal, RoomTaskCard } from "../src/types/room-routing";
 import { expect, test } from "./fixtures";
-import { AUTH_STATE, SEEDED_AGENT_NAME, SEEDED_PROJECT_NAME, json, rowsAt } from "./helpers";
+import { AUTH_STATE, SEEDED_AGENT_NAME, SEEDED_PROJECT_NAME, json } from "./helpers";
 
 test.use({ storageState: AUTH_STATE });
+
+async function findSeededRow(
+  request: APIRequestContext,
+  path: string,
+  matches: (row: Record<string, unknown>) => boolean,
+) {
+  // Persistent E2E environments can place the seed beyond the default first 50 rows.
+  for (let skip = 0; skip < 1000; skip += 100) {
+    const page = await json<{ items: Record<string, unknown>[]; total: number }>(
+      request,
+      `${path}?limit=100&skip=${skip}`,
+    );
+    const row = page.items.find(matches);
+    if (row) return row;
+    if (page.items.length === 0 || skip + page.items.length >= page.total) return undefined;
+  }
+  throw new Error(`The visual fixture seed was not found within 1000 rows of ${path}`);
+}
 
 /**
  * Fixture-only visual evidence on the actual room screen. The room and its
@@ -25,14 +44,22 @@ for (const viewport of [
     });
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const me = await json<{ id: string }>(page.request, "/api/auth/me");
-    const projects = await rowsAt(page.request, "/api/projects");
-    const project = projects.find((row) => row.name === SEEDED_PROJECT_NAME);
+    const project = await findSeededRow(
+      page.request,
+      "/api/projects",
+      (row) => row.name === SEEDED_PROJECT_NAME,
+    );
     expect(project, "the visual fixture requires the seeded project").toBeTruthy();
-    const agents = await rowsAt(page.request, "/api/agents");
-    const agent = agents.find(
+    const agent = await findSeededRow(
+      page.request,
+      "/api/agents",
       (row) => row.name === SEEDED_AGENT_NAME && row.status === "published",
     );
     expect(agent, "the visual fixture requires the seeded published agent").toBeTruthy();
+    expect(
+      agent!.current_version_id,
+      "the seeded published agent must have a valid published version",
+    ).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     const created = await page.request.post("/api/conversations", {
       data: { project_id: project!.id, title: `Room lead visual fixture (${viewport.name})` },
     });

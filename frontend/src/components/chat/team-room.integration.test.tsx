@@ -203,7 +203,10 @@ describe("the room composer", () => {
     );
   });
 
-  it("retries the frozen lead intent after a lost acknowledgement and policy change", async () => {
+  it.each([
+    ["a lost acknowledgement", new TypeError("Connection lost")],
+    ["an unspecified conflict", new ApiError(409, "Admission outcome unknown")],
+  ])("retries the frozen lead intent after %s and a policy change", async (_name, failure) => {
     leadPolicy = {
       ...leadPolicy,
       enabled: true,
@@ -211,7 +214,7 @@ describe("the room composer", () => {
       lead: { agent_id: "Writer", version_id: "pinned-version", name: "Writer", current: true },
       can_ask: true,
     };
-    vi.mocked(apiClient.post).mockRejectedValueOnce(new TypeError("Connection lost"));
+    vi.mocked(apiClient.post).mockRejectedValueOnce(failure);
     const user = userEvent.setup();
     render(room(), { wrapper });
     await user.click(await screen.findByRole("combobox", { name: "Who should answer" }));
@@ -225,6 +228,88 @@ describe("the room composer", () => {
     act(changed);
     await user.click(screen.getByRole("button", { name: "Retry same message" }));
     await waitFor(() => expect(vi.mocked(apiClient.post).mock.calls[1]![1]).toEqual(first));
+  });
+
+  it("unlocks a first policy refusal and reloads the lead before explicit resubmission", async () => {
+    leadPolicy = {
+      ...leadPolicy,
+      enabled: true,
+      revision: 7,
+      lead: { agent_id: "Writer", version_id: "pinned-version", name: "Writer", current: true },
+      can_ask: true,
+    };
+    vi.mocked(apiClient.post).mockImplementationOnce(async () => {
+      leadPolicy = {
+        ...leadPolicy,
+        revision: 8,
+        lead: { agent_id: "Analyst", version_id: "new-version", name: "Analyst", current: true },
+      };
+      throw new ApiError(409, "Room lead policy changed", {
+        error: { code: "ROOM_LEAD_POLICY_CHANGED", message: "Room lead policy changed" },
+      });
+    });
+    const user = userEvent.setup();
+    render(room(), { wrapper });
+    await user.click(await screen.findByRole("combobox", { name: "Who should answer" }));
+    await user.click(await screen.findByRole("option", { name: "Ask lead: Writer" }));
+    await user.type(screen.getByRole("textbox"), "Plan this once");
+    await user.click(screen.getByRole("button", { name: "Ask lead" }));
+    const first = vi.mocked(apiClient.post).mock.calls[0]![1] as {
+      client_message_id: string;
+    };
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ask lead" })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Who should answer" })).toHaveTextContent(
+        "Ask lead: Analyst",
+      ),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The room lead changed. Review the current lead and send again.",
+    );
+    expect(screen.getByRole("textbox")).toHaveValue("Plan this once");
+    await user.type(screen.getByRole("textbox"), " reviewed");
+    await user.click(screen.getByRole("button", { name: "Ask lead" }));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(apiClient.post).mock.calls[1]![1]).toMatchObject({
+      content: "Plan this once reviewed",
+      intent: "ask_lead",
+      expected_policy_revision: 8,
+    });
+    expect(vi.mocked(apiClient.post).mock.calls[1]![1]).not.toMatchObject({
+      client_message_id: first.client_message_id,
+    });
+  });
+
+  it("retains an uncertain lead token when a later retry receives a policy refusal", async () => {
+    leadPolicy = {
+      ...leadPolicy,
+      enabled: true,
+      revision: 7,
+      lead: { agent_id: "Writer", version_id: "pinned-version", name: "Writer", current: true },
+      can_ask: true,
+    };
+    vi.mocked(apiClient.post)
+      .mockRejectedValueOnce(new TypeError("Connection lost"))
+      .mockRejectedValueOnce(
+        new ApiError(409, "Room lead policy changed", {
+          error: { code: "ROOM_LEAD_POLICY_CHANGED", message: "Room lead policy changed" },
+        }),
+      );
+    const user = userEvent.setup();
+    render(room(), { wrapper });
+    await user.click(await screen.findByRole("combobox", { name: "Who should answer" }));
+    await user.click(await screen.findByRole("option", { name: "Ask lead: Writer" }));
+    await user.type(screen.getByRole("textbox"), "Plan this once");
+    await user.click(screen.getByRole("button", { name: "Ask lead" }));
+    const first = vi.mocked(apiClient.post).mock.calls[0]![1];
+    await user.click(await screen.findByRole("button", { name: "Retry same message" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("Room lead policy changed"),
+    );
+    await user.click(screen.getByRole("button", { name: "Retry same message" }));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(3));
+    expect(vi.mocked(apiClient.post).mock.calls[1]![1]).toEqual(first);
+    expect(vi.mocked(apiClient.post).mock.calls[2]![1]).toEqual(first);
   });
 
   it("requires explicit selection of a published runnable cloud responder", async () => {

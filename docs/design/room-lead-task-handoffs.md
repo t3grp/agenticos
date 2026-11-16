@@ -198,6 +198,12 @@ to ask the configured lead for help. The submission carries the policy revision;
 the server chooses the pinned agent version. An earlier published version is a
 version notice, not a permission verdict. Unknown submission outcomes retain the
 original message ID, intent, policy revision and thread until acknowledged.
+A first admission refusal with code `ROOM_LEAD_POLICY_CHANGED` writes no room
+message or request: the composer keeps the text, reloads the policy and asks the
+person to review the current lead before sending again. A generic conflict or a
+later refusal while an earlier outcome is uncertain keeps the original frozen
+token and payload. The backend checks exact-token replay before current policy
+admission.
 
 Proposal text is displayed as untrusted plain text. Review the expected result,
 named accountable teammate when authorized, specialist and due time, then select
@@ -206,6 +212,13 @@ selecting an item, receiving an event and polling never accept work. An uncertai
 decision offers **Check and retry**: read the current decision first and only
 replay the same decision token if it is still pending and permitted. Already
 committed decisions are displayed without another POST.
+Denied reconciliation reads and permission changes keep that uncertain token
+across panel remounts; they cannot prove the earlier write failed. A definite
+first decision POST refusal may clear its new attempt. A refused retry with
+`400`, `403`, `404` or `422` keeps the earlier token because validation and
+access checks can run before idempotency replay. A confirmed decided response or
+the backend's post-lock `409` settles an existing attempt. Fresh permission and
+redaction metadata takes precedence even when the proposal revision is unchanged.
 
 Linked cards read status and next actor from canonical task metadata. A completed
 agent run is **Waiting for review** until the existing task flow records the
@@ -214,6 +227,11 @@ reviewed outcome. Another teammate starts their own planned task through Tasks.
 exact task deep link or expose private working-chat or Inbox links. Room-wide
 cards link to the existing reply thread; a thread view only shows that thread's
 cards.
+After explicit acceptance, canonical Task authority and the existing dispatcher
+control execution. Deleting the source room removes its live proposal but keeps
+an allowlisted review-provenance snapshot. It does not cancel the accepted task
+or widen its authority. Room cards never expose private working-chat or Inbox
+identifiers.
 
 Reads are scoped by signed-in account, effective organization, room and thread.
 Fresh reads recheck permission on opening, room events and a fifteen-second

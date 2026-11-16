@@ -104,7 +104,8 @@ export function RoomProposalCard({
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const busy = useRef(false);
-  const current = result && result.revision >= proposal.revision ? result : proposal;
+  // Permission and redaction changes do not require a new proposal revision.
+  const current = result && result.revision > proposal.revision ? result : proposal;
   const selected = selection.revision === current.revision ? selection.ids : [];
   const setSelected = (change: (ids: string[]) => string[]) =>
     setSelection((held) => ({
@@ -140,6 +141,7 @@ export function RoomProposalCard({
       },
     };
     setAttempt(held);
+    let postingDecision = false;
     try {
       if (prior) {
         // A lost acknowledgement is read back before the same token may be replayed.
@@ -155,12 +157,13 @@ export function RoomProposalCard({
           observed.revision !== held.input.expected_revision ||
           !(held.decision === "accept" ? observed.can_accept : observed.can_discard)
         ) {
-          setAttempt(null);
+          // A read cannot settle an earlier uncertain write. Keep its original token.
           setFailure(t("proposalChanged"));
           actions.changed();
           return;
         }
       }
+      postingDecision = true;
       const accepted = await actions.decide(current.id, held.decision, held.input);
       if (accepted) {
         setResult(accepted);
@@ -168,15 +171,15 @@ export function RoomProposalCard({
         actions.changed();
       }
     } catch (error) {
-      const definite =
-        error instanceof ApiError && [400, 403, 404, 409, 422].includes(error.status);
+      const refused = error instanceof ApiError && [400, 403, 404, 409, 422].includes(error.status);
       setFailure(
-        error instanceof ApiError && error.status === 409
+        postingDecision && error instanceof ApiError && error.status === 409
           ? t("proposalChanged")
           : getErrorMessage(error, errors, t("decisionFailed")),
       );
-      if (definite) {
-        setAttempt(null);
+      if (refused) {
+        // Access/validation may refuse a retry before reading the original decision.
+        if (postingDecision && (prior === null || error.status === 409)) setAttempt(null);
         actions.changed();
       }
     } finally {
@@ -279,10 +282,10 @@ export function RoomProposalCard({
               {t("discard")}
             </Button>
           )}
-          {current.decision === "pending" && !canAccept && !canDiscard && (
-            <p className="text-muted-foreground text-xs">{t("requesterReview")}</p>
-          )}
         </div>
+      )}
+      {current.decision === "pending" && !canAccept && !canDiscard && (
+        <p className="text-muted-foreground text-xs">{t("requesterReview")}</p>
       )}
     </article>
   );

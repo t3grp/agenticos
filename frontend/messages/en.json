@@ -2737,7 +2737,8 @@
         "failed": "Failed",
         "cancelled": "Cancelled",
         "interrupted": "Interrupted"
-      }
+      },
+      "leadPolicyChanged": "The room lead changed. Review the current lead and send again."
     },
     "modelSelector": {
       "choose": "Choose chat model: {model}",

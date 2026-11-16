@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { ApiError, getErrorMessage } from "@/lib/api-error";
 import { clientId } from "@/lib/ids";
+import { announceRoomChange } from "@/lib/room-events";
 import { useAuthStore, useChatStore, useOrgStore } from "@/stores";
 import { EMPTY_ROOM_DRAFT } from "@/stores/chat-store";
 import { useRoomActions } from "./use-room";
@@ -80,15 +81,29 @@ export function useRoomDraft(
         chatApi.getState().roomDrafts[key]?.attempt !== snapshot
       )
         return;
-      change((value) => ({ ...value, error: getErrorMessage(failure, tErrors, t("postFailed")) }));
+      const firstPolicyRefusal =
+        held.attempt === null &&
+        snapshot.input.intent === "ask_lead" &&
+        failure instanceof ApiError &&
+        failure.status === 409 &&
+        failure.code === "ROOM_LEAD_POLICY_CHANGED";
+      change((value) => ({
+        ...value,
+        error: firstPolicyRefusal
+          ? t("leadPolicyChanged")
+          : getErrorMessage(failure, tErrors, t("postFailed")),
+      }));
       // These are definite refusals before admission. Unknown outcomes retain
       // the id and frozen payload, including the chosen agent and reply.
       if (
         held.attempt === null &&
         failure instanceof ApiError &&
-        [400, 403, 404, 422].includes(failure.status)
+        ([400, 403, 404, 422].includes(failure.status) || firstPolicyRefusal)
       ) {
         change((value) => ({ ...value, attempt: null, sending: false }));
+        if (firstPolicyRefusal && conversationId !== null) {
+          announceRoomChange({ conversationId, accountId, organizationId: tenantId });
+        }
       }
     } finally {
       // Closing a thread keeps its uncertain token retryable. A tenant reset

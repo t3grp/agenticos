@@ -175,6 +175,10 @@ export default defineConfig({
         "src/components/chat/chat-room-bar.tsx",
         "src/components/chat/room-thread-button.tsx",
         "src/components/chat/room-thread-panel.tsx",
+        // New room lead review controls start inside the existing coverage gate.
+        "src/components/chat/room-lead-policy-dialog.tsx",
+        "src/components/chat/room-routing-cards.tsx",
+        "src/components/chat/room-routing-panel.tsx",
         "src/components/chat/typing-indicator.tsx",
         "src/components/chat/reply-quote.tsx",
         // A thread's picture from the copy on the device, offline (#2097).
