@@ -2,6 +2,7 @@
 
 import importlib.util
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 from alembic.config import Config
@@ -18,11 +19,26 @@ from tests.integration.test_browser_credential_plans import browser as browser
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 _ROOT = Path(__file__).parents[2]
-_PATH = _ROOT / "alembic" / "versions" / "0333_browser_credential_plans.py"
-_SPEC = importlib.util.spec_from_file_location("browser_credential_migration", _PATH)
-assert _SPEC is not None and _SPEC.loader is not None
-_MIGRATION = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(_MIGRATION)
+
+
+def load_revision(stem: str) -> ModuleType:
+    path = _ROOT / "alembic" / "versions" / f"{stem}.py"
+    spec = importlib.util.spec_from_file_location(f"credential_fixture_{stem}", path)
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    return migration
+
+
+_MIGRATION = load_revision("0333_browser_credential_plans")
+_DESCENDANTS = (
+    load_revision("0334_workflow_media_operations"),
+    load_revision("0335_browser_teaching"),
+)
+assert tuple(migration.down_revision for migration in _DESCENDANTS) == (
+    _MIGRATION.revision,
+    _DESCENDANTS[0].revision,
+)
 _TABLES = (
     "browser_credential_policies",
     "browser_credential_agent_grants",
@@ -31,17 +47,28 @@ _TABLES = (
 )
 
 
-def migrate(connection, direction):
+def migrate(connection, direction, migration=_MIGRATION):
     ctx = MigrationContext.configure(connection, opts={"target_metadata": Base.metadata})
     with ctx.begin_transaction(), Operations.context(ctx):
-        getattr(_MIGRATION, direction)()
+        getattr(migration, direction)()
 
 
 async def step(connection, direction):
+    # The create_all fixture includes later consumers of 0333's tenant keys.
+    # Exercise their real downgrade/upgrade in dependency order; a direct 0333
+    # downgrade is retained below only for its own used-evidence refusal test.
+    migrations = (
+        (*reversed(_DESCENDANTS), _MIGRATION)
+        if direction == "downgrade"
+        else (_MIGRATION, *_DESCENDANTS)
+    )
     # Concurrent tenant-key construction must begin outside the introspection
     # transaction, so Alembic owns the transaction it commits for autocommit_block.
-    await connection.commit()
-    await connection.run_sync(lambda sync: migrate(sync, direction))
+    for migration in migrations:
+        await connection.commit()
+        await connection.run_sync(
+            lambda sync, revision=migration: migrate(sync, direction, revision)
+        )
 
 
 def schema(connection):
@@ -81,11 +108,16 @@ async def test_chain_retains_the_published_account_migration_and_real_room_prede
     assert (
         scripts.get_revision("0332_room_task_handoffs").down_revision == "0331_merge_core_accounts"
     )
-    assert set(scripts.get_revision("0331_merge_core_accounts").down_revision) == {
-        "0330_role_navigation",
+    assert scripts.get_revision("0331_merge_core_accounts").down_revision == "0330_role_navigation"
+    assert scripts.get_revision("0333_room_threads").down_revision == "0332_merge_t3_pools_v1761"
+    assert scripts.get_revision("0332_merge_t3_pools_v1761").down_revision == (
+        "0331_merge_t3_rooms_and_v1761",
         "0326_provider_account_pools",
-    }
-    assert scripts.get_revision("0326_provider_account_pools") is not None
+    )
+    assert (
+        scripts.get_revision("0326_provider_account_pools").down_revision
+        == "0325_merge_t3_rooms_v173"
+    )
 
 
 async def test_native_concurrent_upgrade_preserves_legacy_rows_and_matches_models(

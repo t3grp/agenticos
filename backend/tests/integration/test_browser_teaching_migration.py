@@ -91,12 +91,13 @@ async def test_teaching_uses_the_real_media_and_published_merge_chain():
     }
     for revision, parent in pairs.items():
         assert scripts.get_revision(revision).down_revision == parent
-    assert set(scripts.get_revision("0331_merge_core_accounts").down_revision) == {
-        "0330_role_navigation",
+    assert scripts.get_revision("0331_merge_core_accounts").down_revision == "0330_role_navigation"
+    assert scripts.get_revision("0333_room_threads").down_revision == "0332_merge_t3_pools_v1761"
+    assert scripts.get_revision("0332_merge_t3_pools_v1761").down_revision == (
+        "0331_merge_t3_rooms_and_v1761",
         "0326_provider_account_pools",
-    }
-    assert scripts.get_revision("0332_merge_t3_pools_v1761") is not None
-    assert scripts.get_revision("0336_merge_core_v1761") is not None
+    )
+    assert scripts.get_revision("0336_merge_core_v1761").down_revision == "0331_merge_core_accounts"
 
 
 async def test_upgrade_downgrade_preserves_existing_proposals_and_matches_every_model_column(

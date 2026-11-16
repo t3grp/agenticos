@@ -73,11 +73,16 @@ async def test_media_has_the_real_browser_predecessor_and_preserves_published_ac
     assert (
         scripts.get_revision("0332_room_task_handoffs").down_revision == "0331_merge_core_accounts"
     )
-    assert set(scripts.get_revision("0331_merge_core_accounts").down_revision) == {
-        "0330_role_navigation",
+    assert scripts.get_revision("0331_merge_core_accounts").down_revision == "0330_role_navigation"
+    assert scripts.get_revision("0333_room_threads").down_revision == "0332_merge_t3_pools_v1761"
+    assert scripts.get_revision("0332_merge_t3_pools_v1761").down_revision == (
+        "0331_merge_t3_rooms_and_v1761",
         "0326_provider_account_pools",
-    }
-    assert scripts.get_revision("0326_provider_account_pools") is not None
+    )
+    assert (
+        scripts.get_revision("0326_provider_account_pools").down_revision
+        == "0325_merge_t3_rooms_v173"
+    )
 
 
 async def test_concurrent_upgrade_preserves_the_run_and_matches_the_model_schema(engine):
