@@ -42,6 +42,33 @@ describe("hostOf", () => {
 });
 
 describe("BrowserWindow - the agent's browser, drawn as a browser", () => {
+  it("mounts teaching only on an addressed browser and removes it when credential output is protected", () => {
+    const live = browse({ tabId: "main" });
+    const view = render(<BrowserWindow browse={live} control={control()} />);
+    expect(screen.getByRole("button", { name: "Teach a browser procedure" })).toBeVisible();
+    view.rerender(
+      <BrowserWindow browse={{ ...live, outputProtected: true }} control={control()} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Teach a browser procedure" }),
+    ).not.toBeInTheDocument();
+    view.rerender(<BrowserWindow surface="computer" browse={live} control={control()} />);
+    expect(
+      screen.queryByRole("button", { name: "Teach a browser procedure" }),
+    ).not.toBeInTheDocument();
+    view.rerender(<BrowserWindow browse={{ ...live, outcome: "done" }} control={control()} />);
+    expect(
+      screen.queryByRole("button", { name: "Teach a browser procedure" }),
+    ).not.toBeInTheDocument();
+    view.rerender(
+      <BrowserWindow
+        browse={{ ...live, outcome: "done", teachingSessionId: "capture-id" }}
+        control={null}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Teach a browser procedure" })).toBeVisible();
+  });
+
   it("keeps maximize and restore reachable on a protected view without reintroducing page controls", async () => {
     const onMaximize = vi.fn();
     const safe = browse({ outputProtected: true });

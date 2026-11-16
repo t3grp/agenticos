@@ -37,6 +37,11 @@ export interface Browse {
   heldBy?: string | null;
   /** The same person by id: names are not unique, so this is what says it is you. */
   heldById?: string | null;
+  takeoverId?: string | null;
+  teachingSessionId?: string | null;
+  teachingStatus?: import("@/types/browser-teaching").TeachingStatus | null;
+  teachingRevision?: number | null;
+  teachingReason?: import("@/types/browser-teaching").TeachingReason | null;
   goal: string;
   maxSteps: number | null;
   url: string | null;
@@ -87,6 +92,11 @@ function opened(frame: BrowserFrame): Browse {
     needs: null,
     heldBy: null,
     heldById: null,
+    takeoverId: null,
+    teachingSessionId: null,
+    teachingStatus: null,
+    teachingRevision: null,
+    teachingReason: null,
     callId: frame.call_id,
     goal: frame.goal ?? "",
     maxSteps: frame.max_steps ?? null,
@@ -126,6 +136,11 @@ export function protectBrowse(browse: Browse): Browse {
     needs: null,
     heldBy: null,
     heldById: null,
+    takeoverId: null,
+    teachingSessionId: null,
+    teachingStatus: null,
+    teachingRevision: null,
+    teachingReason: null,
     nativeId: null,
     resumable: false,
     navigable: false,
@@ -204,12 +219,28 @@ function applyTo(browse: Browse, frame: BrowserFrame): Browse {
     case "browser_pointer":
       return { ...browse, pointer: { x: frame.x ?? 0, y: frame.y ?? 0, step: frame.step } };
     case "browser_held":
+      if (browse.outcome !== null) return browse;
       return {
         ...browse,
         needs: null,
         heldBy: frame.by ?? null,
         heldById: frame.by_user_id ?? null,
+        takeoverId: frame.takeover_id ?? null,
         pointer: null,
+      };
+    case "browser_teaching":
+      if (
+        !frame.teaching_session_id ||
+        (frame.teaching_session_id === browse.teachingSessionId &&
+          (frame.teaching_revision ?? 0) < (browse.teachingRevision ?? 0))
+      )
+        return browse;
+      return {
+        ...browse,
+        teachingSessionId: frame.teaching_session_id,
+        teachingStatus: frame.teaching_status ?? null,
+        teachingRevision: frame.teaching_revision ?? null,
+        teachingReason: frame.teaching_reason ?? null,
       };
     case "browser_released":
       // A give-back that kept the sign-in says which site (#2129).
@@ -217,6 +248,7 @@ function applyTo(browse: Browse, frame: BrowserFrame): Browse {
         ...browse,
         heldBy: null,
         heldById: null,
+        takeoverId: null,
         kept: frame.detail ?? browse.kept ?? null,
       };
     case "browser_finished":
@@ -225,6 +257,7 @@ function applyTo(browse: Browse, frame: BrowserFrame): Browse {
         needs: null,
         heldBy: null,
         heldById: null,
+        takeoverId: null,
         pointer: null,
         outcome: frame.outcome ?? null,
         detail: frame.detail ?? null,
@@ -253,6 +286,7 @@ function applyTo(browse: Browse, frame: BrowserFrame): Browse {
  */
 export function applyBrowserFrame(current: Browse[], frame: BrowserFrame): Browse[] {
   const existing = current.find((browse) => browse.callId === frame.call_id);
+  if (existing?.runId && frame.run_id && existing.runId !== frame.run_id) return current;
   if (!existing && frame.kind !== "browser_opened") return current;
   const next = existing
     ? current.map((browse) => (browse === existing ? applyTo(browse, frame) : browse))

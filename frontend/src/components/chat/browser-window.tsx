@@ -35,6 +35,7 @@ import type { BrowseOutcome } from "@/types/chat";
 import { OUTCOME_TONE, StepTimeline } from "./browser-view";
 import { LiveViewport } from "./live-viewport";
 import { BrowserCredentialReview } from "@/components/browser/browser-credential-review";
+import { BrowserTeachingControls } from "@/components/browser/browser-teaching-controls";
 
 /** What a person may do with the browser, as the window offers it. */
 export interface BrowseControl {
@@ -449,6 +450,9 @@ function UnprotectedBrowserWindow({
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           {browse.outcome && <OutcomeBadge outcome={browse.outcome} />}
+          {!computer && browse.runId && (running || browse.teachingSessionId) && (
+            <BrowserTeachingControls browse={browse} canControl={canDrive} />
+          )}
           {canDrive &&
             (hold.holding ? (
               <button
