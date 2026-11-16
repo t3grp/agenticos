@@ -126,11 +126,10 @@ class TestNativeBrowserAcceptance:
     """Full backend CI must execute the native credential and teaching cases."""
 
     def test_backend_cases_receive_a_verified_browser(self, workflow: dict[str, Any]) -> None:
-        job = workflow["jobs"]["test"]
+        job = workflow["jobs"]["test-shard"]
         steps = job["steps"]
-        run = next(
-            i for i, step in enumerate(steps) if "make test COV_REPORT" in step.get("run", "")
-        )
+        run = next(i for i, step in enumerate(steps) if step.get("run", "").strip() == "make test")
+        assert steps[run]["env"]["BACKEND_SHARD"] == "${{ matrix.shard }}/3"
         environment = {**workflow.get("env", {}), **job.get("env", {}), **steps[run].get("env", {})}
         assert environment.get("T3OS_TEST_CHROMIUM_EXECUTABLE") == "/usr/bin/google-chrome"
         verified = [
