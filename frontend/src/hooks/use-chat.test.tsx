@@ -4122,6 +4122,60 @@ describe("useChat - watching a browse", () => {
     receive(type, { kind: type, call_id: "c1", ...data });
   }
 
+  it("routes teaching receipts for the current browse while protection clears all teaching state", () => {
+    const { result } = renderHook(() => useChat(), { wrapper });
+    browserFrame("browser_teaching", {
+      step: 0,
+      run_id: "run-1",
+      teaching_session_id: "capture-1",
+      teaching_revision: 1,
+    });
+    expect(result.current.browses).toHaveLength(0);
+    browserFrame("browser_opened", { step: 0, run_id: "run-1", tab_id: "main" });
+    browserFrame("browser_held", {
+      step: 0,
+      run_id: "run-1",
+      by_user_id: "u1",
+      takeover_id: "server-takeover",
+    });
+    browserFrame("browser_teaching", {
+      step: 1,
+      run_id: "run-1",
+      teaching_session_id: "capture-1",
+      teaching_status: "paused",
+      teaching_revision: 2,
+      teaching_reason: "lease_lost",
+    });
+    expect(result.current.browses[0]).toMatchObject({
+      takeoverId: "server-takeover",
+      teachingSessionId: "capture-1",
+      teachingStatus: "paused",
+      teachingRevision: 2,
+      teachingReason: "lease_lost",
+    });
+    browserFrame("browser_teaching", {
+      step: 2,
+      run_id: "run-1",
+      teaching_session_id: "capture-1",
+      teaching_status: "recording",
+      teaching_revision: 1,
+    });
+    expect(result.current.browses[0]?.teachingRevision).toBe(2);
+    browserFrame("browser_protected", { step: 3, run_id: "run-1", output_protected: true });
+    browserFrame("browser_teaching", {
+      step: 4,
+      run_id: "run-1",
+      teaching_session_id: "capture-2",
+      teaching_revision: 1,
+    });
+    expect(result.current.browses[0]).toMatchObject({
+      outputProtected: true,
+      takeoverId: null,
+      teachingSessionId: null,
+    });
+    expect(useBrowserPanelStore.getState().openCallId).toBeNull();
+  });
+
   it.each(["browser_protected", "browser_frame", "browser_opened"])(
     "erases an existing protected preview after Stop from %s without reopening or recreating a browse",
     (kind) => {

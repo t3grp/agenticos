@@ -10,6 +10,22 @@ import type { LogQuery, RunHistoryQuery } from "@/lib/workflows/types";
 import type { SharingResourceType } from "@/types/sharing";
 
 export const qk = {
+  browserTeaching: {
+    all: (actor: string | undefined, organization: string | null) =>
+      ["browser-teaching", actor, organization] as const,
+    detail: (actor: string | undefined, organization: string | null, id: string) =>
+      ["browser-teaching", actor, organization, "detail", id] as const,
+    policy: (actor: string | undefined, organization: string | null) =>
+      ["browser-teaching", actor, organization, "policy"] as const,
+    preference: (actor: string | undefined, organization: string | null, id: string) =>
+      ["browser-teaching", actor, organization, "preference", id] as const,
+    run: (actor: string | undefined, organization: string | null, id: string) =>
+      ["browser-teaching", actor, organization, "run", id] as const,
+    skills: (actor: string | undefined, organization: string | null) =>
+      ["browser-teaching", actor, organization, "skills"] as const,
+    list: (actor: string | undefined, organization: string | null) =>
+      ["browser-teaching", actor, organization, "list"] as const,
+  },
   roomRouting: {
     all: (account: string | undefined, tenant: string | null, conversation: string | null) =>
       ["room-routing", account, tenant, conversation] as const,

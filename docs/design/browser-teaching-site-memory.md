@@ -1,11 +1,12 @@
 # Browser teaching and site procedural memory
 
-**Status: backend/runtime checkpoint; deployment disabled.** The follow-up to
-issue #113 implements bounded hosted-browser capture, explicit review, ordinary
-skill proposals, bound-version discovery and optional member-approved task
-capture. The hosted-panel controls, translated review experience, rendered
-acceptance and deployment verification remain release requirements. This document
-does not establish that the feature is merged, deployed or available to users.
+**Status: backend and frontend implementation checkpoint; deployment disabled.**
+The follow-up to issue #113 implements bounded hosted-browser capture, hosted
+controls, owner capture discovery, explicit review, ordinary skill proposals,
+bound-version discovery and optional member-approved task capture. Integrated
+release CI, rendered desktop/mobile acceptance and deployment verification
+remain release requirements. This document does not establish that the feature
+is merged, deployed or available to users.
 
 Baseline: T3OS `080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on
 14 November 2026. The product benchmark is
@@ -303,13 +304,92 @@ PostgreSQL tests cover the real predecessor graph, up/down model parity,
 unchanged legacy skill data, interrupted concurrent-index recovery, refusal to
 replace a conflicting index, and refusal to downgrade populated teaching data.
 
-The checkpoint does not yet provide the visible Teach/Pause/Stop/Review controls,
-parameter editor, translated policy/member settings, or a rendered walkthrough.
-Those frontend surfaces must display exact origins and current capture state,
-clear on audience change, treat protected output as dominant, and use fresh
-revisions for review. Full release CI, frontend/browser acceptance and a deployed
-synthetic flow are required before changing availability documentation or
-enabling the organization allowlist.
+## Frontend controls and review
+
+The shared browser window exposes **Teach a browser procedure** for an addressed,
+unprotected live view. Opening it reads the organization policy and that run's
+authorized agent metadata. Recording is available only to the current holder
+with the current server-issued takeover token; reconnecting without a fresh
+browser_held token does not reconstruct permission. The form identifies exact
+HTTPS origins and explains that clicks and navigation affect the live website.
+It offers a new skill where the person may create one, or an existing editable
+skill selected through the ordinary per-resource authority.
+
+Pause, Resume and Stop recording use the persisted capture and its current
+revision. Resume additionally requires the current takeover token and an
+unexpired capture window. Stopping recording opens the review stage; it does not
+stop the hosted browser run. Protected credential output removes teaching
+controls and cached takeover state immediately, including after a reconnect or
+late browser event. It cannot be reversed by later raw frames or navigation.
+
+**Skills → Browser teaching** lists the current person's captures from the
+paginated owner/org collection at /skills/teaching. Opening a row reads its
+exact current receipt at /skills/teaching/{id} before exposing review or
+decisions. The list distinguishes expired captures, manual demonstrations and
+suggestions from completed work. A refused fresh read hides retained private
+metadata, including a membership refusal; an invalid cursor offers a fresh
+first page rather than silently mixing pages.
+
+The review editor preserves every captured sequence in order. The person
+supplies step labels, parameter names and descriptions, explicit relative path
+templates, prerequisites and success checks. Omitting a step is an explicit
+choice. No captured value, parameter default, page label or selector is
+reconstructed. A newer server revision requires reloading the review before
+saving. A refused generation must be reviewed and saved again before another
+draft is offered.
+
+The default **Create draft from reviewed steps** path makes no model call.
+Assistant drafting is a separate choice with an explicit positive USD ceiling,
+bounded by the backend's ten-dollar limit. Neither path applies the draft.
+The handoff uses the existing Skills proposal review: a new skill has its
+separate Apply/Discard decision, and an existing skill retains the agent-check
+flow. The handoff is withheld when the person lacks its existing permissions.
+Applied browser-procedure provenance is displayed only on the exact teaching
+version. Ordinary edits and restores do not inherit that provenance. Manual
+capture and the completion-state flag never claim independent verification of
+the website's business result.
+
+Start and Draft retain the exact scoped request tuple before a write. An
+uncertain response survives reload and a later read refusal. **Check again**
+performs only GET recovery; only an explicit retry button may send the same
+retained tuple again. Delayed responses are rejected after an actor or
+organization change. Cached reads poll for at most three minutes at a time,
+with an explicit GET-only check after that window. Local expiry displays remain
+current without extending network polling or starting another model job.
+
+An acknowledged newer saved review may retire only the same retained Draft
+tuple: the backend serializes review and generation admission on the capture
+row. A lost review acknowledgment, changed audience or different retained tuple
+cannot settle the old attempt. Saving a review never starts another Draft, and
+retiring an older refused attempt does not establish that it incurred no cost.
+
+Organization governance contains the default-off teaching policy with a
+generation-checked confirmation. Acting-member learning preferences are scoped
+to that exact run's agent, remain off by default, and allow a known enabled
+preference to be revoked after agent access is lost. Capability settings expose
+the separate allow_teaching and learn_site_procedures options. Policy, frozen
+capability configuration, the current person and live controller remain
+authoritative; the frontend never enables deployment admission.
+
+The English message catalog, existing locale fallback and onboarding help cover
+the new settings, live controls, review and separate draft/publication decisions.
+The review guide does not click consent or publication actions.
+
+### Frontend acceptance boundaries
+
+Scoped tests exercise tenant changes, current takeover tokens, protected output,
+complete ordered review, revision conflicts, uncertain request recovery, default
+no-model drafting, explicit budgets and existing proposal authority. Synthetic
+desktop and mobile cases in
+frontend/e2e/browser-teaching-visual-fixtures.spec.ts use the actual Skills,
+review, hosted-browser and organization-settings routes. They first check real
+owner authentication and the native read contracts, then substitute clearly
+labelled capture metadata and socket events. Their screenshots are fixture-only
+evidence; they do not prove a live website flow or paid provider execution.
+
+Full integrated release CI, review of the rendered desktop/mobile evidence and a
+deployed synthetic flow remain required before changing availability
+documentation or enabling the organization allowlist.
 
 ## Rollout and rollback
 

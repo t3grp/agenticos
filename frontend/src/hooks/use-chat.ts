@@ -1421,6 +1421,7 @@ export function useChat(options: UseChatOptions = {}) {
         case "browser_released":
         case "browser_needs_person":
         case "browser_protected":
+        case "browser_teaching":
         case "browser_control_error":
         case "browser_pointer": {
           // One branch for every frame: the envelope's `type` is the frame's own

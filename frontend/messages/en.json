@@ -1,4 +1,194 @@
 {
+  "browserTeaching": {
+    "listTitle": "Browser teaching",
+    "listDescription": "Review your demonstrations and completed browser suggestions before drafting a reusable skill.",
+    "backToSkills": "Back to Skills",
+    "startFromBrowser": "To record a demonstration, open an agent’s live browser, take over, then choose Teach. Recording requires the organization and published agent to allow teaching.",
+    "emptyList": "You have no browser captures to review yet.",
+    "expiredCapture": "Expired capture",
+    "createdAt": "Created",
+    "openCapture": "Open capture",
+    "refreshList": "Refresh list",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "checkAgain": "Check again",
+    "requestUnavailable": "This request is unavailable. Check again to read the current state.",
+    "captureUnavailable": "This capture is unavailable to the current person and organization.",
+    "controlsTitle": "Teach a browser procedure",
+    "teach": "Teach",
+    "recording": "Recording",
+    "captureDescription": "Record structural actions, review each step, and create a draft. Nothing is applied to a skill automatically.",
+    "startTitle": "Start a demonstration",
+    "captureTitle": "Demonstration title",
+    "allowedOrigins": "Allowed HTTPS origins",
+    "originsHelp": "One exact origin per line, including https://. Do not include paths, queries, credentials or wildcards. Recording stops outside this set.",
+    "invalidOrigins": "Enter one to ten distinct, exact HTTPS origins.",
+    "targetSkill": "Draft destination",
+    "chooseSkill": "Choose an editable skill",
+    "newSkill": "Create a new skill",
+    "loadMoreSkills": "Load more skills",
+    "takeOverRequired": "Take over this live browser to obtain a current control lease before starting or resuming.",
+    "startRecording": "Start recording",
+    "liveActionsWarning": "Your clicks and navigation affect the live website. Teaching records structure and origins, without entered values. Authentication and unsupported controls remain human steps.",
+    "storageUnavailable": "This browser cannot safely retain this attempt. Use the capture list to check for an existing result before trying again.",
+    "startUncertain": "The Start response is unresolved. Check its status, or explicitly resend the exact same request. Changing browser ownership does not erase an earlier attempt.",
+    "retrySameStart": "Retry the same Start request",
+    "allCaptures": "All browser captures",
+    "capturedSteps": "{count, plural, one {# recorded step} other {# recorded steps}}",
+    "pause": "Pause recording",
+    "resume": "Resume recording",
+    "stopRecording": "Stop and review",
+    "stopRefinement": "Stop this suggestion",
+    "reviewCapture": "Review capture",
+    "newCapture": "Record another demonstration",
+    "policyTitle": "Allow browser teaching",
+    "policyDescription": "Permit explicit browser demonstrations and reviewable procedure suggestions in this organization.",
+    "policyDefaultOff": "Off by default. Agents must also enable teaching in a published browser capability. Automatic suggestions require the acting member’s separate opt-in.",
+    "deploymentDisabled": "Browser teaching is unavailable on this deployment.",
+    "organizationDisabled": "Browser teaching is off for this organization. An administrator can enable it in workspace governance.",
+    "enablePolicy": "Enable browser teaching?",
+    "disablePolicy": "Turn off browser teaching?",
+    "enablePolicyDetail": "Eligible agents may record explicitly started demonstrations. Every draft still waits for review; automatic suggestions also require each member’s opt-in.",
+    "disablePolicyDetail": "Turn off admission and cancel pending drafting for this organization. Existing skill versions remain governed by Skills.",
+    "save": "Save",
+    "preferenceTitle": "Suggest procedures from my completed work",
+    "preferenceDescription": "For this agent and your account only. Suggestions become reviewable after the browser finishes and the agent run completes; they never publish a skill.",
+    "preferenceUnavailable": "New suggestions are unavailable for this agent. You can still turn off an existing opt-in.",
+    "reviewTitle": "Review browser capture",
+    "captureSummary": "Capture status",
+    "manualEvidence": "This is a human demonstration. Its website outcome has not been independently verified.",
+    "completedEvidence": "The browser reported Done and the agent run completed. This does not independently verify the website’s business result.",
+    "completionPending": "This suggestion is not reviewable until the browser and the agent run both complete.",
+    "captureExpires": "Transient capture expires",
+    "discardCapture": "Discard capture",
+    "discardTitle": "Discard this capture?",
+    "discardDescription": "Erase this transient demonstration and its reviewed metadata. An existing skill proposal must be applied or discarded through Skills.",
+    "pollingEnded": "Drafting may still be pending. Automatic checks have stopped; Check again only reads the current state.",
+    "draftUnknown": "The drafting outcome is uncertain. Check its status; no new drafting attempt will start automatically.",
+    "proposalReady": "Skill draft ready for review",
+    "proposalDetail": "Open Skills to inspect the complete proposal. New skills require Apply; changes to an existing skill use the existing Check on agents flow. This capture does not publish anything.",
+    "openProposals": "Review proposals in Skills",
+    "proposalUnavailable": "Your current permissions do not allow the Skills proposal review. The proposal remains pending for an authorized reviewer.",
+    "capturedEvents": "Captured structural actions",
+    "eventsValueFree": "These records contain action types and exact origins, without typed values, DOM labels or selectors.",
+    "reviewSteps": "Review every step",
+    "reviewDescription": "Write a useful label for every captured step. Explicitly omit steps you do not want to keep, define named input parameters, and review each navigation path. Do not enter credentials or private values.",
+    "revisionChanged": "The capture changed after you opened this review. Read the current version before saving.",
+    "reloadReview": "Load current review",
+    "skillName": "Skill name",
+    "skillNameHelp": "Use lowercase letters, numbers, hyphens or underscores; start with a letter or number.",
+    "skillDescription": "Skill description",
+    "parametersTitle": "Parameter names",
+    "parametersHelp": "Define placeholders and what they mean. Values and defaults are never stored in a browser procedure.",
+    "parameterName": "Parameter {number} name",
+    "parameterDescription": "Parameter {number} description",
+    "removeParameter": "Remove parameter",
+    "addParameter": "Add parameter",
+    "stepNumber": "Step {number}",
+    "humanCheckpoint": "A person must handle this step. Authentication, OTP and CAPTCHA values are never recorded.",
+    "omitStep": "Omit step {number}",
+    "stepLabel": "Step {number} instruction",
+    "stepParameter": "Step {number} parameter name",
+    "stepPath": "Step {number} path template",
+    "pathHelp": "Use a relative path such as /reports. Place a defined parameter name inside braces when needed. Queries, fragments, encoded tokens and parent paths are refused.",
+    "prerequisites": "Prerequisites",
+    "successChecks": "Success checks",
+    "checksHelp": "One check per line, up to sixteen. At least one success check is required; it describes what a later person or agent must verify.",
+    "saveReview": "Save reviewed steps",
+    "draftTitle": "Create a skill draft",
+    "draftDescription": "The saved review becomes a pending proposal. Applying it is a separate decision in Skills.",
+    "draftMode": "Drafting method",
+    "reviewedNoModel": "Use my reviewed steps — no model call",
+    "assistantOptional": "Ask the assistant to draft — optional paid model call",
+    "assistantBudget": "Maximum drafting cost (USD)",
+    "assistantBudgetHelp": "Enter an explicit amount above zero and at most $10, with up to six decimal places.",
+    "invalidBudget": "Enter a valid budget above $0 and at most $10.",
+    "createReviewedDraft": "Create draft from reviewed steps",
+    "createAssistantDraft": "Draft with the assistant",
+    "draftUncertain": "The Draft response is unresolved. Check the capture, or explicitly retry the saved revision and drafting choice.",
+    "savedAssistantBudget": "Saved assistant budget: ${budget} USD",
+    "retrySameDraft": "Retry the same Draft request",
+    "procedureTitle": "Browser procedure",
+    "versionAuthority": "This procedure belongs to this exact skill version. Later use still requires observing the live page and matching each control; it does not authorize replay.",
+    "status": {
+      "recording": "Recording",
+      "paused": "Paused",
+      "review": "Ready for review",
+      "proposed": "Draft proposed",
+      "discarded": "Discarded",
+      "expired": "Expired"
+    },
+    "source": {
+      "manual": "Human demonstration",
+      "refinement": "Completed-work suggestion"
+    },
+    "generation": {
+      "none": "No draft requested",
+      "queued": "Draft queued",
+      "generating": "Drafting",
+      "succeeded": "Draft ready",
+      "refused": "Draft refused",
+      "unknown": "Draft outcome unknown",
+      "cancelled": "Draft cancelled"
+    },
+    "action": {
+      "navigate": "Navigate",
+      "click": "Click",
+      "select": "Select an option",
+      "input_parameter": "Enter a parameter",
+      "scroll": "Scroll",
+      "checkpoint": "Human checkpoint"
+    },
+    "role": {
+      "button": "Button",
+      "link": "Link",
+      "textbox": "Text field",
+      "combobox": "Selection field",
+      "checkbox": "Checkbox",
+      "radio": "Radio option",
+      "tab": "Tab",
+      "menuitem": "Menu item",
+      "option": "Option",
+      "switch": "Switch"
+    },
+    "validation": {
+      "name": "Use a valid skill name, up to 64 characters.",
+      "description": "Describe the skill in 1–500 characters.",
+      "sequence": "Review every captured sequence once, in its original order.",
+      "parameters": "Use distinct parameter names and a description for each, up to fifty parameters.",
+      "label": "Give every step a nonblank instruction, up to 160 characters.",
+      "parameter": "Each kept input or selection must name a defined parameter; other steps must not.",
+      "path": "Each kept navigation must have a valid relative path template using defined parameters.",
+      "keptStep": "Keep at least one reviewed step.",
+      "prerequisites": "Use up to sixteen nonblank prerequisites of at most 240 characters.",
+      "successChecks": "Provide one to sixteen nonblank success checks of at most 240 characters."
+    },
+    "reason": {
+      "teaching_disabled": "Browser teaching is turned off.",
+      "teaching_unavailable": "Browser teaching is unavailable for this live session.",
+      "browser_ownership_lost": "The live browser control lease has changed. Take over again to resume.",
+      "credential_output_protected": "Credential protection has stopped teaching and hidden browser output.",
+      "authority_changed": "Your authority changed. Read the current state before continuing.",
+      "teaching_expired": "This transient capture has expired.",
+      "event_limit_reached": "Recording reached its 500-event limit.",
+      "event_bytes_limit_reached": "Recording reached its metadata size limit.",
+      "capture_time_limit_reached": "Recording reached its 30-minute time limit.",
+      "human_authentication_required": "Authentication must be completed by a person; its values are not recorded.",
+      "human_step_required": "A person must handle this unsupported step.",
+      "origin_not_allowed": "The browser left the exact origins allowed for this demonstration.",
+      "capture_unavailable": "This capture is unavailable.",
+      "paused_by_owner": "You paused this recording.",
+      "stale_revision": "This capture changed. Review the current revision before continuing.",
+      "event_sequence_conflict": "The captured sequence changed. Read the current state.",
+      "review_required": "Complete and save the step review before creating a draft.",
+      "generation_budget_refused": "Drafting was refused by the current budget or model policy.",
+      "draft_not_usable": "The generated draft could not be used. Review the steps before trying another explicit draft.",
+      "generation_failed": "Drafting failed. Check the current state before another decision.",
+      "generation_outcome_unknown": "The drafting outcome is uncertain. Check the capture; do not start a new attempt.",
+      "learning_opted_out": "Procedure suggestions are turned off for this member and agent.",
+      "task_not_completed": "The browser and agent run must both complete before this suggestion can be reviewed."
+    }
+  },
   "browserCredentials": {
     "reviewTitle": "Saved credential request",
     "loadingPlan": "Loading the saved credential request…",
@@ -5293,6 +5483,10 @@
         "body": "Skills are reusable instructions you can attach to any agent. Want to make your first one now? We'll walk you through it.",
         "title": "Create a skill?"
       },
+      "review-browser-teaching": {
+        "title": "Review a browser procedure?",
+        "body": "Review each captured step, choose how to draft, and follow the separate Skills proposal decision. The guide does not run a model or apply a skill."
+      },
       "create-workflow": {
         "body": "A workflow chains steps into an automation your agents run. Want to start one now? We'll open the create dialog so you can pick a blank canvas or a template.",
         "title": "Build a workflow?"
@@ -6313,6 +6507,49 @@
       "org-directory-new": {
         "body": "Paste the group's DN or claim value and pick a role. You can only hand out roles below your own.",
         "title": "Map a directory group"
+      },
+      "skills-teaching": {
+        "title": "Review browser demonstrations",
+        "body": "Open your private capture list, including completed-work suggestions. Starting a recording happens only after you take over a live browser."
+      },
+      "teaching-list": {
+        "title": "Your saved captures",
+        "body": "This list is private to you in the current organization. Open a capture to read its current state before reviewing steps or drafting a skill."
+      },
+      "teaching-summary": {
+        "title": "What this capture proves",
+        "body": "A human demonstration does not verify a website outcome. A completed-work suggestion records only that the browser and agent run finished."
+      },
+      "teaching-review": {
+        "title": "Review every action",
+        "body": "Keep the original order, label every step, and explicitly omit anything unwanted. Use parameter names and reviewed relative paths, never credentials or entered values."
+      },
+      "teaching-draft": {
+        "title": "Choose how to draft",
+        "body": "The default uses your reviewed steps without a model call. Assistant drafting needs a separate choice and a budget. Neither applies the proposal."
+      },
+      "teaching-proposal": {
+        "title": "A separate publication decision",
+        "body": "Open Skills to review the complete draft. New skills require Apply; existing skills follow the established agent-check flow."
+      },
+      "org-browser-teaching": {
+        "title": "Teaching is off by default",
+        "body": "Organization policy, the agent’s published capability and the live owner’s explicit action govern recording. Automatic suggestions also require that member’s opt-in."
+      },
+      "flow-teaching-review": {
+        "title": "Review the recorded steps",
+        "body": "Supply labels, parameter names and safe relative paths, then save the complete review.",
+        "absent": "Open a capture that is ready for review. Pending, expired or proposed captures cannot be edited here."
+      },
+      "flow-teaching-draft": {
+        "title": "Create a pending draft",
+        "body": "Choose the no-model path or explicitly budget assistant drafting. The guided flow does not press either action.",
+        "absent": "Save the reviewed steps first. An unresolved drafting attempt must be checked before another choice."
+      },
+      "flow-teaching-proposal": {
+        "title": "Review in Skills",
+        "body": "The capture produces a proposal. Only the existing Skills review flow can apply or discard it.",
+        "absent": "A proposal link appears after drafting completes; Check again only reads its state."
       },
       "org-governance": {
         "body": "Set the organization spending limit and manage approval waivers. Controls depend on your permissions.",
@@ -10150,6 +10387,7 @@
         "showChanges": "Show changes",
         "source": {
           "backfill": "As it was when versions began",
+          "browser_teaching": "Browser teaching",
           "catch_up": "Caught up with main",
           "created": "Created",
           "edit": "Edited",
@@ -14333,6 +14571,14 @@
   },
   "capabilityConfig": {
     "browser_use": {
+      "allow_teaching": {
+        "title": "Allow browser teaching",
+        "description": "Let a person explicitly record structural actions in this provisioned browser and review a skill draft."
+      },
+      "learn_site_procedures": {
+        "title": "Suggest browser procedure refinements",
+        "description": "Allow review-only suggestions from completed browser work when the acting member also opts in. Never publishes a skill."
+      },
       "browser_credential_ids": {
         "title": "Browser credentials",
         "description": "Saved browser logins or contact profiles this agent may request in your private console chat. Each fill requires a live destination confirmation."

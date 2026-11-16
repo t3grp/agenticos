@@ -53,6 +53,52 @@ beforeEach(() => {
 });
 
 describe("useLiveBrowse", () => {
+  it("clears a teaching lease on disconnect and never reconstructs it from snapshot identities", () => {
+    const { result } = renderHook(() => useLiveBrowse("run-1", "c1"));
+    receive({
+      type: "browser_snapshot",
+      task: "t",
+      can_control: true,
+      trace: [
+        frame({ kind: "browser_opened", step: 0 }),
+        frame({ kind: "browser_held", by_user_id: "u1", takeover_id: "server-token" }),
+      ],
+      frame: null,
+    });
+    expect(result.current.browse?.takeoverId).toBe("server-token");
+    act(() => socket.options!.onClose({ code: 1006 } as CloseEvent));
+    expect(result.current.canControl).toBe(false);
+    expect(result.current.browse?.takeoverId).toBeNull();
+    receive({
+      type: "browser_snapshot",
+      task: "t",
+      can_control: true,
+      takeover_id: "outer-field-is-not-authority",
+      trace: [
+        frame({ kind: "browser_opened", step: 0 }),
+        frame({ kind: "browser_held", by_user_id: "u1" }),
+      ],
+      frame: null,
+    });
+    expect(result.current.canControl).toBe(true);
+    expect(result.current.browse?.takeoverId).toBeNull();
+    receive(frame({ kind: "browser_held", by_user_id: "u1", takeover_id: "fresh-server-token" }));
+    expect(result.current.browse?.takeoverId).toBe("fresh-server-token");
+    receive(frame({ kind: "browser_protected", output_protected: true }));
+    receive(
+      frame({
+        kind: "browser_teaching",
+        teaching_session_id: "capture",
+        teaching_revision: 1,
+        teaching_status: "recording",
+      }),
+    );
+    expect(result.current.browse).toMatchObject({
+      outputProtected: true,
+      takeoverId: null,
+      teachingSessionId: null,
+    });
+  });
   it("opens the browse's own socket, for the signed-in person, with the token as a subprotocol", () => {
     const { unmount } = renderHook(() => useLiveBrowse("run 1", "c1"));
 

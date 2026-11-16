@@ -385,6 +385,7 @@ export type WSEventType =
   | "browser_released"
   | "browser_needs_person"
   | "browser_protected"
+  | "browser_teaching"
   | "browser_pointer"
   | "browser_control_error";
 
@@ -417,6 +418,7 @@ export interface BrowserFrame {
     | "browser_released"
     | "browser_needs_person"
     | "browser_protected"
+    | "browser_teaching"
     | "browser_pointer"
     | "browser_control_error";
   /** Which `browse_web` call this belongs to; one turn can browse twice. */
@@ -448,6 +450,12 @@ export interface BrowserFrame {
   by?: string | null;
   /** Who took the browser over, by id - how a viewer tells it is them. */
   by_user_id?: string | null;
+  /** Server-issued holder lease; never reconstructed from a view identity. */
+  takeover_id?: string | null;
+  teaching_session_id?: string | null;
+  teaching_status?: import("@/types/browser-teaching").TeachingStatus | null;
+  teaching_revision?: number | null;
+  teaching_reason?: import("@/types/browser-teaching").TeachingReason | null;
   /** On `browser_pointer`: where the agent is about to press, as fractions of the viewport. */
   x?: number | null;
   y?: number | null;

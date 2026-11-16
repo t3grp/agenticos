@@ -158,15 +158,19 @@ export function useLiveBrowse(
     (event: CloseEvent) => {
       if (!isCurrent()) return;
       const closed = CLOSED[event.code];
-      if (closed)
-        setState((before) => ({
-          generation,
-          browses: before?.generation === generation ? before.browses : [],
-          task: before?.generation === generation ? before.task : "",
-          canControl: false,
-          canRemember: false,
-          status: closed,
-        }));
+      setState((before) => ({
+        generation,
+        // A reconnect may recover the page, but must obtain a fresh held event
+        // before offering teaching Start/Resume with a server-issued lease.
+        browses:
+          before?.generation === generation
+            ? before.browses.map((browse) => ({ ...browse, takeoverId: null }))
+            : [],
+        task: before?.generation === generation ? before.task : "",
+        canControl: false,
+        canRemember: false,
+        status: closed ?? "connecting",
+      }));
     },
     [isCurrent, generation],
   );
