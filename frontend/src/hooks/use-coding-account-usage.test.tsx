@@ -5,6 +5,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { useCodingAccountUsage } from "./use-coding-account-usage";
 import { useAuthStore } from "@/stores";
 import { qk } from "@/lib/query-keys";
+import { ApiError } from "@/lib/api-error";
 import type { CodingAccount, CodingAccountUsage } from "@/lib/coding-accounts-api";
 import * as api from "@/lib/coding-accounts-api";
 
@@ -73,10 +74,12 @@ function report(row: CodingAccount, marker: string): CodingAccountUsage {
     refresh_pending: false,
   };
 }
-function mount(initial = account()) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+function mount(initial = account(), existingClient?: QueryClient) {
+  const client =
+    existingClient ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
@@ -199,6 +202,9 @@ it.each(["organization", "owner"])("does not read or refresh without the %s", as
   expect(result.current.ready).toBe(false);
   act(() => result.current.requestRefresh());
   await waitFor(() => expect(result.current.changed).toBe(true));
+  await act(async () => {
+    await result.current.check();
+  });
   expect(api.readCodingAccountUsage).not.toHaveBeenCalled();
   expect(api.refreshCodingAccountUsage).not.toHaveBeenCalled();
 });
@@ -246,3 +252,232 @@ it("prevents a slower cached read from replacing an accepted refresh", async () 
   expect(result.current.pending).toBe(true);
   expect(api.refreshCodingAccountUsage).toHaveBeenCalledTimes(1);
 });
+
+it.each([
+  ["read", 403],
+  ["read", 404],
+  ["refresh", 403],
+  ["refresh", 404],
+] as const)(
+  "redacts private evidence after a definitive %s %i until a fresh read succeeds",
+  async (operation, status) => {
+    const row = account();
+    const privateReport = report(row, "private-window");
+    privateReport.model_catalog = {
+      ...row.model_catalog,
+      status: "advertised",
+      source: "native_runtime",
+      observed_at: new Date().toISOString(),
+      valid_until: new Date(Date.now() + 300_000).toISOString(),
+      model_ids: ["private-model"],
+    };
+    row.usage = privateReport.usage;
+    row.model_catalog = privateReport.model_catalog;
+    vi.mocked(api.readCodingAccountUsage).mockResolvedValue(privateReport);
+    const current = mount(row);
+    const mine = qk.codingAccounts.mine("org-1:user-1");
+    const other = account({
+      id: "other-account",
+      usage: {
+        ...privateReport.usage,
+        windows: [{ name: "other-window", used: 1, limit: 2, unit: null, resets_at: null }],
+      },
+    });
+    const rotated = { ...row, generation: "new-generation" };
+    current.client.setQueryData(mine, { items: [row, other, rotated] });
+    await waitFor(() =>
+      expect(current.result.current.report?.usage.windows[0]?.name).toBe("private-window"),
+    );
+    const refusal = new ApiError(status, "Synthetic authority refusal");
+    if (operation === "read") {
+      vi.mocked(api.readCodingAccountUsage).mockRejectedValueOnce(refusal);
+      await act(async () => {
+        await current.result.current.check();
+      });
+    } else {
+      vi.mocked(api.refreshCodingAccountUsage).mockRejectedValueOnce(refusal);
+      act(() => current.result.current.requestRefresh());
+    }
+    await waitFor(() => expect(current.result.current.changed).toBe(true));
+    expect(current.result.current.report).toBeUndefined();
+    const key = qk.codingAccounts.usage("org-1:user-1", row.id, row.generation);
+    expect(current.client.getQueryData(key)).toBeNull();
+    const cached = current.client.getQueryData<{ items: CodingAccount[] }>(mine)?.items;
+    expect(cached?.[0]?.usage.windows).toEqual([]);
+    expect(cached?.[0]?.model_catalog.model_ids).toEqual([]);
+    expect(cached?.[1]?.usage.windows[0]?.name).toBe("other-window");
+    expect(cached?.[2]?.usage.windows[0]?.name).toBe("private-window");
+    const priorWrites = operation === "refresh" ? 1 : 0;
+    act(() => current.result.current.requestRefresh());
+    await waitFor(() => expect(current.result.current.refreshing).toBe(false));
+    expect(api.refreshCodingAccountUsage).toHaveBeenCalledTimes(priorWrites);
+
+    let finish!: (value: CodingAccountUsage) => void;
+    vi.mocked(api.readCodingAccountUsage).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    current.unmount();
+    // Even stale account-list props cannot reseed evidence or re-enable a write.
+    const remounted = mount(row, current.client);
+    await waitFor(() => expect(finish).toBeDefined());
+    expect(remounted.result.current.changed).toBe(true);
+    expect(remounted.result.current.report).toBeUndefined();
+    await act(async () => {
+      finish(privateReport);
+    });
+    await waitFor(() => expect(remounted.result.current.changed).toBe(false));
+    expect(remounted.result.current.report?.model_catalog.model_ids).toEqual(["private-model"]);
+    act(() => remounted.result.current.requestRefresh());
+    await waitFor(() =>
+      expect(api.refreshCodingAccountUsage).toHaveBeenCalledTimes(priorWrites + 1),
+    );
+  },
+);
+
+it.each(["read", "refresh"] as const)(
+  "retains valid evidence after a transient %s failure",
+  async (operation) => {
+    const initial = account();
+    const fresh = report(initial, "still-valid");
+    vi.mocked(api.readCodingAccountUsage).mockResolvedValue(fresh);
+    const { result } = mount(initial);
+    await waitFor(() => expect(result.current.report?.usage.windows[0]?.name).toBe("still-valid"));
+    const error = new ApiError(503, "Synthetic temporary outage");
+    if (operation === "read") {
+      vi.mocked(api.readCodingAccountUsage).mockRejectedValueOnce(error);
+      await act(async () => {
+        await result.current.check();
+      });
+    } else {
+      vi.mocked(api.refreshCodingAccountUsage).mockRejectedValueOnce(error);
+      act(() => result.current.requestRefresh());
+    }
+    await waitFor(() => expect(result.current.error).toBe(error));
+    expect(result.current.changed).toBe(false);
+    expect(result.current.report?.usage.windows[0]?.name).toBe("still-valid");
+  },
+);
+
+it("does not republish a delayed refresh after a later read refuses authority", async () => {
+  const row = account();
+  let finish!: (value: CodingAccountUsage) => void;
+  vi.mocked(api.refreshCodingAccountUsage).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const { result, client } = mount(row);
+  await waitFor(() => expect(result.current.checking).toBe(false));
+  act(() => result.current.requestRefresh());
+  await waitFor(() => expect(finish).toBeDefined());
+  vi.mocked(api.readCodingAccountUsage).mockRejectedValueOnce(
+    new ApiError(403, "Synthetic authority refusal"),
+  );
+  await act(async () => {
+    await result.current.check();
+  });
+  expect(result.current.changed).toBe(true);
+  await act(async () => {
+    finish(report(row, "late private evidence"));
+  });
+  expect(
+    client.getQueryData(qk.codingAccounts.usage("org-1:user-1", row.id, row.generation)),
+  ).toBeNull();
+  expect(result.current.changed).toBe(true);
+  expect(result.current.report).toBeUndefined();
+});
+
+it.each(["organization", "owner"])(
+  "does not apply an earlier denied read to the next %s's report",
+  async (change) => {
+    const initial = account();
+    let refuse!: (reason: Error) => void;
+    vi.mocked(api.readCodingAccountUsage).mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          refuse = reject;
+        }),
+    );
+    const { result, client, rerender } = mount(initial);
+    await waitFor(() => expect(refuse).toBeDefined());
+    const next = nextAudience(change, initial);
+    vi.mocked(api.readCodingAccountUsage).mockResolvedValue(report(next.row, "next audience"));
+    const nextMine = qk.codingAccounts.mine(`${next.tenant}:${next.user}`);
+    client.setQueryData(nextMine, { items: [next.row] });
+    act(() => {
+      audience.tenant = next.tenant;
+      useAuthStore.setState({ user: person(next.user) });
+      rerender(next.row);
+    });
+    await waitFor(() =>
+      expect(result.current.report?.usage.windows[0]?.name).toBe("next audience"),
+    );
+    await act(async () => {
+      refuse(new ApiError(403, "Synthetic previous audience refusal"));
+    });
+    expect(result.current.changed).toBe(false);
+    expect(result.current.report?.usage.windows[0]?.name).toBe("next audience");
+    expect(client.getQueryData(nextMine)).toEqual({ items: [next.row] });
+  },
+);
+
+it.each(["account", "generation"])(
+  "refuses a refresh response for another %s without caching it",
+  async (change) => {
+    const row = account();
+    const wrong = nextAudience(change, row).row;
+    vi.mocked(api.refreshCodingAccountUsage).mockResolvedValue(report(wrong, "wrong refresh"));
+    const { result, client } = mount(row);
+    await waitFor(() => expect(result.current.checking).toBe(false));
+    act(() => result.current.requestRefresh());
+    await waitFor(() => expect(result.current.changed).toBe(true));
+    expect(result.current.report).toBeUndefined();
+    expect(
+      client.getQueryData<CodingAccountUsage>(
+        qk.codingAccounts.usage("org-1:user-1", row.id, row.generation),
+      )?.usage.windows[0]?.name,
+    ).toBe("current");
+  },
+);
+
+it.each(["refusal", "organization", "owner"])(
+  "does not send a refresh when %s changes while cancelling its prior read",
+  async (change) => {
+    const row = account();
+    const { result, client, rerender } = mount(row);
+    await waitFor(() => expect(result.current.checking).toBe(false));
+    const cancel = client.cancelQueries.bind(client);
+    let finish!: () => void;
+    vi.spyOn(client, "cancelQueries").mockImplementationOnce(async (filters, options) => {
+      await new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      return cancel(filters, options);
+    });
+    act(() => result.current.requestRefresh());
+    await waitFor(() => expect(finish).toBeDefined());
+    act(() => {
+      if (change === "refusal") {
+        client.setQueryData(qk.codingAccounts.usage("org-1:user-1", row.id, row.generation), null);
+      } else {
+        const next = nextAudience(change, row);
+        audience.tenant = next.tenant;
+        useAuthStore.setState({ user: person(next.user) });
+        rerender(next.row);
+      }
+    });
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(result.current.refreshing).toBe(false));
+    expect(api.refreshCodingAccountUsage).not.toHaveBeenCalled();
+    if (change === "refusal") {
+      expect(result.current.changed).toBe(true);
+      expect(result.current.report).toBeUndefined();
+    }
+  },
+);
