@@ -29,7 +29,9 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
-- Browser, Computer and Files controls on the right of every chat, with separate panels that open before tool activity. Hosted-tool start actions use the selected agent's published configuration and run permissions. Opening an empty panel starts no run; completed browser and desktop images are clearly marked as the last view, and closing a panel keeps it closed as new results arrive.
+- An Agent settings pane beside chat, with explicit draft saving for name, description, instructions, default model and configured capability switches. Editing and publishing use per-agent access hints, including resource grants. Publishing validates the draft and uses the existing version/environment confirmation. Edits survive switching workspace panes; remote changes pause saving. Chat model overrides and running turns keep their existing scope.
+- The agent chat header has a compact model selector with provider icons, saved-model search, explicit account filtering and a return to the agent's model. It preserves chat preferences, permission gates and the advanced connection setup in Controls; disconnected or non-chat models stay unavailable.
+- Browser, Computer and Files controls beside full desktop chats, with separate panels that open before tool activity. The rail is hidden on phones and in compact chats. Hosted-tool start actions use the selected agent's published configuration and run permissions. Opening an empty panel starts no run; completed browser and desktop images are clearly marked as the last view, and closing a panel keeps it closed as new results arrive.
 - Project-room messaging APIs accept human posts without a model call and explicit requests for published cloud agents. A PostgreSQL submission ledger deduplicates retries, queues agent requests per conversation and retains their original requester; permissions are checked when accepted and when work starts or resumes. A waiting approval or answer keeps the room queue blocked. Queued follow-ups read earlier messages and the completed answers to preceding requests, while excluding later prompts. Migration `0311_room_submissions.py` follows `0303_virtual_table_row_policy.py`, which follows `0310_secret_requests.py`; the separate Team rooms interface uses these endpoints.
 - Open console tabs detect a newly deployed frontend and show a persistent top-center update notice with a Reload button, matching ServerOS. Checks run every minute while visible and when the tab returns; the app reloads only when the person chooses it. Build identities detect updates even when the release number is unchanged.
 - Row-level access for tables, by assignee: a table may carry a row policy naming the user or multi-user column that gates viewing and the one that gates editing, plus an optional project half (a link column, a projects table and its members column) that widens viewing to project members. A row with an empty assignee is visible to nobody except the deployment owner, the table owner and Owner/Admin roles; Builders and Operators get the predicate applied like everyone else. Creating a row its creator cannot see is refused, as are updates, upserts and deletes that move a row out of the caller's visibility, and single reads of invisible rows are 404s. Linked records a reader cannot see yield no label and no id, rollups count only the visible subset, and triggers do not fire for rows their publisher cannot see. Set it with `PUT /tables/{id}/row-policy`; tables without a policy behave exactly as before.
@@ -97,6 +99,10 @@ Two things are versioned separately from this file and worth knowing about:
   containers, volumes and networks intact.
 - A harness capability backs an agent with a Claude Code or Codex session in its sandbox, kept open across turns: `harness_start` opens a named session with a first prompt, `harness_prompt` sends it the next one, `harness_stop` closes it and `harness_sessions` lists the open ones. The session is the CLI's own, resumed by an id kept beside the work, and a prompt runs through the same detached execution, live narration, budget ledger and approval as a coding agent's task. A ChatGPT sign-in for Codex is not accepted yet; Codex runs on an OpenAI API key.
 - The harness capability also drives OpenCode, Gemini CLI and Pi sessions, on the same pattern: the same session lifecycle and `read_only` / `edit` access semantics where the CLI supports them, with the CLI's own session id resumed across turns. The credential follows the model for OpenCode and Pi, and is always a Gemini API key for Gemini CLI. The adapters are written from the CLIs' public docs and are untested against the real CLIs; a harness that is not installed reports as failed rather than claiming otherwise.
+### Fixed
+
+- Table link replacements validate every explicitly submitted destination before accepting an unchanged write. Hidden and missing destination IDs receive the same refusal; omitted hidden links remain preserved for older clients.
+
 ## [1.73.0] - 2026-11-13
 
 ### Added
@@ -1052,6 +1058,8 @@ environment without a person's decision.
   fallbacks for email clients that do not load them.
 
 ### Fixed
+
+- Table links expose only readable destination IDs and labels, including exports and projected reads. Link filters and counts use the same visible destinations, and legacy array replacements retain hidden existing links. Invalid stored row policies block record access with a repairable `ROW_POLICY_INVALID` error instead of disabling restrictions.
 
 - Keep parked secret requests in their original conversation, account and organization.
   Leaving that context clears the card and ignores delayed reads or decisions;
