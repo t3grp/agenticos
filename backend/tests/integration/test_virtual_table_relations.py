@@ -857,3 +857,75 @@ async def test_replaying_a_create_whose_record_was_deleted_since_is_not_found(db
     await service.delete_record(ctx, source.id, first.record.id, expected_revision=1)
     with pytest.raises(NotFoundError, match="Record not found"):
         await service.create_record(ctx, source.id, body, operation_key="gone-since")
+
+
+async def test_purging_a_linked_task_board_removes_the_links_and_keeps_the_table_editable(db):
+    from app.schemas.task import TaskCreate
+    from app.services.tasks import TaskService
+
+    owner = await make_user(db)
+    org = await make_org(db, owner=owner)
+    ctx = ctx_for(owner, org)
+    service = VirtualTableService(db)
+    task = await TaskService(db).create(ctx, TaskCreate(title="Linked task"))
+    board = await service.describe_table(ctx, task.table_id)
+    source = await service.create_table(
+        ctx,
+        TableCreate(
+            name="Orders",
+            visibility="org",
+            columns=[column("Name", "text"), column("Tasks", "link", link_table_id=board.id)],
+        ),
+    )
+    link_id = UUID(cid(source, "Tasks"))
+    title_id = next(item.id for item in board.columns if item.type == "text")
+    source = await service.update_schema(
+        ctx,
+        source.id,
+        SchemaUpdate(
+            expected_version=source.schema_version,
+            columns=[
+                *_columns(source),
+                column("Task title", "lookup", link_column_id=link_id, target_column_id=title_id),
+                column("Shout", "formula", formula="UPPER({Task title})"),
+            ],
+        ),
+    )
+    written = await service.create_record(
+        ctx,
+        source.id,
+        RecordCreate(values={cid(source, "Name"): "One", str(link_id): [str(task.id)]}),
+    )
+    assert len(await _edges(db, written.record.id)) == 1
+
+    await TaskService(db).purge_scope("private", owner.id, organization_id=org.id)
+
+    assert await virtual_table_repo.get_table(db, board.id, organization_id=org.id) is None
+    purged = await service.describe_table(ctx, source.id)
+    stored = await virtual_table_repo.get_schema_version(
+        db, table_id=source.id, version=purged.schema_version
+    )
+    # Removed, not archived: no column of the live schema names the purged table.
+    assert [(item["label"], item["type"], item["archived"]) for item in stored.columns] == [
+        ("Name", "text", False),
+        ("Shout", "formula", True),
+    ]
+    assert all(item.get("link_table_id") is None for item in stored.columns)
+    assert (
+        await relation_repo.definitions(db, organization_id=org.id, source_table_id=source.id) == []
+    )
+    assert await _edges(db, written.record.id) == []
+    edited = await service.update_schema(
+        ctx,
+        source.id,
+        SchemaUpdate(
+            expected_version=purged.schema_version,
+            columns=[*_columns(purged), column("Notes", "text")],
+        ),
+    )
+    assert edited.schema_version == purged.schema_version + 1
+    assert [item.label for item in edited.columns] == ["Name", "Shout", "Notes"]
+    assert all(item.link_table_id is None for item in edited.columns)
+    assert (
+        await relation_repo.definitions(db, organization_id=org.id, source_table_id=source.id) == []
+    )
