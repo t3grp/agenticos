@@ -50,7 +50,7 @@ import { OutcomeCards } from "./outcome-cards";
 import { ProjectChip } from "./project-chip";
 import { UsageMeter } from "./usage-meter";
 import { FilePreviewDialog } from "./file-preview-dialog";
-import type { Browse } from "@/lib/browse";
+import type { Browse, BrowserProtection } from "@/lib/browse";
 import { LiveBrowsesProvider } from "./browser-card";
 import { ConversationVisualsProvider } from "./visual-panel";
 import { WorkspacePanels } from "./workspace-panels";
@@ -534,6 +534,7 @@ export function ChatContainer({
     lastUsage,
     delegations,
     browses,
+    protectBrowser,
     sendMessage: sendChatMessage,
     captureSubmission,
     stopGeneration,
@@ -1051,6 +1052,7 @@ export function ChatContainer({
         conversationCost={currentConversationId === null ? null : currentCost}
         delegations={delegations}
         browses={browses}
+        onBrowserProtected={protectBrowser}
         conversationId={currentConversationId}
         turns={turns}
         attachments={attachments}
@@ -1187,6 +1189,7 @@ interface ChatUIProps {
   delegations: Delegation[];
   /** The turn's browses, for the live preview panel. See `BrowserPanel`. */
   browses: Browse[];
+  onBrowserProtected?: (protection: BrowserProtection) => void;
   /** The conversation the file panel reads, or null before one exists. */
   conversationId: string | null;
   /** Who has the conversation open, the reader included. */
@@ -1310,6 +1313,7 @@ function ChatUI({
   agentUsesLocalTools = false,
   delegations,
   browses,
+  onBrowserProtected,
   conversationId,
   turns,
   attachments,
@@ -1831,7 +1835,14 @@ function ChatUI({
                   )}
                 </div>
               ) : (
-                <LiveBrowsesProvider value={{ browses, surfaces, onComment: commentOnPage }}>
+                <LiveBrowsesProvider
+                  value={{
+                    browses,
+                    surfaces,
+                    onComment: commentOnPage,
+                    onProtected: onBrowserProtected,
+                  }}
+                >
                   <ConversationVisualsProvider
                     messages={messages}
                     conversationId={conversationId}
@@ -2297,6 +2308,7 @@ function ChatUI({
           teamRoom={roomProjectId !== null}
           compact={compact}
           browses={browses}
+          onBrowserProtected={onBrowserProtected}
           surfaces={surfaces}
           onComment={commentOnPage}
           onSend={sendMessage}

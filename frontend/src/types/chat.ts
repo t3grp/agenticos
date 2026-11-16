@@ -384,6 +384,7 @@ export type WSEventType =
   | "browser_held"
   | "browser_released"
   | "browser_needs_person"
+  | "browser_protected"
   | "browser_pointer"
   | "browser_control_error";
 
@@ -415,6 +416,7 @@ export interface BrowserFrame {
     | "browser_held"
     | "browser_released"
     | "browser_needs_person"
+    | "browser_protected"
     | "browser_pointer"
     | "browser_control_error";
   /** Which `browse_web` call this belongs to; one turn can browse twice. */
@@ -426,6 +428,10 @@ export interface BrowserFrame {
   native_id?: string | null;
   resumable?: boolean;
   navigable?: boolean;
+  /** Sticky for this page's lifetime, including nested reconnect events. */
+  output_protected?: boolean;
+  credential_plan_id?: string | null;
+  credential_operation?: "fill" | "submit" | null;
   /** On the opening frame: the ceiling, so progress reads as 3/25. */
   max_steps?: number | null;
   /** On the opening frame: the task the model handed over. */

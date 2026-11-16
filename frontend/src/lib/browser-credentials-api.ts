@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import type {
+  BrowserCredentialEligible,
   BrowserCredentialPlan,
   BrowserCredentialPolicy,
   BrowserCredentialPolicyEdit,
@@ -69,6 +70,24 @@ export async function browserCredentialRequest<T>(
 const policyPath = (id: string) => `/secrets/${encodeURIComponent(id)}/browser-policy`;
 const planPath = (runId: string, planId: string) =>
   `/runs/${encodeURIComponent(runId)}/browser-credential-plans/${encodeURIComponent(planId)}`;
+
+export function readBrowserCredentialEligibility(
+  audience: BrowserCredentialAudience,
+  runId: string,
+  callId: string,
+  tabId: string,
+  signal?: AbortSignal,
+) {
+  return browserCredentialRequest(
+    audience,
+    (options) =>
+      apiClient.get<BrowserCredentialEligible[]>(
+        `/runs/${encodeURIComponent(runId)}/browser-credentials`,
+        { ...options, params: { call_id: callId, tab_id: tabId } },
+      ),
+    signal,
+  );
+}
 
 export function readBrowserCredentialPolicy(
   audience: BrowserCredentialAudience,

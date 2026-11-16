@@ -1,13 +1,13 @@
 # Browser credential Vault
 
-**Status: default-disabled backend runtime checkpoint; issue #112 remains open.**
+**Status: default-disabled runtime and UI checkpoint; issue #112 remains open.**
 Typed storage, owner-scoped selection, durable plans, a single live native writer,
 explicit shared-use policy and synthetic Chromium acceptance are implemented.
-The runtime fills selected fields and offers a separate, human-confirmed native
-form submission. Deployment acceptance and the complete permission-aware Vault
-and browser-panel UI remain release requirements. General automation after a
-credential fill and saving a new cookie session from a protected tab are not
-supported by this checkpoint.
+The Vault forms, policy controls, published browser binding, exact plan review,
+separate Submit action and protected browser views are implemented in the UI.
+Rendered desktop/mobile review and deployment acceptance remain release
+requirements. General automation after a credential fill and saving a new
+cookie session from a protected tab are not supported by this checkpoint.
 
 Browser records use the existing secret create, replacement, listing and delete
 routes. Creation defaults to `usage_scope=personal` and `visibility=private`;
@@ -44,7 +44,7 @@ separate paths. A cookie session is not converted into a password.
 | `app/agents/capabilities/browser_use/` | Existing owned view, input lease, observed elements, protected output and bounded credential request tool. |
 | `app/services/live_browse.py` | Strict cache purge and protected event publication before values reach the page. |
 | `app/services/browser_sign_in.py` | Separate member-sealed cookie/local-storage sessions. |
-| Vault forms and hosted browser panel | Dedicated picker, exact destination/field confirmation, protected state and explicit human handoff; required UI integration. |
+| Vault forms and hosted browser panel | Typed forms, owner policy, binding picker, exact destination/field confirmation, protected state and explicit human handoff. |
 
 Paths in that table are under `backend/`. Read [Secrets and the vault](../secrets.md)
 and [Permissions](../permissions.md) for existing access contracts.
@@ -54,15 +54,17 @@ state or republishing agents.
 
 ## Supported user flow and its limits
 
-The backend supports this sequence. The dedicated picker and confirmation
-controls must be integrated before enabling it for end users.
+The UI and backend support this sequence. Keep runtime filling disabled until
+the rendered and deployment acceptance below is complete.
 
 1. Save a **Browser login** with a label, username, password and exact allowed
    origins. Store a TOTP seed only when the owner deliberately chooses to do so.
 2. Bind that credential to a permitted agent's provisioned browser. The binding
    is frozen in the published version; current policy can subtract authority.
-3. In a private live browser run, request eligible metadata for the current
-   observed origin. Select the credential and numbered fields.
+3. Ask the agent in a private live browser run to prepare the saved credential
+   for the current form. Its bounded request uses eligible metadata and the
+   current observed numbered controls. The UI does not invent a manual selector
+   or accept arbitrary destination URLs or DOM handles.
 4. The owning controller prepares the real controls and exposes the exact
    canonical origin and selected field names for the acting person to confirm.
    A generic tool approval cannot authorize the secret write.
@@ -77,9 +79,10 @@ controls must be integrated before enabling it for end users.
 7. A later same-origin TOTP challenge needs fresh observed handles, a new document
    identity and another confirmation. Output remains protected.
 8. If the page requires CAPTCHA, SSO, ambiguous controls or unrestricted
-   interaction, end the protected hosted session and direct the person to the
-   canonical site in their normal browser. This human handoff does not transfer
-   the hosted cookie jar or resume an unprotected credential-bearing agent tab.
+   interaction, use **Stop** in the originating chat to end the hosted run and
+   open the canonical site in a separate browser session. **Close view** only
+   disconnects the view. This handoff does not transfer the hosted cookie jar or
+   resume an unprotected credential-bearing agent tab.
 
 Confirmation authorizes delivery of the selected values to the exact approved
 origin. Its scripts can react to input events or poll the DOM and may send or
@@ -219,6 +222,9 @@ Effects have a 20-second bound and individual protocol requests a five-second
 bound. Closing or parking the owning native tab tears down its controller.
 Disconnecting a viewing WebSocket only closes that view; use the existing Stop
 run action to end the hosted run during a human handoff.
+The `POST /runs/{run_id}/cancel` HTTP route cancels parked runs and refuses a
+currently running controller; the protected view does not present it as a live
+session stop action.
 
 The durable claim commits before the external effect. A second transaction
 rechecks current authority and holds the credential lock through that effect.
@@ -293,12 +299,72 @@ index-zero login fields, selected-only filling, separate submission, TOTP/profil
 stages, hidden/replaced controls, changed documents and hostile secret reflection.
 It uses no real site, personal profile, live credential or paid model.
 
-UI acceptance must still verify schema-driven forms, accessible labels,
-translations, account/organization switching, exact destination and field review,
-decline/close, unknown-without-retry, cached-frame clearing and the documented
-human handoff. Broader safe post-login automation and cookie persistence require
-a separately reviewed continuation design. This checkpoint does not complete
-that part of #112.
+The frontend regression suites exercise typed forms and masked values, owner
+policy and unavailable selections, account/organization switching, exact
+destination and field review, separate fill/Submit consent, denied or malformed
+recovery reads, unknown outcomes, finite polling and protected cache clearing.
+Browser integration checks must still render the final integrated source at
+desktop and mobile widths. The clearly named visual-fixture cases use synthetic
+metadata on the actual Vault, approval and browser surfaces; they do not prove a
+live credential fill or deployment output purge. Broader safe post-login
+automation and cookie persistence require a separately reviewed continuation
+design. This checkpoint does not complete that part of #112.
+
+## Frontend consent and recovery
+
+**Vault** offers Browser login and Browser profile separately from model-provider
+keys. A login can include an explicitly selected TOTP seed; a profile sends only
+the chosen contact fields. Login identifiers, passwords and seeds are masked
+while entering them. Saved rows show allowed origins and available field names,
+never a value or a hint. Replacement asks for the complete new payload.
+
+Only the immutable owner with current edit access can replace browser policy.
+Personal mode clears both delegated lists. Shared mode names both runnable,
+active agents and active members; an agent may still be a draft when permission
+is configured. Unavailable selections remain IDs that the owner can remove,
+rather than being silently discarded. The Builder offers credential references
+only for its built-in browser connection. A configured reference does not imply
+that the runtime rollout admits a fill.
+
+The review opens from the addressed browser request or its dedicated approval
+record. Ordinary framework approval of `browser_fill_credential` only permits
+preparing a request; it retains the existing positional batch decision behavior.
+A dedicated record must carry the matching approval/plan UUID and run UUID. It
+offers exact plan review instead of generic Approve, Reject or swipe decisions.
+The dialog remains open when the pending queue row disappears after confirmation.
+
+Positive confirmation requires the exact document and generation, canonical
+HTTPS origin, known selected fields, a live deadline and current eligible
+metadata matching both credential ID and generation. Missing eligibility keeps
+the receipt readable and prevents a new positive confirmation. Decline uses the
+dedicated confirmation route. A generic API refusal is shown as fixed translated
+copy rather than rendering arbitrary provider or page errors.
+
+The filled receipt exposes a separate **Submit this form** action. It first
+requires a fresh successful child GET returning `null`. Before sending, the UI
+persists only the request UUID, document UUID and generation in session storage,
+scoped by actor, organization, run and parent plan. Unavailable or corrupted
+storage refuses a new Submit write. Lost acknowledgements, denied reconciliation
+reads and reloads preserve the original tuple. **Retry the same submission** is
+an explicit click with that tuple; polling never sends it. Any existing child,
+including refused, expired or unknown, consumes the parent slot permanently.
+
+Plan, eligibility and child reads use private audience/query keys, `no-store`
+requests and a three-minute polling window. **Check again** starts another read
+window without issuing consent. Explicit writes opt out of automatic 401 replay.
+Account or organization changes discard local form and receipt state, abort
+in-flight reads/writes and reject delayed responses before cache insertion. An
+aborted write remains uncertain for its original audience.
+
+Protection is monotonic in the chat cache, each addressed live view and the
+rendered browser window. A protected event, nested reconnect snapshot or protected
+plan receipt clears images, page titles, URL paths, traces, pointers and control
+metadata. Later pictures, false flags, navigation and finish events cannot
+restore them. Protected snapshots may initialize the one authorized addressed
+view without an opening event; unrelated late chat calls remain discarded. A
+late protection event after Stop may erase an existing matching cache but cannot
+create a browse, resume control or reopen a view. The protected window unmounts
+the raw viewport and offers only receipt review and the documented handoff.
 
 ## Reviewed native dependencies
 

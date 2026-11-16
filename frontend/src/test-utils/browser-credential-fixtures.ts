@@ -13,12 +13,15 @@ export const BROWSER_IDS = {
 
 export const LOGIN: SecretKindInfo = {
   kind: "browser_login",
+  // i18n-exempt: synthetic backend catalog name used only by test fixtures.
   name: "Browser login",
+  // i18n-exempt: synthetic backend catalog description, not product copy.
   description: "A saved login for an explicitly confirmed browser destination.",
   json_schema: {
     type: "object",
     properties: {
       kind: { type: "string", const: "browser_login" },
+      // i18n-exempt: backend schema title used only by the synthetic catalog fixture.
       allowed_origins: { type: "array", items: { type: "string" }, title: "Allowed origins" },
       username: { type: "string", format: "password", title: "Username" },
       password: { type: "string", format: "password", title: "Password" },
@@ -30,13 +33,17 @@ export const LOGIN: SecretKindInfo = {
 
 export const PROFILE: SecretKindInfo = {
   kind: "browser_profile",
+  // i18n-exempt: synthetic backend catalog name used only by test fixtures.
   name: "Browser contact profile",
+  // i18n-exempt: synthetic backend catalog description, not product copy.
   description: "Selected contact fields for an explicitly confirmed browser destination.",
   json_schema: {
     type: "object",
     properties: {
       kind: { type: "string", const: "browser_profile" },
+      // i18n-exempt: backend schema title used only by the synthetic catalog fixture.
       allowed_origins: { type: "array", items: { type: "string" }, title: "Allowed origins" },
+      // i18n-exempt: backend schema title used only by the synthetic catalog fixture.
       fields: { type: "object", title: "Contact fields" },
     },
     required: ["allowed_origins", "fields"],

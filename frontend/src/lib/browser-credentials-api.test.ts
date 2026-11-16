@@ -6,6 +6,7 @@ import {
   browserCredentialRequest,
   isBrowserCredentialAudienceCurrent,
   readBrowserCredentialPolicy,
+  readBrowserCredentialEligibility,
   updateBrowserCredentialPolicy,
   readBrowserCredentialPlan,
   confirmBrowserCredentialPlan,
@@ -47,6 +48,23 @@ afterEach(() => {
 });
 
 describe("browser credential API boundaries", () => {
+  it("reads a bare eligible list for the addressed live call without caching or issuing consent", async () => {
+    const eligible = [{ id: ids.secret, authorization_generation: ids.generation }];
+    vi.mocked(apiClient.get).mockResolvedValue(eligible);
+    expect(await readBrowserCredentialEligibility(audience, ids.run, "call:one/two", "main")).toBe(
+      eligible,
+    );
+    expect(apiClient.get).toHaveBeenCalledExactlyOnceWith(
+      `/runs/${ids.run}/browser-credentials`,
+      expect.objectContaining({
+        cache: "no-store",
+        headers: { "X-Organization-Id": ids.org },
+        params: { call_id: "call:one/two", tab_id: "main" },
+        signal: expect.any(AbortSignal),
+      }),
+    );
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
   it("reads policy and plans with no-store and the exact audience", async () => {
     vi.mocked(apiClient.get).mockResolvedValue(plan);
     await readBrowserCredentialPolicy(audience, ids.secret);
