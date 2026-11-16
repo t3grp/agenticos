@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0326_workflow_media_operations"
-down_revision: str | Sequence[str] | None = "0325_merge_t3_rooms_v173"
+down_revision: str | Sequence[str] | None = "0326_provider_account_pools"
 branch_labels: None = None
 depends_on: str | Sequence[str] | None = None
 

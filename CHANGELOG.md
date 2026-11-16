@@ -21,7 +21,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Upgrading
 
-- Migration `backend/alembic/versions/0332_merge_media_account_pools.py` joins `0326_workflow_media_operations` and `0326_provider_account_pools` without changing either parent's schema operations. Both existing 0326 revisions remain intact.
+- The provisional migration `backend/alembic/versions/0326_workflow_media_operations.py` follows `0326_provider_account_pools`. Its final revision ID will be assigned after the integrated #122 migration chain lands.
 
 ### Changed
 
