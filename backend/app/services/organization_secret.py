@@ -9,6 +9,8 @@ bearer token for one outbound catalog request;
 :meth:`OrganizationSecretService.transcription_key`, which returns the key a
 transcription request names; :meth:`OrganizationSecretService.voice_call_key`,
 which opens the key a voice call was held with only to hang that call up (#54);
+:meth:`OrganizationSecretService.workflow_media_key`, which locks and opens only
+the run principal's original provider key for a bounded workflow media operation;
 and :meth:`OrganizationSecretService.oauth_app`, which hands
 an OAuth client's secret to the provider's own token endpoint inside the connect
 flow and to nowhere else. `smtp_email_service` opens one permitted SMTP account
@@ -877,17 +879,69 @@ class OrganizationSecretService:
             raise NotFoundError(message="Secret not found", details={"secret_id": str(secret_id)})
         return secret
 
+    async def workflow_media_secret(
+        self,
+        ctx: AuthContext,
+        secret_id: UUID,
+        *,
+        provider: str,
+        locked: bool = False,
+    ) -> OrganizationSecret:
+        """Metadata for an organization API key this run's principal may use.
+
+        Publication does not lend a publisher's private subscription or grant to
+        another principal. A missing, hidden or wrong-tenant id stays missing;
+        a readable but incompatible key can be corrected without opening it.
+        """
+        secret = await self._get(ctx, secret_id, locked=locked)
+        if (
+            secret.kind != SecretKind.API_KEY.value
+            or secret.usage_scope != "organization"
+            or secret.purpose != provider
+        ):
+            raise BadRequestError(message="Choose an organization API key for this media provider")
+        return secret
+
+    async def workflow_media_key(
+        self,
+        ctx: AuthContext,
+        secret_id: UUID,
+        *,
+        provider: str,
+        expected_generation: UUID,
+    ) -> ApiKeySecret:
+        """Open only the original, still-authorized key for one bounded media call.
+
+        The caller retains this transaction through dispatch. Rotation and deletion
+        take the same PostgreSQL row lock; populate_existing refreshes any identity
+        cached before that lock was acquired. The masked value goes only to the
+        trusted generation adapter, never into a graph, receipt or API response.
+        """
+        secret = await self.workflow_media_secret(ctx, secret_id, provider=provider, locked=True)
+        if secret.authorization_generation != expected_generation:
+            raise AuthorizationError(message="The media provider credential changed")
+        return unseal_kind(
+            secret.sealed_secret,
+            model=ApiKeySecret,
+            scope=VaultScope.organization(ctx.organization_id),
+            key_version=secret.key_version,
+        )
+
     async def _get(
-        self, ctx: AuthContext, secret_id: UUID, *, perm: Perm = Perm.SECRETS_VIEW
+        self,
+        ctx: AuthContext,
+        secret_id: UUID,
+        *,
+        perm: Perm = Perm.SECRETS_VIEW,
+        locked: bool = False,
     ) -> OrganizationSecret:
         """One secret the caller may reach, or reported as missing.
 
         A refusal reads as "not found" so a member cannot probe which keys exist
         by watching 403s turn into 404s - the same rule agents and skills follow.
         """
-        secret = await organization_secret_repo.get(
-            self.db, secret_id, organization_id=ctx.organization_id
-        )
+        getter = organization_secret_repo.get_locked if locked else organization_secret_repo.get
+        secret = await getter(self.db, secret_id, organization_id=ctx.organization_id)
         if secret is None or not await self._browser_accessible(ctx, secret):
             raise NotFoundError(message="Secret not found", details={"secret_id": str(secret_id)})
         allowed = await resolve_access(self.db, ctx, secret, perm, resource_type=SECRET)

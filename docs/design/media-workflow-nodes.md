@@ -155,6 +155,61 @@ That is not evidence of crash-safe workflow resumability. Refactor submit,
 observe and collect only as far as each provider's supported contract permits,
 while preserving existing agent-tool behavior and its regression tests.
 
+### Workflow catalog and reservation bounds
+
+The nullable `workflow` member of each image/video catalog model is the workflow
+admission contract. A null member does not admit generation. Legacy agent options
+remain readable independently. The editor renders the same catalog defaults,
+supported options and reference-image capability that the runtime validates.
+The request accepts an organization-scoped `api_key` whose purpose exactly equals
+the selected provider; a personal connection or `custom` purpose does not qualify.
+
+Image holds use dated catalog inputs verified on 16 November 2026. A hold is a
+conservative reservation ceiling, not a predicted bill or an incurred charge.
+Google's input bound is the selected model's whole published context limit;
+the output bound is the lower request limit supplied to the strict shared SDK
+executor. The output rate is the most expensive permitted output modality,
+covering text, thinking and image tokens together. Authorized reference bytes
+still require bounded decoding and inspection before dispatch.
+
+| Google model | Input-token ceiling | Request output-token cap | Input/output USD per million | Reservation USD |
+|---|---:|---:|---:|---:|
+| Gemini 3 Pro Image | 65,536 | 8,192 | 2 / 120 | 1.114112 |
+| Gemini 3.1 Flash Image | 131,072 | 8,192 | 0.50 / 60 | 0.557056 |
+| Gemini 3.1 Flash Lite Image | 65,536 | 4,096 | 0.25 / 30 | 0.139264 |
+| Gemini 2.5 Flash Image | 65,536 | 8,192 | 0.30 / 30 | 0.265421 |
+
+The derivation is `(input ceiling × input rate + output cap × output rate) / 1e6`,
+rounded upward to six decimal places. Lite accepts only its documented 1K output.
+The 2.5 adapter receives no unsupported size setting. Aspect choices are limited
+to those represented by the installed SDK. Sources: the individual model pages
+linked by the catalog, [Google pricing](https://ai.google.dev/gemini-api/docs/pricing),
+[image generation](https://ai.google.dev/gemini-api/docs/image-generation) and
+[thinking/output limits](https://ai.google.dev/gemini-api/docs/thinking).
+
+OpenAI workflow generation is initially text-only. It requires an explicit
+catalog size/quality, one image tool call, and an 8,192-token caller output cap.
+The reservation includes the GPT-5.4 caller's whole 1,050,000-token context at its
+long-context input rate, its capped output at the long-context output rate, and
+the separate image tool's input and output. A tool prompt is limited to 32,000
+Unicode characters; four UTF-8 bytes per character conservatively bounds its
+byte-level input tokens. The per-size/quality image output table is model-specific;
+one displayed price unit ($0.001) is added above its published rounded estimate.
+The older GPT Image token table is not applied to GPT Image 2. For example, a
+medium 1024×1024 GPT Image 2 request reserves $6.128320, which deliberately exceeds
+the expected cost of a short prompt. Sources: [GPT-5.4 limits](https://developers.openai.com/api/docs/models/gpt-5.4),
+[API pricing](https://developers.openai.com/api/docs/pricing),
+[image generation](https://developers.openai.com/api/docs/guides/image-generation)
+and [the image API prompt limit](https://developers.openai.com/api/reference/resources/images/methods/generate).
+
+Video workflow metadata reuses the current dated per-second catalog rates, with
+all advertised resolutions priced before admission. The same helper supplies
+the editor and request defaults: first catalog resolution/aspect, five seconds
+clamped to the model's range where duration is selectable, and sound disabled
+for optional-audio models. Fixed-audio models receive no audio toggle; models
+that choose their own duration reserve the catalog maximum. Optional sound-on
+requests remain covered by the catalog's required sound-on rate.
+
 ## Durable operation and retry boundary
 
 Add a proposed media-operation record linked to organization, workflow run,
