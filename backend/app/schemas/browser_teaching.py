@@ -90,6 +90,33 @@ class TeachingRead(TeachingModel):
     capture_ends_at: datetime
 
 
+class TeachingSummary(TeachingModel):
+    """Owner discovery metadata; opening a capture still requires its authorized read."""
+
+    id: UUID
+    agent_id: UUID
+    target_skill_id: UUID | None
+    title: str = Field(max_length=160)
+    allowed_origins: tuple[str, ...] = Field(max_length=10)
+    source: Literal["manual", "refinement"]
+    verified_success: bool
+    status: TeachingState
+    revision: int = Field(ge=1)
+    reason_code: TeachingReason | None
+    generation_state: TeachingGeneration
+    proposal_id: UUID | None
+    created_at: datetime
+    expires_at: datetime
+    capture_ends_at: datetime
+
+
+class TeachingList(TeachingModel):
+    """Newest-first owner page with an opaque, owner-and-organization-bound cursor."""
+
+    items: tuple[TeachingSummary, ...] = Field(max_length=100)
+    next_cursor: str | None
+
+
 class TeachingPolicyWrite(TeachingModel):
     generation: UUID | None
     enabled: bool

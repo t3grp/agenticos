@@ -164,6 +164,7 @@ service, which coordinates repositories and browser ownership checks.
 |---|---|
 | `POST /v1/browser-teachings` | Start a new-skill candidate. Collection gate uses `skills:edit`; service also requires current permission to use the agent and own the browser lease. The client-generated `request_id` identifies one exact start intent. |
 | `POST /v1/skills/{skill_id}/browser-teachings` | Start a candidate for an existing skill. The service resolves `skills:edit` on that exact skill, including grants; no broad role gate overrides the grant. |
+| `GET /v1/browser-teachings` | Discover the current personal owner's captures in the active organization using bounded, newest-first cursor pages. The response contains only closed summary metadata. |
 | `GET /v1/browser-teachings/{id}` | Owner-only metadata and review payload, scoped to the current organization. |
 | `PATCH /v1/browser-teachings/{id}` | Pause/resume or edit review fields using `If-Match` and the current revision. |
 | `POST /v1/browser-teachings/{id}/stop` | Atomically stop capture and enter review. Repeated stop returns the same review state. |
@@ -187,6 +188,44 @@ status; another attempt requires a new explicit capture/review flow. The default
 before queuing. The model sees reviewed steps and parameter names, never browser
 session state. All metadata responses use `Cache-Control: no-store`; session
 responses carry an `ETag` matching the revision used by `If-Match` mutations.
+
+### Finding captures after a browser session ends
+
+The collection read lets an owner recover a manual capture or a task refinement
+when its browser event was missed or the browser panel is no longer open. Every
+page refreshes the same personal-user and active-membership authority as the
+per-ID read, then scopes the database query to both owner and organization.
+API keys, impersonation and publisher stand-ins cannot use it. An organization
+administrator does not gain another person's captures through their role.
+
+Owner recovery remains available after teaching is disabled, the live tab ends,
+or the owner loses skill-edit permission. This read grants no new capture,
+generation, execution, proposal or skill-application authority. Review and
+effects always use the existing per-ID routes and their current checks.
+
+`TeachingList` returns only `items` and nullable `next_cursor`. Each
+`TeachingSummary` contains `id`, `agent_id`, nullable `target_skill_id`, `title`,
+`allowed_origins`, `source`, `verified_success`, `status`, `revision`, nullable
+`reason_code`, `generation_state`, nullable `proposal_id`, `created_at`,
+`expires_at` and `capture_ends_at`. The query does not load captured actions,
+reviewed procedures, browser/run identities, lease or generation tokens, or
+budgets. The response is not cached.
+
+`limit` defaults to 20 and accepts 1 through 100. Pages use
+`created_at DESC, id DESC` keyset ordering and have no status filter. The opaque
+cursor is bound to its owner and organization, so clients reset it on either
+audience change. Invalid, unsupported or cross-audience cursors return `400`
+`BAD_REQUEST` with `details.reason_code=invalid_cursor` and a `cursor` field
+problem, without echoing the token. Restart without the cursor. An oversized
+cursor or out-of-range page size returns `422`.
+
+Listing is read-only. At the existing retention boundary, recording, paused and
+review summaries project the same expiry as the canonical owner read: title and
+origins are erased, status and reason become expired, revision advances once,
+and queued or generating work appears cancelled. The list does not mutate the
+capture or run background work. Terminal and proposed states retain the
+canonical read's semantics; ordinary retention and proposal decisions still own
+their erasure. A client must reopen the capture before reviewing or acting.
 
 ## Site procedural memory
 

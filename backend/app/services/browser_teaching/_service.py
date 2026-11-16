@@ -29,12 +29,13 @@ from app.core.browser_teaching import (
     stale_revision,
 )
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.field_errors import refused_field
 from app.core.permissions import AuthContext
 from app.db.models.browser_teaching import BrowserTeachingSession
 from app.repositories import browser_teaching as repo
-from app.schemas.browser_teaching import TeachingChange, TeachingRead, TeachingStart
+from app.schemas.browser_teaching import TeachingChange, TeachingList, TeachingRead, TeachingStart
 
-from . import _access
+from . import _access, _listing
 from ._lease import TeachingTakeover, discover
 
 
@@ -81,10 +82,7 @@ def erase(
 
 
 def expire(row: BrowserTeachingSession, now: datetime) -> None:
-    if (
-        row.status in {TeachingState.RECORDING, TeachingState.PAUSED, TeachingState.REVIEW}
-        and row.expires_at <= now
-    ):
+    if _listing.expired(row.status, row.expires_at, now):
         erase(row, TeachingState.EXPIRED, TeachingReason.EXPIRED)
 
 
@@ -193,6 +191,38 @@ class BrowserTeachingService:
     async def get(self, ctx: AuthContext, session_id: UUID) -> TeachingRead:
         _, row = await self.owned(ctx, session_id)
         return read(row)
+
+    async def list(
+        self, ctx: AuthContext, *, limit: int = 20, cursor: str | None = None
+    ) -> TeachingList:
+        """Discover this current personal owner's captures, without resuming or changing them.
+
+        Like the per-ID read, recovery remains available after a tab ends or
+        teaching is disabled. Each page refreshes active membership before
+        examining its audience-bound cursor. Expiry is projected, not written.
+        """
+        current = await _access.person(self.db, ctx)
+        owner_user_id = current.subject_id
+        if not 1 <= limit <= _listing.MAX_PAGE_SIZE:
+            raise refused_field("limit", "Choose a page size between 1 and 100")
+        before = (
+            None
+            if cursor is None
+            else _listing.decode_cursor(cursor, current.organization_id, owner_user_id)
+        )
+        rows = await repo.owned_page(
+            self.db, current.organization_id, owner_user_id, limit=limit, before=before
+        )
+        now = datetime.now(UTC)
+        page = rows[:limit]
+        return TeachingList(
+            items=tuple(_listing.summary(row, now) for row in page),
+            next_cursor=(
+                _listing.encode_cursor(current.organization_id, owner_user_id, page[-1])
+                if len(rows) > limit
+                else None
+            ),
+        )
 
     async def start(
         self, ctx: AuthContext, data: TeachingStart, *, skill_id: UUID | None = None
