@@ -67,6 +67,7 @@ class BrowserEvent(BaseModel):
         "browser_needs_person",
         "browser_pointer",
         "browser_control_error",
+        "browser_protected",
     ]
 
     call_id: str = Field(
@@ -93,6 +94,8 @@ class BrowserEvent(BaseModel):
     title: str | None = Field(default=None, description="The page's title, when it has one.")
 
     tab_id: str | None = None
+    credential_plan_id: str | None = None
+    credential_operation: Literal["fill", "submit"] | None = None
     """Stable tab identity across selected views and resumed turns."""
 
     native_id: str | None = None

@@ -87,6 +87,10 @@ from app.services.mentions import MentionService
 from app.services.mfa import MfaService
 from app.services.personal_data import PersonalDataService
 from app.services.browser_sign_in import BrowserSignInService
+from app.services.browser_credentials import (
+    BrowserCredentialPlanService,
+    BrowserCredentialPolicyService,
+)
 from app.services.user import UserService
 from app.services.session import SessionService
 from app.services.web_push import WebPushService
@@ -1294,6 +1298,26 @@ def get_browser_sign_in_service(db: DBSession) -> BrowserSignInService:
 
 
 BrowserSignInSvc = Annotated[BrowserSignInService, Depends(get_browser_sign_in_service)]
+
+
+def get_browser_credential_plan_service(
+    db: DBSession, redis: Redis
+) -> BrowserCredentialPlanService:
+    return BrowserCredentialPlanService(db, redis)
+
+
+BrowserCredentialPlanSvc = Annotated[
+    BrowserCredentialPlanService, Depends(get_browser_credential_plan_service)
+]
+
+
+def get_browser_credential_policy_service(db: DBSession) -> BrowserCredentialPolicyService:
+    return BrowserCredentialPolicyService(db)
+
+
+BrowserCredentialPolicySvc = Annotated[
+    BrowserCredentialPolicyService, Depends(get_browser_credential_policy_service)
+]
 
 
 def get_skill_proposal_service(db: DBSession) -> SkillProposalService:

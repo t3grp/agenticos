@@ -109,6 +109,11 @@ def available() -> bool:
     return _redis is not None
 
 
+def credential_redis() -> RedisClient | None:
+    """The existing process connection; native controllers never create a second pool."""
+    return _redis
+
+
 async def save_session(scope: str, sealed: str) -> None:
     """Keep an encrypted conversation snapshot for one hour; no browser stays alive."""
     if _redis is not None:
@@ -190,6 +195,29 @@ async def view_links(run_id: str) -> tuple[str, ...]:
     except Exception:
         logger.exception("live_browse_links_failed")
         return ()
+
+
+async def protect_view(run_id: str, call_id: str, event: BrowserEvent) -> None:
+    """Remove cached output before a fill; failure refuses the effect instead of being logged away.
+
+    The owning sink serializes this operation with all its publications, and its
+    sticky page guard sanitizes every later event. No raw publisher may bypass it.
+    """
+    if _redis is None or event.kind != "browser_protected" or event.image is not None:
+        raise RuntimeError("Browser output protection unavailable")
+    with anyio.fail_after(5):
+        body = event.model_dump_json()
+        pipe = _redis.raw.pipeline(transaction=True)
+        pipe.delete(
+            _key(run_id, call_id, "frame"),
+            _key(run_id, call_id, "location"),
+            _key(run_id, call_id, "trace"),
+        )
+        pipe.set(_key(run_id, call_id, "location"), body, ex=TTL_SECONDS)
+        pipe.rpush(_key(run_id, call_id, "trace"), body)
+        pipe.expire(_key(run_id, call_id, "trace"), TTL_SECONDS)
+        pipe.publish(_key(run_id, call_id, "events"), body)
+        await pipe.execute()
 
 
 async def publish(run_id: str, call_id: str, event: BrowserEvent) -> None:

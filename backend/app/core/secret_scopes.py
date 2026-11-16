@@ -13,6 +13,8 @@ def organization_secret_scope(
     """Preserve technical scopes; browser records require an immutable personal owner."""
     if kind not in BROWSER_SECRET_KINDS:
         return VaultScope.organization(organization_id)
-    if usage_scope != "personal" or owner_user_id is None:
+    if usage_scope not in ("personal", "organization") or owner_user_id is None:
         raise BadRequestError(message="Browser credentials require a personal owner")
+    if usage_scope == "organization":
+        return VaultScope.organization(organization_id)
     return VaultScope.browser_member(organization_id, owner_user_id)

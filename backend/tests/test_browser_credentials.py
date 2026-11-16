@@ -271,7 +271,13 @@ def test_browser_scope_is_shared_by_storage_and_rotation_and_generic_readers_ref
         usage_scope="organization",
         owner_user_id=None,
     ) == VaultScope.organization(row.organization_id)
-    for usage_scope, owner in (("organization", row.owner_user_id), ("personal", None)):
+    assert organization_secret_scope(
+        organization_id=row.organization_id,
+        kind=row.kind,
+        usage_scope="organization",
+        owner_user_id=row.owner_user_id,
+    ) == VaultScope.organization(row.organization_id)
+    for usage_scope, owner in (("unknown", row.owner_user_id), ("personal", None)):
         with pytest.raises(BadRequestError):
             organization_secret_scope(
                 organization_id=row.organization_id,
@@ -310,6 +316,9 @@ async def test_even_an_administrator_cannot_read_or_rotate_another_browser_recor
         AsyncMock(return_value=None if case == "inactive" else object()),
     )
     monkeypatch.setattr(service_module, "resolve_access", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        service_module.browser_credential_repo, "policy_exists", AsyncMock(return_value=False)
+    )
     service = OrganizationSecretService(AsyncMock())
     with pytest.raises(NotFoundError):
         await service.update(ctx, row.id, value=login(totp=False))

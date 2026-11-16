@@ -55,6 +55,7 @@ from app.core.secret_scopes import organization_secret_scope
 from app.core.vault import VaultScope
 from app.db.models.organization_secret import OrganizationSecret
 from app.db.models.resource_grant import Visibility
+from app.repositories import browser_credential as browser_credential_repo
 from app.repositories import member_repo, organization_secret_repo, resource_grant_repo
 from app.schemas.resource_grant import as_visibility
 from app.schemas.secret import BrowserSecretMetadata, SecretSummary, SecretUsage
@@ -142,6 +143,15 @@ class OrganizationSecretService:
             personal_user_id=ctx.personal_user_id,
         )
         if any(secret.kind in BROWSER_SECRET_KINDS for secret in secrets):
+            shared_browser_ids = await browser_credential_repo.policy_ids(
+                self.db,
+                ctx.organization_id,
+                [
+                    secret.id
+                    for secret in secrets
+                    if secret.kind in BROWSER_SECRET_KINDS and secret.usage_scope == "organization"
+                ],
+            )
             browser_owner = ctx.personal_user_id
             active = (
                 browser_owner is not None
@@ -157,7 +167,7 @@ class OrganizationSecretService:
                 or (
                     active
                     and secret.owner_user_id == browser_owner
-                    and secret.usage_scope == "personal"
+                    and (secret.usage_scope == "personal" or secret.id in shared_browser_ids)
                     and secret.visibility == "private"
                 )
             ]
@@ -334,8 +344,12 @@ class OrganizationSecretService:
         if (
             owner is None
             or secret.owner_user_id != owner
-            or secret.usage_scope != "personal"
+            or secret.usage_scope not in ("personal", "organization")
             or secret.visibility != "private"
+        ):
+            return False
+        if secret.usage_scope == "organization" and not await browser_credential_repo.policy_exists(
+            self.db, ctx.organization_id, secret.id
         ):
             return False
         return (
@@ -414,6 +428,13 @@ class OrganizationSecretService:
         """
         secret = await self._get(ctx, secret_id, perm=Perm.SECRETS_EDIT)
         update_data: dict[str, object] = {}
+        if secret.kind in BROWSER_SECRET_KINDS:
+            locked = await browser_credential_repo.secret(
+                self.db, ctx.organization_id, secret_id, locked=True
+            )
+            if locked is None or not await self._browser_accessible(ctx, locked):
+                raise NotFoundError(message="Browser credential not found")
+            secret = locked
 
         if name is not None and name != secret.name:
             await self._refuse_duplicate_name(ctx, name)

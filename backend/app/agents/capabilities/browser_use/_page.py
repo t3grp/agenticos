@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, JsonValue, ValidationError
 
 from app.agents.browser_sign_ins import (
     SignIn,
@@ -35,6 +35,7 @@ from app.agents.browser_sign_ins import (
     site_of,
     storage_from,
 )
+from app.agents.capabilities.browser_use._credential_page import CredentialPage, NativeMethod
 from app.agents.capabilities.browser_use._elements import (
     MAX_COLLECTED_OPTIONS,
     MAX_PAGE_TEXT,
@@ -53,7 +54,10 @@ from app.agents.capabilities.browser_use._endpoint import (
     version_url,
     websocket_url,
 )
+from app.agents.capabilities.browser_use._protected import PROTECTED_TEXT, BrowserOutputGuard
 from app.agents.capabilities.browser_use._route import BrowserRoute
+from app.agents.capabilities.browser_use._transport_privacy import protect_transport_logging
+from app.core.browser_fill import BrowserFillReason, BrowserFillRefused
 from app.core.config import settings
 
 MISSING_EXTRA = (
@@ -691,6 +695,38 @@ class CdpPage:
         self._height = round(policy.preview_width * _VIEWPORT_RATIO)
         self._scale = 1
         self._streaming = False
+        self.output_guard = BrowserOutputGuard()
+        self.credentials = CredentialPage(self._credential_command)
+
+    async def _credential_command(
+        self, method: NativeMethod, params: dict[str, JsonValue]
+    ) -> object:
+        """A fixed command set on this page's attached session; no endpoint or script input."""
+        match method:
+            case "Page.getFrameTree":
+                return await self._client.send.Page.getFrameTree(session_id=self._session)
+            case "Page.createIsolatedWorld":
+                return await self._client.send.Page.createIsolatedWorld(
+                    params=params, session_id=self._session
+                )
+            case "Runtime.callFunctionOn":
+                return await self._client.send.Runtime.callFunctionOn(
+                    params=params, session_id=self._session
+                )
+            case "Runtime.evaluate":
+                return await self._client.send.Runtime.evaluate(
+                    params=params, session_id=self._session
+                )
+            case "Runtime.releaseObject":
+                return await self._client.send.Runtime.releaseObject(
+                    params=params, session_id=self._session
+                )
+
+    def protect_credentials(self, origin: str) -> None:
+        """The owning toolset must stop and join its preview before this boundary."""
+        if self._streaming:
+            raise BrowserFillRefused(BrowserFillReason.PROTECTION_UNAVAILABLE)
+        self.output_guard.protect(origin)
 
     async def _evaluate(  # pragma: no cover - needs a live browser
         self, expression: str, *, await_promise: bool = False
@@ -710,6 +746,8 @@ class CdpPage:
         Raises:
             RuntimeError: The page never came back, or failed for any other reason.
         """
+        if self.output_guard.active:
+            raise EndpointError(PROTECTED_TEXT)
         for attempt in range(_EVAL_ATTEMPTS):
             try:
                 answer = await asyncio.wait_for(
@@ -732,6 +770,8 @@ class CdpPage:
                     f"The browser stopped answering after {_COMMAND_TIMEOUT:.0f}s."
                 ) from exc
             except RuntimeError as exc:
+                if self.output_guard.active:
+                    raise EndpointError(PROTECTED_TEXT) from None
                 if not any(
                     message in str(exc)
                     for message in (_CONTEXT_GONE, "Inspected target navigated or closed")
@@ -743,6 +783,8 @@ class CdpPage:
                     ) from exc
                 await asyncio.sleep(_EVAL_BACKOFF)
                 continue
+            if self.output_guard.active:
+                raise EndpointError(PROTECTED_TEXT)
             thrown = answer.get("exceptionDetails")
             if thrown is not None:
                 # Without this a script that raised came back as
@@ -759,6 +801,11 @@ class CdpPage:
 
     async def snapshot(self) -> Snapshot:  # pragma: no cover - needs a live browser
         """The page as it is now, refused if it has left the allowlist."""
+        if self.output_guard.active:
+            try:
+                return await self.credentials.protected_snapshot(self.output_guard.location()[0])
+            except BrowserFillRefused:
+                return self.output_guard.snapshot()
         # The cut is applied in the page rather than after the transfer; a
         # little slack over `MAX_PAGE_TEXT` so the collapse in Python has
         # something to collapse.
@@ -1026,6 +1073,8 @@ class CdpPage:
 
     async def location(self) -> tuple[str, str]:
         """Read navigation metadata without collecting the DOM or taking a screenshot."""
+        if self.output_guard.active:
+            return self.output_guard.location()
         result = (await self._evaluate("({url: location.href, title: document.title})")).get(
             "value"
         )
@@ -1049,6 +1098,8 @@ class CdpPage:
         and how wide the picture is, which is also what keeps the frame a person
         watches identical to the page the model was shown.
         """
+        if self.output_guard.active:
+            return None
         shot = await self._client.send.Page.captureScreenshot(
             params={
                 "format": "jpeg",
@@ -1058,6 +1109,8 @@ class CdpPage:
             },
             session_id=self._session,
         )
+        if self.output_guard.active:
+            return None
         data = shot.get("data")
         return f"data:image/jpeg;base64,{data}" if data else None
 
@@ -1080,12 +1133,15 @@ class CdpPage:
         slow socket gets the page as it is now rather than a queue of the past.
         The stream is a preview: a failure ends the stream and nothing else.
         """
+        if self.output_guard.active:
+            yield
+            return
         parked: list[dict[str, Any]] = []
         arrived = asyncio.Event()
         streaming = True
 
         def on_frame(event: dict[str, Any], session_id: str | None) -> None:
-            if streaming and session_id == self._session:
+            if streaming and not self.output_guard.active and session_id == self._session:
                 parked[:] = [event]
                 arrived.set()
 
@@ -1098,11 +1154,13 @@ class CdpPage:
                     await self._client.send.Page.screencastFrameAck(
                         params={"sessionId": frame["sessionId"]}, session_id=self._session
                     )
-                    await deliver(f"data:image/jpeg;base64,{frame['data']}")
+                    if not self.output_guard.active:
+                        await deliver(f"data:image/jpeg;base64,{frame['data']}")
                     await asyncio.sleep(STREAM_GAP)
             except (RuntimeError, ConnectionError, OSError) as stopped:
                 self._streaming = False
-                logger.debug("browser stream stopped: %s", stopped)
+                if not self.output_guard.active:
+                    logger.debug("browser stream stopped: %s", stopped)
 
         self._client.register.Page.screencastFrame(on_frame)
         await self._client.send.Page.startScreencast(
@@ -1210,6 +1268,8 @@ class CdpPage:
         `Network.getCookies` for the page's own URL misses those set by the
         identity provider it bounced through on the way.
         """
+        if self.output_guard.active:
+            return None
         here = str((await self._evaluate("location.href")).get("value") or "")
         site = site_of(here)
         if site is None:
@@ -1245,6 +1305,8 @@ class CdpPage:
         Returns:
             The page's text, or a sentence saying it was withheld and why.
         """
+        if self.output_guard.active:
+            return PROTECTED_TEXT
         url = (await self._evaluate("location.href")).get("value")
         if not domain_allowed(str(url or ""), self._policy.allowed_domains):
             return (
@@ -1370,6 +1432,7 @@ async def open_page(  # pragma: no cover - needs a live browser
     """
     if not domain_allowed(start_url, policy.allowed_domains):
         raise DomainRefused(f"{start_url} is outside this agent's allowed domains.")
+    protect_transport_logging()
     try:
         import httpx
 

@@ -1,310 +1,341 @@
 # Browser credential Vault
 
-**Status: staged backend implementation.** The first checkpoint adds typed
-personal browser records, masked selection metadata, member-and-organization
-envelope binding, owner checks, generic-reader refusal and key-rotation support.
-It exposes no credential reveal route and does not yet fill a browser. Durable
-fill plans, guarded native writing, shared-account policy, the UI and synthetic
-browser acceptance remain required before issue #112 can be completed.
+**Status: default-disabled backend runtime checkpoint; issue #112 remains open.**
+Typed storage, owner-scoped selection, durable plans, a single live native writer,
+explicit shared-use policy and synthetic Chromium acceptance are implemented.
+The runtime fills selected fields and offers a separate, human-confirmed native
+form submission. Deployment acceptance and the complete permission-aware Vault
+and browser-panel UI remain release requirements. General automation after a
+credential fill and saving a new cookie session from a protected tab are not
+supported by this checkpoint.
 
-The storage checkpoint uses the existing secret create, replacement, listing and
-delete routes. Browser requests default to `usage_scope=personal` and
-`visibility=private`; explicitly broader requests are refused. Browser hints are
-empty, including for short valid passwords. Replacing a payload requires the
-whole payload and rotates its authorization generation. Removing a password
-does not delete a separately saved cookie session. The fill contracts below
-remain the implementation requirements for subsequent checkpoints.
+Browser records use the existing secret create, replacement, listing and delete
+routes. Creation defaults to `usage_scope=personal` and `visibility=private`;
+broader creation requests are refused. Hints are empty, including for short valid
+passwords. Replacing a payload requires the whole payload and rotates its
+authorization generation. Removing a password does not delete a separately saved
+cookie session. Shared use requires the dedicated policy endpoint, an authorized
+envelope rewrap and a new generation.
 
-Baseline: T3OS `080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on
-14 November 2026. Benchmark:
-[OpenBot v0.71.0](https://github.com/nightly-labs/openbot/releases/tag/v0.71.0),
-including its [documented browser Vault additions](https://openbot.run/changelog).
-This is an independent design for T3OS's existing architecture.
+The original design baseline was T3OS
+`080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on 14 November 2026.
+The benchmark was [OpenBot v0.71.0](https://github.com/nightly-labs/openbot/releases/tag/v0.71.0)
+and its [documented browser Vault additions](https://openbot.run/changelog).
+This is an independent implementation in T3OS's existing architecture.
 
-## Problem and scope
+## Scope and existing boundaries
 
-T3OS already encrypts technical credentials, controls access to each secret and
-keeps browser sign-ins. What is missing is a browser-oriented credential flow:
-save a login for specific sites, select it without exposing its password to the
-model, fill an observed login form and supply a time-based one-time password
-(TOTP) when the site asks for one.
+Save a login for exact sites, select it without exposing its values to the model,
+fill an observed login form and supply a time-based one-time password (TOTP) when
+the site asks. A contact/address profile uses the same field-selective flow.
+Payment-card storage and payment submission remain outside this feature.
 
-Extend the existing Vault with a browser login and an optional contact/address
-profile. Use the provisioned server browser as the default and only execution
-surface for this release. Do not attach a personal browser or read the user's
-password manager, clipboard, browsing history or computer.
+Only the provisioned server browser is eligible. Do not attach a personal browser
+or read a password manager, clipboard, browsing history or the user's computer.
+API keys, OAuth connections and existing saved cookie sessions keep their
+separate paths. A cookie session is not converted into a password.
 
-Keep API keys and OAuth connections on their existing paths. A saved browser
-login is not an API credential, and an existing cookie session is not converted
-into a password. Payment card storage and payment submission remain separate
-future work; this proposal does not claim that part of OpenBot parity.
-
-## Existing implementation to reuse
-
-| Verified module | Decision |
+| Existing module | Integration |
 |---|---|
-| `backend/app/core/vault.py` | Use the existing owner-bound envelope encryption and key rotation. No new encryption mechanism or master key. |
-| `backend/app/core/secret_kinds.py` | Add typed browser payloads and their JSON schemas here. Existing kinds remain unchanged. |
-| `backend/app/db/models/organization_secret.py` | Reuse secret identity, visibility, usage scope and `authorization_generation`. Changes to allowed use rotate the generation. |
-| `backend/app/services/organization_secret.py` | Add a narrow browser writer that resolves authority and delivers values directly to the owned browser. Never return plaintext to an API caller or model. |
-| `backend/app/api/routes/v1/secrets.py` | Reuse creation, replacement, metadata listing and resource access. Do not introduce a reveal endpoint. |
-| `backend/app/services/browser_sign_in.py` | Preserve member-sealed cookie/local-storage sessions and their private audience restrictions. Cookie persistence remains a separate explicit choice. |
-| `backend/app/agents/capabilities/browser_use/_direct.py`, `_page.py`, `_preview.py` | Reuse observed element handles, allowed domains, live browser ownership and human-control lease. |
-| `frontend/src/components/vault/secret-form.tsx`, `secret-dialog.tsx` | Extend schema-driven forms with browser-specific input and masked metadata. |
-| `frontend/src/components/chat/browser-panel.tsx`, `browser-view.tsx` | Add the credential picker and destination confirmation inside the hosted browser panel. |
-| `frontend/src/components/browser/my-sign-ins.tsx` | Keep saved sessions separate from saved passwords and explain their relationship. |
+| `app/core/vault.py` | Existing envelope encryption and key rotation; no new master key or encryption mechanism. |
+| `app/core/secret_kinds.py` | Typed browser payloads and schemas. |
+| `app/services/organization_secret.py` | Owner-checked creation, replacement and deletion; browser values never use generic transport readers. |
+| `app/services/browser_credentials/` | Policy, authority, IDs-only plans, lease and single native writer. |
+| `app/agents/capabilities/browser_use/` | Existing owned view, input lease, observed elements, protected output and bounded credential request tool. |
+| `app/services/live_browse.py` | Strict cache purge and protected event publication before values open. |
+| `app/services/browser_sign_in.py` | Separate member-sealed cookie/local-storage sessions. |
+| Vault forms and hosted browser panel | Dedicated picker, exact destination/field confirmation, protected state and explicit human handoff; required UI integration. |
 
-Read [Secrets and the vault](../secrets.md) and
-[Permissions](../permissions.md) for the current contracts. The implementation
-must preserve their guarantees rather than introducing a parallel store.
-
+Paths in that table are under `backend/`. Read [Secrets and the vault](../secrets.md)
+and [Permissions](../permissions.md) for existing access contracts.
 [PR #89](https://github.com/t3grp/agenticos/pull/89) is the hosted-panel UX
-dependency. Integrate with its accepted implementation or an equivalent reviewed
-launcher. This design neither changes its release state nor republishes agents.
+dependency; integrate its accepted implementation without assuming its release
+state or republishing agents.
 
-## Product flow
+## Supported user flow and its limits
 
-1. In Vault, choose **Browser login**. Enter a label, username, password and one
-   or more exact allowed origins. Add a TOTP seed only when the owner deliberately
-   chooses to store it.
-2. Save as a personal credential by default. The UI explains that use is limited
-   to the owner acting privately, and shows which agent bindings allow it.
-3. In the hosted browser, choose **Use a saved login**. The server lists only
-   eligible metadata for this member, organization, agent, run and destination.
-4. Show the exact destination origin and which fields will be filled. The first
-   implementation requires a human confirmation for each fill operation.
-5. The server fills the observed fields directly. It returns only success or a
-   bounded refusal reason. Filling does not submit the form.
-6. The user or agent submits through the existing browser action path and its
-   approvals. A later TOTP challenge is a separate fill operation with a fresh
-   destination and authority check.
-7. After a successful sign-in, the existing **Keep me signed in** choice may save
-   a cookie session. Removing the password does not silently remove an existing
-   cookie session; the UI offers an explicit link to forget those sessions.
+The backend supports this sequence. The dedicated picker and confirmation
+controls must be integrated before enabling it for end users.
 
-A contact profile follows the same destination-confirmed fill path and exposes
-only the selected fields. It does not turn a form submission or purchase into
-an implicitly authorized action.
+1. Save a **Browser login** with a label, username, password and exact allowed
+   origins. Store a TOTP seed only when the owner deliberately chooses to do so.
+2. Bind that credential to a permitted agent's provisioned browser. The binding
+   is frozen in the published version; current policy can subtract authority.
+3. In a private live browser run, request eligible metadata for the current
+   observed origin. Select the credential and numbered fields.
+4. The owning controller prepares the real controls and exposes the exact
+   canonical origin and selected field names for the acting person to confirm.
+   A generic tool approval cannot authorize the secret write.
+5. Before opening values, stop previews, erase cached frames and enable protected
+   output. The owning controller fills only those selected native controls.
+   The writer does not call form submission during this step.
+6. To submit, choose a separate **Submit this form** action tied to the exact
+   successful, unexpired fill. The endpoint records a new approval and attempt
+   before the same controller calls native `requestSubmit` once. Only same-origin
+   native POST forms are supported. A `submitted` receipt acknowledges that
+   action; it does not establish that sign-in succeeded.
+7. A later same-origin TOTP challenge needs fresh observed handles, a new document
+   identity and another confirmation. Output remains protected.
+8. If the page requires CAPTCHA, SSO, ambiguous controls or unrestricted
+   interaction, end the protected hosted session and direct the person to the
+   canonical site in their normal browser. This human handoff does not transfer
+   the hosted cookie jar or resume an unprotected credential-bearing agent tab.
 
-## Proposed secret kinds
+Confirmation authorizes delivery of the selected values to the exact approved
+origin. Its scripts can react to input events or poll the DOM and may send or
+submit those values themselves. The separate submission guarantee covers the
+T3OS writer; it does not promise to stop a compromised approved website from
+acting on values it has received.
 
-Use discriminated, extra-forbidden Pydantic models in `secret_kinds.py`.
-Secret-bearing fields use `SecretStr` and secret-safe serialization. Validate
-the entire payload before sealing; listing and error responses are separate
-metadata schemas.
+Protected tabs do not offer **Keep me signed in**, screenshots or free-text page
+reading. Existing saved cookie sessions remain separate and are not removed when
+a password is deleted. The UI must explain this limitation rather than imply
+that filling a login enables general post-login automation. The protected view
+can show fixed control roles, canonical origin and bounded receipts, and lets the
+person decline or close. It cannot show unrestricted page content for human
+takeover either: that content may already contain reflected values.
 
-| Kind | Sealed fields | Metadata allowed in listings |
+## Stored payloads and origins
+
+Payloads are discriminated, extra-forbidden Pydantic models. Value fields use
+`SecretStr`; metadata responses and validation errors never reveal them.
+
+| Kind | Sealed fields | Allowed selection metadata |
 |---|---|---|
-| `browser_login` | Username, password, exact allowed origins, optional TOTP seed/algorithm/digits/period, optional reviewed field-role hints | Label, kind, allowed origins, owner/scope, last-used time, `has_totp`; no password or seed hint |
-| `browser_profile` | Reviewed name, email, phone and structured address fields; exact allowed origins | Label, kind, allowed origins and available field names; no profile values |
+| `browser_login` | Username, password, exact allowed origins, optional TOTP seed/algorithm/digits/period. | Label, kind, owner/scope, allowed origins, available field names and `has_totp`; empty password/seed hints. |
+| `browser_profile` | Name, email, phone, reviewed address fields and exact allowed origins. | Label, kind, owner/scope, allowed origins and available field names; no profile values. |
 
-Proposed login shape, showing synthetic placeholders rather than a usable secret:
+Accept only canonical HTTPS origins without paths, queries, fragments, userinfo
+or wildcards. Hostnames and ports are normalized once. Private IP destinations,
+browser-internal pages and non-public DNS resolutions are refused. A future
+enterprise intranet policy needs separate review. The top-level page and actual
+form destination must both match the exact allowed origin.
 
-```json
-{
-  "kind": "browser_login",
-  "username": "<submitted through the secret form>",
-  "password": "<submitted through the secret form>",
-  "allowed_origins": ["https://portal.example.test"],
-  "totp": {
-    "seed": "<base32 seed submitted through the secret form>",
-    "algorithm": "SHA1",
-    "digits": 6,
-    "period_seconds": 30
-  }
-}
-```
+TOTP accepts validated Base32 seeds, SHA1/SHA256/SHA512, six or eight digits and
+30- or 60-second periods. No opaque `otpauth://` import URL enters the API or logs.
+Codes are generated at the final write and are not retained. Under four seconds
+of remaining validity yields `totp_window_unavailable`; the person obtains a
+fresh plan in a new window. A missing replacement password never means preserve
+the old value.
 
-Accept only HTTPS origins without paths, query strings, fragments, userinfo or
-wildcards. Canonicalize hostnames and ports once and compare canonical origins
-at use time. Deny browser-internal, local and private-network destinations in
-the initial release; a future enterprise intranet policy needs explicit review.
+## Ownership, sharing and final authority
 
-The TOTP parser accepts validated Base32 seeds and explicitly supported
-algorithms, digits and periods. Do not add an opaque `otpauth://` URL field
-whose query could appear in validation errors. If import is added, parse in the
-secret form and submit the typed payload; never log the import URI.
+A personal record has an immutable owner, `usage_scope=personal` and
+`visibility=private`. The private run must act as that exact active owner.
+`VaultScope.browser_member(organization_id, user_id)` binds both identities
+through the existing envelope mechanism. Creation, replacement, native use and
+`vault-rotate` share the scope resolver. Changing either identity prevents
+unsealing. Generic secret injection, transport readers and ownership adoption
+refuse browser kinds.
 
-New browser kinds use empty hints. A short valid password must not be rejected
-merely to support a last-four-character hint, and that hint must not disclose it.
-A missing password may not mean 'preserve the old value' in a replacement request:
-use an explicit replacement contract so clients cannot accidentally clear fields.
+Organization-shared use has a separate rollout gate. The immutable owner, with
+`secrets:edit`, must explicitly name **both** permitted agents and active
+members. The dedicated policy endpoint rewraps between member-and-organization
+scope and organizational scope, replaces grants and rotates the generation in
+one transaction. Generic metadata editing or resource sharing cannot transfer
+browser use. Identical policy replacement preserves its generation. Revoking to
+personal scope remains available when filling is disabled.
 
-## Ownership and authorization
+The explicitly permitted acting member confirms each exact shared fill and each
+submission. No additional owner decision per use is required. Metadata visibility
+alone never authorizes use. Current owner and acting-member membership, named
+agent/member grants, private run provenance, frozen published binding and
+`authorization_generation` are checked at the final effect boundary, including
+for already approved plans. Shared rooms, delegated runs, API-key callers,
+unattended contexts, impersonation and publisher fallback are refused.
 
-The first rollout supports personal use only:
-`usage_scope=personal`, `visibility=private` and a non-null owner. Require the
-run to act as that owner in a private, admitted human audience. No anonymous
-embed, public shared conversation, outsider channel, impersonated run or
-publisher-fallback context may borrow the credential.
+The `browser_credential_ids` capability binding is validated at publication and
+limited to the provisioned built-in browser. Current published bindings may
+subtract authority from a frozen run; later additions cannot silently expand it.
+The credential row is locked through the bounded final effect. Payload
+replacement and policy rewrap take that same row lock, so generation changes
+cannot pass the writer's final check concurrently.
 
-The current `OrganizationSecretService` seals even personal-use technical keys
-with `VaultScope.organization(...)`. Personal use is an authorization restriction
-there, not member-bound encryption. Browser passwords need the stronger boundary
-already used for personal browser sessions, extended to include the organization.
+## IDs-only API and bounded controller
 
-The storage checkpoint adds `VaultScope.browser_member(organization_id, user_id)` through the
-existing envelope mechanism, with a distinct scope kind and a stable subject
-derived from both ids. One browser-kind scope resolver must serve creation,
-replacement, browser use and `vault-rotate`; generic technical-key readers must
-refuse the new kinds. Existing secrets keep their current scope. Integration
-tests must prove that changing either id prevents unsealing. No additional master
-key or encryption implementation is introduced.
-
-The first release refuses changing a browser record's owner or personal usage
-scope. Shared-account support must perform an explicit authorized rewrap under
-its chosen organizational scope; editing metadata alone cannot transfer a login.
-
-Per-resource operations use `resolve_access`, including grants. Collection
-creation follows the existing `secrets:edit` gate. Metadata visibility alone
-does not authorize browser use. The current runtime's personal-use restrictions,
-the frozen published agent binding and the explicit browser-use policy must all
-permit the operation.
-
-The first implementation adds a proposed `browser_credential_ids` list to the
-`browser_use` binding. Validate ids and allowed use at publication. Recheck
-membership, secret existence, usage scope, grants, agent identity and
-`authorization_generation` immediately before each fill. A previously approved
-plan does not survive a password rotation or access change.
-
-Organization-shared logins are a later slice. They require explicit opt-in,
-named agent grants and a clear 'act as this shared account' policy. Never infer
-that an organization-wide label or a builder's ability to view a secret permits
-every agent or member to use it.
-
-## Narrow browser-use contract
-
-A credential fill is a server operation attached to an existing run and browser
-session. It does not accept a CDP URL, JavaScript, CSS selector or arbitrary
-destination URL. The request refers only to an observed tab, current page
-generation and fresh element handles.
-
-Proposed internal command:
+Requests never contain a CDP URL, JavaScript, CSS selector, destination URL or
+credential value. A plan request identifies existing observed elements:
 
 ```json
 {
-  "run_id": "<existing authorized run>",
-  "browser_session_id": "<owned hosted session>",
+  "request_id": "<new idempotency UUID>",
+  "call_id": "<owning browser call>",
   "tab_id": "<observed tab>",
-  "page_generation": 12,
-  "secret_id": "<eligible vault reference>",
-  "authorization_generation": "<current generation>",
-  "operation": "login",
-  "field_handles": {
-    "username": 21,
-    "password": 22
-  },
-  "confirmation_id": "<single-use human confirmation>"
+  "secret_id": "<eligible vault UUID>",
+  "authorization_generation": "<current generation UUID>",
+  "fields": [
+    {"field": "username", "element_id": 0},
+    {"field": "password", "element_id": 1}
+  ]
 }
 ```
 
-The server derives origin and agent identity from the live page and run. It
-checks the top-level origin, frame origin, form destination where observable,
-field roles, visibility and page generation. Cross-origin frames, hidden
-controls, unknown form destinations and navigations during validation are
-refused in the first release.
+The run ID comes from the route. Normal browser snapshots number controls from
+zero; request IDs address that exact observation, never an arbitrary selector.
+The live controller stores actual node references in an isolated-world closure
+and produces opaque document and field identities. It checks visibility,
+connection, hit-testing, native control type, exact form action and same-document
+identity again before opening values. Hidden, readonly, replaced, ambiguous or
+cross-origin controls are refused.
 
-The writer holds the browser's input lease and observes the page again
-immediately before sending values. If navigation changes the origin or page
-generation, invalidate the confirmation. A redirect must be inspected at its new
-origin; allowlisting the starting site does not authorize a different one.
-
-Password and TOTP fields must match the expected observed form roles. The
-operator resolves an ambiguous form by taking control. Do not broaden the
-origin list or infer credential permission from instructions on the page.
-
-## Proposed API and capability surface
-
-| Proposed surface | Contract |
+| Surface | Contract |
 |---|---|
-| Existing secret creation/replacement routes | Accept the two new typed kinds after validation and seal them through the existing service. Return metadata only. |
-| `GET /v1/runs/{run_id}/browser-credentials` | Eligible metadata for the current owned hosted browser, scoped to its observed origin. Inaccessible ids are not enumerated. |
-| `POST /v1/runs/{run_id}/browser-credential-plans` | Validate observed handles and issue an expiring, single-use plan for the human to review. Store ids and field roles, never values. |
-| `POST /v1/runs/{run_id}/browser-credential-plans/{id}/confirm` | Confirm as the current human owner, recheck authority and origin, and fill once. A duplicate never blindly retries. |
-| Proposed `browser_fill_credential` tool | Request a plan by secret reference and observed handles; return the required human confirmation or a refusal, never credential values. |
+| Existing secret creation/replacement routes | Validate and seal typed values; return metadata only. No reveal route. |
+| `GET /v1/runs/{run_id}/browser-credentials?call_id=...&tab_id=...` | Eligible metadata for the current owned browser and live origin. |
+| `POST /v1/runs/{run_id}/browser-credential-plans` | Queue an IDs-only request; return 202. Does not approve or execute filling. |
+| `GET /v1/runs/{run_id}/browser-credential-plans/{id}` | Read this acting person's receipt; expire abandoned work without retry. |
+| `POST /v1/runs/{run_id}/browser-credential-plans/{id}/confirmation` | Exact `document_id`, `authorization_generation` and `approve`; confirm or decline as the acting person. |
+| `POST /v1/runs/{run_id}/browser-credential-plans/{filled_id}/submission` | Separate explicit human action with new `request_id`, exact filled document and generation; return its child plan. |
+| `GET/PUT /v1/secrets/{secret_id}/browser-policy` | Immutable-owner-only policy. PUT requires `generation`, `mode` and both `agent_ids`/`member_ids` for shared use. |
+| `browser_credential_options` | Eligible metadata from the owning live controller. |
+| `browser_fill_credential` | Request by IDs and keep that controller alive during a bounded wait for dedicated human confirmation. |
 
-Extend the existing `browser_use` capability and its declared `tools=` tuple.
-The new tool is explicitly side-effecting and must use the existing approval
-system. Per-resource routes delegate authorization to the service; broad role
-checks cannot override a resource grant.
+All routes send `Cache-Control: no-store`. Receipts contain IDs, operation and
+parent fill, field names, canonical origin, opaque document identity, expiry,
+bounded state/reason and `output_protected`. Native handles, selectors, arbitrary
+page errors and protocol payloads are not API output.
 
-Plans expire after 60 seconds and after any page-generation, lease or
-authorization-generation change. TOTP codes are generated at fill time, never
-when a plan is created, and are not retained. If the remaining code lifetime is
-too short, wait for the next valid window within a bounded timeout or ask the
-person to retry.
+The request tool itself is non-side-effecting: its IDs cannot approve a write.
+The actual native effect always uses `ApprovalService` with `always_ask`.
+Claim checks the exact actor, run, agent, tool, capability and plan. The generic
+approval queue contains only the plan ID and fixed explanation. Deciding that
+generic item cannot replace the dedicated document/generation confirmation.
+Native handles are never parked for unrelated approvals or resumed after restart.
 
-Record acceptance before the external browser effect using the run's existing
-durable operation pattern. If a timeout leaves the fill outcome unknown, show
-that state and require fresh observation. Do not automatically send another
-password or code and do not automatically submit a form.
+Plans expire in 60 seconds. The controller lease lasts 90 seconds and renews
+every 20; advertised current origin lasts at most five seconds. The request tool
+waits at most 130 seconds and the controller closes after 150 idle seconds.
+Effects have a 20-second bound and individual protocol requests a five-second
+bound. Closing or parking the owning view tears down its controller.
 
-## Plaintext and browser output boundary
+The durable claim commits before the external effect. A second transaction
+rechecks current authority and holds the credential lock through that effect.
+A timeout, cancellation or lost acknowledgement after claiming becomes terminal
+`unknown`; it never retries automatically. A successful fill may have only one
+submission child. An unknown submission cannot be reopened. A fresh process,
+document, lease or credential generation requires new observation and confirmation.
 
-Plaintext travels only from the vault reader to the narrow browser writer in
-memory. It must not enter model arguments, tool results, chat messages, logs,
-trace spans, audit payloads, exported specs, workflows, teaching recordings,
-screenshots retained as artifacts or error details.
+## Sticky plaintext and output boundary
 
-Before filling, suppress capture of the target fields and clear cached DOM
-snapshots for that page generation. Redact their values from subsequent DOM
-reports and mask them in preview frames while present. TOTP input is treated as
-sensitive even if the page renders it as ordinary text. Pause any browser teaching
-capture across the operation.
+Values travel from the vault reader to the native writer in memory. They do not
+enter model arguments, tools results, messages, audit payloads, exports, stored
+plans or error details. Only explicitly selected fields are opened for filling.
 
-The destination website necessarily receives the submitted credential. Origin
-allowlisting is therefore a security boundary, not just a picker filter.
-Page scripts at that allowed origin can observe form input. Do not claim that
-autofill protects against a compromised allowed website or that masking inputs
-is comprehensive page-content data-loss prevention.
+Before the first write, stop and join the preview stream, clear the cached last
+image, and transactionally remove Redis frame, location and trace caches.
+Publish a fixed `browser_protected` event before values open. Failure refuses
+the write. Cached publication and teardown share a lock: an in-flight old frame
+finishes before the purge and cannot be replayed during later teardown.
 
-A website that echoes a secret outside its input fields is a remaining output
-risk. Release acceptance must include this adversarial fixture. Sensitive values
-must be removed from retained DOM/text results, and preview must remain
-suspended if the output cannot be safely masked. Do not resume captures merely
-because a submit button was pressed.
+Protection is sticky for the tab's lifetime, including redirects, errors and
+uncertain outcomes. Text reads return a fixed explanation. Locations expose only
+the first approved canonical origin. Screenshots, cookie capture and arbitrary
+JavaScript reads are unavailable. Isolated-world snapshots return fixed control
+roles and fresh IDs without values, labels, options, titles, body text, errors or
+URL paths/queries. General browser actions requiring unrestricted DOM output are
+unavailable. Teaching and artifact paths must respect this boundary rather than
+create another raw capture path.
 
-The audit entry records actor, organization, agent, run, secret id, canonical
-origin, operation, result code and generation. It contains no username, code,
-password, profile value or raw page response.
+The real Chromium fixture reflects a synthetic password into body text, labels,
+an image, the title and URL query. Protected outputs omit every reflection;
+preview and cookie capture make no protocol calls. Navigation or Submit never
+restores generic capture. This deliberately limited observation interface does
+not claim safe unrestricted automation after login.
 
-## Implementation slices and acceptance
+The reviewed optional transport logs raw protocol parameters, replies, events and
+exception messages. `_transport_privacy.py` therefore installs permanent filters
+before importing or connecting it. Exact loggers `websockets.client`,
+`cdp_use.client` and `cdp_use.cdp.registry`, their descendants and every
+configured sink stay protected for the complete connection lifetime. Missing
+filters, a newly unprotected sink or an unreviewed package version refuse
+credential admission. Fixed application reasons remain available. Raw protocol
+debugging cannot be enabled on a credential-bearing connection.
 
-| Slice | Deliverable | Required evidence |
-|---|---|---|
-| 1. Types and storage | Browser kinds, schema forms, personal defaults and masked metadata | Cross-owner and cross-tenant unwrap refusal; invalid payload errors contain no values; key rotation preserves valid envelopes. |
-| 2. Eligible selection | Published binding validation and origin-scoped metadata picker | Another user, agent, organization or revoked generation cannot discover or spend the credential. |
-| 3. Login fill | Human-confirmed plan and direct server writer, without form submission | Correct field fill on a synthetic site; stale handles, hidden fields, redirected origins, takeover loss and ambiguous outcomes refuse safely. |
-| 4. TOTP and profile | Just-in-time code and field-selective profile filling | Clock-boundary tests, supported algorithms, expired confirmations, unselected profile fields and no code retention. |
-| 5. Shared-account policy | Explicit organizational opt-in with named agents | Positive authorized case plus grant revocation, member removal, shared-room and publisher-fallback refusal. |
+## Tests and remaining acceptance
 
-Extend `backend/tests/api/test_no_secret_escapes.py` and the focused vault,
-browser and permission suites. Add synthetic browser tests whose test-only
-server receives the values while transcripts, audit entries, traces, screenshots
-and the teaching store do not. Test prompt injection requesting a code through a
-normal text tool, a malicious cross-origin iframe and a page that echoes the
-password. No real credentials or client accounts belong in test fixtures.
+Focused cases live in `backend/tests/test_browser_credential_*.py`,
+`backend/tests/integration/test_browser_credential_*.py` and
+`backend/tests/api/test_browser_credential_routes.py`. They cover storage
+scopes, shared rewraps, policy/membership/generation changes after approval and
+claim, durable attempts, expired/lost leases, output failures, cancellation,
+transport filtering and normalized refusal payloads. Existing browser, secret
+escape and saved-session regressions remain required.
 
-Verify schema-driven forms, accessible field labels, error messages, account and
-organization switching, and the difference between saved passwords and saved
-sessions. Existing sign-in-session tests must remain green.
+`test_browser_credential_chromium.py` uses one sandboxed, disposable Chromium
+process and synthetic credentials. CDP Fetch fulfills only the exact synthetic
+origin and refuses other page requests. Set `T3OS_TEST_CHROMIUM_EXECUTABLE` to a
+reviewed browser for this explicit acceptance batch; its release receipt must
+show zero skipped cases. The disposable profile uses the OS temporary directory
+so Windows sandbox access does not depend on repository-drive ACLs.
+
+The native batch executes real isolated-world JavaScript through `CdpPage`:
+index-zero login fields, selected-only filling, separate submission, TOTP/profile
+stages, hidden/replaced controls, changed documents and hostile secret reflection.
+It uses no real site, personal profile, live credential or paid model.
+
+UI acceptance must still verify schema-driven forms, accessible labels,
+translations, account/organization switching, exact destination and field review,
+decline/close, unknown-without-retry, cached-frame clearing and the documented
+human handoff. Broader safe post-login automation and cookie persistence require
+a separately reviewed continuation design. This checkpoint does not complete
+that part of #112.
+
+## Reviewed native dependencies
+
+Command shapes were checked against Chrome DevTools Protocol commit
+[`dd55cb67621a728bba3d23e056f2de2ca1e7c906`](https://github.com/ChromeDevTools/devtools-protocol/tree/dd55cb67621a728bba3d23e056f2de2ca1e7c906),
+specifically `pdl/js_protocol.pdl` and `pdl/domains/Page.pdl`. The writer uses
+an isolated-world object-bound closure, native setters and explicit object
+release; a recycled execution-context number is not a document identity.
+
+Credential admission requires exact locked `cdp-use==1.4.5` and
+`websockets==17.4`. The reviewed cdp-use wheel SHA-256 is
+`8f8e2435e3a20e4009d2974144192cf3c132f6c2971338e156198814d9b91ecb`.
+Its `cdp_use/client.py` and `cdp_use/cdp/registry.py` establish the payload
+logging boundary. An upgrade requires a new source/logging review and native
+acceptance before changing the version constants. The synthetic batch tests the
+real browser and application commands through a small transport bridge; it does
+not replace deployment acceptance of the installed optional transport, Redis
+purge and panel behavior.
+
+The locked websockets 17.4 source archive has SHA-256
+`09d3939b70df0c8ad2da145ebd50978bccaee1d565e838b0e7921a34d38571eb`.
+Its `src/websockets/asyncio/client.py` chooses `websockets.client` and passes that
+logger to `ClientProtocol`; `asyncio/connection.py` wraps the same logger with a
+`LoggerAdapter`, while `protocol.py` logs frames and failures through it. The
+upstream cdp-use filter is appended to the logger and does not remove the guard
+installed before import. Tests cover this ordering and all reviewed namespaces,
+including records from late callbacks and child loggers at changed levels.
 
 ## Rollout, migration and rollback
 
-No existing credential is converted automatically. Do not reserve an Alembic
-number in this proposal. The implementation checks whether adding typed payloads
-needs a migration, and any new plan tables receive numbers against the current
-single-headed migration chain.
+No existing credential is converted automatically. Migration
+`0333_browser_credential_plans` follows `0332_room_task_handoffs`, retaining
+published `0326_provider_account_pools` and `0331_merge_core_accounts` history.
+It adds four policy/grant/plan tables and tenant keys `uq_agents_org_id`,
+`uq_agent_runs_org_id` and `uq_organization_secrets_org_id`. Key indexes build
+concurrently outside transactional DDL and then attach as constraints. Active
+builds and unexpected same-name objects refuse; only an exact valid standalone
+index is reused, and only an exact invalid leftover may be rebuilt. Allow for
+short constraint-attachment locks and rehearse on a restored database. Do not
+wrap concurrent index DDL in an outer migration transaction.
 
-Ship behind a deployment flag, disabled by default. Enable personal login fill
-for a synthetic test organization first, then selected users. TOTP, profiles and
-shared accounts each have separate rollout gates. Add published documentation,
-Vault/browser onboarding, translations and permission-aware UI in their
-implementation PRs.
+`BROWSER_CREDENTIAL_FILL_ENABLED` defaults false. Enabling also requires the
+organization in `BROWSER_CREDENTIAL_ORGANIZATION_IDS`; optionally restrict users
+with `BROWSER_CREDENTIAL_USER_IDS`. TOTP, profiles and shared use require separate
+`BROWSER_CREDENTIAL_TOTP_ENABLED`, `BROWSER_CREDENTIAL_PROFILE_ENABLED` and
+`BROWSER_CREDENTIAL_SHARED_ENABLED` flags, all false by default. The published
+capability must use the built-in browser at exactly `BROWSER_SIGN_IN_CDP_URL`.
+Personal/native-device browsers and arbitrary CDP endpoints are ineligible.
 
-Disabling the feature blocks new plans and invalidates pending plans immediately.
-Existing sealed browser records remain manageable and rotatable, and may be
-deleted through the normal authorized Vault path. Never downgrade to a build
-that cannot safely parse their metadata without an explicit compatibility plan.
-Do not erase existing saved cookie sessions or rotate unrelated credentials
-during rollback.
+Enable only a synthetic organization after migration, dependency installation,
+UI integration and deployment-level output/cache tests. Then admit selected users
+explicitly. Environment flags are not evidence that those checks passed.
+
+Disabling blocks new and pending use. Sealed records remain manageable, rotatable
+and deletable through their normal authorized paths. Existing cookie sessions
+remain separate. Downgrade of 0333 refuses any policy or plan evidence, including
+requested, filled and unknown work. Deleting evidence to force rollback would
+discard the record preventing unsafe retries; that is not an automatic rollback
+strategy. Do not deploy an older reader that cannot safely parse browser metadata
+without an explicit compatibility plan.
