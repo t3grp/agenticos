@@ -2,7 +2,7 @@
 source_sha: "7cb876b5ef26"
 ---
 
-<!-- source_sha: ccdd48ecf924 -->
+<!-- source_sha: b3b3173c34cf -->
 
 # Contribuir a AgenticOS
 
@@ -112,10 +112,12 @@ supervisión.
 - Los bugs se entregan con un test de regresión que falla sin el arreglo.
 - Cuenta en la descripción qué decidiste y por qué. El qué ya lo enseña el
   código.
-- Los pull requests ejecutan solo las comprobaciones rápidas. Cada merge a `t3`
-  y cada etiqueta `v*` ejecutan la CI completa. Si una ejecución de `t3` falla,
-  reviértela o corrígela antes del siguiente merge; un despliegue a producción
-  la necesita en verde.
+- La CI no se ejecuta en los pull requests. Antes de hacer push, ejecuta la
+  comprobación rápida (lint, comprobación de tipos, tests relacionados) y pega
+  el comando y su salida en el pull request. Cada merge a `t3` y cada etiqueta
+  `v*` ejecutan la CI completa; si una ejecución de `t3` falla, reviértela o
+  corrígela antes del siguiente merge. Un despliegue a producción la necesita
+  en verde.
 
 ## Seguridad
 

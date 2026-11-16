@@ -96,9 +96,11 @@ ends up sending email unattended.
   neither.
 - Bugs ship with a regression test that fails without the fix.
 - Say what you decided and why in the description. The code shows the what.
-- Pull requests run the quick checks only. Every merge to `t3` and every `v*`
-  tag runs the full suite. When a `t3` run fails, revert or fix it before the
-  next merge; a production deploy needs it green.
+- No CI runs on pull requests. Before pushing, run the quick check (lint, type
+  checks, related tests) and paste its command and output into the pull
+  request. Every merge to `t3` and every `v*` tag runs the full suite; when a
+  `t3` run fails, revert or fix it before the next merge. A production deploy
+  needs it green.
 
 ## Security
 

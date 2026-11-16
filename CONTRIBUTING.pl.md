@@ -2,7 +2,7 @@
 source_sha: "7cb876b5ef26"
 ---
 
-<!-- source_sha: ccdd48ecf924 -->
+<!-- source_sha: b3b3173c34cf -->
 
 # Współtworzenie AgenticOS
 
@@ -110,10 +110,12 @@ zapomniana flaga jest tym, przez co agent kończy, wysyłając maile bez nadzoru
   zreviewowane ani jako jedno, ani jako drugie.
 - Bugi jadą z testem regresji, który bez poprawki nie przechodzi.
 - W opisie napisz, co zdecydowałeś i dlaczego. Co — pokazuje kod.
-- Pull requesty uruchamiają tylko szybkie kontrole. Każde scalenie do `t3` i
-  każdy tag `v*` uruchamia pełne CI. Gdy przebieg na `t3` się nie powiedzie,
-  wycofaj lub napraw zmianę przed kolejnym scaleniem; wdrożenie produkcyjne
-  wymaga zielonego przebiegu.
+- CI nie uruchamia się dla pull requestów. Przed wypchnięciem uruchom szybką
+  kontrolę (lint, sprawdzanie typów, powiązane testy) i wklej polecenie oraz
+  jego wynik do pull requestu. Każde scalenie do `t3` i każdy tag `v*`
+  uruchamia pełne CI; gdy przebieg na `t3` się nie powiedzie, wycofaj lub
+  napraw zmianę przed kolejnym scaleniem. Wdrożenie produkcyjne wymaga
+  zielonego przebiegu.
 
 ## Bezpieczeństwo
 

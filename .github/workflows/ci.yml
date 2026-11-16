@@ -21,17 +21,16 @@ name: CI
 # `concurrency` group is keyed on `github.ref`, so a stacked branch cancels its own
 # superseded runs like any other.
 #
-# Pull requests run only the quick checks (lint, type checks); the heavy suites
-# are skipped there, and a skipped required check counts as a pass. Every push to
-# `t3` (each merge) and every `v*` tag runs the full suite (user decision,
-# 2026-11-16). A failed `t3` run is reverted or fixed before the next merge, and a
-# production deploy needs it green.
+# No CI runs on pull requests (user decision, 2026-11-16). The quick check (lint,
+# type checks, related tests) runs in the T3 session before it pushes, and its
+# command and output are pasted into the pull request for the lead to read before
+# merging; `t3` requires no status checks. Every push to `t3` (each merge) and
+# every `v*` tag runs the full suite. A failed `t3` run is reverted or fixed
+# before the next merge, and a production deploy needs it green.
 on:
   push:
     branches: [t3]
     tags: ['v*']
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 # One run per ref, and a newer run cancels an older one on every ref, `t3`
 # included (user decision, 2026-11-16). A cancelled `t3` run never becomes a

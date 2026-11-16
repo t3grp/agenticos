@@ -59,22 +59,13 @@ def triggers(workflow: dict[str, Any]) -> dict[str, Any]:
     return block
 
 
-class TestEveryPullRequestIsChecked:
-    """A pull request that runs nothing must not be possible to open."""
+class TestPullRequestsRunNoCI:
+    """The PR quick check runs in the T3 session and is pasted into the PR (2026-11-16)."""
 
-    def test_the_pull_request_trigger_matches_whatever_the_base_is(
-        self, triggers: dict[str, Any]
-    ) -> None:
-        assert "pull_request" in triggers, "CI no longer runs on pull requests at all"
-        event = triggers["pull_request"]
-        filters = sorted(
-            set(event or {}) & {"branches", "branches-ignore", "paths", "paths-ignore"}
-        )
-        assert not filters, (
-            f"the `pull_request` trigger filters on {filters}. A `branches` filter matches "
-            "the base, so a pull request stacked on a feature branch would run no jobs and "
-            "report an empty checks list rather than a red one - #359. A `paths` filter is "
-            "worse: the required checks never report and the merge button stays grey."
+    def test_pull_requests_trigger_nothing(self, triggers: dict[str, Any]) -> None:
+        assert "pull_request" not in triggers, (
+            "CI runs after merge and on release tags only; the lead reads the quick "
+            "check output pasted into each pull request before merging."
         )
 
     def test_no_trigger_is_filtered_by_path(self, triggers: dict[str, Any]) -> None:
@@ -91,17 +82,10 @@ class TestEveryPullRequestIsChecked:
         }
         assert not filtered, f"path filters appear on {sorted(filtered)}."
 
-    def test_pull_requests_run_fast_checks_on_every_update(self, triggers: dict[str, Any]) -> None:
-        """Opening, updating and reopening a PR must all run the fast checks."""
-        required = {"opened", "synchronize", "reopened"}
-        assert required <= set(triggers["pull_request"].get("types", [])), (
-            "PR creation, updates and reopening must all trigger the fast checks."
-        )
-
     def test_heavy_suites_run_after_every_merge_and_release(
         self, triggers: dict[str, Any], workflow: dict[str, Any]
     ) -> None:
-        """PRs run the quick checks; every `t3` push and `v*` tag runs the full suite."""
+        """Every `t3` push and `v*` tag runs the full suite."""
         assert triggers["push"]["branches"] == ["t3"]
         assert triggers["push"]["tags"] == ["v*"]
         assert workflow["jobs"]["changes"]["outputs"]["full"] == (

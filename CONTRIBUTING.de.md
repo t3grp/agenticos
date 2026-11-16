@@ -2,7 +2,7 @@
 source_sha: "7cb876b5ef26"
 ---
 
-<!-- source_sha: ccdd48ecf924 -->
+<!-- source_sha: b3b3173c34cf -->
 
 # Zu AgenticOS beitragen
 
@@ -114,10 +114,12 @@ verschickt.
 - Bugs kommen mit einem Regressionstest, der ohne den Fix fehlschlägt.
 - Schreiben Sie in die Beschreibung, was Sie entschieden haben und warum. Das
   Was zeigt der Code.
-- Pull Requests durchlaufen nur die schnellen Prüfungen. Jeder Merge nach `t3`
-  und jedes `v*`-Tag startet die vollständige CI. Schlägt ein `t3`-Lauf fehl,
-  mache ihn vor dem nächsten Merge rückgängig oder behebe ihn; ein
-  Produktions-Deployment setzt einen grünen Lauf voraus.
+- Für Pull Requests läuft keine CI. Führe vor dem Push die schnelle Prüfung
+  aus (Lint, Typprüfung, betroffene Tests) und füge Befehl und Ausgabe in den
+  Pull Request ein. Jeder Merge nach `t3` und jedes `v*`-Tag startet die
+  vollständige CI; schlägt ein `t3`-Lauf fehl, mache ihn vor dem nächsten Merge
+  rückgängig oder behebe ihn. Ein Produktions-Deployment setzt einen grünen
+  Lauf voraus.
 
 ## Sicherheit
 
