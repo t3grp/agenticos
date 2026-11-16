@@ -1,7 +1,9 @@
 # Media generation nodes for workflows
 
-**Status: proposal only.** This document adds no workflow node, generation
-request, provider credential, migration or running background job.
+**Status: implementation in progress, unavailable by default.** The Asset node
+and shared generation boundaries described below have local implementation and
+focused validation. Durable image/video workflow execution, canvas controls,
+combined validation and deployment remain separate completion gates.
 
 Baseline: T3OS `080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on
 14 November 2026. Benchmark:
@@ -34,8 +36,8 @@ credential, budget and retry behavior.
 | `frontend/src/components/workflows/runs/run-files.tsx` | Show media outputs using the existing authorized run-file surface. |
 
 See [workflow nodes](../reference/workflow-nodes.md) for the current node contract.
-The registry presently includes `image.transform`, not the proposed generation
-node ids below.
+The registry includes `image.transform` and the default-disabled `asset.input`.
+The generation node ids below still require their durable workflow adapters.
 
 ## Proposed node contracts
 
@@ -108,6 +110,34 @@ and retention. A private asset cannot become visible to every organization membe
 because generated media has a broader store.
 
 ## Shared generation boundary
+
+### Implemented provider boundary
+
+The shared boundary for the image agent tool and workflow integration is
+`backend/app/services/image_generation.py`. The existing agent tool retains its
+admission, metering and storage ownership. Strict workflow execution owns and
+closes its provider clients, fixes the catalog endpoints, disables transport and
+model-correction retries, rejects paid-request redirects and admits one model
+request. OpenAI Responses also receives `max_tool_calls=1` in the actual request
+body; the installed SDK has no named setting for that field. The workflow caller
+supplies its catalog-validated token cap, request options and input-image bytes.
+
+The video facade accepts a frozen `VideoReceipt` containing only provider, API,
+model, kind and an opaque job/file id. New receipts are durably acknowledged by
+the caller before polling or collection. A matching receipt resumes that exact
+job without another submission. A failed journal propagates; a lost submission
+without a receipt remains uncertain. Google inline responses have no resumable
+file receipt. Protected workflow collection validates and pins every download
+hop to public addresses, bounds the body, and permanently drops authentication
+headers after the first cross-origin redirect. Provider cancellation and billing
+limitations still apply. These provider primitives alone do not establish
+workflow crash recovery, current authority, budget holds or atomic file storage.
+
+Focused tests use the actual image SDKs against synthetic HTTP transports and
+the video facade against synthetic provider/pinned-download transports. They
+make no paid requests. Full integration and live acceptance remain pending.
+
+### Workflow integration contract
 
 Extract a narrow generation service used by both the existing agent tool and
 the workflow node. Its explicit inputs are the resolved provider request,

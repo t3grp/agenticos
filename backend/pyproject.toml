@@ -888,6 +888,7 @@ include = [
     # what the Builder offers, and a probe that quietly starts answering "no"
     # would empty that picker without a single test failing.
     "app/services/decision_models.py",
+    "app/services/image_generation.py",
     "app/services/image_models.py",
     "app/services/media_inspection.py",
     "app/services/media_types.py",
@@ -929,6 +930,7 @@ include = [
     "app/services/video_generation/clients.py",
     "app/services/video_generation/exceptions.py",
     "app/services/video_generation/generation.py",
+    "app/services/video_generation/receipts.py",
     "app/services/provider_error_code.py",
     "app/services/transcription_usage.py",
     # The rest of `app/services/rag/` came with the template and is reported
@@ -1861,6 +1863,7 @@ include = [
     # what the Builder offers, and a probe that quietly starts answering "no"
     # would empty that picker without a single test failing.
     "app/services/decision_models.py",
+    "app/services/image_generation.py",
     "app/services/image_models.py",
     "app/services/media_inspection.py",
     "app/services/media_types.py",
@@ -1902,6 +1905,7 @@ include = [
     "app/services/video_generation/clients.py",
     "app/services/video_generation/exceptions.py",
     "app/services/video_generation/generation.py",
+    "app/services/video_generation/receipts.py",
     "app/services/provider_error_code.py",
     "app/services/transcription_usage.py",
     # The rest of `app/services/rag/` came with the template and is reported
