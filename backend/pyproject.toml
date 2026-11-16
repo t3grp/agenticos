@@ -655,6 +655,8 @@ include = [
     "app/core/resource_icons.py",
     "app/core/catalog/**",
     "app/core/secret_kinds.py",
+    "app/core/browser_origins.py",
+    "app/core/secret_scopes.py",
     "app/core/tool_identity.py",
     "app/core/vault.py",
     # The audit trail, fail-closed and part of the caller's transaction. Every
@@ -1583,6 +1585,8 @@ include = [
     "app/core/resource_icons.py",
     "app/core/catalog/**",
     "app/core/secret_kinds.py",
+    "app/core/browser_origins.py",
+    "app/core/secret_scopes.py",
     "app/core/tool_identity.py",
     "app/core/vault.py",
     # The audit trail, fail-closed and part of the caller's transaction. Every

@@ -1,8 +1,19 @@
 # Browser credential Vault
 
-**Status: proposal only.** This design does not add secret kinds, expose
-credentials, modify browser permissions or deploy autofill. The schemas and
-endpoints below are proposed contracts for separate implementation PRs.
+**Status: staged backend implementation.** The first checkpoint adds typed
+personal browser records, masked selection metadata, member-and-organization
+envelope binding, owner checks, generic-reader refusal and key-rotation support.
+It exposes no credential reveal route and does not yet fill a browser. Durable
+fill plans, guarded native writing, shared-account policy, the UI and synthetic
+browser acceptance remain required before issue #112 can be completed.
+
+The storage checkpoint uses the existing secret create, replacement, listing and
+delete routes. Browser requests default to `usage_scope=personal` and
+`visibility=private`; explicitly broader requests are refused. Browser hints are
+empty, including for short valid passwords. Replacing a payload requires the
+whole payload and rotates its authorization generation. Removing a password
+does not delete a separately saved cookie session. The fill contracts below
+remain the implementation requirements for subsequent checkpoints.
 
 Baseline: T3OS `080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on
 14 November 2026. Benchmark:
@@ -132,7 +143,7 @@ with `VaultScope.organization(...)`. Personal use is an authorization restrictio
 there, not member-bound encryption. Browser passwords need the stronger boundary
 already used for personal browser sessions, extended to include the organization.
 
-Add a proposed `VaultScope.browser_member(organization_id, user_id)` through the
+The storage checkpoint adds `VaultScope.browser_member(organization_id, user_id)` through the
 existing envelope mechanism, with a distinct scope kind and a stable subject
 derived from both ids. One browser-kind scope resolver must serve creation,
 replacement, browser use and `vault-rotate`; generic technical-key readers must
