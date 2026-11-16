@@ -24,6 +24,7 @@ const owner = { id: "owner-a" } as NonNullable<ReturnType<typeof useAuthStore.ge
 const stored: Secret = {
   id: "credential-a",
   name: "Demo login",
+  description: null,
   kind: "browser_login",
   hint: "MUST-NOT-SHOW",
   owner_user_id: owner.id,

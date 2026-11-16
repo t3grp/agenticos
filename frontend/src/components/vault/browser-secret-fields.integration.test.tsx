@@ -65,7 +65,7 @@ describe("typed browser credentials", () => {
       ["Code period", "60 seconds"],
     ]) {
       await userEvent.click(screen.getByRole("combobox", { name: label }));
-      await userEvent.click(screen.getByRole("option", { name: option, exact: true }));
+      await userEvent.click(screen.getByRole("option", { name: option }));
     }
     expect(changed).toHaveBeenLastCalledWith(
       expect.objectContaining({

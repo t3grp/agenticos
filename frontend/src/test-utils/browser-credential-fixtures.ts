@@ -20,8 +20,8 @@ export const LOGIN: SecretKindInfo = {
     properties: {
       kind: { type: "string", const: "browser_login" },
       allowed_origins: { type: "array", items: { type: "string" }, title: "Allowed origins" },
-      username: { type: "string", format: "password", title: "Username", minLength: 1 },
-      password: { type: "string", format: "password", title: "Password", minLength: 1 },
+      username: { type: "string", format: "password", title: "Username" },
+      password: { type: "string", format: "password", title: "Password" },
       totp: { type: "object", title: "TOTP settings" },
     },
     required: ["allowed_origins", "username", "password"],
