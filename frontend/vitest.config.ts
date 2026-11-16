@@ -376,6 +376,9 @@ export default defineConfig({
         "src/components/vault/speech-key-field.tsx",
         // Keys and connected accounts share the vault inventory and its coverage gate.
         "src/components/vault/vault-table.tsx",
+        "src/components/vault/browser-secret-fields.tsx",
+        "src/components/vault/browser-credential-metadata.tsx",
+        "src/components/vault/browser-credential-policy.tsx",
       ],
       exclude: [
         "node_modules",
