@@ -169,10 +169,11 @@ class PersonalCodingSessionFactory:
                         ctx, account, harness, selection_reason=reason
                     ) as task:
                         yield task
-                return
             except ConflictError:
                 if acquired:
                     raise
+            else:
+                return
         raise ConflictError(message="Every eligible coding account in this pool is busy")
 
     @asynccontextmanager

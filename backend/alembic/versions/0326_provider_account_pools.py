@@ -33,15 +33,14 @@ def upgrade() -> None:
     op.alter_column("coding_accounts", "is_default", server_default=None)
     op.alter_column("coding_accounts", "pool_member", server_default=None)
     op.drop_constraint(
-        "coding_accounts_organization_id_user_id_harness_key",
+        "coding_accounts_organization_id_key",
         "coding_accounts",
         type_="unique",
     )
     op.create_check_constraint(
         "ck_coding_account_pool",
         "coding_accounts",
-        "pool_member IS FALSE OR "
-        "(harness = 'codex' AND provider_identity_fingerprint IS NOT NULL)",
+        "pool_member IS FALSE OR (harness = 'codex' AND provider_identity_fingerprint IS NOT NULL)",
     )
     op.create_index(
         "coding_accounts_default_idx",
@@ -60,14 +59,18 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    duplicate_accounts = op.get_bind().execute(
-        sa.text(
-            "SELECT EXISTS ("
-            "SELECT 1 FROM coding_accounts "
-            "GROUP BY organization_id, user_id, harness HAVING count(*) > 1"
-            ")"
+    duplicate_accounts = (
+        op.get_bind()
+        .execute(
+            sa.text(
+                "SELECT EXISTS ("
+                "SELECT 1 FROM coding_accounts "
+                "GROUP BY organization_id, user_id, harness HAVING count(*) > 1"
+                ")"
+            )
         )
-    ).scalar_one()
+        .scalar_one()
+    )
     if duplicate_accounts:
         raise RuntimeError("Cannot downgrade while multiple coding accounts exist")
 
@@ -75,7 +78,7 @@ def downgrade() -> None:
     op.drop_index("coding_accounts_default_idx", table_name="coding_accounts")
     op.drop_constraint("ck_coding_account_pool", "coding_accounts", type_="check")
     op.create_unique_constraint(
-        "coding_accounts_organization_id_user_id_harness_key",
+        "coding_accounts_organization_id_key",
         "coding_accounts",
         ["organization_id", "user_id", "harness"],
     )

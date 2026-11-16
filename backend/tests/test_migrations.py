@@ -258,10 +258,33 @@ def test_provider_account_migration_preserves_existing_grant_and_refuses_lossy_d
         assert downgrade.returncode != 0
         assert "Cannot downgrade while multiple coding accounts exist" in downgrade.stderr
         with engine.connect() as db:
-            assert db.execute(
-                text("SELECT count(*) FROM coding_accounts WHERE organization_id = :org"),
-                {"org": organization_id},
-            ).scalar_one() == 2
+            assert (
+                db.execute(
+                    text("SELECT count(*) FROM coding_accounts WHERE organization_id = :org"),
+                    {"org": organization_id},
+                ).scalar_one()
+                == 2
+            )
+        with engine.begin() as db:
+            db.execute(
+                text("DELETE FROM coding_accounts WHERE organization_id = :org AND id != :id"),
+                {"org": organization_id, "id": account_id},
+            )
+        downgrade = _alembic("downgrade", "0325_merge_t3_rooms_v173")
+        assert downgrade.returncode == 0, downgrade.stderr
+        upgrade = _alembic("upgrade", "head")
+        assert upgrade.returncode == 0, upgrade.stderr
+        with engine.connect() as db:
+            assert (
+                db.execute(
+                    text(
+                        "SELECT id, enabled, generation, sealed_secret, is_default, pool_member, "
+                        "provider_identity_fingerprint FROM coding_accounts WHERE id = :id"
+                    ),
+                    {"id": account_id},
+                ).one()
+                == preserved
+            )
     finally:
         engine.dispose()
 

@@ -96,7 +96,10 @@ function CodingAccountList({ harnesses }: { harnesses: readonly CodingHarness[] 
               {accounts.length > 0 ? (
                 <ul className="divide-border ml-12 divide-y">
                   {accounts.map((account) => (
-                    <li key={account.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li
+                      key={account.id}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3"
+                    >
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{account.label}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
@@ -118,8 +121,8 @@ function CodingAccountList({ harnesses }: { harnesses: readonly CodingHarness[] 
                         </p>
                         {account.usage.windows.map((window) => (
                           <p className="text-muted-foreground text-xs" key={window.name}>
-                            {window.name}: {window.used ?? t("unknownValue")} / {window.limit ?? t("unknownValue")}{" "}
-                            {window.unit ?? ""}
+                            {window.name}: {window.used ?? t("unknownValue")} /{" "}
+                            {window.limit ?? t("unknownValue")} {window.unit ?? ""}
                             {window.resets_at && ` · ${t("resetsAt", { time: window.resets_at })}`}
                           </p>
                         ))}
@@ -130,7 +133,9 @@ function CodingAccountList({ harnesses }: { harnesses: readonly CodingHarness[] 
                             size="sm"
                             variant="outline"
                             disabled={actions.makeDefault.isPending}
-                            onClick={() => void actions.makeDefault.mutateAsync(account).catch(failure)}
+                            onClick={() =>
+                              void actions.makeDefault.mutateAsync(account).catch(failure)
+                            }
                           >
                             {t("makeDefault")}
                           </Button>
@@ -161,7 +166,9 @@ function CodingAccountList({ harnesses }: { harnesses: readonly CodingHarness[] 
                           size="sm"
                           variant="outline"
                           disabled={actions.disconnect.isPending}
-                          onClick={() => void actions.disconnect.mutateAsync(account.id).catch(failure)}
+                          onClick={() =>
+                            void actions.disconnect.mutateAsync(account.id).catch(failure)
+                          }
                         >
                           {t("disconnect")}
                         </Button>
@@ -170,7 +177,7 @@ function CodingAccountList({ harnesses }: { harnesses: readonly CodingHarness[] 
                   ))}
                 </ul>
               ) : (
-                <p className="text-muted-foreground ml-12 mt-1 text-xs">{t("notConnected")}</p>
+                <p className="text-muted-foreground mt-1 ml-12 text-xs">{t("notConnected")}</p>
               )}
             </li>
           );

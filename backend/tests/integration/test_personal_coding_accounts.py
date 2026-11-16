@@ -123,6 +123,8 @@ async def test_an_administrator_or_another_tenant_cannot_use_or_disconnect_the_a
         owner, other = await person(db), await person(db)
         org = await organization(db, owner)
         elsewhere = await organization(db, owner)
+        db.add(OrganizationMember(organization_id=org.id, user_id=other.id, role="admin"))
+        await db.flush()
         service = CodingAccountService(db)
         row = await service.create(context(owner, org), request(enabled=True))
         for ctx in (context(other, org), context(owner, elsewhere)):
@@ -258,16 +260,18 @@ async def test_codex_accounts_keep_explicit_defaults_and_reject_duplicate_provid
         with pytest.raises(AlreadyExistsError, match="already connected"):
             await connect("account-1", "Duplicate")
 
-        with pytest.raises(BadRequestError, match="verified account identity"):
-            await service.update(
-                ctx,
-                second.id,
-                CodingAccountUpdate(
-                    generation=second.generation,
-                    enabled=True,
-                    pool_member=True,
-                ),
-            )
+        second_generation = second.generation
+        await service.update(
+            ctx,
+            second.id,
+            CodingAccountUpdate(
+                generation=second_generation,
+                enabled=True,
+                pool_member=True,
+            ),
+        )
+        assert first.is_default and not second.is_default and second.pool_member
+        assert second.generation != second_generation
         await service.update(
             ctx,
             second.id,
@@ -341,6 +345,25 @@ async def test_migrated_codex_identity_is_backfilled_before_pool_selection(
             enabled=True,
         )
         account.provider_identity_fingerprint = None
+        replacement = await service.save(
+            ctx,
+            harness="codex",
+            label="Second sign-in",
+            secret=OpenAICodexSecret(
+                access_token="access-token-second",
+                refresh_token="refresh-token-second",
+                account_id="second-account-id",
+            ),
+            enabled=True,
+        )
+        assert account.provider_identity_fingerprint is not None
+        assert replacement.provider_identity_fingerprint != account.provider_identity_fingerprint
+        with pytest.raises(ConflictError, match="no verified stable account identity"):
+            await service.create(
+                ctx,
+                CodingAccountCreate(harness="codex", label="Unidentified", api_key=SecretStr(KEY)),
+            )
+        account.provider_identity_fingerprint = None
         await service.update(
             ctx,
             account.id,
@@ -403,11 +426,11 @@ async def test_pool_candidates_are_owner_scoped_stable_and_bounded(
                 ),
             )
     expected = [
-            account.id
-            for account in sorted(
-                accounts, key=lambda row: (not row.is_default, row.created_at, row.id)
-            )[:3]
-        ]
+        account.id
+        for account in sorted(
+            accounts, key=lambda row: (not row.is_default, row.created_at, row.id)
+        )[:3]
+    ]
     selected = await factory._accounts("codex")
     assert [account.id for account in selected] == expected
 
@@ -805,6 +828,7 @@ async def test_membership_teardown_removes_coding_consent_without_affecting_othe
             OrganizationMember.organization_id == org.id, OrganizationMember.user_id == owner.id
         )
     )
+    assert membership is not None
     previous_id = previous.id
     await end_membership(db, membership)
     assert (
@@ -879,7 +903,7 @@ async def test_factory_refuses_collaborator_sources_before_loading_a_personal_ac
         prompt="Task",
     )
     load = AsyncMock()
-    monkeypatch.setattr(coding_module.PersonalCodingSessionFactory, "_account", load)
+    monkeypatch.setattr(coding_module.PersonalCodingSessionFactory, "_accounts", load)
     with pytest.raises(AuthorizationError, match="Personal coding accounts"):
         async with factory.session(run, harness="codex", timeout_seconds=60):
             pytest.fail("Shared source admitted")

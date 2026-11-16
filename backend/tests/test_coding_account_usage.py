@@ -65,11 +65,19 @@ def test_missing_telemetry_stays_unknown() -> None:
     [
         (None, VALID_UNTIL, "missing_observation_window"),
         (OBSERVED, None, "missing_observation_window"),
-        (datetime(2026, 11, 16, 11, 59), VALID_UNTIL, "invalid_observation_timezone"),
-        (OBSERVED, datetime(2026, 11, 16, 12, 1), "invalid_validity_timezone"),
+        (
+            datetime(2026, 11, 16, 11, 59, tzinfo=UTC).replace(tzinfo=None),
+            VALID_UNTIL,
+            "invalid_observation_timezone",
+        ),
+        (
+            OBSERVED,
+            datetime(2026, 11, 16, 12, 1, tzinfo=UTC).replace(tzinfo=None),
+            "invalid_validity_timezone",
+        ),
         (NOW + timedelta(seconds=61), VALID_UNTIL, "clock_skew"),
         (OBSERVED - timedelta(minutes=2), NOW, "stale_observation"),
-        (VALID_UNTIL + timedelta(seconds=1), VALID_UNTIL, "stale_observation"),
+        (NOW + timedelta(seconds=30), NOW + timedelta(seconds=20), "stale_observation"),
     ],
 )
 def test_invalid_or_stale_observations_stay_unknown(
@@ -154,5 +162,5 @@ def test_naive_current_time_is_rejected() -> None:
             observed_at=OBSERVED,
             valid_until=VALID_UNTIL,
             windows=[],
-            now=datetime(2026, 11, 16, 12, 0),
+            now=NOW.replace(tzinfo=None),
         )

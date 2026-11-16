@@ -22,7 +22,7 @@ from app.agents.capabilities.coding_agent._harness import CodingReport, Harness
 from app.agents.capabilities.coding_agent._personal import PersonalCodingTask, SignIn
 from app.agents.deps import AgentDeps
 from app.clients.redis import RedisClient
-from app.core.exceptions import ConflictError
+from app.core.exceptions import BadRequestError, ConflictError
 from app.services.coding_account_lease import account_lease
 
 pytestmark = pytest.mark.anyio
@@ -125,8 +125,9 @@ async def test_busy_pool_lease_selects_the_next_account_before_admission(
     from app.services.personal_coding import PersonalCodingSessionFactory
 
     owner, organization = uuid4(), uuid4()
-    first, second = _pool_account(organization, owner, "primary"), _pool_account(
-        organization, owner, "secondary"
+    first, second = (
+        _pool_account(organization, owner, "primary"),
+        _pool_account(organization, owner, "secondary"),
     )
     redis = MemoryRedis()
     factory = _personal_session_factory(organization, owner, redis)
@@ -147,16 +148,81 @@ async def test_busy_pool_lease_selects_the_next_account_before_admission(
         "get_shares_for_conversation",
         AsyncMock(return_value=[]),
     )
-    monkeypatch.setattr(PersonalCodingSessionFactory, "_accounts", AsyncMock(return_value=[first, second]))
+    monkeypatch.setattr(
+        PersonalCodingSessionFactory, "_accounts", AsyncMock(return_value=[first, second])
+    )
     monkeypatch.setattr(PersonalCodingSessionFactory, "_isolated", isolated)
 
     key = f"personal-coding:{organization}:{owner}:{first.id}"
     async with account_lease(key, 60, redis=redis):
-        async with factory.session(_personal_factory_context(organization, owner), harness="codex", timeout_seconds=60) as selected:
+        async with factory.session(
+            _personal_factory_context(organization, owner), harness="codex", timeout_seconds=60
+        ) as selected:
             assert selected is second
         assert attempted == [(second.id, "opt_in_pool")]
         assert key in redis.values
         assert f"personal-coding:{organization}:{owner}:{second.id}" not in redis.values
+
+
+@pytest.mark.parametrize("state", ["empty", "no_default", "disabled_default", "disabled_pool"])
+async def test_account_selection_refuses_unavailable_accounts(
+    monkeypatch: pytest.MonkeyPatch, state: str
+) -> None:
+    from app.services import personal_coding as module
+
+    owner, organization = uuid4(), uuid4()
+    account = _pool_account(organization, owner, "primary")
+    account.pool_member = state == "disabled_pool"
+    account.enabled = state not in {"disabled_default", "disabled_pool"}
+    account.is_default = state != "no_default"
+    factory = _personal_session_factory(organization, owner, MemoryRedis())
+
+    @asynccontextmanager
+    async def connection() -> AsyncGenerator[object]:
+        yield object()
+
+    monkeypatch.setattr(module, "get_db_context", connection)
+    monkeypatch.setattr(
+        module.account_repo,
+        "list_for",
+        AsyncMock(return_value=[] if state == "empty" else [account]),
+    )
+    with pytest.raises(BadRequestError, match=r"Enable an account|Choose and enable"):
+        await factory._accounts("codex")
+
+
+async def test_all_busy_accounts_are_refused_without_entering_a_provider_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services import personal_coding as module
+    from app.services.personal_coding import PersonalCodingSessionFactory
+
+    owner, organization = uuid4(), uuid4()
+    account = _pool_account(organization, owner, "primary")
+    redis = MemoryRedis()
+    factory = _personal_session_factory(organization, owner, redis)
+
+    @asynccontextmanager
+    async def connection() -> AsyncGenerator[object]:
+        yield object()
+
+    monkeypatch.setattr(module, "get_db_context", connection)
+    monkeypatch.setattr(
+        module.conversation_share_repo, "get_shares_for_conversation", AsyncMock(return_value=[])
+    )
+    monkeypatch.setattr(
+        PersonalCodingSessionFactory, "_accounts", AsyncMock(return_value=[account])
+    )
+    key = f"personal-coding:{organization}:{owner}:{account.id}"
+    async with account_lease(key, 60, redis=redis):
+        held = redis.values[key]
+        with pytest.raises(ConflictError, match="Every eligible coding account"):
+            async with factory.session(
+                _personal_factory_context(organization, owner), harness="codex", timeout_seconds=60
+            ):
+                pytest.fail("A busy account must not enter a provider session")
+        assert redis.values[key] == held
+    assert not redis.values
 
 
 async def test_an_error_after_admission_never_starts_a_replacement_account(
@@ -166,8 +232,9 @@ async def test_an_error_after_admission_never_starts_a_replacement_account(
     from app.services.personal_coding import PersonalCodingSessionFactory
 
     owner, organization = uuid4(), uuid4()
-    first, second = _pool_account(organization, owner, "primary"), _pool_account(
-        organization, owner, "secondary"
+    first, second = (
+        _pool_account(organization, owner, "primary"),
+        _pool_account(organization, owner, "secondary"),
     )
     factory = _personal_session_factory(organization, owner, MemoryRedis())
     attempted = []
@@ -187,7 +254,9 @@ async def test_an_error_after_admission_never_starts_a_replacement_account(
         "get_shares_for_conversation",
         AsyncMock(return_value=[]),
     )
-    monkeypatch.setattr(PersonalCodingSessionFactory, "_accounts", AsyncMock(return_value=[first, second]))
+    monkeypatch.setattr(
+        PersonalCodingSessionFactory, "_accounts", AsyncMock(return_value=[first, second])
+    )
     monkeypatch.setattr(PersonalCodingSessionFactory, "_isolated", isolated)
 
     with pytest.raises(ConflictError, match="acceptance is uncertain"):

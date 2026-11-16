@@ -251,7 +251,9 @@ class CodingAccountService:
             for_update=True,
         )
         if membership is None:
-            raise AuthorizationError(message="A personal coding account requires organization membership")
+            raise AuthorizationError(
+                message="A personal coding account requires organization membership"
+            )
 
     @staticmethod
     def _provider_identity(secret: ApiKeySecret | OpenAICodexSecret) -> str | None:
