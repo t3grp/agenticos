@@ -186,6 +186,7 @@ cross-origin controls are refused.
 | `GET /v1/runs/{run_id}/browser-credential-plans/{id}` | Read this acting person's receipt; expire abandoned work without retry. |
 | `POST /v1/runs/{run_id}/browser-credential-plans/{id}/confirmation` | Exact `document_id`, `authorization_generation` and `approve`; confirm or decline as the acting person. |
 | `POST /v1/runs/{run_id}/browser-credential-plans/{filled_id}/submission` | Separate explicit human action with new `request_id`, exact filled document and generation; return its child plan. |
+| `GET /v1/runs/{run_id}/browser-credential-plans/{filled_id}/submission` | Read the one existing submission child or `null`; never confirms, creates or retries an attempt. |
 | `GET/PUT /v1/secrets/{secret_id}/browser-policy` | Immutable-owner-only policy. PUT requires `generation`, `mode` and both `agent_ids`/`member_ids` for shared use. |
 | `browser_credential_options` | Eligible metadata from the owning live controller. |
 | `browser_fill_credential` | Request by IDs and keep that controller alive during a bounded wait for dedicated human confirmation. |
@@ -194,6 +195,15 @@ All routes send `Cache-Control: no-store`. Receipts contain IDs, operation and
 parent fill, field names, canonical origin, opaque document identity, expiry,
 bounded state/reason and `output_protected`. Native handles, selectors, arbitrary
 page errors and protocol payloads are not API output.
+
+A filled parent exposes `submission_expires_at`, derived from its successful
+completion plus the existing 60-second submission window. Its earlier
+`expires_at` is the fill confirmation deadline. The separate Submit action both
+creates and confirms its child; it needs no second confirmation. After a lost
+response or reload, read the existing child with GET before offering any retry.
+Retain the same request UUID for an explicit retry of an uncertain request.
+Every filled parent permits at most one submission child, including after a
+terminal or unknown outcome. No polling path issues a new POST.
 
 The request tool itself is non-side-effecting: its IDs cannot approve a write.
 The actual native effect always uses `ApprovalService` with `always_ask`.
@@ -206,7 +216,9 @@ Plans expire in 60 seconds. The controller lease lasts 90 seconds and renews
 every 20; advertised current origin lasts at most five seconds. The request tool
 waits at most 130 seconds and the controller closes after 150 idle seconds.
 Effects have a 20-second bound and individual protocol requests a five-second
-bound. Closing or parking the owning view tears down its controller.
+bound. Closing or parking the owning native tab tears down its controller.
+Disconnecting a viewing WebSocket only closes that view; use the existing Stop
+run action to end the hosted run during a human handoff.
 
 The durable claim commits before the external effect. A second transaction
 rechecks current authority and holds the credential lock through that effect.
@@ -227,9 +239,13 @@ the final current-authority and generation checks.
 
 Before the first write, stop and join the preview stream, clear the cached last
 image, and transactionally remove Redis frame, location and trace caches.
-Publish a fixed `browser_protected` event before writing values. Failure refuses
-the write. Cached publication and teardown share a lock: an in-flight old frame
-finishes before the purge and cannot be replayed during later teardown.
+Publish a fixed `browser_protected` event to every earlier call bound to that page
+before writing values. Failure of any view's purge refuses the write. Every later
+guarded event also carries `output_protected=true`; clients must treat it as sticky,
+including on reconnect snapshots. Cached publication and teardown share a lock:
+an in-flight old frame finishes before all view caches are purged and cannot be
+replayed during later teardown. Reconnect checks protection again after subscribing,
+and the socket drops queued pictures when protection arrives.
 
 Protection is sticky for the tab's lifetime, including redirects, errors and
 uncertain outcomes. Text reads return a fixed explanation. Locations expose only

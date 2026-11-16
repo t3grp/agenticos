@@ -40,6 +40,7 @@ from app.schemas.browser_credential import (
 from app.services.approvals import ApprovalService
 from app.services.browser_credentials._lease import BrowserWriterLease, LiveBrowserIdentity
 from app.services.browser_credentials._plans import (
+    PLAN_SECONDS,
     AuthorizedFill,
     BrowserCredentialPlanService,
     _owned_by,
@@ -272,6 +273,10 @@ async def test_owner_confirmation_claim_and_separate_submit_are_durable_single_a
     await b.service.finish(b.identity, claim, filled=True)
     finished = await b.service.get(b.ctx, b.run.id, first.id)
     assert finished.state == BrowserFillState.FILLED and finished.output_protected
+    persisted = await repo.plan(b.db, b.org.id, first.id)
+    assert finished.submission_expires_at == persisted.finished_at + timedelta(seconds=PLAN_SECONDS)
+    assert confirmed.submission_expires_at is None
+    assert await b.service.submitted(b.ctx, b.run.id, first.id) is None
     count = await b.db.scalar(select(func.count()).select_from(AppAdminAuditLog))
     await b.service.finish(b.identity, claim, filled=False)
     assert await b.db.scalar(select(func.count()).select_from(AppAdminAuditLog)) == count
@@ -298,6 +303,20 @@ async def test_owner_confirmation_claim_and_separate_submit_are_durable_single_a
     await b.service.authorize_effect(b.ctx, b.identity, submit_claim)
     await b.service.finish(b.identity, submit_claim, filled=True)
     assert (await b.service.get(b.ctx, b.run.id, submit.id)).state == BrowserFillState.SUBMITTED
+    recovered = await b.service.submitted(b.ctx, b.run.id, first.id)
+    assert recovered.id == submit.id and recovered.state == BrowserFillState.SUBMITTED
+    assert recovered.submission_expires_at is None
+    assert await b.service.submit(b.ctx, b.run.id, first.id, submission) == recovered
+    with pytest.raises(BrowserFillRefused):
+        await b.service.submit(
+            b.ctx, b.run.id, first.id, submission.model_copy(update={"request_id": uuid4()})
+        )
+    with pytest.raises((NotFoundError, BrowserFillRefused)):
+        await b.service.submitted(
+            AuthContext(user_id=uuid4(), organization_id=b.org.id, role="member"),
+            b.run.id,
+            first.id,
+        )
     assert len(await repo.list_for_run(b.db, b.org.id, b.run.id, b.owner.id)) == 2
     audit = list(await b.db.scalars(select(AppAdminAuditLog.details)))
     plans = list(await b.db.scalars(select(BrowserCredentialPlan)))

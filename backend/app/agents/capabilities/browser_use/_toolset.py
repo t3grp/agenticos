@@ -196,6 +196,28 @@ async def _live(
     viewers = False
     last_image: BrowserEvent | None = None
     event_lock = asyncio.Lock()
+    view_token = object()
+    bound_guard: BrowserOutputGuard | None = None
+    last_step = 0
+    tab_id: str | None = None
+
+    async def announce_protection() -> None:
+        nonlocal last_image
+        assert bound_guard is not None
+        last_image = None
+        event = bound_guard.event(
+            BrowserEvent(
+                kind="browser_protected",
+                call_id=call_id,
+                step=last_step,
+                tab_id=tab_id,
+                run_id=run,
+            )
+        )
+        if run is not None:
+            await live_browse.protect_view(run, call_id, event)
+        if chat is not None:
+            await chat(event)
 
     async def publish_event(event: BrowserEvent) -> bool:
         nonlocal checked_at, viewers, last_image
@@ -232,17 +254,23 @@ async def _live(
         return True
 
     async def sink(event: BrowserEvent) -> bool:
-        nonlocal last_image
+        nonlocal last_image, bound_guard, last_step, tab_id
         async with event_lock:
             guard = None if get_guard is None else get_guard()
             if guard is None:
                 return await publish_event(event)
+            bound_guard = guard
+            last_step, tab_id = event.step, event.tab_id or tab_id
+            guard.bind_view(view_token, announce_protection)
             async with guard.publication_lock:
                 if guard.active:
-                    # An older view may not receive the new view's protection
-                    # announcement. Its own final cached image is unsafe too.
+                    # Announce to every earlier call while holding the shared
+                    # fence, so no page-bound cache can survive secret delivery.
                     last_image = None
+                    await guard.announce()
                     event = guard.event(event)
+                    if event.kind == "browser_protected":
+                        return True
                 return await publish_event(event)
 
     return sink, None if run is None else live_browse.LiveControl(run, call_id), run

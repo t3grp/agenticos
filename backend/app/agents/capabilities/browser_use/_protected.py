@@ -1,6 +1,7 @@
 """A sticky output boundary: an unprovably safe page never resumes capture."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
 
 from app.agents.browser_events import BrowserEvent
 from app.agents.capabilities.browser_use._elements import Snapshot
@@ -21,6 +22,19 @@ class BrowserOutputGuard:
         # Every live view of this page shares the fence. Announcing protection
         # must settle publications from an earlier browse before native delivery.
         self.publication_lock = asyncio.Lock()
+        self._views: dict[object, Callable[[], Awaitable[None]]] = {}
+        self._announced: set[object] = set()
+
+    def bind_view(self, token: object, announce: Callable[[], Awaitable[None]]) -> None:
+        """Keep every page-bound view until the page ends, including earlier calls."""
+        self._views.setdefault(token, announce)
+
+    async def announce(self) -> None:
+        """Called under publication_lock; every cache must clear before delivery."""
+        for token, publish in tuple(self._views.items()):
+            if token not in self._announced:
+                await publish()
+                self._announced.add(token)
 
     @property
     def active(self) -> bool:
@@ -50,6 +64,7 @@ class BrowserOutputGuard:
             outcome=event.outcome,
             credential_plan_id=event.credential_plan_id,
             credential_operation=event.credential_operation,
+            output_protected=True,
             url=url,
             title=title,
             reason=PROTECTED_TEXT,

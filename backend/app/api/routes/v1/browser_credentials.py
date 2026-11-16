@@ -107,3 +107,14 @@ async def submit_filled_form(
 ) -> BrowserCredentialPlanRead:
     """Explicitly submit the exact filled form once. This does not claim sign-in succeeded."""
     return await service.submit(ctx, run_id, plan_id, data)
+
+
+@router.get(
+    "/runs/{run_id}/browser-credential-plans/{plan_id}/submission",
+    response_model=BrowserCredentialPlanRead | None,
+)
+async def read_submission(
+    run_id: UUID, plan_id: UUID, ctx: Auth, service: BrowserCredentialPlanSvc
+) -> BrowserCredentialPlanRead | None:
+    """Recover the one existing attempt without granting consent or performing an action."""
+    return await service.submitted(ctx, run_id, plan_id)

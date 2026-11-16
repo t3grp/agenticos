@@ -63,6 +63,13 @@ def read_plan(row: BrowserCredentialPlan) -> BrowserCredentialPlanRead:
         origin=None if observed is None else observed.origin,
         document_id=None if observed is None else observed.document_id,
         expires_at=row.expires_at,
+        submission_expires_at=(
+            row.finished_at + timedelta(seconds=PLAN_SECONDS)
+            if row.operation == BrowserFillOperation.FILL
+            and row.state == BrowserFillState.FILLED
+            and row.finished_at is not None
+            else None
+        ),
         reason_code=None if row.reason_code is None else BrowserFillReason(row.reason_code),
         output_protected=row.output_protected,
     )

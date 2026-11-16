@@ -72,6 +72,7 @@ def services():
         get=AsyncMock(return_value=plan()),
         confirm=AsyncMock(return_value=plan(BrowserFillState.APPROVED)),
         submit=AsyncMock(return_value=plan(BrowserFillState.APPROVED, BrowserFillOperation.SUBMIT)),
+        submitted=AsyncMock(return_value=None),
     )
     policy = BrowserCredentialPolicyRead(
         secret_id=SECRET,
@@ -202,3 +203,34 @@ async def test_policy_has_no_implicit_shared_audience(client, services) -> None:
     )
     assert response.status_code == 422
     services.policy.update.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        None,
+        BrowserFillState.APPROVED,
+        BrowserFillState.CLAIMED,
+        BrowserFillState.SUBMITTED,
+        BrowserFillState.UNKNOWN,
+    ],
+)
+async def test_submission_recovery_reads_only_the_existing_attempt(client, services, state):
+    receipt = None if state is None else plan(state, BrowserFillOperation.SUBMIT)
+    services.plans.submitted.return_value = receipt
+    response = await client.get(BASE + f"/browser-credential-plans/{PLAN}/submission")
+    assert response.status_code == 200 and "no-store" in response.headers["cache-control"]
+    assert response.json() == (None if receipt is None else receipt.model_dump(mode="json"))
+    assert services.plans.submitted.await_args.args[1:] == (RUN, PLAN)
+    services.plans.request.assert_not_awaited()
+    services.plans.confirm.assert_not_awaited()
+    services.plans.submit.assert_not_awaited()
+
+
+async def test_submission_recovery_cannot_bypass_parent_ownership(client, services):
+    services.plans.submitted.side_effect = NotFoundError(
+        message="Browser credential plan not found"
+    )
+    response = await client.get(BASE + f"/browser-credential-plans/{PLAN}/submission")
+    assert response.status_code == 404
+    services.plans.submit.assert_not_awaited()

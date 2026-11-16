@@ -67,6 +67,7 @@ class BrowserCredentialPlanRead(BaseModel):
     origin: str | None
     document_id: UUID | None
     expires_at: datetime
+    submission_expires_at: datetime | None = None
     reason_code: BrowserFillReason | None
     output_protected: bool
 

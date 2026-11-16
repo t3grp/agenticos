@@ -387,7 +387,15 @@ async def _load(run_id: str, call_id: str) -> tuple[BrowseMeta | None, list[str]
     raw_location = await _redis.get(_key(run_id, call_id, "location"))
     if raw_location is not None:
         location = BrowserEvent.model_validate_json(raw_location)
-        picture = BrowserEvent.model_validate_json(frame) if frame is not None else location
+        if location.output_protected:
+            # Protection may have committed between these separate Redis reads.
+            # Never combine a pre-fill picture or trace with a protected location.
+            trace = [
+                item for item in trace if BrowserEvent.model_validate_json(item).output_protected
+            ]
+            picture = location.model_copy(update={"image": None})
+        else:
+            picture = BrowserEvent.model_validate_json(frame) if frame is not None else location
         frame = picture.model_copy(
             update={"url": location.url, "title": location.title}
         ).model_dump_json()
@@ -460,6 +468,7 @@ class _PreviewPacket:
     raw: str
     picture: bool
     terminal: bool = False
+    protected: bool = False
 
 
 async def _deliver_preview(
@@ -476,12 +485,19 @@ async def _deliver_preview(
     wake = asyncio.Event()
     done = False
     slow = False
+    protected = False
     async with anyio.create_task_group() as tasks:
 
         async def collect() -> None:
-            nonlocal picture, done, slow
+            nonlocal picture, done, slow, protected
             try:
                 async for packet in source:
+                    if packet.protected and not protected:
+                        protected = True
+                        picture = None
+                        events.clear()
+                    elif protected and packet.picture:
+                        continue
                     if packet.picture:
                         picture = packet.raw
                     elif len(events) < PREVIEW_EVENT_LIMIT:
@@ -532,6 +548,7 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
     if _redis is None:
         await websocket.close(code=1011, reason="Live view is unavailable")
         return
+    redis = _redis
     meta, trace, frame = await _load(run_id, call_id)
     if meta is None:
         await websocket.close(code=_NOT_FOUND_CLOSE_CODE, reason="Browse not found")
@@ -603,15 +620,24 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
         slow = False
 
         async def incoming() -> AsyncGenerator[_PreviewPacket]:
+            # Subscribe first, then recover protection published in the initial
+            # snapshot/subscribe interval. Later protection is already queued.
+            location = await redis.get(_key(run_id, call_id, "location"))
+            if location is not None:
+                observed = BrowserEvent.model_validate_json(location)
+                if observed.output_protected:
+                    yield _PreviewPacket(location, False, protected=True)
             async for message in pubsub.listen():
                 if message.get("type") == "message":
                     # RedisClient decodes channel names. Routing by channel avoids
                     # parsing/reallocating the base64 JPEG merely to classify it.
+                    is_event = message.get("channel") == _key(run_id, call_id, "events")
+                    details = json.loads(str(message["data"])) if is_event else {}
                     yield _PreviewPacket(
                         str(message["data"]),
                         message.get("channel") == _key(run_id, call_id, "pictures"),
-                        message.get("channel") == _key(run_id, call_id, "events")
-                        and json.loads(str(message["data"])).get("kind") == "browser_finished",
+                        is_event and details.get("kind") == "browser_finished",
+                        is_event and details.get("output_protected") is True,
                     )
 
         async def forward() -> None:

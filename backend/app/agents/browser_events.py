@@ -96,6 +96,8 @@ class BrowserEvent(BaseModel):
     tab_id: str | None = None
     credential_plan_id: str | None = None
     credential_operation: Literal["fill", "submit"] | None = None
+    output_protected: bool = False
+    """Sticky page protection, including on old-call frames and reconnect snapshots."""
     """Stable tab identity across selected views and resumed turns."""
 
     native_id: str | None = None
