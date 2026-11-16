@@ -815,3 +815,45 @@ async def test_default_metadata_replays_legacy_table_receipts_without_changing_t
     ):
         with pytest.raises(IdempotencyKeyReuseError):
             await service.create_table(ctx, changed, operation_key="before-link-limit")
+
+
+async def test_only_a_link_column_may_limit_its_linked_records(db):
+    service, ctx, *_rest = await _setup(db)
+    with pytest.raises(InvalidSchemaError, match="Only a link column limits linked records"):
+        await service.create_table(
+            ctx,
+            TableCreate(name="Notes", columns=[column("Name", "text", link_limit=2)]),
+        )
+
+
+async def test_relationship_definitions_need_an_existing_source_table(db):
+    with pytest.raises(ValueError, match="existing source table"):
+        await relation_repo.sync_schema(db, table_id=uuid4(), columns=[])
+
+
+async def test_resyncing_an_unchanged_record_keeps_one_copy_of_its_evidence(db):
+    _service, _ctx, org, _owner, source, _target, targets = await _setup(db)
+    key = cid(source, "Customers")
+    stored = VirtualTableRecord(
+        organization_id=org.id,
+        table_id=source.id,
+        schema_version=source.schema_version,
+        values={key: [str(targets[0]), "bad"]},
+        revision=3,
+    )
+    db.add(stored)
+    await db.flush()
+    await relation_repo.sync_record(db, record=stored)
+    await relation_repo.sync_record(db, record=stored)
+    held = list(await db.scalars(select(VirtualTableLinkEvidence)))
+    assert [(row.position, row.reason, row.value) for row in held] == [(1, "invalid_id", "bad")]
+    assert [edge.target_record_id for edge in await _edges(db, stored.id)] == [targets[0]]
+
+
+async def test_replaying_a_create_whose_record_was_deleted_since_is_not_found(db):
+    service, ctx, _org, _owner, source, _target, targets = await _setup(db)
+    body = RecordCreate(values={cid(source, "Customers"): [str(targets[0])]})
+    first = await service.create_record(ctx, source.id, body, operation_key="gone-since")
+    await service.delete_record(ctx, source.id, first.record.id, expected_revision=1)
+    with pytest.raises(NotFoundError, match="Record not found"):
+        await service.create_record(ctx, source.id, body, operation_key="gone-since")
