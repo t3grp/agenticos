@@ -155,7 +155,10 @@ def _signed_in_as(deps: AgentDeps) -> _Person | None:
 
 
 async def _live(
-    deps: AgentDeps, call_id: str, task: str, guard: BrowserOutputGuard | None = None
+    deps: AgentDeps,
+    call_id: str,
+    task: str,
+    get_guard: Callable[[], BrowserOutputGuard | None] | None = None,
 ) -> tuple[BrowserEventSink | None, BrowserControl | None, str | None]:
     """Where this browse's frames go, where its people's commands come from, and its run.
 
@@ -166,26 +169,28 @@ async def _live(
     chat's own sink, which is what a test or the CLI gets.
     """
     chat = deps.browser_events
+    run: str | None = None
     if not live_browse.available() or deps.run_id is None or deps.organization_id is None:
-        return chat, None, None
-    run = str(deps.run_id)
-    signed_in = _signed_in_as(deps) is not None
-    await live_browse.open_view(
-        run,
-        call_id,
-        live_browse.BrowseMeta(
-            organization_id=deps.organization_id,
-            agent_id=deps.agent_id,
-            user_id=deps.user_id,
-            remembers=signed_in,
-            # A browse carrying its person's kept sign-ins is theirs to watch and
-            # drive alone: the pages are their accounts, whoever else may see runs
-            # or edit the agent.
-            personal=signed_in,
-            task=task,
-            started_at=datetime.now(UTC),
-        ),
-    )
+        if chat is None:
+            return None, None, None
+    else:
+        run = str(deps.run_id)
+        signed_in = _signed_in_as(deps) is not None
+        await live_browse.open_view(
+            run,
+            call_id,
+            live_browse.BrowseMeta(
+                organization_id=deps.organization_id,
+                agent_id=deps.agent_id,
+                user_id=deps.user_id,
+                remembers=signed_in,
+                # A browse carrying its person's kept sign-ins is theirs to watch
+                # and drive alone, whoever else may see runs or edit the agent.
+                personal=signed_in,
+                task=task,
+                started_at=datetime.now(UTC),
+            ),
+        )
 
     checked_at = float("-inf")
     viewers = False
@@ -194,6 +199,8 @@ async def _live(
 
     async def publish_event(event: BrowserEvent) -> bool:
         nonlocal checked_at, viewers, last_image
+        if run is None:
+            return await chat(event) if chat is not None else False
         if event.kind == "browser_protected":
             last_image = None
             await live_browse.protect_view(run, call_id, event)
@@ -225,12 +232,20 @@ async def _live(
         return True
 
     async def sink(event: BrowserEvent) -> bool:
+        nonlocal last_image
         async with event_lock:
-            if guard is not None and guard.active:
-                event = guard.event(event)
-            return await publish_event(event)
+            guard = None if get_guard is None else get_guard()
+            if guard is None:
+                return await publish_event(event)
+            async with guard.publication_lock:
+                if guard.active:
+                    # An older view may not receive the new view's protection
+                    # announcement. Its own final cached image is unsafe too.
+                    last_image = None
+                    event = guard.event(event)
+                return await publish_event(event)
 
-    return sink, live_browse.LiveControl(run, call_id), run
+    return sink, None if run is None else live_browse.LiveControl(run, call_id), run
 
 
 def _remembering(person: _Person) -> RememberSignIn:
@@ -498,7 +513,9 @@ def build_toolset(
         call_id = ctx.tool_call_id or str(uuid4())
         current_page = None if toolset.session is None else toolset.session.page
         guard = current_page.output_guard if isinstance(current_page, CdpPage) else None
-        sink, control, run_id = await _live(ctx.deps, call_id, task, guard)
+        # This invocation pins one owning page, including the page that is about
+        # to open. Never look up the toolset's selected tab from a late event.
+        sink, control, run_id = await _live(ctx.deps, call_id, task, lambda: guard)
         person = _signed_in_as(ctx.deps)
         remember = None if person is None else _remembering(person)
         # The agent's own step model where it named one - a cheaper or
@@ -555,6 +572,7 @@ def build_toolset(
                 if isinstance(opened, str):
                     return await fail(opened)
                 session = opened
+                guard = session.page.output_guard if isinstance(session.page, CdpPage) else None
             elif start_url:
                 session.restart()
                 try:
@@ -713,7 +731,7 @@ def build_toolset(
         call_id = ctx.tool_call_id or str(uuid4())
         page = None if toolset.session is None else toolset.session.page
         guard = page.output_guard if isinstance(page, CdpPage) else None
-        sink, control, run_id = await _live(ctx.deps, call_id, goal, guard)
+        sink, control, run_id = await _live(ctx.deps, call_id, goal, lambda: guard)
         person = _signed_in_as(ctx.deps)
         toolset.view = DirectView(
             call_id=call_id,

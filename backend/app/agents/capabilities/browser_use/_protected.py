@@ -1,5 +1,7 @@
 """A sticky output boundary: an unprovably safe page never resumes capture."""
 
+import asyncio
+
 from app.agents.browser_events import BrowserEvent
 from app.agents.capabilities.browser_use._elements import Snapshot
 from app.core.browser_origins import browser_origin
@@ -16,6 +18,9 @@ class BrowserOutputGuard:
 
     def __init__(self) -> None:
         self._origin: str | None = None
+        # Every live view of this page shares the fence. Announcing protection
+        # must settle publications from an earlier browse before native delivery.
+        self.publication_lock = asyncio.Lock()
 
     @property
     def active(self) -> bool:

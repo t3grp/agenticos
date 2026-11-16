@@ -2,18 +2,25 @@
 
 import asyncio
 import base64
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from pydantic_ai.tools import RunContext
+from pydantic_ai.usage import RunUsage
 from redis.exceptions import RedisError
 
 from app.agents.browser_events import BrowserEvent
+from app.agents.capabilities.browser_use import _toolset as toolset_module
+from app.agents.capabilities.browser_use._page import CdpPage, PagePolicy
 from app.agents.capabilities.browser_use._protected import BrowserOutputGuard
 from app.agents.capabilities.browser_use._toolset import _live
+from app.agents.deps import AgentDeps
 from app.services import live_browse
 from tests.test_browser_credentials import PASSWORD
+from tests.test_browser_use import DONE_ARGS, _browsing_model, _policy, _snapshot
 from tests.test_live_browse import _Pipe, _Store
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
@@ -102,7 +109,7 @@ async def make_sink(monkeypatch, guard: BrowserOutputGuard):
     monkeypatch.setattr(live_browse, "has_viewers", AsyncMock(return_value=False))
     monkeypatch.setattr(live_browse, "publish", AsyncMock())
     monkeypatch.setattr(live_browse, "protect_view", AsyncMock())
-    sink, _, _ = await _live(deps, "call", "Synthetic private task", guard)
+    sink, _, _ = await _live(deps, "call", "Synthetic private task", lambda: guard)
     return sink, deps.browser_events
 
 
@@ -132,11 +139,14 @@ async def test_cached_last_picture_is_cleared_and_never_replayed_on_teardown(mon
     assert live_browse.publish.await_count == 2
 
 
+@pytest.mark.parametrize("different_view", [False, True])
 async def test_pending_publication_settles_before_clear_and_late_frames_remain_sanitized(
     monkeypatch,
+    different_view,
 ) -> None:
     guard = BrowserOutputGuard()
     sink, _ = await make_sink(monkeypatch, guard)
+    protected_sink = (await make_sink(monkeypatch, guard))[0] if different_view else sink
     started, release = asyncio.Event(), asyncio.Event()
     order = []
 
@@ -156,10 +166,181 @@ async def test_pending_publication_settles_before_clear_and_late_frames_remain_s
     )
     await started.wait()
     guard.protect(ORIGIN)
-    protected = asyncio.create_task(sink(protected_event()))
+    protected = asyncio.create_task(protected_sink(protected_event()))
     await asyncio.sleep(0)
     assert order == ["earlier frame"] and not protected.done()
     release.set()
     await old
     await protected
     assert order == ["earlier frame", "clear cached output"]
+
+
+@pytest.mark.parametrize("first_tool", ["browse_web", "browser_open"])
+async def test_first_page_sinks_stay_protected_after_fill_tab_switch_and_close(
+    monkeypatch, first_tool
+) -> None:
+    """Exercise first-open and credential-tool plumbing, with no native writes."""
+    published, chat, protect_view = AsyncMock(), AsyncMock(return_value=True), AsyncMock()
+    monkeypatch.setattr(live_browse, "available", lambda: True)
+    monkeypatch.setattr(live_browse, "open_view", AsyncMock())
+    monkeypatch.setattr(live_browse, "has_viewers", AsyncMock(return_value=False))
+    monkeypatch.setattr(live_browse, "publish", published)
+    monkeypatch.setattr(live_browse, "protect_view", protect_view)
+    monkeypatch.setattr(live_browse, "credential_redis", lambda: object())
+    sinks, pages = [], []
+
+    async def capture_sink(*args, **kwargs):
+        result = await _live(*args, **kwargs)
+        assert result[0] is not None
+        sinks.append(result[0])
+        return result
+
+    monkeypatch.setattr(toolset_module, "_live", capture_sink)
+
+    @asynccontextmanager
+    async def open_page(**kwargs):
+        page = CdpPage(MagicMock(), str(uuid4()), PagePolicy(None, 60, 1024))
+        page.snapshot = AsyncMock(return_value=_snapshot(text="Synthetic page"))
+        page.location = AsyncMock(return_value=(ORIGIN, "Synthetic page"))
+        pages.append(page)
+        yield page
+
+    raw_frame = BrowserEvent(
+        kind="browser_frame",
+        call_id="first",
+        step=0,
+        image=base64.b64encode(PASSWORD.encode()).decode(),
+        url=ORIGIN + "/" + PASSWORD,
+        title=PASSWORD,
+    )
+
+    async def browse(*, sink, session, **kwargs):
+        session.last = await session.page.snapshot()
+        # The older view caches a final image without a viewer, and never gets
+        # the later direct view's browser_protected announcement.
+        assert not await sink(raw_frame)
+        return SimpleNamespace(
+            outcome="done", steps=0, text="Synthetic result", page="Synthetic page"
+        )
+
+    monkeypatch.setattr(toolset_module, "run_browse", browse)
+    controllers = []
+
+    async def create_controller(**kwargs):
+        async def request(*args):
+            await kwargs["protect"](ORIGIN)
+            return SimpleNamespace(id=uuid4())
+
+        controller = SimpleNamespace(
+            alive=True,
+            ctx=None,
+            redis=kwargs["redis"],
+            identity=SimpleNamespace(
+                run_id=uuid4(), call_id=kwargs["call_id"], tab_id=kwargs["tab_id"]
+            ),
+            request=AsyncMock(side_effect=request),
+            wait=AsyncMock(return_value="Credential fill completed."),
+            close=AsyncMock(),
+        )
+        controllers.append(controller)
+        return controller
+
+    monkeypatch.setattr(toolset_module.BrowserCredentialController, "create", create_controller)
+    monkeypatch.setattr(
+        toolset_module.BrowserCredentialPlanService, "eligible", AsyncMock(return_value=[])
+    )
+
+    @asynccontextmanager
+    async def database():
+        yield None
+
+    monkeypatch.setattr(toolset_module, "get_db_context", database)
+    ctx = RunContext(
+        deps=AgentDeps(
+            run_id=uuid4(), organization_id=uuid4(), agent_id=uuid4(), browser_events=chat
+        ),
+        model=_browsing_model(DONE_ARGS),
+        usage=RunUsage(),
+        tool_call_id="first",
+    )
+    toolset = toolset_module.build_toolset(
+        cdp_url="http://browser:9222",
+        page_policy=PagePolicy(None, 60, 1024),
+        loop_policy=_policy(),
+        page_factory=open_page,
+        credential_ids=(uuid4(),),
+    )
+
+    async def invoke(name, args=None):
+        tools = await toolset.get_tools(ctx)
+        return await toolset.call_tool(name, args or {}, ctx, tools[name])
+
+    async def late_events(original_sinks):
+        published.reset_mock()
+        chat.reset_mock()
+        for sink in original_sinks:
+            for event in (
+                raw_frame,
+                BrowserEvent(
+                    kind="browser_control_error", call_id="first", step=1, detail=PASSWORD
+                ),
+                BrowserEvent(kind="browser_finished", call_id="first", step=1, reason=PASSWORD),
+            ):
+                await sink(event)
+        assert published.await_count == len(original_sinks) * 3
+        for call in published.await_args_list + chat.await_args_list:
+            event = call.args[-1]
+            assert event.image is None
+            assert PASSWORD not in event.model_dump_json()
+            assert event.url == ORIGIN
+
+    async with toolset:
+        args = (
+            {"task": "Synthetic task", "start_url": ORIGIN}
+            if first_tool == "browse_web"
+            else {"url": ORIGIN}
+        )
+        await invoke(first_tool, args)
+        assert await invoke("browser_credential_options") == "[]"
+        first_view = toolset.view
+        assert first_view is not None
+        assert (
+            await invoke(
+                "browser_fill_credential",
+                {
+                    "secret_id": str(uuid4()),
+                    "authorization_generation": str(uuid4()),
+                    "selection": {"fields": [{"field": "password", "element_id": 0}]},
+                },
+            )
+            == "Credential fill completed."
+        )
+        assert toolset.view is first_view
+        assert pages[0].output_guard.active
+        assert controllers[0].request.await_count == 1
+        protect_view.assert_awaited_once()
+        original_sinks = tuple(sinks)
+        await late_events(original_sinks)
+        await invoke("browser_new_tab", {"url": ORIGIN})
+        assert len(pages) == 2 and not pages[1].output_guard.active
+        await late_events(original_sinks)
+    await late_events(original_sinks)
+
+
+@pytest.mark.parametrize("missing", ["redis", "run", "organization"])
+async def test_chat_fallback_filters_late_output_when_page_is_protected(monkeypatch, missing):
+    guard = BrowserOutputGuard()
+    chat = AsyncMock(return_value=True)
+    monkeypatch.setattr(live_browse, "available", lambda: missing != "redis")
+    deps = AgentDeps(
+        run_id=None if missing == "run" else uuid4(),
+        organization_id=None if missing == "organization" else uuid4(),
+        browser_events=chat,
+    )
+    sink, control, run = await _live(deps, "first", "Synthetic task", lambda: guard)
+    assert sink is not None and control is None and run is None
+    guard.protect(ORIGIN)
+    await sink(BrowserEvent(kind="browser_control_error", call_id="first", step=1, detail=PASSWORD))
+    event = chat.await_args.args[0]
+    assert PASSWORD not in event.model_dump_json()
+    assert event.url == ORIGIN
