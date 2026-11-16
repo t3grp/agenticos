@@ -80,6 +80,7 @@ export function ApprovalsTab(props: ApprovalsTabProps) {
 function ScopedApprovalsTab({ period, onFocusRun, periodControl }: ApprovalsTabProps) {
   const t = useTranslations("pages.runs");
   const browser = useTranslations("browserCredentials");
+  const continuation = useTranslations("browserContinuation");
   // The receipt remains open when confirmation removes its pending queue row.
   const [credentialReview, setCredentialReview] = useState<BrowserCredentialSelection | null>(null);
   const range = { from: periodStart(period), to: periodEnd(period) };
@@ -281,12 +282,21 @@ function ScopedApprovalsTab({ period, onFocusRun, periodControl }: ApprovalsTabP
         >
           <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
             <DialogHeader>
-              <DialogTitle>{browser("reviewDestination")}</DialogTitle>
-              <DialogDescription>{browser("readOnlyChecks")}</DialogDescription>
+              <DialogTitle>
+                {credentialReview.continuationId
+                  ? continuation("reviewContinuation")
+                  : browser("reviewDestination")}
+              </DialogTitle>
+              <DialogDescription>
+                {credentialReview.continuationId
+                  ? continuation("checksOnlyRead")
+                  : browser("readOnlyChecks")}
+              </DialogDescription>
             </DialogHeader>
             <BrowserCredentialReview
               runId={credentialReview.runId}
               planId={credentialReview.planId}
+              continuationId={credentialReview.continuationId}
             />
           </DialogContent>
         </Dialog>

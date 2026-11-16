@@ -101,6 +101,27 @@ export const qk = {
   publicApi: {
     openapi: () => ["public-api", "openapi"] as const,
   },
+  browserContinuations: {
+    receipt: (
+      actor: string | undefined,
+      org: string | null,
+      source: import("@/types/browser-credentials").BrowserCredentialPlan,
+    ) =>
+      [
+        "browser-continuations",
+        actor,
+        org,
+        source.run_id,
+        source.id,
+        source.parent_plan_id,
+        source.authorization_generation,
+        source.secret_id,
+        source.call_id,
+        source.tab_id,
+        source.document_id,
+        source.origin,
+      ] as const,
+  },
   browserSignIns: {
     /** The caller's kept browser sign-ins in one organization (#2129). */
     mine: (orgId: string) => ["browser-sign-ins", orgId] as const,

@@ -1,4 +1,67 @@
 {
+  "browserContinuation": {
+    "approvalConsent": "Review the exact current site and cookie-saving choice. Continue only through this dedicated confirmation.",
+    "reviewContinuation": "Review continuation",
+    "title": "Continue with protected cookies",
+    "protectionPersists": "Both browser views remain protected. Page text, images and ordinary browser controls stay hidden.",
+    "preparationOnly": "Prepare a review of this submitted page. This step does not export cookies, save a sign-in or open another session.",
+    "prepare": "Prepare continuation",
+    "retryPreparation": "Retry the same preparation",
+    "preparationRetained": "The original preparation request is retained. An explicit retry uses that same request.",
+    "storageUnavailable": "This browser cannot preserve a recoverable decision. No new action will be sent.",
+    "consent": "Continue at this exact site in a fresh protected browser context using only its permitted cookies.",
+    "confirmationDeadline": "Confirm before",
+    "keepSignedIn": "Keep me signed in",
+    "keepDuration": "Save these cookies privately for up to seven days. The site's cookie expiry or loss of access may end this sooner. This choice starts off.",
+    "accessRechecked": "Current access to every credential used in this session is checked again. No local storage, page text or form values are saved.",
+    "confirmationExpired": "This confirmation window has expired. Checking status cannot renew it.",
+    "continueDecisionRetained": "Your original Continue decision and cookie-saving choice are retained. A retry cannot change them.",
+    "declineDecisionRetained": "Your original Decline decision is retained. A retry cannot turn it into consent.",
+    "retryDecision": "Retry the same decision",
+    "continueProtected": "Continue in protected browser",
+    "decline": "Decline continuation",
+    "readUnavailable": "The current continuation receipt could not be verified. Private details and new actions are unavailable.",
+    "checking": "Checking the continuation…",
+    "unknownOutcome": "The effect is uncertain. This continuation cannot be repeated, and no new attempt will be created for this submission.",
+    "continuedMeaning": "A fresh protected browser context was established. This does not prove that sign-in succeeded.",
+    "cookiesSaved": "Cookies were saved with your explicit consent. Future use still requires current access.",
+    "cookiesNotSaved": "Cookies were used only for this continuation. No reusable sign-in was saved.",
+    "openProtectedView": "Open protected view",
+    "manageSignIns": "Manage saved sign-ins",
+    "writeUncertain": "The response could not be verified. Check the receipt before taking another action; checks do not repeat the write.",
+    "pollingEnded": "Automatic status checks have stopped. Check the continuation to read its latest receipt.",
+    "checkAgain": "Check continuation",
+    "checksOnlyRead": "Status checks only read the receipt. They never export cookies, save a sign-in or open a context.",
+    "states": {
+      "requested": "Preparation requested",
+      "preparing": "Preparing the current page",
+      "awaiting_confirmation": "Waiting for your continuation decision",
+      "approved": "Decision recorded",
+      "claimed": "Applying the confirmed continuation",
+      "continued": "Protected continuation established",
+      "refused": "Continuation refused",
+      "expired": "Continuation expired",
+      "declined": "Continuation declined",
+      "unknown": "Continuation outcome unknown"
+    },
+    "reasons": {
+      "continuation_disabled": "Protected continuation is unavailable in this deployment.",
+      "continuation_unavailable": "This continuation is not available.",
+      "source_not_submitted": "A confirmed, acknowledged submission is required.",
+      "confirmation_required": "The exact current page requires your decision.",
+      "confirmation_expired": "The confirmation deadline passed.",
+      "document_changed": "The page changed after preparation.",
+      "destination_refused": "The current site could not be approved.",
+      "authority_changed": "Access to a contributing credential changed.",
+      "browser_ownership_lost": "This run no longer owns the browser.",
+      "output_protection_unavailable": "Protected output could not be established.",
+      "session_state_refused": "The session state could not be accepted safely.",
+      "session_cookie_missing": "No permitted cookies are available for this site.",
+      "browser_unavailable": "The owning browser is unavailable.",
+      "uncertain_continuation": "The continuation effect could not be verified.",
+      "continuation_already_consumed": "This submission already has its one continuation attempt."
+    }
+  },
   "browserCredentials": {
     "reviewTitle": "Saved credential request",
     "loadingPlan": "Loading the saved credential request…",
@@ -6289,6 +6352,10 @@
       "my-memory": {
         "body": "Agents keep notes between conversations. This is yours: read what was written, stop a note being used without destroying it, or delete it outright. A note in an external memory service is named here but not shown.",
         "title": "What agents remember about you"
+      },
+      "browser-protected-continuation": {
+        "title": "Continue without exposing the page",
+        "body": "After an acknowledged submission, prepare a separate continuation review. Keeping cookies is optional and lasts at most seven days. Both views remain protected; checking status never repeats an action."
       },
       "my-sign-ins": {
         "body": "When you sign in during a browse and keep the sign-in, your agents' browser starts signed in there next time. Forget a site and the next browse starts signed out.",

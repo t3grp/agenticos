@@ -27,6 +27,7 @@ import {
 function useCallLine(approval: ToolApproval, withArguments: boolean): string | null {
   const t = useTranslations("pages.runs");
   const tTools = useTranslations("chat.tools");
+  if (browserCredentialApproval(approval).kind !== "ordinary") return null;
   if (approval.content_hidden) return t("contentHidden");
   return (
     approvalSummary(approval.capability_tool_id, approval.context, tTools) ??
@@ -91,6 +92,8 @@ export function PendingApproval({
   const mayApprove = !(approval.always_asks && approval.content_hidden);
   const browser = useTranslations("browserCredentials");
   const credential = browserCredentialApproval(approval);
+  const continuation = useTranslations("browserContinuation");
+  const continuing = credential.kind === "plan" && !!credential.continuationId;
 
   if (credential.kind !== "ordinary") {
     return (
@@ -98,21 +101,35 @@ export function PendingApproval({
         <AgentFace agentId={approval.agent_id} className="size-9 shrink-0" />
         <div className="min-w-0 flex-1 space-y-2">
           <p className="text-sm font-medium">
-            {actor} · {browser("reviewTitle")}
+            {actor} · {continuing ? continuation("title") : browser("reviewTitle")}
           </p>
           <p className="text-muted-foreground text-sm">
-            {credential.kind === "plan" ? browser("fillConsent") : browser("invalidApprovalPlan")}
+            {continuing
+              ? continuation("approvalConsent")
+              : credential.kind === "plan"
+                ? browser("fillConsent")
+                : browser("invalidApprovalPlan")}
           </p>
           <Button
             size="sm"
             variant="outline"
             onClick={() =>
               credential.kind === "plan" && onReviewCredential
-                ? onReviewCredential({ runId: credential.runId, planId: credential.planId })
+                ? onReviewCredential({
+                    runId: credential.runId,
+                    planId: credential.planId,
+                    ...(credential.continuationId
+                      ? { continuationId: credential.continuationId }
+                      : {}),
+                  })
                 : onOpenRun()
             }
           >
-            {credential.kind === "plan" ? browser("reviewDestination") : t("openTheRun")}
+            {continuing
+              ? continuation("reviewContinuation")
+              : credential.kind === "plan"
+                ? browser("reviewDestination")
+                : t("openTheRun")}
           </Button>
         </div>
       </li>
@@ -223,6 +240,8 @@ export function DecidedApproval({
   const askedLine = useAskedLine(approval);
   const browser = useTranslations("browserCredentials");
   const credential = browserCredentialApproval(approval);
+  const continuation = useTranslations("browserContinuation");
+  const continuing = credential.kind === "plan" && !!credential.continuationId;
 
   if (credential.kind !== "ordinary") {
     return (
@@ -230,7 +249,7 @@ export function DecidedApproval({
         <AgentFace agentId={approval.agent_id} className="size-7 shrink-0" />
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-sm font-medium">
-            {actor} · {browser("reviewTitle")}
+            {actor} · {continuing ? continuation("title") : browser("reviewTitle")}
           </p>
           {credential.kind === "unavailable" && (
             <p className="text-muted-foreground text-xs">{browser("invalidApprovalPlan")}</p>
@@ -241,11 +260,21 @@ export function DecidedApproval({
           variant="outline"
           onClick={() =>
             credential.kind === "plan" && onReviewCredential
-              ? onReviewCredential({ runId: credential.runId, planId: credential.planId })
+              ? onReviewCredential({
+                  runId: credential.runId,
+                  planId: credential.planId,
+                  ...(credential.continuationId
+                    ? { continuationId: credential.continuationId }
+                    : {}),
+                })
               : onOpenRun()
           }
         >
-          {credential.kind === "plan" ? browser("reviewReceipt") : t("openTheRun")}
+          {continuing
+            ? continuation("reviewContinuation")
+            : credential.kind === "plan"
+              ? browser("reviewReceipt")
+              : t("openTheRun")}
         </Button>
       </li>
     );
