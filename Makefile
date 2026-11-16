@@ -481,6 +481,11 @@ TEST_GATE = $(if $(findstring xml,$(COV_REPORT)),uv run --directory backend cove
 # coverage data as `backend/.coverage.shardK` instead of applying the gate, which
 # only means anything over the whole suite. `scripts/ci_backend_shard.py` decides
 # membership, so every file runs in exactly one shard.
+#
+# The shard's data is written there directly (`COVERAGE_FILE`), not renamed from
+# `.coverage` afterwards: pytest-cov erases `.coverage` and every `.coverage.*`
+# beside it when a run starts, so a second shard run in the same tree used to
+# delete the first one's data.
 BACKEND_SHARDS := 3
 BACKEND_SHARD_INDEX = $(firstword $(subst /, ,$(BACKEND_SHARD)))
 
@@ -530,8 +535,8 @@ test:
 	$(TEST_DB_START)
 	@status=0; paths=tests/; \
 	$(if $(BACKEND_SHARD),paths=$$(uv run --quiet --directory backend python ../scripts/ci_backend_shard.py $(BACKEND_SHARD) tests) || exit 1;) \
-	$(TEST_DB_ENV) uv run --directory backend pytest $$paths -v --cov=app --cov-report= --cov-fail-under=0 -n auto --maxprocesses 4 || status=$$?; \
-	$(if $(BACKEND_SHARD),mv backend/.coverage backend/.coverage.shard$(BACKEND_SHARD_INDEX) || status=1;,$(TEST_GATE)) \
+	$(TEST_DB_ENV) $(if $(BACKEND_SHARD),COVERAGE_FILE=.coverage.shard$(BACKEND_SHARD_INDEX)) uv run --directory backend pytest $$paths -v --cov=app --cov-report= --cov-fail-under=0 -n auto --maxprocesses 4 || status=$$?; \
+	$(if $(BACKEND_SHARD),test -s backend/.coverage.shard$(BACKEND_SHARD_INDEX) || status=1;,$(TEST_GATE)) \
 	exit $$status
 
 # The aggregate `test` job in CI: every shard must have succeeded, every shard's

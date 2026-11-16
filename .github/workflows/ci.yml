@@ -372,8 +372,12 @@ jobs:
         # finished in 14 to 20 minutes with quiet output, and with its output
         # sent to a file. Failures still print in full with a short summary, and
         # `faulthandler_timeout` still names a test that hangs.
+        #
+        # `--durations=25` names the slowest tests. The first sharded run spent
+        # nine of shard 1's 21 minutes with one worker alone on something the
+        # quiet output cannot name; the list says which file to move.
         env:
-          PYTEST_ADDOPTS: "-q -q"
+          PYTEST_ADDOPTS: "-q -q --durations=25"
           BACKEND_SHARD: ${{ matrix.shard }}/3
         run: make test
 

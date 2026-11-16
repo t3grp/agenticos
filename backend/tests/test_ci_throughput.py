@@ -92,7 +92,10 @@ def test_one_backend_run_preserves_the_platform_gate(tmp_path: Path, failure: st
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
         "PYTEST_PLUGINS": "pytest_cov.plugin,xdist.plugin",
     }
-    env.pop("PYTEST_ADDOPTS", None)
+    # The shard job runs this file with `BACKEND_SHARD` set; the run below must
+    # see only what it passes on its own command line.
+    for inherited in ("PYTEST_ADDOPTS", "BACKEND_SHARD", "MAKEFLAGS", "MAKELEVEL", "MFLAGS"):
+        env.pop(inherited, None)
     result = subprocess.run(
         [MAKE, "test", "TEST_DB=external", "COV_REPORT=xml"],
         cwd=tmp_path,
@@ -185,7 +188,10 @@ def test_sharded_backend_runs_gate_only_their_union(tmp_path: Path, covered: str
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
         "PYTEST_PLUGINS": "pytest_cov.plugin,xdist.plugin",
     }
-    env.pop("PYTEST_ADDOPTS", None)
+    # The shard job runs this file with `BACKEND_SHARD` set; the run below must
+    # see only what it passes on its own command line.
+    for inherited in ("PYTEST_ADDOPTS", "BACKEND_SHARD", "MAKEFLAGS", "MAKELEVEL", "MFLAGS"):
+        env.pop(inherited, None)
     for shard in ("1/2", "2/2"):
         run = subprocess.run(
             [MAKE, "test", "TEST_DB=external", f"BACKEND_SHARD={shard}"],

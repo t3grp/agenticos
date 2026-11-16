@@ -41,10 +41,12 @@ def tree(tmp_path: Path) -> Path:
     return root
 
 
+@pytest.mark.parametrize("weighted", [False, True])
 @pytest.mark.parametrize("total", [1, 2, 3, 4, 7, 10])
-def test_the_shards_partition_every_test_file(tree: Path, total: int) -> None:
+def test_the_shards_partition_every_test_file(tree: Path, total: int, weighted: bool) -> None:
     files = ci_backend_shard.test_files(tree)
-    shards = [ci_backend_shard.select(files, index, total) for index in range(1, total + 1)]
+    weight = ci_backend_shard.test_count if weighted else (lambda _: 1)
+    shards = [ci_backend_shard.select(files, index, total, weight) for index in range(1, total + 1)]
 
     counts = Counter(path for shard in shards for path in shard)
     assert set(counts) == set(files), "a file ran in no shard"
@@ -69,11 +71,35 @@ def test_paths_are_sorted_posix_strings(tree: Path) -> None:
 def test_the_shards_cover_the_real_suite() -> None:
     root = REPO_ROOT / "backend" / "tests"
     files = ci_backend_shard.test_files(root)
-    shards = [ci_backend_shard.select(files, index, 3) for index in (1, 2, 3)]
+    shards = [
+        ci_backend_shard.select(files, index, 3, ci_backend_shard.test_count) for index in (1, 2, 3)
+    ]
 
     assert sorted(path for shard in shards for path in shard) == files
     assert Path(__file__).resolve().as_posix() in files
-    assert max(map(len, shards)) - min(map(len, shards)) <= 1
+    loads = [sum(map(ci_backend_shard.test_count, shard)) for shard in shards]
+    assert max(loads) - min(loads) <= max(map(ci_backend_shard.test_count, files))
+
+
+def test_a_heavy_file_is_balanced_by_many_light_ones(tmp_path: Path) -> None:
+    """Shards are even in tests, not in files: the round-robin split was 19% apart."""
+    (tmp_path / "test_heavy.py").write_text("def test_one(): ...\n" * 6)
+    for name in "abcdef":
+        (tmp_path / f"test_{name}.py").write_text("async def test_one(): ...\n")
+    files = ci_backend_shard.test_files(tmp_path)
+
+    first, second = (
+        ci_backend_shard.select(files, index, 2, ci_backend_shard.test_count) for index in (1, 2)
+    )
+
+    assert first == [(tmp_path / "test_heavy.py").as_posix()]
+    assert len(second) == 6
+
+
+def test_a_file_without_tests_still_weighs_something(tmp_path: Path) -> None:
+    (tmp_path / "test_empty.py").write_text("")
+
+    assert ci_backend_shard.test_count(str(tmp_path / "test_empty.py")) == 1
 
 
 @pytest.mark.parametrize(("index", "total"), [(0, 3), (4, 3), (1, 0)])
