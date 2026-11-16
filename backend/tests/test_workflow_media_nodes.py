@@ -404,11 +404,13 @@ def test_video_config_rejects_stale_or_unsupported_catalog_choices(monkeypatch, 
         model.audio = "always"
 
     with pytest.raises(ValidationError):
-        media.GenerateVideoConfig(
-            provider="synthetic",
-            model="synthetic-video",
-            secret_id=uuid4(),
-            **overrides,
+        media.GenerateVideoConfig.model_validate(
+            {
+                "provider": "synthetic",
+                "model": "synthetic-video",
+                "secret_id": uuid4(),
+                **overrides,
+            }
         )
 
 
@@ -544,6 +546,7 @@ async def test_video_resource_check_requires_an_accepted_resumable_provider_and_
     ]
 
     entry.api = "xai_videos"
+    monkeypatch.setattr(media, "_usable_api_key", lambda *_args: _return(None))
     assert await media.check_video_resources(object(), object(), config) == [
         ("secret_id", "Choose an API key for this video provider that you can use")
     ]
