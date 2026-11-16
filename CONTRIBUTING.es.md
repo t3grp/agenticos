@@ -113,8 +113,8 @@ supervisión.
 - Cuenta en la descripción qué decidiste y por qué. El qué ya lo enseña el
   código.
 - La CI rápida se ejecuta en cada pull request. La CI completa requiere la
-  etiqueta `full-ci`, una rama de origen del pull request con el patrón
-  `sync/upstream-*` o la publicación de una etiqueta de versión (`v*`).
+  etiqueta `full-ci`, una rama de origen del pull request que coincida con
+  `sync/upstream-*` o una publicación (push de una etiqueta `v*`).
 
 ## Seguridad
 

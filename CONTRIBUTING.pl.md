@@ -110,9 +110,9 @@ zapomniana flaga jest tym, przez co agent kończy, wysyłając maile bez nadzoru
   zreviewowane ani jako jedno, ani jako drugie.
 - Bugi jadą z testem regresji, który bez poprawki nie przechodzi.
 - W opisie napisz, co zdecydowałeś i dlaczego. Co — pokazuje kod.
-- Szybkie CI działa przy każdym pull requeście. Pełne CI wymaga etykiety
-  `full-ci`, gałęzi źródłowej pull requesta `sync/upstream-*` lub wypchnięcia
-  taga wydania (`v*`).
+- Szybkie kontrole CI uruchamiają się dla każdego pull requestu. Pełne CI wymaga
+  etykiety `full-ci`, gałęzi źródłowej pull requestu pasującej do
+  `sync/upstream-*` albo publikacji wydania (wypchnięcia tagu `v*`).
 
 ## Bezpieczeństwo
 
