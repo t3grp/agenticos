@@ -81,8 +81,8 @@ class TestEveryPullRequestIsChecked:
         """No trigger may carry a path filter.
 
         A path filter on pull requests hides their required contexts, including stacked
-        PRs. On pushes it skips a new `ci/batch` branch equal to `t3`, whose diff is
-        empty, so the batch run would never start.
+        PRs. On pushes, docs-only merges are classified by the `changes` job instead,
+        against the last successful `t3` run, so a cancelled run's commits stay covered.
         """
         filtered = {
             event: config
@@ -98,17 +98,26 @@ class TestEveryPullRequestIsChecked:
             "PR creation, updates and reopening must all trigger the fast checks."
         )
 
-    def test_heavy_suites_run_only_for_batches_and_releases(
+    def test_heavy_suites_run_after_every_merge_and_release(
         self, triggers: dict[str, Any], workflow: dict[str, Any]
     ) -> None:
-        """Full CI runs on a `ci/batch` push or a `v*` tag, never on a PR (2026-11-16)."""
-        assert "ci/batch" in triggers["push"]["branches"], (
-            "Pushing a `t3` commit to `ci/batch` is how a batch run is started."
-        )
+        """PRs run the quick checks; every `t3` push and `v*` tag runs the full suite."""
+        assert triggers["push"]["branches"] == ["t3"]
+        assert triggers["push"]["tags"] == ["v*"]
         assert workflow["jobs"]["changes"]["outputs"]["full"] == (
-            "${{ github.event_name == 'push' && (github.ref == 'refs/heads/ci/batch' "
-            "|| startsWith(github.ref, 'refs/tags/v')) }}"
-        ), "Only `ci/batch` pushes and release tags may run the heavy suites."
+            "${{ github.event_name == 'push' }}"
+        ), "The heavy suites run on pushes (merges and tags), never on pull requests."
+
+    def test_a_push_classifies_against_the_last_successful_t3_run(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """With cancel-in-progress, `github.event.before` may be a commit never tested."""
+        step = next(
+            step for step in workflow["jobs"]["changes"]["steps"] if step.get("id") == "pushed"
+        )
+        assert "status=success" in step["run"]
+        assert "github.event.before" not in step["run"]
+        assert "merge-base --is-ancestor" in step["run"]
 
 
 class TestWorkerBackedJourneys:
