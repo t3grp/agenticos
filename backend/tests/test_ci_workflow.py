@@ -77,38 +77,38 @@ class TestEveryPullRequestIsChecked:
             "worse: the required checks never report and the merge button stays grey."
         )
 
-    def test_only_documentation_pushes_may_be_filtered_by_path(
-        self, triggers: dict[str, Any]
-    ) -> None:
-        """The fast/full CI policy skips docs-only pushes, while every PR still reports checks.
+    def test_no_trigger_is_filtered_by_path(self, triggers: dict[str, Any]) -> None:
+        """No trigger may carry a path filter.
 
-        Keep the exception limited to the documented push paths. A path filter on
-        pull requests would hide their required contexts, including stacked PRs.
+        A path filter on pull requests hides their required contexts, including stacked
+        PRs. On pushes it skips a new `ci/batch` branch equal to `t3`, whose diff is
+        empty, so the batch run would never start.
         """
         filtered = {
             event: config
             for event, config in triggers.items()
             if {"paths", "paths-ignore"} & set(config or {})
         }
-        assert set(filtered) == {"push"}, (
-            f"path filters appear on {sorted(filtered)}; only documentation-only pushes may "
-            "be skipped. Pull requests must report their checks for every base and path."
-        )
-        push = filtered["push"]
-        assert "paths" not in push, "Push CI must not be restricted to an allow-list of paths."
-        assert set(push["paths-ignore"]) == {"docs/**", "mkdocs.yml", "*.md"}, (
-            "The push exception must ignore only the documented documentation paths."
+        assert not filtered, f"path filters appear on {sorted(filtered)}."
+
+    def test_pull_requests_run_fast_checks_on_every_update(self, triggers: dict[str, Any]) -> None:
+        """Opening, updating and reopening a PR must all run the fast checks."""
+        required = {"opened", "synchronize", "reopened"}
+        assert required <= set(triggers["pull_request"].get("types", [])), (
+            "PR creation, updates and reopening must all trigger the fast checks."
         )
 
-    def test_labeling_a_pull_request_rechecks_the_full_ci_choice(
-        self, triggers: dict[str, Any]
+    def test_heavy_suites_run_only_for_batches_and_releases(
+        self, triggers: dict[str, Any], workflow: dict[str, Any]
     ) -> None:
-        """Adding full-ci to an existing PR must schedule its selected checks."""
-        required = {"opened", "synchronize", "reopened", "labeled"}
-        assert required <= set(triggers["pull_request"].get("types", [])), (
-            "PR creation, updates, reopening and labeling must all trigger CI so full-ci "
-            "can opt an existing PR into the complete gates."
+        """Full CI runs on a `ci/batch` push or a `v*` tag, never on a PR (2026-11-16)."""
+        assert "ci/batch" in triggers["push"]["branches"], (
+            "Pushing a `t3` commit to `ci/batch` is how a batch run is started."
         )
+        assert workflow["jobs"]["changes"]["outputs"]["full"] == (
+            "${{ github.event_name == 'push' && (github.ref == 'refs/heads/ci/batch' "
+            "|| startsWith(github.ref, 'refs/tags/v')) }}"
+        ), "Only `ci/batch` pushes and release tags may run the heavy suites."
 
 
 class TestWorkerBackedJourneys:
