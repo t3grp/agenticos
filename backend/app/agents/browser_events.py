@@ -33,8 +33,11 @@ a surface that cannot narrate one still runs; it is simply not narrated.
 from collections.abc import Awaitable, Callable
 from typing import Literal, Protocol
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.core.browser_teaching import TeachingReason, TeachingState
 
 BrowseOutcome = Literal["done", "blocked", "exhausted", "failed"]
 """How a browse ended, and all four are ordinary.
@@ -68,6 +71,7 @@ class BrowserEvent(BaseModel):
         "browser_pointer",
         "browser_control_error",
         "browser_protected",
+        "browser_teaching",
     ]
 
     call_id: str = Field(
@@ -98,6 +102,11 @@ class BrowserEvent(BaseModel):
     credential_operation: Literal["fill", "submit"] | None = None
     output_protected: bool = False
     """Sticky page protection, including on old-call frames and reconnect snapshots."""
+    takeover_id: UUID | None = None
+    teaching_session_id: UUID | None = None
+    teaching_status: TeachingState | None = None
+    teaching_revision: int | None = Field(default=None, ge=1)
+    teaching_reason: TeachingReason | None = None
     """Stable tab identity across selected views and resumed turns."""
 
     native_id: str | None = None
@@ -266,11 +275,12 @@ class BrowserCommand(BaseModel):
         "back",
         "forward",
         "reload",
+        "control_lost",
     ]
-    url: str | None = Field(default=None, max_length=8192)
+    url: str | None = Field(default=None, max_length=8192, repr=False)
     x: float | None = Field(default=None, ge=0, le=4000)
     y: float | None = Field(default=None, ge=0, le=4000)
-    text: str | None = Field(default=None, max_length=2000)
+    text: str | None = Field(default=None, max_length=2000, repr=False)
     key: BrowserKey | None = None
     dy: float | None = Field(default=None, ge=-5000, le=5000)
     width: int | None = Field(default=None, ge=320, le=1600, description="On `resize`, in CSS px.")
@@ -289,6 +299,9 @@ class BrowserCommand(BaseModel):
         ),
     )
     by: str | None = Field(default=None, max_length=200)
+    control_connection_id: UUID | None = None
+    control_sequence: int | None = Field(default=None, ge=1, le=1_000_000)
+    """Internal provenance, overwritten by the authenticated socket for every command."""
     by_user_id: str | None = Field(
         default=None,
         max_length=64,

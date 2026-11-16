@@ -1241,6 +1241,11 @@ class Settings(BaseSettings):
     # `BROWSER_CDP_ALLOWED_HOSTS` like any agent's. Empty hides the option.
     BROWSER_SIGN_IN_CDP_URL: str = ""
 
+    # Teaching is separately admitted for synthetic/test organizations first.
+    # Organization policy and the published agent/member opt-ins can only narrow it.
+    BROWSER_TEACHING_ENABLED: bool = False
+    BROWSER_TEACHING_ORGANIZATION_IDS: list[UUID] = []
+
     # Credential fills use only that provisioned browser, in an admitted private
     # console run. Rollout is explicit per organization, with optional member pins.
     BROWSER_CREDENTIAL_FILL_ENABLED: bool = False

@@ -29,7 +29,7 @@ from collections import deque
 from collections.abc import AsyncGenerator, AsyncIterable, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import anyio
 from fastapi import WebSocket, WebSocketDisconnect
@@ -61,6 +61,9 @@ COMMAND_LIMIT = 100
 """How many commands wait for a held browser at most. A person types and clicks far
 slower than this drains; past it the oldest go, so a flood cannot grow Redis or bury
 the newest `give_back` behind it."""
+
+CONTROL_SEQUENCE_LIMIT = 1_000_000
+"""The server ends a connection before its accepted-input sequence can grow unbounded."""
 
 _NOT_FOUND_CLOSE_CODE = 4404
 _FORBIDDEN_CLOSE_CODE = 4403
@@ -536,6 +539,41 @@ async def _deliver_preview(
     return not slow
 
 
+@contextlib.asynccontextmanager
+async def _teaching_connection(
+    redis: RedisClient, meta: BrowseMeta, access: _Access, run_id: str, call_id: str
+) -> AsyncGenerator[UUID | None]:
+    """A server identity ends with its socket; the client never selects it."""
+    if (
+        not access.own
+        or not settings.BROWSER_TEACHING_ENABLED
+        or meta.organization_id not in settings.BROWSER_TEACHING_ORGANIZATION_IDS
+    ):
+        yield None
+        return
+    from app.services.browser_teaching._lease import close_connection, open_connection
+
+    connection_id = uuid4()
+    if not await open_connection(redis, run_id, call_id, connection_id, access.user_id):
+        yield None
+        return
+    try:
+        yield connection_id
+    finally:
+        await close_connection(redis, run_id, call_id, connection_id, access.user_id)
+        with anyio.move_on_after(3, shield=True):
+            with contextlib.suppress(Exception):
+                await send(
+                    run_id,
+                    call_id,
+                    BrowserCommand(
+                        type="control_lost",
+                        by_user_id=access.user_id,
+                        control_connection_id=connection_id,
+                    ),
+                )
+
+
 async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id: str) -> None:
     """Serve one viewer of one browse until either side is done.
 
@@ -583,6 +621,7 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
     # `REVALIDATE_SECONDS` while only frames flow.
     current = access
     lost = False
+    sequence = 0
 
     async def still_allowed() -> bool:
         nonlocal current, lost
@@ -590,10 +629,21 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
         if fresh is None:
             lost = True
             return False
+        if connection_id is not None:
+            from app.services.browser_teaching._lease import renew_connection
+
+            if (
+                not fresh.own
+                or fresh.user_id != access.user_id
+                or not await renew_connection(redis, run_id, call_id, connection_id, access.user_id)
+            ):
+                lost = True
+                return False
         current = fresh
         return True
 
     async def commands() -> None:
+        nonlocal sequence, lost
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -601,19 +651,35 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
                     return
                 if not current.control:
                     continue
+                if len(raw) > 32_768:
+                    continue
                 try:
                     command = BrowserCommand.model_validate_json(raw)
                 except ValidationError:
                     continue
+                if command.type == "control_lost":
+                    continue
+                if sequence >= CONTROL_SEQUENCE_LIMIT:
+                    lost = True
+                    return
+                sequence += 1
                 await send(
                     run_id,
                     call_id,
-                    command.model_copy(update={"by": current.name, "by_user_id": current.user_id}),
+                    command.model_copy(
+                        update={
+                            "by": current.name,
+                            "by_user_id": current.user_id,
+                            "control_connection_id": connection_id,
+                            "control_sequence": sequence if connection_id is not None else None,
+                        }
+                    ),
                 )
         except WebSocketDisconnect:
             return
 
     async with (
+        _teaching_connection(redis, meta, access, run_id, call_id) as connection_id,
         _subscription(run_id, call_id, viewer=True) as pubsub,
         anyio.create_task_group() as tasks,
     ):
@@ -652,7 +718,9 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
 
         async def revalidate() -> None:
             while True:
-                await anyio.sleep(REVALIDATE_SECONDS)
+                await anyio.sleep(
+                    min(REVALIDATE_SECONDS, 15) if connection_id is not None else REVALIDATE_SECONDS
+                )
                 if not await still_allowed():
                     break
             tasks.cancel_scope.cancel()

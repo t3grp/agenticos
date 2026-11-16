@@ -72,6 +72,14 @@ class RefreshCodingAccountUsage(Payload):
     request_id: UUID
 
 
+class DraftBrowserTeaching(Payload):
+    organization_id: UUID
+    session_id: UUID
+    revision: int = Field(ge=1)
+    source_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    token: UUID
+
+
 class MoveProjectWorkspacePayload(Payload):
     transfer_id: UUID
     project_id: UUID
@@ -852,6 +860,18 @@ REFRESH_CODING_ACCOUNT_USAGE = Task(
     retry_refusal="Refresh usage from your coding account to recheck current owner consent",
 )
 
+
+DRAFT_BROWSER_TEACHING = Task(
+    kind="draft-browser-teaching",
+    payload_type=DraftBrowserTeaching,
+    pool=Pool.AGENT,
+    max_attempts=1,
+    timeout=timedelta(minutes=4),
+    priority=Priority.INTERACTIVE,
+    retry_refusal="Read the browser teaching receipt; an uncertain draft is never retried automatically",
+)
+SWEEP_BROWSER_TEACHINGS = _sweep("sweep-browser-teachings", timeout=timedelta(minutes=2))
+
 REVERT_CODING_TASK = Task(
     retry_refusal="Retry the revert from its conversation so its files and current access can be checked again",
     kind="revert-coding-task",
@@ -907,6 +927,8 @@ TASKS: dict[str, TaskKind] = {
         DELIVER_CHANNEL_HANDBACK,
         MOVE_PROJECT_WORKSPACE,
         REVERT_CODING_TASK,
+        DRAFT_BROWSER_TEACHING,
+        SWEEP_BROWSER_TEACHINGS,
         REFRESH_CODING_ACCOUNT_USAGE,
         INGEST_DOCUMENT,
         SYNC_COLLECTION,

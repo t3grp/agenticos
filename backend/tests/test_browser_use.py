@@ -575,6 +575,7 @@ BROWSER_TOOLS = (
     "browser_switch_tab",
     "browser_close_tab",
     "browser_read",
+    "browser_procedures",
     "browser_click",
     "browser_type",
     "browser_credential_options",

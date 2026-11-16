@@ -91,6 +91,9 @@ from app.services.browser_credentials import (
     BrowserCredentialPlanService,
     BrowserCredentialPolicyService,
 )
+from app.services.browser_teaching._service import BrowserTeachingService
+from app.services.browser_teaching._policy import BrowserTeachingPolicyService
+from app.services.browser_teaching._generation import BrowserTeachingDraftService
 from app.services.user import UserService
 from app.services.session import SessionService
 from app.services.web_push import WebPushService
@@ -1317,6 +1320,31 @@ def get_browser_credential_policy_service(db: DBSession) -> BrowserCredentialPol
 
 BrowserCredentialPolicySvc = Annotated[
     BrowserCredentialPolicyService, Depends(get_browser_credential_policy_service)
+]
+
+
+def get_browser_teaching_service(db: DBSession, redis: Redis) -> BrowserTeachingService:
+    return BrowserTeachingService(db, redis)
+
+
+BrowserTeachingSvc = Annotated[BrowserTeachingService, Depends(get_browser_teaching_service)]
+
+
+def get_browser_teaching_policy_service(db: DBSession) -> BrowserTeachingPolicyService:
+    return BrowserTeachingPolicyService(db)
+
+
+BrowserTeachingPolicySvc = Annotated[
+    BrowserTeachingPolicyService, Depends(get_browser_teaching_policy_service)
+]
+
+
+def get_browser_teaching_draft_service(db: DBSession, redis: Redis) -> BrowserTeachingDraftService:
+    return BrowserTeachingDraftService(db, redis)
+
+
+BrowserTeachingDraftSvc = Annotated[
+    BrowserTeachingDraftService, Depends(get_browser_teaching_draft_service)
 ]
 
 

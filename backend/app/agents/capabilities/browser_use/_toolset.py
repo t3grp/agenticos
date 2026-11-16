@@ -33,6 +33,7 @@ from typing import Any, Literal, cast
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
+import anyio
 import httpx
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.messages import UserContent
@@ -91,8 +92,12 @@ from app.agents.capabilities.browser_use._plans import plan_key
 from app.agents.capabilities.browser_use._preview import Preview
 from app.agents.capabilities.browser_use._protected import BrowserOutputGuard
 from app.agents.capabilities.browser_use._route import BrowserRoute, recheck
+from app.agents.capabilities.browser_use._teaching_hooks import TeachingCapture
+from app.agents.capabilities.browser_use._teaching_page import TeachingPage
+from app.agents.capabilities.skills._log import SkillUseLog
 from app.agents.deps import AgentDeps
 from app.core.browser_fill import BrowserFillRefused, BrowserFillSelection
+from app.core.browser_teaching import TeachingRefused
 from app.core.sanitize import UrlRefusedError
 from app.db.session import get_db_context
 from app.services import browse_plans, browser_sign_in, live_browse
@@ -159,6 +164,7 @@ async def _live(
     call_id: str,
     task: str,
     get_guard: Callable[[], BrowserOutputGuard | None] | None = None,
+    get_teaching: Callable[[], TeachingCapture | None] | None = None,
 ) -> tuple[BrowserEventSink | None, BrowserControl | None, str | None]:
     """Where this browse's frames go, where its people's commands come from, and its run.
 
@@ -256,6 +262,9 @@ async def _live(
     async def sink(event: BrowserEvent) -> bool:
         nonlocal last_image, bound_guard, last_step, tab_id
         async with event_lock:
+            teaching = None if get_teaching is None else get_teaching()
+            if teaching is not None:
+                event = teaching.event(event)
             guard = None if get_guard is None else get_guard()
             if guard is None:
                 return await publish_event(event)
@@ -409,6 +418,8 @@ class BrowserToolset(FunctionToolset[Any]):
     async def park(self) -> None:
         """End the selected view and pause its paints, retaining its isolated page."""
         await self.stop_credentials()
+        if self.session is not None and self.session.teaching is not None:
+            await self.session.teaching.end()
         await self.stop_watching()
         if self.view is not None:
             await close_view(self.view, self.session)
@@ -496,6 +507,8 @@ def build_toolset(
     route: BrowserRoute | None = None,
     resume_local: bool = False,
     credential_ids: tuple[UUID, ...] = (),
+    allow_teaching: bool = False,
+    skill_log: SkillUseLog | None = None,
 ) -> BrowserToolset:
     """`browse_web` and the agent's own browser tools, bound to the browser seam."""
     open_browser = page_factory if page_factory is not None else open_page
@@ -541,9 +554,12 @@ def build_toolset(
         call_id = ctx.tool_call_id or str(uuid4())
         current_page = None if toolset.session is None else toolset.session.page
         guard = current_page.output_guard if isinstance(current_page, CdpPage) else None
+        teaching = None if toolset.session is None else toolset.session.teaching
         # This invocation pins one owning page, including the page that is about
         # to open. Never look up the toolset's selected tab from a late event.
-        sink, control, run_id = await _live(ctx.deps, call_id, task, lambda: guard)
+        sink, control, run_id = await _live(
+            ctx.deps, call_id, task, lambda: guard, lambda: teaching
+        )
         person = _signed_in_as(ctx.deps)
         remember = None if person is None else _remembering(person)
         # The agent's own step model where it named one - a cheaper or
@@ -601,6 +617,7 @@ def build_toolset(
                     return await fail(opened)
                 session = opened
                 guard = session.page.output_guard if isinstance(session.page, CdpPage) else None
+                teaching = session.teaching
             elif start_url:
                 session.restart()
                 try:
@@ -729,7 +746,7 @@ def build_toolset(
             sign_ins = [entry for entry in sign_ins if entry.site != restored.sign_in.site]
             sign_ins.append(restored.sign_in)
         try:
-            return await toolset.open(
+            opened = await toolset.open(
                 open_browser,
                 **options,
                 cdp_url=cdp_url,
@@ -738,6 +755,22 @@ def build_toolset(
                 sign_ins=sign_ins,
                 route=pinned_route,
             )
+            redis = live_browse.credential_redis()
+            if allow_teaching and isinstance(opened.page, CdpPage) and redis is not None:
+                from app.services.browser_teaching._capture import BrowserTeachingCapture
+
+                opened.teaching = await BrowserTeachingCapture.create(
+                    deps=ctx.deps,
+                    tab_id=toolset.tab_id,
+                    redis=redis,
+                    page=TeachingPage(opened.page._credential_command),
+                    guard=opened.page.output_guard,
+                    step=lambda: opened.steps,
+                    locate=opened.page._locate,
+                )
+                if opened.teaching is not None:
+                    assert toolset._stack is not None
+                    toolset._stack.push_async_callback(opened.teaching.close)
         except (httpx.HTTPError, OSError) as exc:
             # Only while opening: the browser was never reached - a name that does
             # not resolve, a refused connection, an endpoint answering 5xx. The
@@ -751,6 +784,8 @@ def build_toolset(
                 type(exc).__name__,
             )
             return UNREACHABLE
+        else:
+            return opened
 
     async def direct_view(ctx: RunContext[AgentDeps], goal: str) -> tuple[DirectView, bool]:
         """The view this run's direct actions are drawn in, and whether it is new."""
@@ -759,7 +794,10 @@ def build_toolset(
         call_id = ctx.tool_call_id or str(uuid4())
         page = None if toolset.session is None else toolset.session.page
         guard = page.output_guard if isinstance(page, CdpPage) else None
-        sink, control, run_id = await _live(ctx.deps, call_id, goal, lambda: guard)
+        teaching = None if toolset.session is None else toolset.session.teaching
+        sink, control, run_id = await _live(
+            ctx.deps, call_id, goal, lambda: guard, lambda: teaching
+        )
         person = _signed_in_as(ctx.deps)
         toolset.view = DirectView(
             call_id=call_id,
@@ -791,6 +829,8 @@ def build_toolset(
         page = session.page
 
         async def protect(origin: str) -> None:
+            if session.teaching is not None:
+                await session.teaching.protect()
             await toolset.stop_watching()
             page.protect_credentials(origin)
             view.preview = False
@@ -1049,6 +1089,31 @@ def build_toolset(
         await toolset.watch(view)
         return page_report(snapshot)
 
+    async def browser_procedures(ctx: RunContext[AgentDeps]) -> str:
+        """Read approved bound procedures for the live origin, without executing them.
+
+        Returns:
+            Reviewed procedure facts, or a fixed refusal. Observe and rematch every
+            control before acting; captured element numbers and values are never returned.
+        """
+        session = toolset.session
+        if session is None:
+            return NO_TAB
+        if not isinstance(session.page, CdpPage) or session.page.output_guard.active:
+            return "Browser procedures are unavailable for this page."
+        from app.services.browser_teaching._discovery import discover
+
+        try:
+            with anyio.fail_after(15):
+                observed = await TeachingPage(session.page._credential_command).observe("origin")
+                async with get_db_context() as db:
+                    procedures = await discover(db, ctx.deps, skill_log, observed.origin)
+        except TeachingRefused:
+            return "Browser procedures are unavailable for this page or current authority."
+        except Exception:
+            return "Browser procedure discovery is unavailable."
+        return json.dumps([item.model_dump(mode="json") for item in procedures])
+
     async def browser_click(ctx: RunContext[AgentDeps], element: int) -> str:
         """Click an element of the open page, by its number in the last page read.
 
@@ -1138,6 +1203,7 @@ def build_toolset(
         browser_switch_tab,
         browser_close_tab,
         browser_read,
+        browser_procedures,
         browser_click,
         browser_type,
         browser_select,
@@ -1148,6 +1214,7 @@ def build_toolset(
         if direct in (browser_switch_tab, browser_close_tab):
             metadata = {BROWSER_TAB_REQUIREMENT: "any"}
         elif direct in (
+            browser_procedures,
             browser_click,
             browser_type,
             browser_select,
