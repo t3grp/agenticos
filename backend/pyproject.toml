@@ -409,7 +409,8 @@ line-length = 100
 # These run on the runner's own `python3` (3.12), before any toolchain is
 # installed - CI's first job, and the dependency-graph submission - so they keep
 # to syntax that interpreter parses.
-per-file-target-version = { "../deploy/updater/*.py" = "py312", "../scripts/ci_changed_scope.py" = "py312", "../scripts/dependency_snapshot.py" = "py312" }
+# The native account probe likewise runs in the workbench's Python 3.12.
+per-file-target-version = { "../deploy/updater/*.py" = "py312", "../scripts/ci_changed_scope.py" = "py312", "../scripts/dependency_snapshot.py" = "py312", "app/services/coding_account_usage/_native_probe.py" = "py312" }
 
 [tool.ruff.lint]
 # Dotless i is a distinct Turkish letter used in localized messages.
@@ -1265,6 +1266,7 @@ include = [
     "app/schemas/coding_account.py",
     "app/repositories/coding_account.py",
     "app/services/coding_accounts.py",
+    "app/services/coding_account_usage/*",
     "app/services/personal_codex.py",
     "app/services/coding_account_lease.py",
     "app/services/personal_coding_snapshot.py",
@@ -2214,6 +2216,7 @@ include = [
     "app/schemas/coding_account.py",
     "app/repositories/coding_account.py",
     "app/services/coding_accounts.py",
+    "app/services/coding_account_usage/*",
     "app/services/personal_codex.py",
     "app/services/coding_account_lease.py",
     "app/services/personal_coding_snapshot.py",

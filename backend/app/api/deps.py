@@ -2632,6 +2632,18 @@ def get_coding_account_service(db: DBSession) -> CodingAccountService:
 CodingAccountSvc = Annotated[CodingAccountService, Depends(get_coding_account_service)]
 
 
+from app.services.coding_account_usage import CodingAccountUsageService
+
+
+def get_coding_account_usage_service(db: DBSession, redis: Redis) -> CodingAccountUsageService:
+    return CodingAccountUsageService(db, redis)
+
+
+CodingAccountUsageSvc = Annotated[
+    CodingAccountUsageService, Depends(get_coding_account_usage_service)
+]
+
+
 from app.services.onboarding import OnboardingService
 
 

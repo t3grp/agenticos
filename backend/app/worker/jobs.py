@@ -64,6 +64,14 @@ class RevertCodingTask(Payload):
     api_key_id: UUID | None = None
 
 
+class RefreshCodingAccountUsage(Payload):
+    organization_id: UUID
+    user_id: UUID
+    account_id: UUID
+    generation: UUID
+    request_id: UUID
+
+
 class MoveProjectWorkspacePayload(Payload):
     transfer_id: UUID
     project_id: UUID
@@ -814,6 +822,16 @@ MONTHLY_USAGE_REPORT = _sweep("monthly-usage-report", timeout=timedelta(hours=1)
 # lost to a deploy or an outage is picked up by the following day's run.
 FAILURE_LEDGER_DIGEST = _sweep("failure-ledger-digest", timeout=timedelta(hours=1))
 
+REFRESH_CODING_ACCOUNT_USAGE = Task(
+    kind="refresh-coding-account-usage",
+    payload_type=RefreshCodingAccountUsage,
+    pool=Pool.WORKFLOW,
+    max_attempts=1,
+    timeout=timedelta(minutes=2),
+    priority=Priority.INTERACTIVE,
+    retry_refusal="Refresh usage from your coding account to recheck current owner consent",
+)
+
 REVERT_CODING_TASK = Task(
     retry_refusal="Retry the revert from its conversation so its files and current access can be checked again",
     kind="revert-coding-task",
@@ -869,6 +887,7 @@ TASKS: dict[str, TaskKind] = {
         DELIVER_CHANNEL_HANDBACK,
         MOVE_PROJECT_WORKSPACE,
         REVERT_CODING_TASK,
+        REFRESH_CODING_ACCOUNT_USAGE,
         INGEST_DOCUMENT,
         SYNC_COLLECTION,
         SYNC_SOURCE,
