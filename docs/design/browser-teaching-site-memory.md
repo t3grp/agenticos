@@ -1,9 +1,9 @@
 # Browser teaching and site procedural memory
 
-**Status: proposal only.** This design adds no recording, model call, route,
-database table or browser permission. The APIs and schemas below are proposed
-contracts for implementation PRs. Do not list the feature as available after
-merging this document.
+**Implementation status:** The manual new-skill path and exact-origin procedure
+discovery are implemented behind `BROWSER_TEACHING_ENABLED`, which defaults to
+off. Existing-skill candidates, model-authored drafts and automatic refinements
+remain future work. This document records the design for those steps.
 
 Baseline: T3OS `080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on
 14 November 2026. The product benchmark is

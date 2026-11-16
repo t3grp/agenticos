@@ -49,6 +49,7 @@ def production() -> Handlers:
     from app.worker.tasks import (
         approval_tasks,
         authoring_tasks,
+        browser_teaching_tasks,
         case_generation_tasks,
         channel_tasks,
         coding_tasks,
@@ -167,6 +168,10 @@ def production() -> Handlers:
             Handler(
                 jobs.SWEEP_GENERATED_MEDIA,
                 _each_tick(generated_media_tasks.sweep_generated_media),
+            ),
+            Handler(
+                jobs.SWEEP_BROWSER_TEACHINGS,
+                _each_tick(browser_teaching_tasks.sweep_browser_teachings),
             ),
             Handler(jobs.SEND_DIAGNOSTICS, diagnostics_tasks.send_diagnostics),
             Handler(jobs.PROACTIVE_SWEEP, proactive_tasks.proactive_sweep),

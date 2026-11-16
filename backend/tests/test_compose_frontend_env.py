@@ -35,3 +35,8 @@ def test_the_session_cookie_namespace_reaches_the_console(
     """Two deployments on one host name share cookies across ports, so signing in to
     one signs out of the other unless each console names its cookies apart."""
     assert "SESSION_COOKIE_NAMESPACE=${SESSION_COOKIE_NAMESPACE:-}" in environment, name
+
+
+@pytest.mark.parametrize(("name", "environment"), _consoles())
+def test_browser_teaching_flag_reaches_the_console(name: str, environment: list[str]) -> None:
+    assert "BROWSER_TEACHING_ENABLED=${BROWSER_TEACHING_ENABLED:-false}" in environment, name

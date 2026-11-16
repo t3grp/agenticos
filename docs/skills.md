@@ -259,6 +259,30 @@ somebody rewrote since the proposal was written is refused rather than
 overwritten. A learned skill is an ordinary skill from then on: editable,
 versioned by the same bump an edit always makes, and undone by a new edit
 rather than a restore.
+
+## Teach a site procedure
+
+In a managed server browser, a member with `skills:edit` can start teaching while
+they hold the browser lease. Teaching is disabled by default; enable
+`BROWSER_TEACHING_ENABLED` in the backend and frontend environment after rollout
+review. Pause during sign-in. Stop to label click targets, name ordinary input
+parameters, and create a new skill proposal. Discard erases an unproposed
+session. A disconnect, ended lease, or move to another origin pauses capture.
+
+Capture stores one HTTPS origin, a control role, a structural fingerprint and
+labels supplied during review. It
+does not store input values, cookies, page text, screenshots, selectors or URL
+paths and query strings. The session stops at 500 steps, 128 KiB or 30 minutes.
+Unfinished steps expire and are erased after 24 hours. Only a successful browser
+run can produce a proposal. Proposal creation is deterministic and makes no
+model call.
+
+The proposal waits in Skill changes. Applying it writes a versioned procedure
+resource to the skill; the agent must also bind and publish the skill. A managed
+browser run receives it only when its published agent version binds that skill
+and the current page has the exact recorded origin. The browser reads the live
+page before each action and must stop when the structure does not match. Page
+content cannot publish a skill or change permissions.
 ## Checking a change on every agent { #checking-a-change-on-every-agent }
 
 A skill is shared, so a change is judged on every agent that would read it: on

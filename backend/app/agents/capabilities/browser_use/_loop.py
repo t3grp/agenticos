@@ -174,6 +174,11 @@ class PageSession(Protocol):
     async def location(self) -> tuple[str, str]:
         """Read the current URL and title without capturing or collecting the page."""
 
+    async def teaching_target(
+        self, x: float | None = None, y: float | None = None
+    ) -> dict[str, str | bool] | None:
+        """Return only a control role, structure hash and sensitive-field flag."""
+
     async def screenshot(self) -> str | None:
         """The viewport as a `data:` URL."""
 
@@ -238,6 +243,8 @@ RememberSignIn = Callable[["PageSession", BrowserCommand], Awaitable[str | None]
 person the run acts for, or the tab is not on a site.
 """
 
+RecordHumanInput = Callable[["PageSession", BrowserCommand], Awaitable[None]]
+
 
 @dataclass(frozen=True, slots=True)
 class LoopPolicy:
@@ -277,6 +284,7 @@ async def run_browse(
     control: BrowserControl | None = None,
     run_id: str | None = None,
     remember: RememberSignIn | None = None,
+    record_human_input: RecordHumanInput | None = None,
     plan: Sequence[PlanStep] = (),
 ) -> BrowseResult:
     """Drive `session.page` towards `task`, narrating as it goes, and stop for a reason.
@@ -314,6 +322,7 @@ async def run_browse(
         control=control,
         run_id=run_id,
         remember=remember,
+        record_human_input=record_human_input,
         kept=kept,
     )
     return replace(
@@ -334,6 +343,7 @@ async def _drive(
     control: BrowserControl | None,
     run_id: str | None,
     remember: RememberSignIn | None,
+    record_human_input: RecordHumanInput | None,
     kept: _Plan,
 ) -> BrowseResult:
     """`run_browse`'s loop, replaying and recording into `kept` as it goes."""
@@ -390,6 +400,8 @@ async def _drive(
                         by=waiting.by,
                         by_user_id=waiting.by_user_id,
                         remember=remember,
+                        lease_id=waiting.viewer_id,
+                        record_human_input=record_human_input,
                     )
                     was_held = True
             # A resized page has laid itself out again, so the first step's snapshot
@@ -454,6 +466,8 @@ async def _drive(
                         by=waiting.by,
                         by_user_id=waiting.by_user_id,
                         remember=remember,
+                        lease_id=waiting.viewer_id,
+                        record_human_input=record_human_input,
                     )
                 if waiting is not None or resized:
                     # The chosen replay step was removed before it acted; its
@@ -548,6 +562,8 @@ async def _drive(
                     by=arrived.by,
                     by_user_id=arrived.by_user_id,
                     remember=remember,
+                    lease_id=arrived.viewer_id,
+                    record_human_input=record_human_input,
                 )
                 continue
             if isinstance(action, Blocked):
@@ -768,6 +784,8 @@ async def held(
     by: str | None,
     by_user_id: str | None,
     remember: RememberSignIn | None,
+    record_human_input: RecordHumanInput | None = None,
+    lease_id: str | None = None,
 ) -> None:
     """Hand the tab to a person until they give it back, or until `HOLD_LIMIT`.
 
@@ -784,7 +802,12 @@ async def held(
     page = session.page
     await emit(
         BrowserEvent(
-            kind="browser_held", call_id=call_id, step=session.steps, by=by, by_user_id=by_user_id
+            kind="browser_held",
+            call_id=call_id,
+            step=session.steps,
+            by=by,
+            by_user_id=by_user_id,
+            control_id=lease_id,
         )
     )
     kept: str | None = None
@@ -835,15 +858,21 @@ async def held(
             with anyio.move_on_after(HOLD_LIMIT):
                 while True:
                     command = await control.wait(FRAME_EVERY)
-                    if command is None or (
-                        by_user_id is not None and command.by_user_id != by_user_id
+                    if (
+                        command is None
+                        or (by_user_id is not None and command.by_user_id != by_user_id)
+                        or (lease_id is not None and command.viewer_id != lease_id)
                     ):
                         continue
                     if command.type == "give_back":
                         if command.remember and remember is not None:
                             kept = await remember(page, command)
                         break
+                    if command.type == "disconnect":
+                        break
                     try:
+                        if record_human_input is not None:
+                            await record_human_input(page, command)
                         await _person_input(page, command)
                         if command.type in {"navigate", "back", "forward", "reload"}:
                             url, title = await page.location()
@@ -875,7 +904,14 @@ async def held(
         finally:
             tasks.cancel_scope.cancel()
     await emit(
-        BrowserEvent(kind="browser_released", call_id=call_id, step=session.steps, detail=kept)
+        BrowserEvent(
+            kind="browser_released",
+            call_id=call_id,
+            step=session.steps,
+            by_user_id=by_user_id,
+            detail=kept,
+            control_id=lease_id,
+        )
     )
     session.history += (
         f"step {session.steps}: a person took the browser over and handed it back - "

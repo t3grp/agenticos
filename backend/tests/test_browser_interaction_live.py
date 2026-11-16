@@ -29,7 +29,13 @@ class _Website(BaseHTTPRequestHandler):
         <input id="name" aria-label="Name">
         <button onclick="[300,340,380,420].forEach(ms=>setTimeout(()=>document.querySelector('#result').textContent=String(ms),ms))">Open</button>
         <p id="result"></p><a href="/second">Next page</a>"""
-        if self.path == "/busy":
+        if self.path.startswith("/teaching"):
+            body = b"""<!doctype html><title>Teaching fixture</title>
+            <input id="invoice" name="invoice_number" aria-label="Invoice number" value="synthetic-input-value">
+            <input id="password" type="password" autocomplete="current-password" value="synthetic-password">
+            <input id="otp" name="otp" autocomplete="one-time-code" value="synthetic-otp-value">
+            <main>synthetic-dom-secret</main><button id="submit">Submit invoice</button>"""
+        elif self.path == "/busy":
             body = b"""<!doctype html><main><h1>Article ready</h1></main>
             <aside id="ad">Advertisement</aside><script>
             setInterval(() => document.querySelector('#ad').textContent = String(performance.now()), 20);
@@ -125,6 +131,59 @@ async def test_same_url_history_reload_and_dom_updates(
         assert (await page.location())[0] == address + "second"
         await page.reload()
         assert (await page.location())[0] == address + "second"
+
+
+@pytest.mark.security
+async def test_teaching_target_keeps_only_structure_and_omits_sensitive_fields(
+    isolated_chromium: tuple[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+    from uuid import uuid4
+
+    from app.services.browser_teaching import _public_step
+
+    endpoint, address = isolated_chromium
+    monkeypatch.setattr(settings, "BROWSER_EGRESS_PROXY", "")
+    async with open_page(
+        cdp_url=endpoint,
+        start_url=address + "teaching?access_token=synthetic-url-token#otp",
+        policy=PagePolicy(allowed_domains=["127.0.0.1"], candidate_cap=100, preview_width=1000),
+    ) as page:
+        await page._evaluate("document.querySelector('#invoice').focus()")
+        target = await page.teaching_target()
+        assert target is not None
+        assert target["role"] == "textbox"
+        assert target["sensitive"] is False
+        assert set(target) == {"role", "fingerprint", "sensitive"}
+
+        for selector in ("#password", "#otp"):
+            await page._evaluate(f"document.querySelector('{selector}').focus()")
+            sensitive = await page.teaching_target()
+            assert sensitive is not None
+            assert sensitive["sensitive"] is True
+
+        step = _public_step(
+            uuid4(),
+            0,
+            "input_parameter",
+            "https://portal.example.test/teaching?access_token=synthetic-url-token#otp",
+            {
+                "role": str(target["role"]),
+                "fingerprint": str(target["fingerprint"]),
+                "value": "synthetic-input-value",
+                "label": "synthetic-dom-secret",
+                "dom_text": "synthetic-dom-secret",
+            },
+        )
+        serialized = json.dumps(step)
+        for private_value in (
+            "synthetic-url-token",
+            "synthetic-input-value",
+            "synthetic-password",
+            "synthetic-otp-value",
+            "synthetic-dom-secret",
+        ):
+            assert private_value not in serialized
 
 
 async def test_live_preview_keeps_painting_without_an_agent_action(

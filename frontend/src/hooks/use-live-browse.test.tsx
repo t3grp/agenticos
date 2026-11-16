@@ -129,10 +129,17 @@ describe("useLiveBrowse", () => {
     expect(result.current.status).toBe("connecting");
   });
 
-  it("sends a person's command as it is", () => {
+  it("adds a UUID to a person's command", () => {
     const { result } = renderHook(() => useLiveBrowse("run-1", "c1"));
     result.current.send({ type: "click", x: 4, y: 2 });
-    expect(socket.sendMessage).toHaveBeenCalledWith({ type: "click", x: 4, y: 2 });
+    expect(socket.sendMessage).toHaveBeenCalledWith({
+      type: "click",
+      x: 4,
+      y: 2,
+      command_id: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ),
+    });
   });
 });
 

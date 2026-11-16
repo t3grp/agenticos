@@ -3,9 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BrowserPanel } from "./browser-panel";
+import { PublicConfigProvider } from "@/components/public-config/public-config-provider";
 import type { Browse } from "@/lib/browse";
+import { DEFAULT_PUBLIC_CONFIG } from "@/lib/public-config";
 import { useAuthStore } from "@/stores";
 import { useBrowserPanelStore } from "@/stores/browser-panel-store";
+
+const permissions = vi.hoisted(() => ({ skillsEdit: false }));
+
+vi.mock("@/hooks/use-permissions", () => ({
+  usePermissions: () => ({ can: () => permissions.skillsEdit }),
+}));
 
 vi.mock("@/hooks/use-native-browser", () => ({
   useNativeBrowser: () => ({
@@ -21,6 +29,7 @@ const live = vi.hoisted(() => ({
     browse: null as Browse | null,
     task: "",
     canControl: false,
+    leaseId: null as string | null,
     status: "connecting" as string,
     send: vi.fn(),
   },
@@ -52,13 +61,42 @@ function browse(overrides: Partial<Browse> = {}): Browse {
 }
 
 beforeEach(() => {
-  live.value = { browse: null, task: "", canControl: false, status: "connecting", send: vi.fn() };
+  permissions.skillsEdit = false;
+  live.value = {
+    browse: null,
+    task: "",
+    canControl: false,
+    leaseId: null,
+    status: "connecting",
+    send: vi.fn(),
+  };
   live.calls = [];
   useAuthStore.setState({ user: { id: "u1", full_name: "Ada", email: "ada@acme.test" } as never });
   useBrowserPanelStore.setState({ openCallId: null });
 });
 
 describe("BrowserPanel - a browse beside the chat", () => {
+  it("passes the held browser lease to its teaching controls", () => {
+    permissions.skillsEdit = true;
+    const heldBrowse = browse({ heldBy: "Ada", heldById: "u1" });
+    live.value = {
+      ...live.value,
+      browse: heldBrowse,
+      canControl: true,
+      leaseId: "socket-lease",
+      status: "live",
+    };
+    useBrowserPanelStore.setState({ openCallId: "c1" });
+
+    render(
+      <PublicConfigProvider config={{ ...DEFAULT_PUBLIC_CONFIG, browserTeachingEnabled: true }}>
+        <BrowserPanel browses={[heldBrowse]} />
+      </PublicConfigProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Teach a task" })).toBeInTheDocument();
+  });
+
   it("draws nothing when nothing has browsed, or nothing was opened", () => {
     const { container, rerender } = render(<BrowserPanel browses={[]} />);
     expect(container).toBeEmptyDOMElement();

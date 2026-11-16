@@ -1,5 +1,5 @@
 ---
-source_sha: "3bce1ab7805a"
+source_sha: "cd28881c21fb"
 ---
 
 # Skills { #skills }
@@ -256,6 +256,31 @@ skill que alguien reescribió desde que se escribió la propuesta se rechaza en
 lugar de sobrescribirse. Un skill aprendido es a partir de ahí un skill
 ordinario: editable, versionado con el mismo incremento que cualquier edición,
 y deshecho con una edición nueva en lugar de una restauración.
+
+## Enseñar un procedimiento de un sitio { #teach-a-site-procedure }
+
+En un navegador gestionado por el servidor, un miembro con `skills:edit` puede
+empezar a enseñar mientras controla el navegador. La función está desactivada
+por defecto. Activa `BROWSER_TEACHING_ENABLED` en el backend y el frontend tras
+revisar el despliegue. Pausa la grabación durante el inicio de sesión. Detenla
+para etiquetar los controles, nombrar los parámetros de las entradas normales y
+crear una propuesta de skill nuevo. Descartar elimina una sesión sin propuesta.
+Una desconexión, el fin del control o un cambio de origen pausa la grabación.
+
+La captura guarda un origen HTTPS, el rol de un control, una huella estructural y
+etiquetas revisadas.
+No guarda valores escritos, cookies, texto de la página, capturas de pantalla,
+selectores ni rutas o consultas de URL. Se detiene tras 500 pasos, 128 KiB o
+30 minutos. Los pasos sin terminar se eliminan al cabo de 24 horas. Solo una sesión
+del navegador finalizada con éxito permite crear una propuesta. La creación es
+determinista y no llama a ningún modelo.
+
+La propuesta espera en Cambios de skills. Al aplicarla, el skill guarda una versión
+de la rutina; también debes vincular el skill al agente y publicar el agente. Un
+run de navegador gestionado solo la recibe si la versión publicada del agente
+vincula ese skill y la página actual tiene el mismo origen exacto. El navegador
+vuelve a leer la página antes de cada acción y se detiene si la estructura no
+coincide. El contenido de la página no puede publicar un skill ni cambiar permisos.
 
 Un cambio registra la versión del skill para la que se escribió: en un run, la
 versión que ese run recibió, y un turno posterior que reescribe el cambio

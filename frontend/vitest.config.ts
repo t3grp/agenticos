@@ -232,6 +232,7 @@ export default defineConfig({
         "src/components/chat/browser-visit.tsx",
         "src/components/chat/browser-comment.tsx",
         "src/components/chat/browser-panel.tsx",
+        "src/components/chat/browser-teaching-controls.tsx",
         "src/components/chat/browser-panel-frame.tsx",
         "src/components/chat/browser-view.tsx",
         "src/components/chat/browser-window.tsx",

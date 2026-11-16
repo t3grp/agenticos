@@ -1,5 +1,5 @@
 ---
-source_sha: "3bce1ab7805a"
+source_sha: "cd28881c21fb"
 ---
 
 # Skille { #skills }
@@ -249,6 +249,31 @@ a skill, który ktoś przepisał po napisaniu propozycji, jest odrzucany zamiast
 nadpisywany. Wyuczony skill jest od tej pory zwykłym skillem: edytowalnym,
 wersjonowanym tym samym przyrostem wersji co każda edycja i cofanym nową
 edycją, a nie przywróceniem.
+
+## Naucz procedury witryny { #teach-a-site-procedure }
+
+W zarządzanej przeglądarce serwerowej członek z uprawnieniem `skills:edit` może
+rozpocząć naukę, gdy trzyma dzierżawę przeglądarki. Nauka jest domyślnie
+wyłączona. Po przeglądzie wdrożenia ustaw `BROWSER_TEACHING_ENABLED` w backendzie
+i frontendzie. Wstrzymaj nagrywanie przy logowaniu. Zatrzymaj je, aby opisać
+klikane elementy, nazwać parametry zwykłych pól i utworzyć propozycję nowego
+skilla. Odrzuć, aby usunąć niezgłoszoną sesję. Rozłączenie, zakończenie dzierżawy
+lub zmiana źródła wstrzymuje nagrywanie.
+
+Nagranie zapisuje jedno pochodzenie HTTPS, rolę kontrolki, odcisk struktury i
+sprawdzone etykiety. Nie
+zapisuje wpisanych wartości, plików cookie, tekstu strony, zrzutów ekranu,
+selektorów ani ścieżek i parametrów adresu URL. Limit wynosi 500 kroków, 128 KiB
+lub 30 minut. Nieukończone kroki są usuwane po 24 godzinach. Propozycję można
+utworzyć tylko po udanym runie przeglądarki. Jej utworzenie jest deterministyczne
+i nie wywołuje modelu.
+
+Propozycja czeka w Zmianach skilli. Zastosowanie zapisuje wersjonowaną procedurę
+w skillu; agent musi też przypisać skill i opublikować wersję. Zarządzana
+przeglądarka otrzymuje procedurę tylko wtedy, gdy opublikowana wersja agenta
+wiąże ten skill, a bieżąca strona ma dokładnie to samo pochodzenie. Przed każdym
+krokiem przeglądarka czyta bieżącą stronę i zatrzymuje się, gdy struktura się nie
+zgadza. Treść strony nie może opublikować skilla ani zmienić uprawnień.
 
 Zmiana zapisuje wersję skilla, dla której powstała: przy runie jest to wersja,
 którą ten run dostał, a późniejsza tura, która ją nadpisuje, zapisuje swoją. Apply

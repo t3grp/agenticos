@@ -25,6 +25,7 @@ describe("usePublicConfig", () => {
       artifactUrl: "https://api.acme.example",
       siteUrl: "https://console.acme.example",
       chatMaxUploadSizeMb: 25,
+      browserTeachingEnabled: false,
       oauthProviders: ["github", "microsoft"],
       oidcDisplayName: "SSO",
       oidcIcon: null,

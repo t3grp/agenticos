@@ -287,8 +287,10 @@ class TestCommands:
         await live_browse.send(RUN, CALL, BrowserCommand(type="give_back"))
         control = LiveControl(RUN, CALL)
 
-        assert await control.poll() == BrowserCommand(type="take_over", by="Ada")
-        assert await control.wait(1) == BrowserCommand(type="give_back")
+        take_over = await control.poll()
+        give_back = await control.wait(1)
+        assert take_over is not None and take_over.type == "take_over" and take_over.by == "Ada"
+        assert give_back is not None and give_back.type == "give_back"
         assert await control.poll() is None
 
     async def test_an_unreadable_command_is_dropped_rather_than_stopping_the_browse(
@@ -411,10 +413,12 @@ class TestStreaming:
         await live_browse.stream(socket, auth_token="t", run_id=RUN, call_id=CALL)
 
         queued = [BrowserCommand.model_validate_json(raw) for raw in store.lists[_key("control")]]
-        assert queued == [
-            BrowserCommand(type="take_over", by="Ada Lovelace", by_user_id="user-ada"),
-            BrowserCommand(type="type", text="agent", by="Ada Lovelace", by_user_id="user-ada"),
+        assert [(item.type, item.by, item.by_user_id) for item in queued] == [
+            ("take_over", "Ada Lovelace", "user-ada"),
+            ("type", "Ada Lovelace", "user-ada"),
+            ("disconnect", "Ada Lovelace", "user-ada"),
         ]
+        assert all(item.viewer_id == socket.sent[0]["viewer_id"] for item in queued)
         assert socket.sent[0]["can_control"] is True
         assert socket.sent[0]["frame"] is None
 
@@ -433,7 +437,10 @@ class TestStreaming:
 
         await live_browse.stream(socket, auth_token="t", run_id=RUN, call_id=CALL)
 
-        assert store.lists.get(_key("control"), []) == []
+        commands = [BrowserCommand.model_validate_json(raw) for raw in store.lists[_key("control")]]
+        assert [(command.type, command.viewer_id) for command in commands] == [
+            ("disconnect", socket.sent[0]["viewer_id"])
+        ]
         assert socket.closed == (4403, "Not allowed to watch")
         # Asked again as a re-check: an aged session token does not end the view.
         assert access.await_args_list[1].kwargs == {"recheck": True}

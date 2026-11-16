@@ -49,6 +49,7 @@ class SkillProposal(Base, TimestampMixin):
         # first. Composite because filtering on status alone would scan every
         # decided proposal the deployment has ever recorded.
         Index("ix_skill_proposals_pending", "organization_id", "status"),
+        Index("ix_skill_proposals_browser_teaching", "browser_teaching_id", unique=True),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -169,6 +170,10 @@ class SkillProposal(Base, TimestampMixin):
         nullable=True,
         index=True,
     )
+    browser_teaching_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
+    """The reviewed browser teaching session that produced this proposal, if any."""
 
     def __repr__(self) -> str:
         return f"<SkillProposal(name={self.name}, status={self.status})>"

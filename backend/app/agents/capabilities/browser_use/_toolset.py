@@ -22,6 +22,7 @@ import asyncio
 import base64
 import functools
 import hashlib
+import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -91,6 +92,7 @@ from app.agents.capabilities.browser_use._route import BrowserRoute, recheck
 from app.agents.deps import AgentDeps
 from app.core.sanitize import UrlRefusedError
 from app.services import browse_plans, browser_sign_in, live_browse
+from app.services.browser_teaching import BrowserTeachingService
 
 BROWSER_TAB_REQUIREMENT = "agenticos_browser_tab_requirement"
 
@@ -206,6 +208,37 @@ async def _live(
             await live_browse.publish(run, call_id, last_image)
             last_image = None
         await live_browse.publish(run, call_id, event)
+        if (
+            event.kind == "browser_finished"
+            and deps.organization_id is not None
+            and deps.run_id is not None
+        ):
+            try:
+                await BrowserTeachingService.end_run(deps.organization_id, deps.run_id, call_id)
+            except Exception as exc:
+                logger.warning(
+                    "browser_teaching_run_end_failed", extra={"error": type(exc).__name__}
+                )
+        if (
+            event.kind == "browser_released"
+            and event.control_id is not None
+            and event.by_user_id is not None
+            and deps.user_id is not None
+            and deps.organization_id is not None
+            and deps.run_id is not None
+        ):
+            try:
+                await BrowserTeachingService.end_lease(
+                    deps.organization_id,
+                    UUID(event.by_user_id),
+                    deps.run_id,
+                    call_id,
+                    event.control_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "browser_teaching_lease_end_failed", extra={"error": type(exc).__name__}
+                )
         if chat is not None:
             await chat(event)
         return True
@@ -467,6 +500,63 @@ def build_toolset(
         sink, control, run_id = await _live(ctx.deps, call_id, task)
         person = _signed_in_as(ctx.deps)
         remember = None if person is None else _remembering(person)
+
+        async def record_human_input(page: PageSession, command: BrowserCommand) -> None:
+            if (
+                isinstance(page, NativePage)
+                or ctx.deps.organization_id is None
+                or ctx.deps.user_id is None
+                or ctx.deps.run_id is None
+            ):
+                return
+            action = {
+                "click": "click",
+                "type": "input_parameter",
+                "navigate": "navigate",
+                "back": "navigate",
+                "forward": "navigate",
+                "reload": "navigate",
+                "scroll": "scroll",
+            }.get(command.type)
+            if action is None:
+                return
+            try:
+                target: dict[str, str] | None = None
+                if command.type == "click":
+                    observed = await page.teaching_target(command.x, command.y)
+                    if observed is None or observed.get("sensitive") is True:
+                        return
+                    target = {
+                        key: str(observed[key])
+                        for key in ("role", "fingerprint")
+                        if key in observed
+                    }
+                elif command.type == "type":
+                    observed = await page.teaching_target()
+                    if observed is None or observed.get("sensitive") is True:
+                        return
+                    target = {
+                        key: str(observed[key])
+                        for key in ("role", "fingerprint")
+                        if key in observed
+                    }
+                url, _ = await page.location()
+                await BrowserTeachingService.record_input(
+                    ctx.deps.organization_id,
+                    UUID(ctx.deps.user_id),
+                    ctx.deps.run_id,
+                    call_id,
+                    command.viewer_id or "",
+                    command.command_id,
+                    action,
+                    url,
+                    target,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "browser_teaching_capture_failed", extra={"error": type(exc).__name__}
+                )
+
         # The agent's own step model where it named one - a cheaper or
         # faster-serving model for the steps, which are most of a browse - else
         # the run's.
@@ -490,7 +580,23 @@ def build_toolset(
             memory: str,
             screenshot: str | None,
         ) -> Step:
-            prompt: list[UserContent] = [observation(goal, snapshot, history, memory)]
+            observed = observation(goal, snapshot, history, memory)
+            if (
+                ctx.deps.organization_id is not None
+                and ctx.deps.agent_id is not None
+                and ctx.deps.run_id is not None
+            ):
+                procedures = await BrowserTeachingService.procedure_for_origin(
+                    ctx.deps.organization_id,
+                    ctx.deps.run_id,
+                    ctx.deps.agent_id,
+                    snapshot.url,
+                )
+                if procedures:
+                    observed += "\n\nApproved procedures for this exact origin:\n" + json.dumps(
+                        procedures, ensure_ascii=True, separators=(",", ":")
+                    )
+            prompt: list[UserContent] = [observed]
             image = _image(screenshot)
             if image is not None:
                 prompt.append(image)
@@ -547,6 +653,7 @@ def build_toolset(
                 else control,
                 run_id=run_id,
                 remember=remember,
+                record_human_input=record_human_input,
                 plan=plan,
             )
             if person is not None and kept_as is not None:

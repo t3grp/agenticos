@@ -61,6 +61,8 @@ class SkillVersionSource(StrEnum):
     """An agent's change to the files in its workspace, accepted by a person."""
     IMPROVE = "improve"
     """The assistant's proposal, accepted by a person."""
+    BROWSER_TEACHING = "browser_teaching"
+    """A person-approved procedure taught in a managed browser."""
     RESTORE = "restore"
     CATCH_UP = "catch_up"
     """A fork took main's changes in, and is based on main's newest version since."""

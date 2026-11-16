@@ -800,6 +800,7 @@ WORKFLOW_LOG_ALERTS = _sweep("workflow-log-alerts", timeout=timedelta(minutes=5)
 RECONCILE_CONVERSATION_TASKS = _sweep("reconcile-conversation-tasks", timeout=timedelta(seconds=30))
 RECONCILE_ROOM_REQUESTS = _sweep("reconcile-room-requests", timeout=timedelta(seconds=30))
 SWEEP_GENERATED_MEDIA = _sweep("sweep-generated-media")
+SWEEP_BROWSER_TEACHINGS = _sweep("sweep-browser-teachings")
 SEND_DIAGNOSTICS = _sweep("send-diagnostics", timeout=timedelta(seconds=60))
 PROACTIVE_SWEEP = _sweep("proactive-sweep")
 WATCH_SWEEP = _sweep("watch-sweep")
@@ -931,6 +932,7 @@ TASKS: dict[str, TaskKind] = {
         WORKFLOW_RUN_RETENTION,
         WORKFLOW_LOG_ALERTS,
         SWEEP_GENERATED_MEDIA,
+        SWEEP_BROWSER_TEACHINGS,
         SEND_DIAGNOSTICS,
         PROACTIVE_SWEEP,
         WATCH_SWEEP,

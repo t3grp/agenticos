@@ -1467,6 +1467,12 @@ include = [
     "app/services/browser_sign_in.py",
     "app/services/browser_sign_in_session.py",
     "app/api/routes/v1/browser_sign_ins.py",
+    "app/db/models/browser_teaching.py",
+    "app/repositories/browser_teaching.py",
+    "app/schemas/browser_teaching.py",
+    "app/services/browser_teaching.py",
+    "app/api/routes/v1/browser_teachings.py",
+    "app/worker/tasks/browser_teaching_tasks.py",
     # What the platform does for people on its own initiative, all of it in
     # background jobs, and the suggestions it leaves them (#2301).
     "app/services/proactive/**",
@@ -2407,6 +2413,12 @@ include = [
     "app/services/browser_sign_in.py",
     "app/services/browser_sign_in_session.py",
     "app/api/routes/v1/browser_sign_ins.py",
+    "app/db/models/browser_teaching.py",
+    "app/repositories/browser_teaching.py",
+    "app/schemas/browser_teaching.py",
+    "app/services/browser_teaching.py",
+    "app/api/routes/v1/browser_teachings.py",
+    "app/worker/tasks/browser_teaching_tasks.py",
     # What the platform does for people on its own initiative, all of it in
     # background jobs, and the suggestions it leaves them (#2301).
     "app/services/proactive/**",

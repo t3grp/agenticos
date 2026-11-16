@@ -778,6 +778,42 @@ class CdpPage:
             )
         return snapshot
 
+    async def teaching_target(
+        self, x: float | None = None, y: float | None = None
+    ) -> dict[str, str | bool] | None:
+        """Read only a control role, structural hash and credential-field flag for teaching."""
+        point = (
+            "document.activeElement"
+            if x is None or y is None
+            else f"document.elementFromPoint({x},{y})"
+        )
+        raw = await self._evaluate(
+            "(async () => { const e = " + point + "; if (!e) return null;"
+            " const tag = (e.tagName || '').toLowerCase();"
+            " const role = e.getAttribute('role') || (tag === 'textarea' || e.isContentEditable ? 'textbox' :"
+            " tag === 'input' && ['text','email','search','tel','url'].includes((e.type || '').toLowerCase()) ? 'textbox' :"
+            " tag === 'button' ? 'button' : tag === 'a' ? 'link' : tag === 'select' ? 'select' : tag);"
+            " const attrs = [e.type,e.name,e.id,e.autocomplete,e.getAttribute('aria-label'),e.placeholder].join(' ');"
+            " const sensitive = /password|passcode|one.?time|otp|token|secret|cookie|authorization|api.?key/i.test(attrs) ||"
+            " (tag === 'input' && ['password','hidden'].includes((e.type || '').toLowerCase()));"
+            " const parts=[]; for(let n=e;n&&n.parentElement;n=n.parentElement){"
+            " const siblings=[...n.parentElement.children].filter(s=>s.tagName===n.tagName);"
+            " parts.unshift(n.tagName.toLowerCase()+':'+(siblings.indexOf(n)+1)); if(parts.length===12) break; }"
+            " const bytes = new TextEncoder().encode(parts.join('>'));"
+            " const digest = await crypto.subtle.digest('SHA-256', bytes);"
+            " const fingerprint=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');"
+            " return {role,fingerprint,sensitive}; })()",
+            await_promise=True,
+        )
+        value = raw.get("value")
+        if not isinstance(value, dict):
+            return None
+        return {
+            key: value[key]
+            for key in ("role", "fingerprint", "sensitive")
+            if isinstance(value.get(key), (str, bool))
+        }
+
     async def _locate(  # pragma: no cover - needs a live browser
         self, element: Element
     ) -> tuple[float, float]:

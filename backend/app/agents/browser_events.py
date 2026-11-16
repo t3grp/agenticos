@@ -33,6 +33,7 @@ a surface that cannot narrate one still runs; it is simply not narrated.
 from collections.abc import Awaitable, Callable
 from typing import Literal, Protocol
 from urllib.parse import urlsplit
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -159,6 +160,11 @@ class BrowserEvent(BaseModel):
             "tells that they are the one holding it. Names are not unique."
         ),
     )
+    control_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="The socket lease that holds the browser, on `browser_held` and `browser_released`.",
+    )
     x: float | None = Field(
         default=None,
         ge=0,
@@ -249,6 +255,9 @@ class BrowserCommand(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    command_id: UUID = Field(default_factory=uuid4)
+    viewer_id: str | None = Field(default=None, max_length=64)
+
     type: Literal[
         "take_over",
         "give_back",
@@ -261,6 +270,7 @@ class BrowserCommand(BaseModel):
         "back",
         "forward",
         "reload",
+        "disconnect",
     ]
     url: str | None = Field(default=None, max_length=8192)
     x: float | None = Field(default=None, ge=0, le=4000)
@@ -293,6 +303,7 @@ class BrowserCommand(BaseModel):
             "the run acts for, and this is how the browse tells."
         ),
     )
+    control_id: str | None = Field(default=None, max_length=64)
 
     @field_validator("url")
     @classmethod

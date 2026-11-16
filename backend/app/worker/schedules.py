@@ -148,6 +148,7 @@ SCHEDULES: tuple[Schedule, ...] = (
     Schedule("workflow-run-retention", jobs.WORKFLOW_RUN_RETENTION, _DAY),
     # Generated images, speech and video past `GENERATED_MEDIA_RETENTION_DAYS` (#2310).
     Schedule("sweep-generated-media", jobs.SWEEP_GENERATED_MEDIA, _DAY),
+    Schedule("sweep-browser-teachings", jobs.SWEEP_BROWSER_TEACHINGS, _HOUR),
     # A report covers the period its occurrence names, so one that arrives while
     # the last is still sending waits rather than being dropped: a skipped tick
     # would be a week nobody is ever sent.

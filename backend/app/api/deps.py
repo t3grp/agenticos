@@ -1008,6 +1008,7 @@ def get_stats_service(db: DBSession) -> StatsService:
 StatsSvc = Annotated[StatsService, Depends(get_stats_service)]
 
 from app.services.skill_proposal import SkillProposalService
+from app.services.browser_teaching import BrowserTeachingService
 from app.services.skill_agents import SkillAgentService
 from app.services.skill_catch_up import SkillCatchUpService
 from app.services.skill_versions import SkillVersionService
@@ -1286,6 +1287,13 @@ def get_skill_proposal_service(db: DBSession) -> SkillProposalService:
 
 
 SkillProposalSvc = Annotated[SkillProposalService, Depends(get_skill_proposal_service)]
+
+
+def get_browser_teaching_service(db: DBSession) -> BrowserTeachingService:
+    return BrowserTeachingService(db)
+
+
+BrowserTeachingSvc = Annotated[BrowserTeachingService, Depends(get_browser_teaching_service)]
 
 from app.services.skill_check import SkillCheckService
 

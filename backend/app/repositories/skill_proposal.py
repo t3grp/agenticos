@@ -79,6 +79,18 @@ async def get_pending_for_skill(
     return result.scalars().first()
 
 
+async def get_by_browser_teaching(
+    db: AsyncSession, *, organization_id: UUID, teaching_id: UUID
+) -> SkillProposal | None:
+    result = await db.execute(
+        select(SkillProposal).where(
+            SkillProposal.organization_id == organization_id,
+            SkillProposal.browser_teaching_id == teaching_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_for_organization(
     db: AsyncSession, *, organization_id: UUID, status: str | None = None
 ) -> list[SkillProposal]:

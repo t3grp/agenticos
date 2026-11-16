@@ -1,5 +1,5 @@
 ---
-source_sha: "3bce1ab7805a"
+source_sha: "cd28881c21fb"
 ---
 
 # Skills { #skills }
@@ -269,6 +269,32 @@ statt überschrieben. Ein gelernter Skill ist danach ein gewöhnlicher Skill:
 bearbeitbar, versioniert durch denselben Versionssprung wie jede Bearbeitung,
 und rückgängig gemacht durch eine neue Bearbeitung statt durch eine
 Wiederherstellung.
+
+## Eine Website-Prozedur beibringen { #teach-a-site-procedure }
+
+In einem verwalteten Serverbrowser kann ein Mitglied mit `skills:edit` eine
+Aufzeichnung starten, während es die Browsersteuerung hält. Browserlernen ist
+standardmäßig deaktiviert. Aktiviere `BROWSER_TEACHING_ENABLED` nach der
+Rollout-Prüfung in Backend und Frontend. Pausiere bei der Anmeldung. Stoppe die
+Aufzeichnung, um Klickziele zu benennen, normale Eingaben als Parameter
+festzulegen und einen neuen Skillvorschlag zu erstellen. Verwerfen löscht eine
+Sitzung ohne Vorschlag. Bei einer getrennten Verbindung, beendeter Steuerung
+oder einem Wechsel des Ursprungs pausiert die Aufzeichnung.
+
+Gespeichert werden nur ein HTTPS-Ursprung, eine Steuerungsrolle, ein
+Strukturfingerabdruck und geprüfte Bezeichnungen. Eingaben, Cookies, Seitentext, Bildschirmbilder, Selektoren
+sowie URL-Pfade und Abfragewerte werden nicht gespeichert. Die Aufzeichnung endet
+bei 500 Schritten, 128 KiB oder 30 Minuten. Nicht abgeschlossene Schritte werden
+nach 24 Stunden gelöscht. Ein Vorschlag ist nur nach einem erfolgreichen Browserlauf
+möglich. Die Erstellung ist deterministisch und ruft kein Modell auf.
+
+Der Vorschlag wartet unter Skilländerungen. Anwenden speichert eine versionierte
+Prozedur im Skill; der Agent muss den Skill zusätzlich binden und veröffentlichen.
+Ein verwalteter Browserlauf erhält sie nur, wenn die veröffentlichte Agentenversion
+den Skill bindet und die aktuelle Seite exakt denselben Ursprung hat. Vor jeder
+Aktion liest der Browser die aktuelle Seite erneut und stoppt, wenn ihre Struktur
+nicht passt. Seiteninhalt kann weder einen Skill veröffentlichen noch Berechtigungen
+ändern.
 
 Eine Änderung hält fest, für welche Version des Skills sie geschrieben wurde:
 bei einem Run die Version, die dieser Run bekommen hat, und ein späterer Turn,

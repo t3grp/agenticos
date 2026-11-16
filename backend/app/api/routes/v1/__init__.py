@@ -78,7 +78,7 @@ from app.api.routes.v1 import table_views
 from app.api.routes.v1 import virtual_table_triggers
 from app.api.routes.v1 import memory as memory_files
 from app.api.routes.v1 import onboarding, outcomes, primary_conversations, system_agents
-from app.api.routes.v1 import browser_sign_ins
+from app.api.routes.v1 import browser_sign_ins, browser_teachings
 from app.api.routes.v1 import coding_accounts
 from app.api.routes.v1 import permissions
 from app.api.routes.v1 import email_webhook, imessage_webhook, sms_webhook, telegram_webhook, phone
@@ -228,6 +228,9 @@ v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboard
 v1_router.include_router(system_agents.router, prefix="/system-agents", tags=["system-agents"])
 v1_router.include_router(
     browser_sign_ins.router, prefix="/browser-sign-ins", tags=["browser-sign-ins"]
+)
+v1_router.include_router(
+    browser_teachings.router, prefix="/browser-teachings", tags=["browser-teachings"]
 )
 v1_router.include_router(skill_changes.router, prefix="/skill-changes", tags=["skills:changes"])
 v1_router.include_router(auto_skill_learning.router, tags=["failure-learning"])

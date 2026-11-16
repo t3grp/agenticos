@@ -59,6 +59,16 @@ describe("readPublicConfig", () => {
     expect(readPublicConfig({ CHAT_MAX_UPLOAD_SIZE_MB: "25" }).chatMaxUploadSizeMb).toBe(25);
   });
 
+  it("keeps browser teaching off unless the deployment enables it", () => {
+    expect(readPublicConfig({}).browserTeachingEnabled).toBe(false);
+    expect(readPublicConfig({ BROWSER_TEACHING_ENABLED: "true" }).browserTeachingEnabled).toBe(
+      true,
+    );
+    expect(readPublicConfig({ BROWSER_TEACHING_ENABLED: "off" }).browserTeachingEnabled).toBe(
+      false,
+    );
+  });
+
   it.each(["abc", "0", "-5", "", "NaN"])(
     "falls back to 10 MB when the ceiling is %j, rather than refusing every file",
     (raw) => {

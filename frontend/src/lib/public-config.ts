@@ -50,6 +50,8 @@ export interface PublicConfig {
    * client accepted, read and sent in full a file the server refused at 10 (#498).
    */
   chatMaxUploadSizeMb: number;
+  /** Whether this deployment exposes manual browser teaching. */
+  browserTeachingEnabled: boolean;
   /** The identity providers the sign-in page offers, in the order configured. */
   oauthProviders: readonly SignInProvider[];
   /**
@@ -87,6 +89,7 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
   artifactUrl: "http://localhost:8000",
   siteUrl: "http://localhost:3000",
   chatMaxUploadSizeMb: 10,
+  browserTeachingEnabled: false,
   oauthProviders: ["google"],
   oidcDisplayName: "SSO",
   oidcIcon: null,
@@ -156,6 +159,9 @@ export function readPublicConfig(env: Readonly<Record<string, string | undefined
     chatMaxUploadSizeMb: megabytes(
       env.CHAT_MAX_UPLOAD_SIZE_MB,
       DEFAULT_PUBLIC_CONFIG.chatMaxUploadSizeMb,
+    ),
+    browserTeachingEnabled: ["true", "1", "yes", "on"].includes(
+      env.BROWSER_TEACHING_ENABLED?.trim().toLowerCase() ?? "",
     ),
     oauthProviders: providers(env.OAUTH_PROVIDERS, DEFAULT_PUBLIC_CONFIG.oauthProviders),
     oidcDisplayName: env.OIDC_DISPLAY_NAME?.trim() || DEFAULT_PUBLIC_CONFIG.oidcDisplayName,

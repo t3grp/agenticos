@@ -70,6 +70,30 @@ async def get_version(
     return result.scalar_one_or_none()
 
 
+async def get_at_time(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    skill_id: UUID,
+    fork_id: UUID | None,
+    at: datetime,
+) -> SkillVersion | None:
+    """The newest version on a line that existed when a run started."""
+    line = SkillVersion.fork_id.is_(None) if fork_id is None else SkillVersion.fork_id == fork_id
+    result = await db.execute(
+        select(SkillVersion)
+        .where(
+            SkillVersion.organization_id == organization_id,
+            SkillVersion.skill_id == skill_id,
+            line,
+            SkillVersion.created_at <= at,
+        )
+        .order_by(SkillVersion.number.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_versions(
     db: AsyncSession, version_ids: Collection[UUID], *, organization_id: UUID
 ) -> dict[UUID, SkillVersion]:

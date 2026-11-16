@@ -31,6 +31,7 @@ interface Snapshot {
   can_remember?: boolean;
   trace: BrowserFrame[];
   frame: BrowserFrame | null;
+  viewer_id: string;
 }
 
 /** The close codes the live view answers with, and what each means to a viewer. */
@@ -59,6 +60,7 @@ export function useLiveBrowse(runId: string, callId: string, enabled = true) {
   const [task, setTask] = useState("");
   const [canControl, setCanControl] = useState(false);
   const [canRemember, setCanRemember] = useState(false);
+  const [leaseId, setLeaseId] = useState<string | null>(null);
   const [status, setStatus] = useState<LiveBrowseStatus>("connecting");
 
   const url = useMemo(
@@ -82,6 +84,7 @@ export function useLiveBrowse(runId: string, callId: string, enabled = true) {
         setTask(data.task);
         setCanControl(data.can_control);
         setCanRemember(data.can_remember === true);
+        setLeaseId(data.viewer_id);
         setStatus("live");
         return;
       }
@@ -114,7 +117,10 @@ export function useLiveBrowse(runId: string, callId: string, enabled = true) {
     return () => disconnect();
   }, [accessToken, enabled, finished, connect, disconnect]);
 
-  const send = useCallback((command: BrowserCommand) => sendMessage(command), [sendMessage]);
+  const send = useCallback(
+    (command: BrowserCommand) => sendMessage({ ...command, command_id: crypto.randomUUID() }),
+    [sendMessage],
+  );
 
-  return { browse, task, canControl, canRemember, status, send };
+  return { browse, task, canControl, canRemember, leaseId, status, send };
 }

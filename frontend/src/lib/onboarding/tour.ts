@@ -432,6 +432,12 @@ export const TOUR_STEPS: readonly TourStep[] = [
   // or crossed out - but readiness loads after the page, so the stop is optional:
   // a slow read must not pin the caption to nothing (#54).
   { id: "chat-voice-call", page: ROUTES.CHAT, target: "chat-voice-call", optional: true },
+  {
+    id: "chat-browser-teaching",
+    page: ROUTES.CHAT,
+    target: "browser-teach",
+    optional: true,
+  },
   // Inside the same popover as the model, so the walk opens it - `activate` on a
   // popover's trigger clicks it - and the next stop finds it already open.
   // `optional` because the section renders only for someone who may change it.

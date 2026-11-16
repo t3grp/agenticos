@@ -20,6 +20,7 @@ import { useBrowserPanelStore } from "@/stores/browser-panel-store";
 import type { PageComment } from "./browser-comment";
 import { BrowserTabs } from "./browser-tabs";
 import { BrowserWindow } from "./browser-window";
+import { BrowserTeachingControls } from "./browser-teaching-controls";
 
 /** One selected browse beside the chat, or full screen when space is limited. */
 export function BrowserPanel({
@@ -139,6 +140,11 @@ function OpenBrowser({
         })();
         return (
           <>
+            <BrowserTeachingControls
+              browse={browse}
+              canControl={live.canControl && live.status === "live"}
+              leaseId={live.leaseId}
+            />
             {tabs.length > 0 && (
               <BrowserTabs
                 tabs={tabs}

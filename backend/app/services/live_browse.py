@@ -29,7 +29,7 @@ from collections import deque
 from collections.abc import AsyncGenerator, AsyncIterable, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import anyio
 from fastapi import WebSocket, WebSocketDisconnect
@@ -181,6 +181,16 @@ async def publish(run_id: str, call_id: str, event: BrowserEvent) -> None:
     body = event.model_dump_json()
     try:
         pipe = _redis.raw.pipeline()
+        if event.kind == "browser_held" and event.by_user_id is not None:
+            pipe.set(
+                _key(run_id, call_id, "lease"),
+                f"{event.by_user_id}:{event.control_id or ''}",
+                ex=TTL_SECONDS,
+            )
+        elif event.kind in {"browser_released", "browser_finished"}:
+            pipe.delete(_key(run_id, call_id, "lease"))
+        if event.kind == "browser_opened" and event.url is not None:
+            pipe.set(_key(run_id, call_id, "location"), event.model_dump_json(), ex=TTL_SECONDS)
         if event.kind == "browser_frame":
             if event.image is not None:
                 pipe.set(_key(run_id, call_id, "frame"), body, ex=TTL_SECONDS)
@@ -342,6 +352,45 @@ async def _load(run_id: str, call_id: str) -> tuple[BrowseMeta | None, list[str]
     return BrowseMeta.model_validate_json(raw_meta), trace, frame
 
 
+async def metadata(run_id: str, call_id: str) -> BrowseMeta | None:
+    """The tenant and agent that own one live browse."""
+    if _redis is None:
+        return None
+    raw = await _redis.get(_key(run_id, call_id, "meta"))
+    return None if raw is None else BrowseMeta.model_validate_json(raw)
+
+
+async def lease_owner(run_id: str, call_id: str) -> str | None:
+    """The current human controller, if the managed browser is held."""
+    raw = None if _redis is None else await _redis.get(_key(run_id, call_id, "lease"))
+    return None if raw is None else raw.split(":", 1)[0]
+
+
+async def lease_id(run_id: str, call_id: str) -> str | None:
+    """The socket that owns the current human-control lease."""
+    raw = None if _redis is None else await _redis.get(_key(run_id, call_id, "lease"))
+    return None if raw is None else raw.partition(":")[2] or None
+
+
+async def origin(run_id: str, call_id: str) -> str | None:
+    """The last observed page address; callers must reduce it to an origin."""
+    if _redis is None:
+        return None
+    raw = await _redis.get(_key(run_id, call_id, "location"))
+    return None if raw is None else BrowserEvent.model_validate_json(raw).url
+
+
+async def outcome(run_id: str, call_id: str) -> str | None:
+    """The terminal result, if the browser run has finished."""
+    if _redis is None:
+        return None
+    for raw in reversed(await _redis.list_range(_key(run_id, call_id, "trace"))):
+        event = BrowserEvent.model_validate_json(raw)
+        if event.kind == "browser_finished":
+            return event.outcome
+    return None
+
+
 @contextlib.asynccontextmanager
 async def _subscription(
     run_id: str, call_id: str, *, viewer: bool = False
@@ -488,6 +537,7 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
     if access is None:
         await websocket.close(code=_FORBIDDEN_CLOSE_CODE, reason="Not allowed to watch")
         return
+    viewer_id = uuid4().hex
     with anyio.move_on_after(PREVIEW_SEND_TIMEOUT) as initial:
         await websocket.send_text(
             json.dumps(
@@ -497,6 +547,7 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
                     "started_at": meta.started_at.astimezone(UTC).isoformat(),
                     "can_control": access.control,
                     "can_remember": access.own and meta.remembers,
+                    "viewer_id": viewer_id,
                     "trace": [json.loads(item) for item in trace],
                     "frame": json.loads(frame) if frame else None,
                 }
@@ -528,8 +579,31 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
         try:
             while True:
                 raw = await websocket.receive_text()
+                could_control = current.control
                 if not await still_allowed():
+                    if could_control:
+                        await send(
+                            run_id,
+                            call_id,
+                            BrowserCommand(
+                                type="disconnect",
+                                by=current.name,
+                                by_user_id=current.user_id,
+                                viewer_id=viewer_id,
+                            ),
+                        )
                     return
+                if could_control and not current.control:
+                    await send(
+                        run_id,
+                        call_id,
+                        BrowserCommand(
+                            type="disconnect",
+                            by=current.name,
+                            by_user_id=current.user_id,
+                            viewer_id=viewer_id,
+                        ),
+                    )
                 if not current.control:
                     continue
                 try:
@@ -539,9 +613,26 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
                 await send(
                     run_id,
                     call_id,
-                    command.model_copy(update={"by": current.name, "by_user_id": current.user_id}),
+                    command.model_copy(
+                        update={
+                            "by": current.name,
+                            "by_user_id": current.user_id,
+                            "viewer_id": viewer_id,
+                        }
+                    ),
                 )
         except WebSocketDisconnect:
+            if current.control:
+                await send(
+                    run_id,
+                    call_id,
+                    BrowserCommand(
+                        type="disconnect",
+                        by=current.name,
+                        by_user_id=current.user_id,
+                        viewer_id=viewer_id,
+                    ),
+                )
             return
 
     async with (

@@ -56,6 +56,7 @@ class SkillProposalRead(BaseSchema, TimestampSchema):
             "agent's workspace wrote"
         ),
     )
+    browser_teaching_id: UUID | None = None
     rationale: str = ""
     evidence: list[dict[str, str | int | None]] = Field(
         default_factory=list,

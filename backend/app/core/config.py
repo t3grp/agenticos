@@ -1213,6 +1213,9 @@ class Settings(BaseSettings):
     # like any spec-supplied address. Empty refuses browser automation outright.
     BROWSER_CDP_ALLOWED_HOSTS: list[str] = []
 
+    # Manual, redacted browser teaching is opt-in while its rollout is proven.
+    BROWSER_TEACHING_ENABLED: bool = False
+
     # Hosts a virtual terminal (`mirage`) may mount by an address its author typed:
     # an SSH server, a Postgres or MongoDB DSN, an IMAP server, a self-hosted
     # Nextcloud or Dify. The address is in an agent's spec, which whoever holds
