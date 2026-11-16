@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenantGuard, useTenantId } from "@/hooks/use-organizations";
 import { useAuthStore } from "@/stores";
 import { qk } from "@/lib/query-keys";
+import { ApiError } from "@/lib/api-error";
 import {
   readCodingAccountUsage,
   refreshCodingAccountUsage,
@@ -17,9 +18,34 @@ const POLL_WINDOW_MS = 3 * 60_000;
 
 class UsageIdentityChanged extends Error {}
 
+function accessRefused(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 403 || error.status === 404);
+}
+
+const REDACTED_EVIDENCE: Pick<CodingAccount, "usage" | "model_catalog"> = {
+  usage: {
+    status: "unknown",
+    source: "unavailable",
+    observed_at: null,
+    observation_age_seconds: null,
+    valid_until: null,
+    windows: [],
+    reason_code: null,
+  },
+  model_catalog: {
+    status: "unknown",
+    source: "unavailable",
+    observed_at: null,
+    valid_until: null,
+    model_ids: [],
+    reason_code: null,
+  },
+};
+
 interface RefreshScope {
   tenant: string | null;
   user: string | undefined;
+  scope: string;
   accountId: string;
   generation: string;
   key: ReturnType<typeof qk.codingAccounts.usage>;
@@ -44,12 +70,52 @@ export function useCodingAccountUsage(account: CodingAccount) {
   }>({ identity: "", pending: false, until: null });
   const pollUntil = polling.identity === identity ? polling.until : null;
 
-  const usage = useQuery({
+  const currentAudience = (started: RefreshScope | undefined): started is RefreshScope =>
+    started !== undefined &&
+    guard(started.tenant) &&
+    useAuthStore.getState().user?.id === started.user &&
+    account.id === started.accountId &&
+    account.generation === started.generation;
+
+  const redact = (started: RefreshScope) => {
+    if (!currentAudience(started)) return;
+    // Null persists the refusal across remounts and Check again's pending GET.
+    // Stale list props must not reseed private evidence or authorize a refresh.
+    client.setQueryData<CodingAccountUsage | null>(started.key, null);
+    client.setQueryData<{ items: CodingAccount[] }>(
+      qk.codingAccounts.mine(started.scope),
+      (cached) =>
+        cached && {
+          ...cached,
+          items: cached.items.map((row) =>
+            row.id === started.accountId && row.generation === started.generation
+              ? { ...row, ...REDACTED_EVIDENCE, usage_refresh_pending: false }
+              : row,
+          ),
+        },
+    );
+  };
+
+  const usage = useQuery<CodingAccountUsage | null>({
     queryKey: key,
     queryFn: async () => {
       if (!ready || !guard(tenant) || useAuthStore.getState().user?.id !== user)
         throw new UsageIdentityChanged();
-      const report = await readCodingAccountUsage(account.id);
+      let report: CodingAccountUsage;
+      try {
+        report = await readCodingAccountUsage(account.id);
+      } catch (error) {
+        if (accessRefused(error))
+          redact({
+            tenant,
+            user,
+            scope,
+            accountId: account.id,
+            generation: account.generation,
+            key,
+          });
+        throw error;
+      }
       if (!guard(tenant) || useAuthStore.getState().user?.id !== user)
         throw new UsageIdentityChanged();
       if (report.account_id !== account.id || report.generation !== account.generation) {
@@ -81,17 +147,16 @@ export function useCodingAccountUsage(account: CodingAccount) {
         : false,
   });
 
-  const currentAudience = (started: RefreshScope | undefined) =>
-    started !== undefined &&
-    guard(started.tenant) &&
-    useAuthStore.getState().user?.id === started.user &&
-    account.id === started.accountId &&
-    account.generation === started.generation;
-
   const refresh = useMutation({
     mutationKey: [...key, "refresh"],
     mutationFn: async (started: RefreshScope) => {
-      if (!ready || !supported || !account.enabled || !currentAudience(started))
+      if (
+        !ready ||
+        !supported ||
+        !account.enabled ||
+        !currentAudience(started) ||
+        client.getQueryData(started.key) === null
+      )
         throw new UsageIdentityChanged();
       const report = await refreshCodingAccountUsage({
         id: started.accountId,
@@ -102,7 +167,13 @@ export function useCodingAccountUsage(account: CodingAccount) {
       return report;
     },
     onMutate: async (started: RefreshScope): Promise<RefreshScope> => {
-      if (!ready || !supported || !account.enabled || !currentAudience(started))
+      if (
+        !ready ||
+        !supported ||
+        !account.enabled ||
+        !currentAudience(started) ||
+        client.getQueryData(started.key) === null
+      )
         throw new UsageIdentityChanged();
       // A slower cached read must not overwrite the newly accepted pending probe.
       await client.cancelQueries({ queryKey: started.key, exact: true });
@@ -110,22 +181,31 @@ export function useCodingAccountUsage(account: CodingAccount) {
       return started;
     },
     onSuccess: (report, _variables, started) => {
-      if (!currentAudience(started) || !started) return;
-      if (report.account_id !== started.accountId || report.generation !== started.generation)
-        return;
+      if (!currentAudience(started)) return;
+      // A later refusal outranks an earlier refresh. Only a fresh authorized GET
+      // can restore access; mutationFn already checked the report's identity.
+      if (client.getQueryData(started.key) === null) return;
       client.setQueryData(started.key, report);
     },
+    onError: async (error, _variables, started) => {
+      if (accessRefused(error) && currentAudience(started)) {
+        await client.cancelQueries({ queryKey: started.key, exact: true }, { revert: false });
+        redact(started);
+      }
+    },
     onSettled: (_report, _error, _variables, started) => {
-      if (currentAudience(started) && started)
+      if (currentAudience(started))
         void client.invalidateQueries({
-          queryKey: qk.codingAccounts.mine(`${started.tenant ?? ""}:${started.user ?? ""}`),
+          queryKey: qk.codingAccounts.mine(started.scope),
           exact: true,
         });
     },
   });
 
   const changed =
-    usage.error instanceof UsageIdentityChanged || refresh.error instanceof UsageIdentityChanged;
+    usage.data === null ||
+    usage.error instanceof UsageIdentityChanged ||
+    refresh.error instanceof UsageIdentityChanged;
   const report = ready && !changed ? usage.data : undefined;
   const pending = Boolean(report?.refresh_pending && supported && account.enabled);
   const now = Math.max(clock, usage.dataUpdatedAt);
@@ -171,6 +251,7 @@ export function useCodingAccountUsage(account: CodingAccount) {
       refresh.mutate({
         tenant,
         user,
+        scope,
         accountId: account.id,
         generation: account.generation,
         key,

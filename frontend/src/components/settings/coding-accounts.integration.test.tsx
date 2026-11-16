@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
 import { CodingAccounts, PersonalCodingAccount } from "./coding-accounts";
 import { apiClient } from "@/lib/api-client";
+import { ApiError } from "@/lib/api-error";
 import type {
   CodingAccount,
   CodingAccountChange,
@@ -363,6 +364,42 @@ it("hides expired cached windows and model IDs instead of presenting them as cur
   expect(screen.queryByText("reported-model-a")).toBeNull();
 });
 
+it("keeps partially reported usage amounts unknown and preserves minute windows", async () => {
+  const row = observedAccount();
+  row.usage.windows = [
+    {
+      name: "quarter-hour",
+      window_duration_minutes: 15,
+      used: null,
+      limit: 7,
+      unit: null,
+      resets_at: null,
+    },
+    { name: "Reported percent", used: 12, limit: null, unit: "percent", resets_at: null },
+  ];
+  serve(row);
+  mount();
+  expect(await screen.findByText("Window: 15 minutes")).toBeVisible();
+  expect(screen.getByText("Unknown / 7")).toBeVisible();
+  expect(screen.getByText("12 / Unknown %")).toBeVisible();
+  expect(screen.getByText("Reported status: Available")).toBeVisible();
+});
+
+it.each([null, "usage_windows_unavailable"])(
+  "shows missing windows once without inferring readiness from reason %s",
+  async (reason) => {
+    const row = observedAccount();
+    row.usage.windows = [];
+    row.usage.reason_code = reason;
+    serve(row);
+    mount();
+    expect(await screen.findByText("Reported status: Available")).toBeVisible();
+    expect(screen.getAllByText("Usage windows were not reported.")).toHaveLength(1);
+    expect(screen.getByText("reported-model-a")).toBeVisible();
+    expect(screen.queryByText("100 / 100 %")).toBeNull();
+  },
+);
+
 it("expires a displayed report without another read or a provider refresh", async () => {
   vi.useFakeTimers();
   serve(observedAccount(1_000));
@@ -405,6 +442,69 @@ it("keeps a valid report after a failed cached read and checks again without req
   expect(screen.queryByRole("alert")).toBeNull();
   expect(apiClient.post).not.toHaveBeenCalled();
 });
+
+it.each([
+  ["read", 403],
+  ["read", 404],
+  ["refresh", 403],
+  ["refresh", 404],
+] as const)(
+  "clears a private report after a denied %s %i and requires a fresh read before refreshing",
+  async (operation, status) => {
+    const row = observedAccount();
+    let denyRead!: (reason: Error) => void;
+    const heldRead = new Promise<never>((_resolve, reject) => {
+      denyRead = reject;
+    });
+    vi.mocked(apiClient.get).mockImplementation(async (path) => {
+      if (path === "/coding-accounts") return { items: [row] };
+      if (path.endsWith("/usage")) return operation === "read" ? heldRead : report(row);
+      throw new Error(`Unexpected GET ${path}`);
+    });
+    mount();
+    expect(await screen.findByText("100 / 100 %")).toBeVisible();
+    expect(screen.getByText("reported-model-a")).toBeVisible();
+    const denied = new ApiError(status, "Synthetic authority refusal");
+    const refresh = screen.getByRole("button", { name: "Refresh usage" });
+    if (operation === "read") {
+      await act(async () => {
+        denyRead(denied);
+      });
+    } else {
+      vi.mocked(apiClient.post).mockRejectedValueOnce(denied);
+      await userEvent.click(refresh);
+    }
+    expect(
+      await screen.findByText("This connection changed. Checking its current status."),
+    ).toBeVisible();
+    expect(screen.getByText("Reported status: Unknown")).toBeVisible();
+    expect(screen.queryByText("100 / 100 %")).toBeNull();
+    expect(screen.queryByText("reported-model-a")).toBeNull();
+    expect(refresh).toBeDisabled();
+    const writes = operation === "refresh" ? 1 : 0;
+    expect(apiClient.post).toHaveBeenCalledTimes(writes);
+
+    let finish!: (value: CodingAccountUsage) => void;
+    vi.mocked(apiClient.get).mockImplementation(async (path) => {
+      if (path === "/coding-accounts") return { items: [row] };
+      return new Promise<CodingAccountUsage>((resolve) => {
+        finish = resolve;
+      });
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await waitFor(() => expect(finish).toBeDefined());
+    expect(screen.queryByText("100 / 100 %")).toBeNull();
+    expect(screen.queryByText("reported-model-a")).toBeNull();
+    expect(refresh).toBeDisabled();
+    await act(async () => {
+      finish(report(row));
+    });
+    expect(await screen.findByText("reported-model-a")).toBeVisible();
+    expect(screen.getByText("100 / 100 %")).toBeVisible();
+    expect(refresh).toBeEnabled();
+    expect(apiClient.post).toHaveBeenCalledTimes(writes);
+  },
+);
 
 it("bounds pending polling and offers a cached check without starting another refresh", async () => {
   vi.useFakeTimers();
