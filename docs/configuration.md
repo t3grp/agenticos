@@ -527,6 +527,8 @@ write — so set it well past your longest legitimate run and no closer. See
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `WORKFLOW_MEDIA_NODE_STAGE` | `disabled` | Rollout stage for media nodes: `disabled` hides all, `asset` exposes Asset, and `image` adds image generation and accepted video providers |
+| `WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS` | `[]` | JSON list of provider IDs with an operator-recorded live acceptance. Only resumable video adapters in this list are available; keep it empty until acceptance |
 | `WORKFLOW_RUN_MAX_INPUT_BYTES` | `262144` | The largest payload a run may be started with, as compact JSON. It is kept on the run for its `core.input` node, so a larger one is refused with `413` before the run is admitted |
 | `WORKFLOW_RUN_MAX_FILE_BYTES` | `1073741824` | The most file bytes one run may store, all its file steps together. A step whose file would pass it fails with `FILE_QUOTA_EXCEEDED` and stores nothing |
 | `WORKFLOW_ORG_MAX_FILE_BYTES` | `21474836480` | The same for one organization, across every run that still holds its files |

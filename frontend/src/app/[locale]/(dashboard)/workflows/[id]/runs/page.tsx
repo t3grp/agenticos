@@ -23,6 +23,7 @@ import { StartRunDialog } from "@/components/workflows/runs/start-run-dialog";
 import { WorkflowStats } from "@/components/workflows/runs/workflow-stats";
 import { usePermissions, useWorkflow, useWorkflowRuns, useWorkflowVersion } from "@/hooks";
 import { ROUTES } from "@/lib/constants";
+import { hasBillableMedia } from "@/lib/workflows/media";
 import { getErrorMessage } from "@/lib/api-error";
 import { DIALOG_FORM, DIALOG_SCROLL } from "@/lib/dialog-sizes";
 import { cn } from "@/lib/utils";
@@ -159,6 +160,7 @@ export default function WorkflowRunsPage({ params }: PageProps) {
           onOpenChange={setStartOpen}
           canRunLive={canRunLive && !awaitingContract}
           canTest={canTest}
+          hasBillableMedia={hasBillableMedia(workflow?.draft_graph) || hasBillableMedia(live?.graph)}
           liveNotice={contractNotice}
           busy={start.isPending}
           error={start.error}

@@ -1,5 +1,5 @@
 ---
-source_sha: "aa79e2a8a321"
+source_sha: "69f02740ce08"
 ---
 
 # Konfiguracja { #configuration }
@@ -537,6 +537,8 @@ najdłuższym uprawnionym runem i nie bliżej. Zobacz
 
 | Zmienna | Domyślnie | Opis |
 | --- | --- | --- |
+| `WORKFLOW_MEDIA_NODE_STAGE` | `disabled` | Etap wdrożenia węzłów mediów: `disabled` ukrywa wszystkie, `asset` udostępnia Asset, a `image` dodaje generowanie obrazów i zaakceptowane providery video |
+| `WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS` | `[]` | Lista JSON ID providerów z odnotowanym przez operatora testem akceptacyjnym na żywo. Dostępne są tylko wznawialne adaptery video z tej listy; pozostaw ją pustą do czasu akceptacji |
 | `WORKFLOW_RUN_MAX_INPUT_BYTES` | `262144` | Największy ładunek, z jakim można uruchomić run, jako zwarty JSON. Jest przechowywany w runie dla jego węzła `core.input`, więc większy zostaje odrzucony z `413`, zanim run zostanie przyjęty |
 | `WORKFLOW_RUN_MAX_FILE_BYTES` | `1073741824` | Najwięcej bajtów plików, jakie może zapisać jeden run, wszystkie jego kroki plikowe razem. Krok, którego plik by go przekroczył, kończy się błędem `FILE_QUOTA_EXCEEDED` i niczego nie zapisuje |
 | `WORKFLOW_ORG_MAX_FILE_BYTES` | `21474836480` | To samo dla jednej organizacji, we wszystkich runach, które nadal przechowują swoje pliki |

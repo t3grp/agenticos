@@ -1,5 +1,5 @@
 ---
-source_sha: "aa79e2a8a321"
+source_sha: "69f02740ce08"
 ---
 
 # Configuración { #configuration }
@@ -549,6 +549,8 @@ no más cerca. Ver [Gobernanza](governance.md#a-run-whose-process-died).
 
 | Variable | Por defecto | Descripción |
 | --- | --- | --- |
+| `WORKFLOW_MEDIA_NODE_STAGE` | `disabled` | Fase de rollout de nodos multimedia: `disabled` los oculta todos, `asset` muestra Asset e `image` añade generación de imágenes y providers de video aceptados |
+| `WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS` | `[]` | Lista JSON de IDs de provider con una aceptación en vivo registrada por un operador. Solo están disponibles los adaptadores de video reanudables de esta lista; mantenla vacía hasta la aceptación |
 | `WORKFLOW_RUN_MAX_INPUT_BYTES` | `262144` | La carga más grande con la que se puede iniciar un run, como JSON compacto. Se guarda en el run para su nodo `core.input`, así que una mayor se rechaza con `413` antes de admitir el run |
 | `WORKFLOW_RUN_MAX_FILE_BYTES` | `1073741824` | Los bytes de archivos que puede guardar un run, todos sus pasos de archivo juntos. Un paso cuyo archivo lo superaría falla con `FILE_QUOTA_EXCEEDED` y no guarda nada |
 | `WORKFLOW_ORG_MAX_FILE_BYTES` | `21474836480` | Lo mismo para una organización, entre todos los runs que aún conservan sus archivos |

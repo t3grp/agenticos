@@ -1,5 +1,5 @@
 ---
-source_sha: "3dcf65276140"
+source_sha: "46f17051be74"
 ---
 
 # Workflows { #workflows }
@@ -153,6 +153,15 @@ robi, albo po grupie. Krok dodajesz na cztery sposoby:
 - **Prawy przycisk** na kanwie: ten sam wybór kroków otwiera się tam, gdzie kliknąłeś,
   i tam trafia krok. Pod nim **Dodaj notatkę** (Add a note) oraz, gdy coś skopiowano, **Wklej** (Paste).
 - **Przeciągnij** krok z wyboru, żeby położyć go tam, gdzie go upuścisz, bez połączeń.
+
+Grupa **Files** zawiera **Asset**, **Generate image** i **Generate video**.
+Asset sprawdza `FileRef` z tego samego runa; kroki generowania używają modeli z
+katalogu, autoryzowanych kluczy API w vault i rezerwacji budżetu workflowu.
+Ustawienia deploymentu kontrolują, kiedy węzły są widoczne. Providery video
+wymagają odnotowanej akceptacji na żywo. Zobacz
+[kontrakty węzłów mediów](reference/workflow-nodes.md#media-generation) oraz
+[ustawienia workflowów](configuration.md#workflow-runs).
+Nowy run może spowodować kolejną opłatę, a okno startu o tym ostrzega.
 
 Aplikacje Google Workspace (**Gmail**, **Google Calendar**, **Google Drive**,
 **Google Docs**, **Google Sheets**) i Microsoft 365 (**Outlook**, **Outlook

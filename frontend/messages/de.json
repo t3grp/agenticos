@@ -13497,7 +13497,17 @@
             "starting" : "Startet",
             "succeeded" : "Erledigt",
             "switchedOff" : "Ausgeschaltet",
-            "waiting" : "Wartet"
+            "waiting" : "Wartet",
+            "mediaProgress" : {
+               "prepared" : "Wird vorbereitet",
+               "submitting" : "Wird gesendet",
+               "generating" : "Wird generiert",
+               "saving" : "Wird gespeichert",
+               "complete" : "Abgeschlossen",
+               "unknown" : "Ausgang unbekannt",
+               "failed" : "Fehlgeschlagen",
+               "cancelled" : "Abgebrochen"
+            }
          },
          "notFound" : "Workflow nicht gefunden",
          "notFoundDetail" : "Dieser Workflow existiert nicht, oder er ist nicht mit Ihnen geteilt.",
@@ -13554,9 +13564,42 @@
          "runDraft" : "Draft testen",
          "runDuration" : "Dauer",
          "runFileDownload" : "{name} herunterladen",
+         "runFilePreview" : "Vorschau von {name}",
          "runFiles" : "Dateien",
          "runFilesCaption" : "Was die Schritte dieses Runs gespeichert haben",
          "runFilesNone" : "Dieser Run hat keine Dateien gespeichert.",
+         "mediaProvider" : "Anbieter",
+         "mediaModel" : "Modell",
+         "mediaProviderPlaceholder" : "Anbieter auswählen",
+         "mediaModelPlaceholder" : "Modell auswählen",
+         "mediaCatalogUnavailable" : "Der Medienmodellkatalog konnte nicht geladen werden.",
+         "mediaField" : {
+            "accepted_types" : "Akzeptierte Dateitypen",
+            "provider" : "Anbieter",
+            "model" : "Modell",
+            "resolution" : "Auflösung",
+            "aspect_ratio" : "Seitenverhältnis",
+            "seconds" : "Dauer (Sekunden)",
+            "audio" : "Audio",
+            "background" : "Hintergrund",
+            "file" : "Datei",
+            "first_frame" : "Erstes Bild",
+            "max_bytes" : "Maximale Dateigröße (Bytes)",
+            "max_cost_usd" : "Maximale Kosten pro Bild (USD)",
+            "max_pixels" : "Maximale Bildpixel",
+            "output_format" : "Bildformat",
+            "prompt" : "Prompt",
+            "quality" : "Bildqualität",
+            "size" : "Bildgröße",
+            "timeout_seconds" : "Zeitlimit (Sekunden)"
+         },
+         "mediaProviderApiKey" : "API-Schlüssel des Anbieters",
+         "mediaRunWarningTitle" : "Mediengenerierung kann Geld kosten",
+         "mediaRunWarning" : "Dieser Run kann eine neue Bild- oder Videoanfrage an einen Anbieter senden. Ein weiterer Run kann eine weitere Belastung verursachen.",
+         "mediaAudioOn" : "Audio einschließen",
+         "mediaAudioOff" : "Ohne Audio",
+         "videoEstimate" : "Geschätzter Höchstbetrag: {amount} für {seconds} Sekunden bei {resolution}. Preisstand {since}.",
+         "videoEstimateUnavailable" : "Kein aktueller Katalogpreis verfügbar. Dieser Schritt verweigert die Übermittlung.",
          "runFilterAnyMode" : "Jede Version",
          "runFilterAnySince" : "Jederzeit",
          "runFilterAnyStatus" : "Jeder Status",
@@ -17422,6 +17465,18 @@
          "image_transform" : {
             "description" : "Ein PNG-, JPEG-, WebP- oder GIF-Bild zuschneiden, skalieren, drehen oder konvertieren; Metadaten werden entfernt und die Größe wird vor dem Dekodieren begrenzt.",
             "name" : "Bild umwandeln"
+         },
+         "asset_input" : {
+            "description" : "Eine run-gebundene Bild- oder Videodatei prüfen und ihre typisierte Dateireferenz weitergeben.",
+            "name" : "Medienasset"
+         },
+         "image_generate" : {
+            "description" : "Ein Bild mit einem Katalogmodell und einem freigegebenen Anbieterschlüssel erstellen.",
+            "name" : "Bild generieren"
+         },
+         "video_generate" : {
+            "description" : "Ein Video mit einer datierten Katalogschätzung und einem freigegebenen Anbieter erstellen.",
+            "name" : "Video generieren"
          },
          "knowledge_add" : {
             "description" : "Einen Text oder eine Datei in Wissens-Collections ablegen, damit Agents sie finden.",

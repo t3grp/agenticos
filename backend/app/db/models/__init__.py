@@ -220,6 +220,7 @@ from app.db.models.failure_learning import (
     AgentInstructionProposal,
 )
 from app.db.models.workflow_file import WorkflowFile
+from app.db.models.workflow_media_operation import WorkflowMediaOperation
 from app.db.models.workflow_log_alert import WorkflowLogAlertFiring, WorkflowLogAlertRule
 from app.db.models.workflow_log_entry import WorkflowLogEntry
 from app.db.models.virtual_table_trigger import (
@@ -468,6 +469,7 @@ __all__ = [
     "AgentInstructionProposal",
     "WorkflowApprovalStatus",
     "WorkflowFile",
+    "WorkflowMediaOperation",
     "WorkflowLogAlertFiring",
     "WorkflowLogAlertRule",
     "WorkflowLogEntry",

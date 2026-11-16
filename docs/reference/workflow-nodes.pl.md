@@ -1,5 +1,5 @@
 ---
-source_sha: "a9b67bff9ee7"
+source_sha: "c55ed9e6e199"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -1368,6 +1368,71 @@ Wyniki sandboxa są ograniczane także podczas strumieniowego pobierania z hosta
 ::: app.workflows.nodes.convert_pdf_to_png._handler.ConvertPdfToPngConfig
 
 ::: app.workflows.nodes.image_transform._handler.ImageTransformConfig
+
+### Wejścia i generowanie mediów { #media-generation }
+
+**Asset** (`asset.input@1`) przyjmuje `FileRef` ze scope'em tego runa. Sprawdza
+zapisany rozmiar i typ względem bajtów, a potem weryfikuje dekodowanie obrazu i
+limit pikseli. Nie zużywa budżetu na generowanie. Wynik zachowuje ten sam
+`FileRef` i podaje wykryty typ, rozmiar bajtów oraz wymiary obrazu, jeśli są
+znane.
+
+**Generate image** (`image.generate@1`) używa modelu obrazów z bieżącego
+katalogu i klucza API, z którego może korzystać osoba wykonująca run. Ustaw
+`max_cost_usd`; workflow rezerwuje ten szacunek przed wysłaniem żądania. Jeśli
+koszt użycia modelu nie jest znany, szacunek pozostaje minimalnym zgłoszonym
+kosztem. Wynik to plik runa i bezpieczny receipt operacji.
+
+**Generate video** (`video.generate@1`) rezerwuje szacowany koszt na podstawie
+bieżącej ceny katalogowej, rozdzielczości i długości. Pierwsza klatka musi być
+`FileRef` z tego runa w formacie PNG, JPEG lub WebP, nie większym niż 10 MiB.
+Wynikiem jest plik runa w formacie MP4. Provider jest dostępny tylko wtedy, gdy
+jego adapter potrafi wznowić znane zadanie z receiptu, a jego ID znajduje się w
+`WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS`.
+
+Deployment steruje paletą przez `WORKFLOW_MEDIA_NODE_STAGE`; zobacz
+[ustawienia workflowów](../configuration.md#workflow-runs). Domyślne
+`disabled` ukrywa wszystkie węzły mediów. `asset` udostępnia Asset. `image`
+udostępnia Asset i Generate image, a także tylko video providery z listy
+akceptacji. Dodaj video providera dopiero po zapisaniu przez operatora wyniku
+ograniczonego testu na żywo. Zamknięta bramka wdrożenia nie wysyła żądań do
+providerów.
+
+Operacje generowania zapisują trwałą fazę i bezpieczny receipt providera. Znany
+receipt video wznawia to samo zadanie providera. Niejednoznaczny wynik pozostaje
+`unknown`, zachowuje szacowany budżet i nigdy nie jest automatycznie wysyłany
+ponownie. Okno startu ostrzega przed nowym runem, który może ponownie obciążyć
+za generowanie. Podglądy plików używają autoryzowanej trasy plików runa; receipt
+nie przechowuje treści odpowiedzi providera, poświadczeń ani podpisanych URL-i.
+
+| Faza | Znaczenie i wznowienie |
+| --- | --- |
+| `prepared` | Operacja i szacunek są zapisane przed wysłaniem żądania do providera. |
+| `submitting` | Żądanie mogło dotrzeć do providera; po restarcie nie można zakładać, że nie dotarło. |
+| `submitted` | Receipt zadania providera jest zapisany i można odpytać to samo zadanie bez ponownego wysłania. |
+| `collecting` | Wynik jest sprawdzany i kopiowany do plików runa. |
+| `stored` | Plik runa i receipt są zapisane; retry zwraca ten wynik. |
+| `unknown` | Przyjęcie lub zapis wyniku są niepewne; automatyczne wysłanie ponowne jest blokowane, a szacunek pozostaje zarezerwowany. |
+
+::: app.workflows.nodes.media._handler.AssetConfig
+
+::: app.workflows.nodes.media._handler.AssetInput
+
+::: app.workflows.nodes.media._handler.AssetOutput
+
+::: app.workflows.nodes.media._handler.GenerateImageConfig
+
+::: app.workflows.nodes.media._handler.GenerateImageInput
+
+::: app.workflows.nodes.media._handler.GenerateImageOutput
+
+::: app.workflows.nodes.media._handler.GenerateVideoConfig
+
+::: app.workflows.nodes.media._handler.GenerateVideoInput
+
+::: app.workflows.nodes.media._handler.GenerateVideoOutput
+
+::: app.workflows.nodes.media._handler.MediaReceipt
 
 ## Python { #python }
 

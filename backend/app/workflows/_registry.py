@@ -147,6 +147,7 @@ def load_builtins() -> None:
         loop_item,
         loop_yield,
         mcp_call,
+        media,
         notification_send,
         table_create,
         table_describe,

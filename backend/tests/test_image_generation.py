@@ -36,6 +36,7 @@ from app.agents.capabilities.sandbox._capped import CappedStateBackend
 from app.agents.deps import AgentDeps
 from app.core.config import settings
 from app.core.secret_kinds import ApiKeySecret
+from app.services import image_generation as image_generation_module
 from tests.workspaces import ShellFailing, document_workspace
 
 pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("generated_media_ledger")]
@@ -75,11 +76,11 @@ class _FakeAgent:
 @pytest.fixture(autouse=True)
 def _fakes(monkeypatch: pytest.MonkeyPatch, tmp_path):
     monkeypatch.setattr(settings, "MEDIA_DIR", tmp_path)
-    # Only the model *run* is faked; `_build_image_model` runs for real (it
+    # Only the model *run* is faked; `_build_model` runs for real (it
     # constructs a provider client with a fake key, no network), so its one
     # branch stays covered.
-    monkeypatch.setattr(toolset_module, "PydanticAgent", _FakeAgent)
-    build = toolset_module._build_image_model
+    monkeypatch.setattr(image_generation_module, "PydanticAgent", _FakeAgent)
+    build = image_generation_module._build_model
 
     def offline_model(model_id: str, api_key: str) -> Model:
         model = build(model_id, api_key)
@@ -94,7 +95,7 @@ def _fakes(monkeypatch: pytest.MonkeyPatch, tmp_path):
         )
         return model
 
-    monkeypatch.setattr(toolset_module, "_build_image_model", offline_model)
+    monkeypatch.setattr(image_generation_module, "_build_model", offline_model)
     _FakeAgent.raise_exc = None
 
 
@@ -237,17 +238,20 @@ async def test_an_image_holds_its_estimate_until_it_is_stored(
 async def test_an_image_that_was_not_drawn_gives_its_hold_back(
     generated_media_reservations: dict[object, dict[str, object]],
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ):
     monkeypatch.setattr(settings, "GENERATED_MEDIA_QUOTA_MB", 1024)
-    _FakeAgent.raise_exc = UserError("refused")
+    _FakeAgent.raise_exc = UserError("api_key=synthetic https://cdn.invalid/?sig=synthetic")
     toolset = build_image_toolset(
         model_id="openai-responses:gpt-5.4", api_key="k", tool_settings={}
     )
 
-    with pytest.raises(ModelRetry):
+    with caplog.at_level("WARNING"), pytest.raises(ModelRetry):
         await _generate(toolset, _ctx(uuid4()))
 
     assert generated_media_reservations == {}
+    assert "synthetic" not in caplog.text
+    assert "cdn.invalid" not in caplog.text
 
 
 async def test_a_quota_of_zero_never_refuses(

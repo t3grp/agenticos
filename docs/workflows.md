@@ -150,6 +150,14 @@ group. You add a step four ways:
   lands there. Beneath it, **Add a note** and, once something is copied, **Paste**.
 - **Drag** a step from the picker to put it where you drop it, wired to nothing.
 
+The **Files** group includes **Asset**, **Generate image** and **Generate video**.
+Asset checks a run-scoped `FileRef`; the generation steps use catalog models,
+authorized vault API keys and workflow budget reservations. Deployment settings
+control when the nodes appear, and Video providers need recorded live acceptance.
+See the [media node contracts](reference/workflow-nodes.md#media-generation) and
+[workflow settings](configuration.md#workflow-runs).
+A new run can make another paid request, so the start dialog warns before it runs.
+
 The apps of Google Workspace (**Gmail**, **Google Calendar**, **Google Drive**,
 **Google Docs**, **Google Sheets**) and of Microsoft 365 (**Outlook**, **Outlook
 Calendar**, **OneDrive**, **Excel**) are groups of their own in **Apps and the web**.

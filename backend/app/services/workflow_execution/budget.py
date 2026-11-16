@@ -27,6 +27,7 @@ from app.agents.capabilities.budget import BudgetScope, SpendLimit
 from app.db.models.workflow_run import WorkflowRun
 from app.db.session import get_worker_db_context
 from app.repositories import organization_repo
+from app.repositories import workflow_media_operation as workflow_media_operation_repo
 from app.repositories import workflow_run as workflow_run_repo
 from app.services.spend import organization_monthly_spend
 
@@ -72,6 +73,7 @@ async def unreserved(db: AsyncSession, run: WorkflowRun) -> Decimal | None:
         return None
     held = await workflow_run_repo.sum_in_flight_reservations(db, workflow_run_id=run.id)
     held += await workflow_run_repo.sum_live_child_reservations(db, workflow_run_id=run.id)
+    held += await workflow_media_operation_repo.sum_unsettled_estimates(db, workflow_run_id=run.id)
     return max(Decimal(0), run.budget_limit - total_cost(run) - held)
 
 

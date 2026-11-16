@@ -1,5 +1,5 @@
 ---
-source_sha: "3dcf65276140"
+source_sha: "46f17051be74"
 ---
 
 # Workflows { #workflows }
@@ -159,6 +159,15 @@ hace o por su grupo. Añades un paso de cuatro maneras:
 - **Clic derecho** en el lienzo: el mismo selector se abre donde hiciste clic, y el
   paso aparece allí. Debajo, **Add a note** y, cuando hay algo copiado, **Paste**.
 - **Arrastra** un paso desde el selector para dejarlo donde lo sueltes, sin conectar.
+
+El grupo **Files** incluye **Asset**, **Generate image** y **Generate video**.
+Asset comprueba un `FileRef` del mismo run; los pasos de generación usan modelos
+del catálogo, claves API autorizadas del vault y reservas del budget del workflow.
+La configuración del deployment controla cuándo aparecen los nodos. Los providers
+de video necesitan una aceptación en vivo registrada. Consulta los
+[contratos de nodos multimedia](reference/workflow-nodes.md#media-generation) y la
+[configuración de workflows](configuration.md#workflow-runs).
+Un run nuevo puede generar otro cargo y el diálogo de inicio lo advierte.
 
 Las aplicaciones de Google Workspace (**Gmail**, **Google Calendar**, **Google Drive**,
 **Google Docs**, **Google Sheets**) y de Microsoft 365 (**Outlook**, **Outlook

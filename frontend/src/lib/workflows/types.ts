@@ -664,6 +664,16 @@ export interface WorkflowNodeRunRead {
   output: Record<string, unknown> | null;
   /** How the step's latest try ended; `uncertain` is one nobody could confirm. Null before any try. */
   last_attempt_status: NodeAttemptStatus | null;
+  media_phase?:
+    | "prepared"
+    | "submitting"
+    | "submitted"
+    | "collecting"
+    | "stored"
+    | "unknown"
+    | "failed"
+    | "cancelled"
+    | null;
   /** What the step reported after its try was given up on, to use instead of running it again. */
   late_output: Record<string, unknown> | null;
   started_at: string | null;

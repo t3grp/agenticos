@@ -10,6 +10,8 @@ disagree. `GET /providers/catalog` is the list, and the service refuses
 anything not in it.
 """
 
+from datetime import date
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -427,6 +429,11 @@ class TextToSpeechProviderList(BaseSchema):
     total: int
 
 
+class VideoPriceRead(BaseSchema):
+    since: date
+    usd_per_second: dict[str, Decimal]
+
+
 class VideoModelRead(BaseSchema):
     """One model that makes video, and what it can make."""
 
@@ -446,6 +453,7 @@ class VideoModelRead(BaseSchema):
         description="Whether a clip carries sound: always, on request, or never"
     )
     first_frame: bool = Field(description="Whether it can start from an image")
+    prices: list[VideoPriceRead] = Field(description="Dated per-second prices by resolution")
 
 
 class VideoProviderRead(BaseSchema):

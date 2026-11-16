@@ -1327,6 +1327,69 @@ Sandbox output is also capped while streaming it from the host. A file that grow
 
 ::: app.workflows.nodes.image_transform._handler.ImageTransformConfig
 
+### Media inputs and generation { #media-generation }
+
+**Asset** (`asset.input@1`) accepts a run-scoped `FileRef`. It checks the stored
+size and type against the bytes, then verifies image decoding and pixel limits.
+It spends no generation budget. Its output keeps the same `FileRef` and reports
+the detected type, byte size and image dimensions when known.
+
+**Generate image** (`image.generate@1`) uses an image model from the current
+catalog and an API key the run principal may use. Set `max_cost_usd`; the
+workflow reserves that estimate before submission. If model usage is unpriced,
+the estimate remains the minimum reported cost. The output is a run file plus a
+safe operation receipt.
+
+**Generate video** (`video.generate@1`) uses a current catalog price, resolution
+and duration to reserve its estimate. A first frame must be a run-scoped
+`FileRef` in PNG, JPEG or WebP format and no larger than 10 MiB. The output is a
+run file in MP4 format. A provider appears only when its adapter can resume a
+known job receipt and its ID is in `WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS`.
+
+The deployment controls the palette with `WORKFLOW_MEDIA_NODE_STAGE`; see
+[workflow settings](../configuration.md#workflow-runs). Its
+default, `disabled`, hides every media node. `asset` exposes Asset. `image`
+exposes Asset and Generate image; it exposes only the video providers that pass
+the acceptance allowlist. Add a video provider only after an operator records a
+bounded live acceptance for that provider. No media node makes a network call
+while its rollout gate is closed.
+
+Generation operations keep a durable phase and a safe provider receipt. Known
+video receipts resume the same provider job. An ambiguous result stays
+`unknown`, keeps its budget estimate and is never submitted again automatically.
+The start dialog warns before a new run can make another billable generation.
+Output previews use the run's authorized file route; provider response bodies,
+credentials and signed URLs are not stored in the receipt.
+
+| Phase | Meaning and recovery |
+| --- | --- |
+| `prepared` | The operation and estimate are stored before provider submission. |
+| `submitting` | The request may have reached the provider; a restart cannot assume it did not. |
+| `submitted` | A provider job receipt is stored and can be polled without another submission. |
+| `collecting` | The result is being checked and copied into run storage. |
+| `stored` | The run file and receipt are saved; a retry returns this result. |
+| `unknown` | Acceptance or storage is uncertain; automatic resubmission is refused and the estimate stays held. |
+
+::: app.workflows.nodes.media._handler.AssetConfig
+
+::: app.workflows.nodes.media._handler.AssetInput
+
+::: app.workflows.nodes.media._handler.AssetOutput
+
+::: app.workflows.nodes.media._handler.GenerateImageConfig
+
+::: app.workflows.nodes.media._handler.GenerateImageInput
+
+::: app.workflows.nodes.media._handler.GenerateImageOutput
+
+::: app.workflows.nodes.media._handler.GenerateVideoConfig
+
+::: app.workflows.nodes.media._handler.GenerateVideoInput
+
+::: app.workflows.nodes.media._handler.GenerateVideoOutput
+
+::: app.workflows.nodes.media._handler.MediaReceipt
+
 ## Python { #python }
 
 Two nodes run Python, for two kinds of work.

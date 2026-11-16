@@ -226,6 +226,19 @@ class WorkflowNodeRunRead(BaseSchema):
         description="How the step's latest try ended: `uncertain` is a try nobody could "
         "confirm. Null before any try",
     )
+    media_phase: (
+        Literal[
+            "prepared",
+            "submitting",
+            "submitted",
+            "collecting",
+            "stored",
+            "unknown",
+            "failed",
+            "cancelled",
+        ]
+        | None
+    ) = Field(default=None, description="Durable phase of a media provider operation")
     late_output: dict[str, Any] | None = Field(
         default=None,
         description="The output the step reported after its try was given up on, which a "

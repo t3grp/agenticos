@@ -20,6 +20,7 @@ import {
   FORM_TRIGGER,
   CHAT_TRIGGER,
 } from "@/lib/workflows/triggers";
+import { hasBillableMedia } from "@/lib/workflows/media";
 import type { NodeDefinition } from "@/lib/workflows/types";
 import { useWorkflowEditorStore } from "@/stores/workflow-editor-store";
 
@@ -152,6 +153,7 @@ export function RunButton({ workflowId, catalog, onStarted }: RunButtonProps) {
           onOpenChange={setAsking}
           canRunLive={false}
           canTest
+          hasBillableMedia={hasBillableMedia(graph)}
           busy={start.isPending}
           error={start.error}
           onInputChange={start.reset}

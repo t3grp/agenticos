@@ -79,6 +79,7 @@ from app.repositories import member as member_repo
 from app.repositories import user as user_repo
 from app.repositories import workflow as workflow_repo
 from app.repositories import workflow_approval as workflow_approval_repo
+from app.repositories import workflow_media_operation as workflow_media_operation_repo
 from app.repositories import workflow_run as workflow_run_repo
 from app.schemas.workflow_run import StepChoice
 from app.services.access import WORKFLOW, resolve_access
@@ -995,11 +996,39 @@ async def begin_attempt(
 
     reserved: Decimal | None = None
     handed = budget.remaining(run)
+    media_operation = None
+    if definition.id in {"image.generate", "video.generate"}:
+        media_operation = await workflow_media_operation_repo.get_for_node_run(
+            db, node_run.id, organization_id=run.organization_id
+        )
+    cached_media_output = (
+        media_operation is not None
+        and media_operation.phase == "stored"
+        and media_operation.output is not None
+    )
     # A step woken because the run it called ended only collects the answer: the called
     # run did the spending, and holding it back for a sibling's share could not help.
     collecting = node_run.waiting_reason == WaitingReason.EXTERNAL_EVENT.value
-    if definition.spends_budget and run.budget_limit is not None and not collecting:
+    if (
+        definition.spends_budget
+        and run.budget_limit is not None
+        and not collecting
+        and not cached_media_output
+    ):
         free = await budget.unreserved(db, run)
+        if free is None:
+            raise RuntimeError("A workflow with a budget limit must have an unreserved balance")
+        media_resume_estimate: Decimal | None = None
+        if (
+            media_operation is not None
+            and media_operation.phase in {"submitted", "collecting"}
+            and isinstance(media_operation.provider_receipt, dict)
+            and isinstance(media_operation.provider_receipt.get("operation_id"), str)
+            and media_operation.estimated_cost_usd is not None
+        ):
+            # Move the known job's durable hold onto this in-flight attempt.
+            media_resume_estimate = media_operation.estimated_cost_usd
+            free += media_resume_estimate
         if not free:
             # The cap is not spent (`over_budget` above) but parallel steps hold all
             # that is left. Try again once one of them settles; nothing is handed out.
@@ -1007,7 +1036,8 @@ async def begin_attempt(
             return None
         # A step that calls a workflow reserves like any spender; the hold moves to the
         # called run's own row when it is admitted (`admit_call`).
-        reserved = handed = budget.reservation(free, budget.own_cap(call.config))
+        own_cap = media_resume_estimate or budget.own_cap(call.config)
+        reserved = handed = budget.reservation(free, own_cap)
 
     attempt_no = (latest.attempt_no if latest else 0) + 1
     key = idempotency_key(
@@ -1542,6 +1572,30 @@ async def _resolve_orphan_of_live_run(
     db: AsyncSession, *, run: WorkflowRun, node_run: NodeRun, attempt: NodeAttempt, now: datetime
 ) -> None:
     """Retry an interrupted attempt that is safe to repeat; otherwise a person decides."""
+    media_operation = await workflow_media_operation_repo.get_for_node_run(
+        db, node_run.id, organization_id=run.organization_id
+    )
+    if media_operation is not None:
+        has_receipt = isinstance(media_operation.provider_receipt, dict) and isinstance(
+            media_operation.provider_receipt.get("operation_id"), str
+        )
+        resumable = (
+            media_operation.phase in {"prepared", "stored"}
+            and (media_operation.phase != "stored" or media_operation.output is not None)
+        ) or (media_operation.phase in {"submitted", "collecting"} and has_receipt)
+        if resumable:
+            graph = await _graph_or_none(db, run)
+            retry = _retry_policy(graph, node_run)
+            failures = await workflow_run_repo.count_failed_attempts(db, node_run_id=node_run.id)
+            if failures < _attempt_ceiling(retry):
+                await dispatch_queue.queue_dispatch(
+                    db,
+                    run=run,
+                    node_run_id=node_run.id,
+                    available_at=now + timedelta(seconds=_backoff_seconds(failures, retry)),
+                )
+                return
+
     if attempt.retry_guarantee == RetryGuarantee.IDEMPOTENT.value:
         # The same ceiling and backoff a `Failed` result gets: a node whose
         # every attempt dies mid-call (a handler that crashes its worker) must
@@ -1757,6 +1811,12 @@ async def _settle_loaded(
                 cost=max(outcome.cost, cumulative),
                 cost_is_partial=outcome.cost_is_partial or child.cost_is_partial,
             )
+    if begun.definition.id in {"image.generate", "video.generate"}:
+        booked = await workflow_run_repo.sum_attempt_costs(db, node_run_id=node_run.id)
+        outcome = replace(
+            outcome,
+            cost=attempt.cost + max(Decimal(0), outcome.cost - booked),
+        )
     # An outcome describes this handler invocation's cumulative spend. A duplicate
     # delivery adds nothing; a late result can refine what was known of the same try.
     cost_outcome = replace(outcome, cost=max(Decimal(0), outcome.cost - attempt.cost))
@@ -1766,6 +1826,8 @@ async def _settle_loaded(
         "decide.choose",
         "decide.score",
         "knowledge.search",
+        "image.generate",
+        "video.generate",
     }:
         await workflow_run_repo.record_node_spend(
             db,

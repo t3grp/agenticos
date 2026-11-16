@@ -22,6 +22,17 @@ const WORD: Record<NodeRunState, string> = {
   switchedOff: "switchedOff",
 };
 
+const MEDIA_WORD = {
+  prepared: "mediaProgress.prepared",
+  submitting: "mediaProgress.submitting",
+  submitted: "mediaProgress.generating",
+  collecting: "mediaProgress.saving",
+  stored: "mediaProgress.complete",
+  unknown: "mediaProgress.unknown",
+  failed: "mediaProgress.failed",
+  cancelled: "mediaProgress.cancelled",
+} as const;
+
 // Solid fills - a tint mixed into the card, never a see-through one - since the
 // pill sits on the card's border, which would otherwise show through it.
 const LOOK: Record<NodeRunState, string> = {
@@ -54,6 +65,8 @@ export function RunPill({
 }) {
   const t = useTranslations("pages.workflows.nodeStatus");
   const took = state === "done" && summary?.durationMs != null ? summary.durationMs : null;
+  const progressWord =
+    summary?.mediaPhase == null ? undefined : MEDIA_WORD[summary.mediaPhase];
   return (
     <span
       data-run-state={state}
@@ -68,7 +81,11 @@ export function RunPill({
       {state === "waiting" && <Hourglass aria-hidden="true" className="size-3" />}
       {state === "done" && <Check aria-hidden="true" className="size-3" />}
       {(state === "failed" || state === "attention") && <X aria-hidden="true" className="size-3" />}
-      {took === null ? t(WORD[state]) : formatElapsed(took)}
+      {progressWord !== undefined && (state === "running" || state === "failed")
+        ? t(progressWord)
+        : took === null
+          ? t(WORD[state])
+          : formatElapsed(took)}
       {state === "running" && summary?.startedAt != null && <Ticking since={summary.startedAt} />}
     </span>
   );

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.spec import AgentSpec
 from app.core.audit import record_audit
 from app.core.background import spawn_after_commit
+from app.core.config import settings
 from app.core.exceptions import (
     AlreadyExistsError,
     AppException,
@@ -70,14 +71,21 @@ from app.schemas.workflow import (
 )
 from app.services.access import TABLE, WORKFLOW, resolve_access, visible_resource_ids
 from app.services.file_storage import delete_files_best_effort
+from app.services.image_models import image_providers
 from app.services.mcp_connection import McpConnectionService
 from app.services.sharing import SharingService
-from app.services.virtual_tables.dependencies import Dependent, register_dependency_checker
+from app.services.video_generation import WORKFLOW_RESUMABLE_APIS
+from app.services.video_models import providers as video_providers
+from app.services.virtual_tables.dependencies import (
+    Dependent,
+    register_dependency_checker,
+)
 from app.services.virtual_tables.facade import VirtualTableService
 from app.services.workflow_authority import require_human_publisher
 from app.services.workflow_execution.exceptions import WorkflowArchivedError
 from app.services.workflow_triggers import WorkflowTriggerSync
 from app.workflows._registry import all_node_definitions
+from app.workflows.contracts.definition import NodeDefinition
 from app.workflows.contracts.io import (
     Binding,
     LiteralValue,
@@ -93,8 +101,15 @@ from app.workflows.graph.model import (
     WorkflowGraph,
     jsonb_value_fits,
 )
-from app.workflows.graph.validate import derive_scopes, graph_size_problems, validate_graph
-from app.workflows.nodes.core_input._handler import TriggerInputConfig, effective_input_schema
+from app.workflows.graph.validate import (
+    derive_scopes,
+    graph_size_problems,
+    validate_graph,
+)
+from app.workflows.nodes.core_input._handler import (
+    TriggerInputConfig,
+    effective_input_schema,
+)
 from app.workflows.triggers import (
     DECLARES_FIELDS,
     UNATTENDED,
@@ -105,6 +120,46 @@ from app.workflows.triggers import (
 
 _SLUG_ALLOWED = re.compile(r"[^a-z0-9]+")
 _SLUG_TRIM = re.compile(r"-{2,}")
+
+
+def _node_config_schema(definition: NodeDefinition) -> dict[str, object] | None:
+    """Add current catalog choices to media config fields for the editor."""
+    if definition.config_schema is None:
+        return None
+    schema = definition.config_schema.model_json_schema()
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return schema
+    provider = properties.get("provider")
+    if not isinstance(provider, dict):
+        return schema
+    if definition.id == "image.generate":
+        provider["enum"] = [entry.provider for entry in image_providers()]
+    elif definition.id == "video.generate":
+        accepted = set(settings.WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS)
+        provider["enum"] = [
+            entry.provider
+            for entry in video_providers()
+            if entry.provider in accepted and entry.api in WORKFLOW_RESUMABLE_APIS
+        ]
+    return schema
+
+
+def _node_is_catalogued(node_id: str) -> bool:
+    """Keep media nodes out of the palette until each rollout gate opens."""
+    stage = settings.WORKFLOW_MEDIA_NODE_STAGE
+    if node_id == "asset.input":
+        return stage in {"asset", "image"}
+    if node_id == "image.generate":
+        return stage == "image"
+    if node_id == "video.generate":
+        accepted = set(settings.WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS)
+        return stage == "image" and any(
+            entry.provider in accepted and entry.api in WORKFLOW_RESUMABLE_APIS
+            for entry in video_providers()
+        )
+    return True
+
 
 # `WorkflowCreate.name`'s ceiling. The numbering suffix eats into it rather than
 # growing past it, so the suffix - the part that says which one this is - always
@@ -407,9 +462,7 @@ class WorkflowRegistryService:
                 category=definition.category,
                 description=definition.description,
                 kind=definition.kind,
-                config_schema=definition.config_schema.model_json_schema()
-                if definition.config_schema
-                else None,
+                config_schema=_node_config_schema(definition),
                 input_schema=definition.input_schema.model_json_schema()
                 if definition.input_schema
                 else None,
@@ -432,6 +485,7 @@ class WorkflowRegistryService:
                 exclusive_branches=definition.exclusive_branches,
             )
             for definition in all_node_definitions()
+            if _node_is_catalogued(definition.id)
         ]
         return NodeCatalog(items=items, total=len(items))
 

@@ -45,6 +45,13 @@ function mount(props: Partial<Parameters<typeof StartRunDialog>[0]> = {}) {
 }
 
 describe("StartRunDialog", () => {
+  it("warns when a run can submit billable media generation", () => {
+    mount({ hasBillableMedia: true });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Media generation can cost money");
+    expect(screen.getByRole("status")).toHaveTextContent("Running again can create another charge");
+  });
+
   it("prefills the selected published entry rather than a different draft trigger", async () => {
     const onStart = mount({
       canTest: false,

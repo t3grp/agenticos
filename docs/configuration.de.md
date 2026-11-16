@@ -1,5 +1,5 @@
 ---
-source_sha: "aa79e2a8a321"
+source_sha: "69f02740ce08"
 ---
 
 # Konfiguration { #configuration }
@@ -561,6 +561,8 @@ legitimen Run und nicht knapper. Siehe
 
 | Variable | Standard | Beschreibung |
 | --- | --- | --- |
+| `WORKFLOW_MEDIA_NODE_STAGE` | `disabled` | Rollout-Stufe der Medienknoten: `disabled` blendet alle aus, `asset` zeigt Asset und `image` ergänzt Bildgenerierung sowie akzeptierte Video-Provider |
+| `WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS` | `[]` | JSON-Liste der Provider-IDs mit einem vom Operator dokumentierten Live-Abnahmetest. Nur fortsetzbare Video-Adapter in dieser Liste sind verfügbar; bis zur Abnahme leer lassen |
 | `WORKFLOW_RUN_MAX_INPUT_BYTES` | `262144` | Die größte Nutzlast, mit der ein Run gestartet werden kann, als kompaktes JSON. Sie wird für den `core.input`-Knoten am Run gespeichert, daher wird eine größere mit `413` abgelehnt, bevor der Run angenommen wird |
 | `WORKFLOW_RUN_MAX_FILE_BYTES` | `1073741824` | Die meisten Dateibytes, die ein Run speichern darf, alle seine Dateischritte zusammen. Ein Schritt, dessen Datei es überschreiten würde, scheitert mit `FILE_QUOTA_EXCEEDED` und speichert nichts |
 | `WORKFLOW_ORG_MAX_FILE_BYTES` | `21474836480` | Dasselbe für eine Organisation, über alle Runs, die ihre Dateien noch halten |

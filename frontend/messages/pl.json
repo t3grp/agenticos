@@ -13578,7 +13578,17 @@
             "starting" : "Uruchamia się",
             "succeeded" : "Gotowe",
             "switchedOff" : "Wyłączony",
-            "waiting" : "Czeka"
+            "waiting" : "Czeka",
+            "mediaProgress" : {
+               "prepared" : "Przygotowywanie",
+               "submitting" : "Wysyłanie",
+               "generating" : "Generowanie",
+               "saving" : "Zapisywanie",
+               "complete" : "Gotowe",
+               "unknown" : "Nieznany wynik",
+               "failed" : "Niepowodzenie",
+               "cancelled" : "Anulowano"
+            }
          },
          "notFound" : "Nie znaleziono workflow",
          "notFoundDetail" : "Ten workflow nie istnieje albo nie jest Ci udostępniony.",
@@ -13635,9 +13645,42 @@
          "runDraft" : "Testuj draft",
          "runDuration" : "Czas",
          "runFileDownload" : "Pobierz {name}",
+         "runFilePreview" : "Podgląd: {name}",
          "runFiles" : "Pliki",
          "runFilesCaption" : "Co zapisały kroki tego uruchomienia",
          "runFilesNone" : "To uruchomienie nie zapisało żadnych plików.",
+         "mediaProvider" : "Dostawca",
+         "mediaModel" : "Model",
+         "mediaProviderPlaceholder" : "Wybierz dostawcę",
+         "mediaModelPlaceholder" : "Wybierz model",
+         "mediaCatalogUnavailable" : "Nie można wczytać katalogu modeli multimedialnych.",
+         "mediaField" : {
+            "accepted_types" : "Akceptowane typy plików",
+            "provider" : "Dostawca",
+            "model" : "Model",
+            "resolution" : "Rozdzielczość",
+            "aspect_ratio" : "Proporcje obrazu",
+            "seconds" : "Czas trwania (sekundy)",
+            "audio" : "Dźwięk",
+            "background" : "Tło",
+            "file" : "Plik",
+            "first_frame" : "Pierwsza klatka",
+            "max_bytes" : "Maksymalny rozmiar pliku (bajty)",
+            "max_cost_usd" : "Maksymalny koszt obrazu (USD)",
+            "max_pixels" : "Maksymalna liczba pikseli obrazu",
+            "output_format" : "Format obrazu",
+            "prompt" : "Prompt",
+            "quality" : "Jakość obrazu",
+            "size" : "Rozmiar obrazu",
+            "timeout_seconds" : "Limit czasu (sekundy)"
+         },
+         "mediaProviderApiKey" : "Klucz API dostawcy",
+         "mediaRunWarningTitle" : "Generowanie mediów może kosztować",
+         "mediaRunWarning" : "To uruchomienie może wysłać nowe żądanie obrazu lub filmu do dostawcy. Kolejne uruchomienie może spowodować kolejną opłatę.",
+         "mediaAudioOn" : "Dołącz dźwięk",
+         "mediaAudioOff" : "Bez dźwięku",
+         "videoEstimate" : "Szacowany limit: {amount} za {seconds} sekund przy {resolution}. Cena z dnia {since}.",
+         "videoEstimateUnavailable" : "Brak aktualnej ceny w katalogu. Ten krok odmówi wysłania żądania.",
          "runFilterAnyMode" : "Dowolna wersja",
          "runFilterAnySince" : "Dowolny czas",
          "runFilterAnyStatus" : "Dowolny status",
@@ -17510,6 +17553,18 @@
          "image_transform" : {
             "description" : "Przytnij, zmień rozmiar, obróć lub przekonwertuj obraz PNG, JPEG, WebP lub GIF, z usuniętymi metadanymi i rozmiarem ograniczonym przed dekodowaniem.",
             "name" : "Przekształć obraz"
+         },
+         "asset_input" : {
+            "description" : "Sprawdź plik obrazu lub wideo należący do uruchomienia i przekaż dalej jego typowaną referencję.",
+            "name" : "Zasób"
+         },
+         "image_generate" : {
+            "description" : "Wygeneruj obraz przy użyciu modelu z katalogu i autoryzowanego klucza dostawcy.",
+            "name" : "Generuj obraz"
+         },
+         "video_generate" : {
+            "description" : "Wygeneruj wideo z datowanym szacunkiem kosztu i zaakceptowanym dostawcą.",
+            "name" : "Generuj wideo"
          },
          "knowledge_add" : {
             "description" : "Dodaj tekst lub plik do kolekcji wiedzy, żeby agenci mogli go znaleźć.",

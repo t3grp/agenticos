@@ -207,8 +207,35 @@ class TestUnreserved:
                 "sum_live_child_reservations",
                 AsyncMock(return_value=Decimal("0.2")),
             ),
+            patch.object(
+                budget.workflow_media_operation_repo,
+                "sum_unsettled_estimates",
+                AsyncMock(return_value=Decimal("0")),
+            ),
         ):
             assert await budget.unreserved(MagicMock(), run) == Decimal("0.2")
+
+    @pytest.mark.security
+    async def test_an_unknown_media_estimate_stays_reserved(self):
+        run = _run(budget_limit=Decimal("1"), spent_cost=Decimal("0.2"), child_cost=Decimal("0.1"))
+        with (
+            patch.object(
+                budget.workflow_run_repo,
+                "sum_in_flight_reservations",
+                AsyncMock(return_value=Decimal("0.3")),
+            ),
+            patch.object(
+                budget.workflow_run_repo,
+                "sum_live_child_reservations",
+                AsyncMock(return_value=Decimal("0.2")),
+            ),
+            patch.object(
+                budget.workflow_media_operation_repo,
+                "sum_unsettled_estimates",
+                AsyncMock(return_value=Decimal("0.1")),
+            ),
+        ):
+            assert await budget.unreserved(MagicMock(), run) == Decimal("0.1")
 
     @pytest.mark.security
     async def test_more_held_than_the_cap_leaves_nothing_never_less(self):
@@ -222,6 +249,11 @@ class TestUnreserved:
             patch.object(
                 budget.workflow_run_repo,
                 "sum_live_child_reservations",
+                AsyncMock(return_value=Decimal("0")),
+            ),
+            patch.object(
+                budget.workflow_media_operation_repo,
+                "sum_unsettled_estimates",
                 AsyncMock(return_value=Decimal("0")),
             ),
         ):

@@ -13968,7 +13968,17 @@
             "starting" : "Starting",
             "succeeded" : "Done",
             "switchedOff" : "Switched off",
-            "waiting" : "Waiting"
+            "waiting" : "Waiting",
+            "mediaProgress" : {
+               "prepared" : "Preparing",
+               "submitting" : "Submitting",
+               "generating" : "Generating",
+               "saving" : "Saving",
+               "complete" : "Complete",
+               "unknown" : "Outcome unknown",
+               "failed" : "Failed",
+               "cancelled" : "Cancelled"
+            }
          },
          "notFound" : "Workflow not found",
          "notFoundDetail" : "This workflow does not exist, or it is not shared with you.",
@@ -14025,9 +14035,42 @@
          "runDraft" : "Test draft",
          "runDuration" : "Duration",
          "runFileDownload" : "Download {name}",
+         "runFilePreview" : "Preview {name}",
          "runFiles" : "Files",
          "runFilesCaption" : "What this run's steps stored",
          "runFilesNone" : "This run has stored no files.",
+         "mediaProvider" : "Provider",
+         "mediaModel" : "Model",
+         "mediaProviderPlaceholder" : "Choose a provider",
+         "mediaModelPlaceholder" : "Choose a model",
+         "mediaCatalogUnavailable" : "The media model catalog could not be loaded.",
+         "mediaField" : {
+            "accepted_types" : "Accepted file types",
+            "provider" : "Provider",
+            "model" : "Model",
+            "resolution" : "Resolution",
+            "aspect_ratio" : "Aspect ratio",
+            "seconds" : "Duration (seconds)",
+            "audio" : "Audio",
+            "background" : "Background",
+            "file" : "File",
+            "first_frame" : "First frame",
+            "max_bytes" : "Maximum file size (bytes)",
+            "max_cost_usd" : "Maximum cost per image (USD)",
+            "max_pixels" : "Maximum image pixels",
+            "output_format" : "Image format",
+            "prompt" : "Prompt",
+            "quality" : "Image quality",
+            "size" : "Image size",
+            "timeout_seconds" : "Timeout (seconds)"
+         },
+         "mediaProviderApiKey" : "Provider API key",
+         "mediaRunWarningTitle" : "Media generation can cost money",
+         "mediaRunWarning" : "This run can send a new image or video request to a provider. Running again can create another charge.",
+         "mediaAudioOn" : "Include audio",
+         "mediaAudioOff" : "No audio",
+         "videoEstimate" : "Estimated maximum: {amount} for {seconds} seconds at {resolution}. Price dated {since}.",
+         "videoEstimateUnavailable" : "No current catalog price is available. This node will refuse submission.",
          "runFilterAnyMode" : "Any version",
          "runFilterAnySince" : "Any time",
          "runFilterAnyStatus" : "Any status",
@@ -17948,6 +17991,18 @@
          "image_transform" : {
             "description" : "Crop, resize, rotate or convert a PNG, JPEG, WebP or GIF image, with its metadata removed and its size bounded before it is decoded.",
             "name" : "Transform an image"
+         },
+         "asset_input" : {
+            "description" : "Check a run-scoped image or video file and pass its typed file reference forward.",
+            "name" : "Asset"
+         },
+         "image_generate" : {
+            "description" : "Generate an image with a catalog model and an authorized provider key.",
+            "name" : "Generate image"
+         },
+         "video_generate" : {
+            "description" : "Generate a video with a dated catalog estimate and an accepted provider.",
+            "name" : "Generate video"
          },
          "knowledge_add" : {
             "description" : "Put a text or a file into knowledge collections, for agents to find.",

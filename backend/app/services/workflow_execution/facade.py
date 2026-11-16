@@ -43,6 +43,7 @@ from app.repositories import workflow as workflow_repo
 from app.repositories import workflow_approval as workflow_approval_repo
 from app.repositories import workflow_file as workflow_file_repo
 from app.repositories import workflow_log_entry as workflow_log_repo
+from app.repositories import workflow_media_operation as workflow_media_operation_repo
 from app.repositories import workflow_run as workflow_run_repo
 from app.schemas.reply_expectation import ReplyExpectation, ReplyExpectationEdit
 from app.schemas.workflow import StoredWorkflowSettings
@@ -1170,6 +1171,11 @@ class WorkflowExecutionService:
         attempts = await workflow_run_repo.list_attempts_of(
             self.db, node_run_ids=[row.id for row in rows]
         )
+        media_phases = await workflow_media_operation_repo.phases_for_node_runs(
+            self.db,
+            [row.id for row in rows],
+            organization_id=ctx.organization_id,
+        )
         by_run: dict[UUID, list[NodeAttempt]] = {}
         for attempt in attempts:
             by_run.setdefault(attempt.node_run_id, []).append(attempt)
@@ -1191,6 +1197,7 @@ class WorkflowExecutionService:
         items = []
         for row in rows:
             read = node_run_read(row, by_run.get(row.id, []))
+            read.media_phase = media_phases.get(row.id)
             if row.node_instance_id in awaited and row.resume_payload is not None:
                 read.reply_expectation = ReplyExpectation.model_validate(row.resume_payload)
             decision = decisions.get(row.id)

@@ -23,6 +23,7 @@ import pytest
 
 from app.services import video_models
 from app.services.video_generation import (
+    WORKFLOW_RESUMABLE_APIS,
     FirstFrame,
     VideoFailure,
     VideoProviderError,
@@ -563,6 +564,79 @@ class TestAlibaba:
             await _make("alibaba", "wan3.0-video")
 
         assert caught.value.failure is failure
+
+
+@pytest.mark.parametrize(
+    ("provider_id", "model", "create_path", "receipt", "status_path", "status_payload"),
+    [
+        (
+            "byteplus",
+            "dreamina-seedance-2-0-260128",
+            "/api/v3/contents/generations/tasks",
+            "cgt-resume",
+            "/api/v3/contents/generations/tasks/cgt-resume",
+            {"status": "succeeded", "content": {"video_url": "https://tos.example/v.mp4"}},
+        ),
+        (
+            "xai",
+            "grok-imagine-video-1.5",
+            "/v1/videos/generations",
+            "request-resume",
+            "/v1/videos/request-resume",
+            {"status": "done", "video": {"url": "https://vidgen.example/v.mp4", "duration": 4}},
+        ),
+        (
+            "alibaba",
+            "wan3.0-video",
+            "/api/v1/services/aigc/video-generation/video-synthesis",
+            "task-resume",
+            "/api/v1/tasks/task-resume",
+            {"output": {"task_status": "SUCCEEDED", "video_url": "https://oss.example/v.mp4"}},
+        ),
+    ],
+    ids=["byteplus", "xai", "alibaba"],
+)
+async def test_a_known_job_receipt_resumes_without_another_submission(
+    provider_id, model, create_path, receipt, status_path, status_payload
+):
+    submitted: list[str] = []
+
+    async def save_receipt(value: str) -> None:
+        submitted.append(value)
+
+    def create(_request: httpx.Request) -> httpx.Response:
+        if provider_id == "byteplus":
+            return httpx.Response(200, json={"id": receipt})
+        if provider_id == "xai":
+            return httpx.Response(200, json={"request_id": receipt})
+        return httpx.Response(200, json={"output": {"task_id": receipt}})
+
+    def status(_request: httpx.Request) -> httpx.Response:
+        assert submitted == [receipt]
+        return httpx.Response(200, json=status_payload)
+
+    routes = {
+        ("POST", create_path): create,
+        ("GET", status_path): status,
+        ("GET", "/v.mp4"): _bytes(),
+    }
+    with _answering(routes) as seen:
+        clip = await _make(provider_id, model, receipt_callback=save_receipt)
+
+    assert _provider(provider_id).api in WORKFLOW_RESUMABLE_APIS
+    assert submitted == [receipt]
+    assert clip.data == MP4
+    assert any(request.method == "POST" for request in seen)
+
+    resumed_routes = {
+        ("GET", status_path): _json(status_payload),
+        ("GET", "/v.mp4"): _bytes(),
+    }
+    with _answering(resumed_routes) as resumed:
+        resumed_clip = await _make(provider_id, model, resume_receipt=receipt)
+
+    assert resumed_clip.data == MP4
+    assert all(request.method != "POST" for request in resumed)
 
     async def test_a_create_answer_without_a_task_is_unavailable(self):
         with (
@@ -1291,3 +1365,47 @@ async def test_a_refused_submission_reports_no_stage():
         await _make("xai", "grok-imagine-video-1.5", reached=stages.append)
 
     assert stages == []
+
+
+async def test_transport_failure_logs_no_response_text_or_signed_url(caplog):
+    def lost(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout(
+            "api_key=synthetic https://storage.invalid/video.mp4?sig=synthetic",
+            request=request,
+        )
+
+    with (
+        caplog.at_level(logging.WARNING),
+        _answering({("POST", "/v1/videos/generations"): lost}),
+        pytest.raises(VideoProviderError),
+    ):
+        await _make("xai", "grok-imagine-video-1.5")
+
+    assert "synthetic" not in caplog.text
+    assert "storage.invalid" not in caplog.text
+
+
+async def test_cancel_failure_logs_no_response_text_or_provider_url(caplog):
+    def lost(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadError(
+            "api_key=synthetic https://provider.invalid/?sig=synthetic", request=request
+        )
+
+    call = clients_module.VideoCall(
+        provider="byteplus",
+        base_url="https://provider.invalid/api/v3",
+        api_key=KEY,
+        model="dreamina-seedance-2-0-260128",
+        prompt="synthetic prompt",
+        resolution="720p",
+        aspect_ratio="16:9",
+    )
+    with (
+        caplog.at_level(logging.INFO),
+        _answering({("DELETE", "/api/v3/contents/generations/tasks/t1"): lost}),
+    ):
+        async with httpx.AsyncClient() as client:
+            await clients_module.cancel_byteplus_task(client, call, "t1")
+
+    assert "synthetic" not in caplog.text
+    assert "provider.invalid" not in caplog.text

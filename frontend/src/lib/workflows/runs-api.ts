@@ -124,6 +124,12 @@ export async function downloadWorkflowRunFile(runId: string, file: WorkflowRunFi
   saveBlob(await response.blob(), file.filename ?? file.id);
 }
 
+/** Read one file through the run-scoped route for an authorized inline preview. */
+export async function getWorkflowRunFileBlob(runId: string, fileId: string): Promise<Blob> {
+  const response = await apiClient.raw(`${ROOT}/${runId}/files/${fileId}`);
+  return response.blob();
+}
+
 /** Correct or pause an expectation; the account cannot be silently replaced. */
 export async function editReplyExpectation(
   runId: string,

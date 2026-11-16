@@ -1255,6 +1255,16 @@ async def booked_agent_segments(
     return Decimal(total or 0)
 
 
+async def sum_attempt_costs(db: AsyncSession, *, node_run_id: UUID) -> Decimal:
+    """Spend already booked across every dispatch attempt of one node."""
+    total = await db.scalar(
+        select(func.coalesce(func.sum(NodeAttempt.cost), 0)).where(
+            NodeAttempt.node_run_id == node_run_id
+        )
+    )
+    return Decimal(total or 0)
+
+
 async def sum_in_flight_reservations(db: AsyncSession, *, workflow_run_id: UUID) -> Decimal:
     """What the run's attempts still in flight hold of its budget.
 

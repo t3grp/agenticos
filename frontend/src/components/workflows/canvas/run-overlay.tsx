@@ -23,6 +23,7 @@ export interface NodeRunSummary {
   durationMs: number | null;
   /** When the row running now started, by the server's clock: a running step's timer. */
   startedAt: string | null;
+  mediaPhase?: WorkflowNodeRunRead["media_phase"];
 }
 
 function took(row: WorkflowNodeRunRead): number | null {
@@ -54,6 +55,7 @@ export function summarizeNodeRuns(rows: WorkflowNodeRunRead[]): Map<string, Node
   for (const row of rows) {
     const current = byNode.get(row.node_instance_id);
     if (current === undefined) {
+      const mediaPhase = row.media_phase ?? undefined;
       byNode.set(row.node_instance_id, {
         status: row.status,
         runs: 1,
@@ -63,11 +65,16 @@ export function summarizeNodeRuns(rows: WorkflowNodeRunRead[]): Map<string, Node
         items: listSize(row.output),
         durationMs: took(row),
         startedAt: row.status === "running" ? row.started_at : null,
+        ...(mediaPhase === undefined ? {} : { mediaPhase }),
       });
       continue;
     }
     const items = listSize(row.output);
     const worse = SEVERITY.indexOf(row.status) < SEVERITY.indexOf(current.status);
+    const mediaPhase =
+      row.status === "running" || row.media_phase === "unknown"
+        ? row.media_phase ?? undefined
+        : current.mediaPhase;
     byNode.set(row.node_instance_id, {
       status: worse ? row.status : current.status,
       runs: current.runs + 1,
@@ -81,6 +88,7 @@ export function summarizeNodeRuns(rows: WorkflowNodeRunRead[]): Map<string, Node
           ? null
           : (current.durationMs ?? 0) + (took(row) ?? 0),
       startedAt: row.status === "running" ? row.started_at : current.startedAt,
+      ...(mediaPhase === undefined ? {} : { mediaPhase }),
     });
   }
   return byNode;

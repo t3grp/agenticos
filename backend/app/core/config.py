@@ -1017,6 +1017,10 @@ class Settings(BaseSettings):
     WORKFLOW_GRAPH_MAX_NODES: int = Field(default=500, gt=0)
     WORKFLOW_GRAPH_MAX_EDGES: int = Field(default=2000, gt=0)
     WORKFLOW_GRAPH_MAX_BINDINGS: int = Field(default=2000, gt=0)
+    # Media nodes ship in a staged rollout. Video providers stay unavailable
+    # until an operator adds one after its bounded live acceptance is recorded.
+    WORKFLOW_MEDIA_NODE_STAGE: Literal["disabled", "asset", "image"] = "disabled"
+    WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS: list[str] = Field(default_factory=list)
     # The largest payload a run may be started with, as compact JSON. It is stored
     # on the run's row and read at every `core.input` dispatch, and the surfaces
     # that supply it are open to API keys and webhooks (#1792), so an unbounded one

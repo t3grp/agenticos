@@ -872,6 +872,7 @@ include = [
     # would empty that picker without a single test failing.
     "app/services/decision_models.py",
     "app/services/image_models.py",
+    "app/services/image_generation.py",
     "app/services/model_profile.py",
     "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
@@ -909,6 +910,7 @@ include = [
     "app/services/video_generation/clients.py",
     "app/services/video_generation/exceptions.py",
     "app/services/video_generation/generation.py",
+    "app/services/workflow_media_operations.py",
     "app/services/provider_error_code.py",
     "app/services/transcription_usage.py",
     # The rest of `app/services/rag/` came with the template and is reported
@@ -1374,6 +1376,8 @@ include = [
     "app/repositories/workflow.py",
     "app/schemas/workflow.py",
     "app/services/workflow_registry.py",
+    "app/db/models/workflow_media_operation.py",
+    "app/repositories/workflow_media_operation.py",
     "app/schemas/workflow_portable.py",
     "app/services/workflow_portable.py",
     "app/services/workflow_agents.py",
@@ -1812,6 +1816,7 @@ include = [
     # would empty that picker without a single test failing.
     "app/services/decision_models.py",
     "app/services/image_models.py",
+    "app/services/image_generation.py",
     "app/services/model_profile.py",
     "app/services/claude_subscription/**",
     # Whether an agent can run on a model. A classification that quietly widens
@@ -1849,6 +1854,7 @@ include = [
     "app/services/video_generation/clients.py",
     "app/services/video_generation/exceptions.py",
     "app/services/video_generation/generation.py",
+    "app/services/workflow_media_operations.py",
     "app/services/provider_error_code.py",
     "app/services/transcription_usage.py",
     # The rest of `app/services/rag/` came with the template and is reported
@@ -2314,6 +2320,8 @@ include = [
     "app/repositories/workflow.py",
     "app/schemas/workflow.py",
     "app/services/workflow_registry.py",
+    "app/db/models/workflow_media_operation.py",
+    "app/repositories/workflow_media_operation.py",
     "app/schemas/workflow_portable.py",
     "app/services/workflow_portable.py",
     "app/services/workflow_agents.py",

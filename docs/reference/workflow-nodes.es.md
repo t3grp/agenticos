@@ -1,5 +1,5 @@
 ---
-source_sha: "a9b67bff9ee7"
+source_sha: "c55ed9e6e199"
 ---
 
 # Nodos de workflow { #workflow-nodes }
@@ -1390,6 +1390,72 @@ Las salidas del sandbox también se limitan durante su descarga en streaming. Un
 ::: app.workflows.nodes.convert_pdf_to_png._handler.ConvertPdfToPngConfig
 
 ::: app.workflows.nodes.image_transform._handler.ImageTransformConfig
+
+### Entradas y generación multimedia { #media-generation }
+
+**Asset** (`asset.input@1`) acepta un `FileRef` del mismo run. Comprueba el
+tamaño y el tipo guardados frente a los bytes, y después valida la decodificación
+de la imagen y el límite de píxeles. No consume budget de generación. Su salida
+conserva el mismo `FileRef` e indica el tipo detectado, el tamaño en bytes y las
+dimensiones de la imagen cuando se conocen.
+
+**Generate image** (`image.generate@1`) usa un modelo de imagen del catálogo
+actual y una clave API que pueda usar el principal del run. Configura
+`max_cost_usd`; el workflow reserva esa estimación antes del envío. Si el uso del
+modelo no tiene precio, la estimación queda como coste mínimo registrado. La
+salida contiene un archivo del run y un recibo seguro de la operación.
+
+**Generate video** (`video.generate@1`) reserva la estimación con el precio
+actual del catálogo, la resolución y la duración. El primer fotograma debe ser
+un `FileRef` del mismo run, en PNG, JPEG o WebP, con un máximo de 10 MiB. La
+salida es un archivo MP4 del run. Un provider aparece solo si su adaptador puede
+reanudar un trabajo conocido a partir de un recibo y su ID está en
+`WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS`.
+
+El deployment controla la paleta con `WORKFLOW_MEDIA_NODE_STAGE`; consulta la
+[configuración de workflows](../configuration.md#workflow-runs). Su valor
+predeterminado, `disabled`, oculta todos los nodos multimedia. `asset` muestra
+Asset. `image` muestra Asset y Generate image, además de los providers de video
+de la lista de aceptación. Añade un provider de video solo después de registrar
+una aceptación en vivo y acotada. Una puerta de rollout cerrada no llama a
+ningún provider.
+
+Las operaciones de generación guardan una fase duradera y un recibo seguro del
+provider. Los recibos de video conocidos reanudan el mismo trabajo. Un resultado
+ambiguo sigue en `unknown`, conserva la estimación de budget y nunca se vuelve a
+enviar automáticamente. El diálogo de inicio avisa antes de un nuevo run que
+puede generar otro cargo. Las vistas previas usan la ruta autorizada de archivos
+del run; los recibos no guardan respuestas del provider, credenciales ni URL
+firmadas.
+
+| Fase | Significado y recuperación |
+| --- | --- |
+| `prepared` | La operación y la estimación se guardan antes del envío al provider. |
+| `submitting` | La solicitud puede haber llegado al provider; un reinicio no debe asumir que no llegó. |
+| `submitted` | Se guarda el recibo del trabajo del provider y se puede consultar sin volver a enviarlo. |
+| `collecting` | Se valida el resultado y se copia al almacenamiento del run. |
+| `stored` | Se guardan el archivo y el recibo; un retry devuelve este resultado. |
+| `unknown` | No se sabe si se aceptó o almacenó; se rechaza el reenvío automático y se mantiene la reserva. |
+
+::: app.workflows.nodes.media._handler.AssetConfig
+
+::: app.workflows.nodes.media._handler.AssetInput
+
+::: app.workflows.nodes.media._handler.AssetOutput
+
+::: app.workflows.nodes.media._handler.GenerateImageConfig
+
+::: app.workflows.nodes.media._handler.GenerateImageInput
+
+::: app.workflows.nodes.media._handler.GenerateImageOutput
+
+::: app.workflows.nodes.media._handler.GenerateVideoConfig
+
+::: app.workflows.nodes.media._handler.GenerateVideoInput
+
+::: app.workflows.nodes.media._handler.GenerateVideoOutput
+
+::: app.workflows.nodes.media._handler.MediaReceipt
 
 ## Python { #python }
 

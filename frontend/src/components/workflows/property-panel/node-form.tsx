@@ -81,6 +81,7 @@ import { InputContractForm } from "./input-contract-form";
 import { MergeForm } from "./merge-form";
 import { ACCOUNT_TRIGGERS, PortalAccount } from "./portal-account";
 import { ScheduleTriggerForm } from "./schedule-trigger-form";
+import { MediaModelField } from "./media-model-field";
 import {
   applyRebase,
   rebaseClear,
@@ -336,6 +337,7 @@ function ResourcePin({
   kind,
   schema,
   label,
+  purpose,
   value,
   error,
   disabled,
@@ -345,6 +347,7 @@ function ResourcePin({
   schema: Schema;
   /** The field's own title, for a picker that labels its control; its own label when none. */
   label: string | undefined;
+  purpose?: string;
   value: unknown;
   error?: string;
   disabled?: boolean;
@@ -442,6 +445,7 @@ function ResourcePin({
       value={strOrNull(value)}
       onChange={(next) => onChange(next ?? undefined)}
       kind={secretKind(schema)}
+      purpose={purpose}
       disabled={disabled}
       error={error}
     />
@@ -460,8 +464,64 @@ function ConfigLeaf({
 }: FieldProps & { value: unknown; onChange: (value: unknown) => void }) {
   const field = bindingFieldPath(path);
   const error = ctx.errors.get(field);
+  const mediaNode = ["asset.input", "image.generate", "video.generate"].includes(
+    ctx.node.definition_id,
+  );
+  const t = useTranslations("pages.workflows");
   const label = labelOf(schema, name);
+  const mediaLabel = t.has(`mediaField.${name}`) ? t(`mediaField.${name}`) : label;
+  const formSchema = mediaNode
+    ? { ...schema, title: mediaLabel, description: undefined }
+    : schema;
   const resource = resourceKind(schema);
+
+  if (
+    mediaNode &&
+    [
+      "provider",
+      "model",
+      "resolution",
+      "aspect_ratio",
+      "seconds",
+      "audio",
+      "max_cost_usd",
+      "timeout_seconds",
+    ].includes(name)
+  ) {
+    const definition = ctx.catalog.items.find(
+      (entry) =>
+        entry.id === ctx.node.definition_id && entry.version === ctx.node.definition_version,
+    );
+    const providerProperty = record(record(definition?.config_schema)["properties"])["provider"];
+    const providerEnum = record(providerProperty)["enum"];
+    return (
+      <MediaModelField
+        definitionId={ctx.node.definition_id as "image.generate" | "video.generate"}
+        schema={formSchema}
+        acceptedProviders={
+          Array.isArray(providerEnum)
+            ? providerEnum.filter((item): item is string => typeof item === "string")
+            : undefined
+        }
+        name={
+          name as
+            | "provider"
+            | "model"
+            | "resolution"
+            | "aspect_ratio"
+            | "seconds"
+            | "audio"
+            | "max_cost_usd"
+            | "timeout_seconds"
+        }
+        value={value}
+        node={ctx.node}
+        disabled={ctx.disabled}
+        error={error}
+        updateNodeConfig={ctx.updateNodeConfig}
+      />
+    );
+  }
 
   if (ctx.node.definition_id === "notification.send" && name === "channels") {
     return <NotificationChannels value={value} disabled={ctx.disabled} onChange={onChange} />;
@@ -478,11 +538,12 @@ function ConfigLeaf({
         {!labelled && <Label>{label}</Label>}
         <ResourcePin
           kind={resource}
-          schema={schema}
-          label={ownTitle(schema, name)}
+          schema={formSchema}
+          label={mediaNode && name === "secret_id" ? t("mediaProviderApiKey") : ownTitle(schema, name)}
+          purpose={mediaNode && name === "secret_id" ? strOrNull(ctx.node.config["provider"]) ?? "" : undefined}
           value={value}
           error={error}
-          disabled={ctx.disabled}
+          disabled={ctx.disabled || (mediaNode && name === "secret_id" && !ctx.node.config["provider"])}
           onChange={onChange}
         />
       </div>
@@ -494,7 +555,7 @@ function ConfigLeaf({
     return (
       <ConfigCondition
         root={condition}
-        schema={schema}
+        schema={formSchema}
         name={name}
         required={required}
         ctx={ctx}
@@ -510,7 +571,7 @@ function ConfigLeaf({
     return (
       <ConfigCode
         language={code}
-        schema={schema}
+        schema={formSchema}
         name={name}
         path={path}
         ctx={ctx}
@@ -526,7 +587,7 @@ function ConfigLeaf({
         targetNodeId={ctx.node.id}
         targetField={field}
         name={name}
-        schema={schema}
+        schema={formSchema}
         required={required}
         bindings={ctx.bindings}
         graph={ctx.graph}
@@ -541,7 +602,7 @@ function ConfigLeaf({
 
   return (
     <SchemaForm
-      schema={singleFieldSchema(name, schema, required)}
+      schema={singleFieldSchema(name, formSchema, required)}
       value={value === undefined ? {} : { [name]: value }}
       idPrefix={`cfg-${field.replace(/[^a-zA-Z0-9]+/g, "-")}`}
       disabled={ctx.disabled}

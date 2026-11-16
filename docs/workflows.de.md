@@ -1,5 +1,5 @@
 ---
-source_sha: "3dcf65276140"
+source_sha: "46f17051be74"
 ---
 
 # Workflows { #workflows }
@@ -165,6 +165,16 @@ fügen einen Schritt auf vier Wegen hinzu:
   etwas kopiert ist, **Einfügen** (Paste).
 - **Ziehen** Sie einen Schritt aus der Auswahl, um ihn dort abzulegen, wo Sie ihn
   fallen lassen, ohne Verbindung.
+
+Die Gruppe **Files** enthält **Asset**, **Generate image** und **Generate video**.
+Asset prüft eine `FileRef` aus demselben Run; die Generierungsschritte verwenden
+Katalogmodelle, autorisierte Vault-API-Schlüssel und Budgetreservierungen des
+Workflows. Deployment-Einstellungen steuern, wann die Knoten erscheinen.
+Video-Provider benötigen eine dokumentierte Live-Abnahme. Siehe die
+[Medienknoten-Verträge](reference/workflow-nodes.md#media-generation) und die
+[Workflow-Einstellungen](configuration.md#workflow-runs).
+Ein neuer Run kann eine weitere kostenpflichtige Anfrage auslösen; der Startdialog
+warnt davor.
 
 Die Apps von Google Workspace (**Gmail**, **Google Calendar**, **Google Drive**,
 **Google Docs**, **Google Sheets**) und von Microsoft 365 (**Outlook**, **Outlook

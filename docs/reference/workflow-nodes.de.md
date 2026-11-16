@@ -1,5 +1,5 @@
 ---
-source_sha: "a9b67bff9ee7"
+source_sha: "c55ed9e6e199"
 ---
 
 # Workflow-Knoten { #workflow-nodes }
@@ -1434,6 +1434,73 @@ Sandbox-Ausgaben werden auch beim Streaming vom Host begrenzt. Eine nach der Mes
 ::: app.workflows.nodes.convert_pdf_to_png._handler.ConvertPdfToPngConfig
 
 ::: app.workflows.nodes.image_transform._handler.ImageTransformConfig
+
+### Medien-Eingaben und Generierung { #media-generation }
+
+**Asset** (`asset.input@1`) akzeptiert eine `FileRef` aus demselben Run. Der
+Knoten prüft die gespeicherte Größe und den Typ anhand der Bytes und validiert
+danach Bilddekodierung und Pixelgrenzen. Er verbraucht kein Generierungsbudget.
+Die Ausgabe behält dieselbe `FileRef` bei und meldet den erkannten Typ, die
+Bytegröße und, falls bekannt, die Bildmaße.
+
+**Generate image** (`image.generate@1`) verwendet ein Bildmodell aus dem
+aktuellen Katalog und einen API-Schlüssel, den der Run-Prinzipal verwenden darf.
+Setzen Sie `max_cost_usd`; der Workflow reserviert diesen Schätzwert vor dem
+Absenden. Wenn die Modellnutzung nicht bepreist ist, bleibt der Schätzwert die
+Untergrenze der gemeldeten Kosten. Die Ausgabe besteht aus einer Run-Datei und
+einem sicheren Operationsbeleg.
+
+**Generate video** (`video.generate@1`) reserviert den Schätzwert anhand des
+aktuellen Katalogpreises, der Auflösung und der Dauer. Ein Startbild muss eine
+`FileRef` aus demselben Run im Format PNG, JPEG oder WebP und höchstens 10 MiB
+groß sein. Die Ausgabe ist eine MP4-Run-Datei. Ein Provider erscheint nur, wenn
+sein Adapter einen bekannten Jobbeleg fortsetzen kann und seine ID in
+`WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS` steht.
+
+Die Deployment-Einstellung `WORKFLOW_MEDIA_NODE_STAGE` steuert die Palette;
+siehe [Workflow-Einstellungen](../configuration.md#workflow-runs). Der
+Standardwert `disabled` blendet alle Medienknoten aus. `asset` zeigt Asset.
+`image` zeigt Asset und Generate image sowie nur Video-Provider aus der
+Akzeptanzliste. Fügen Sie einen Video-Provider erst hinzu, wenn ein Operator
+einen begrenzten Live-Abnahmetest dokumentiert hat. Bei geschlossener
+Rollout-Schranke erfolgt kein Provider-Aufruf.
+
+Generierungsoperationen speichern eine dauerhafte Phase und einen sicheren
+Providerbeleg. Bekannte Video-Belege setzen denselben Provider-Job fort. Ein
+unklares Ergebnis bleibt `unknown`, hält den Schätzwert im Budget und wird nie
+automatisch erneut abgesendet. Der Startdialog warnt vor einem neuen Run, der
+eine weitere kostenpflichtige Generierung auslösen kann. Vorschauen verwenden
+die autorisierte Run-Datei-Route; Belege speichern weder Providerantworten noch
+Zugangsdaten oder signierte URLs.
+
+| Phase | Bedeutung und Wiederaufnahme |
+| --- | --- |
+| `prepared` | Operation und Schätzwert sind vor dem Absenden gespeichert. |
+| `submitting` | Die Anfrage kann den Provider erreicht haben; nach einem Neustart darf das nicht ausgeschlossen werden. |
+| `submitted` | Der Provider-Jobbeleg ist gespeichert und kann ohne erneutes Absenden abgefragt werden. |
+| `collecting` | Das Ergebnis wird geprüft und in die Run-Dateien kopiert. |
+| `stored` | Run-Datei und Beleg sind gespeichert; ein Retry gibt dieses Ergebnis zurück. |
+| `unknown` | Annahme oder Speicherung sind unklar; erneutes Absenden wird abgelehnt und der Schätzwert bleibt reserviert. |
+
+::: app.workflows.nodes.media._handler.AssetConfig
+
+::: app.workflows.nodes.media._handler.AssetInput
+
+::: app.workflows.nodes.media._handler.AssetOutput
+
+::: app.workflows.nodes.media._handler.GenerateImageConfig
+
+::: app.workflows.nodes.media._handler.GenerateImageInput
+
+::: app.workflows.nodes.media._handler.GenerateImageOutput
+
+::: app.workflows.nodes.media._handler.GenerateVideoConfig
+
+::: app.workflows.nodes.media._handler.GenerateVideoInput
+
+::: app.workflows.nodes.media._handler.GenerateVideoOutput
+
+::: app.workflows.nodes.media._handler.MediaReceipt
 
 ## Python { #python }
 

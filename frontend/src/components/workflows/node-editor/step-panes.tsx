@@ -32,6 +32,7 @@ import {
   testEntryGraph,
 } from "@/lib/workflows/step-data";
 import { effectiveDefinition } from "@/lib/workflows/ports";
+import { hasBillableMedia } from "@/lib/workflows/media";
 import {
   WEBHOOK_TRIGGER,
   declaredFields,
@@ -495,6 +496,7 @@ export function OutputPane({
           onOpenChange={setAsking}
           canRunLive={false}
           canTest
+          hasBillableMedia={hasBillableMedia(branch)}
           busy={start.isPending}
           error={start.error}
           onInputChange={start.reset}

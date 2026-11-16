@@ -7,7 +7,10 @@ import * as api from "@/lib/workflows/runs-api";
 
 import { RunFiles } from "./run-files";
 
-vi.mock("@/lib/workflows/runs-api", () => ({ downloadWorkflowRunFile: vi.fn() }));
+vi.mock("@/lib/workflows/runs-api", () => ({
+  downloadWorkflowRunFile: vi.fn(),
+  getWorkflowRunFileBlob: vi.fn(),
+}));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 const FILE = {
@@ -42,5 +45,25 @@ describe("RunFiles", () => {
     render(<RunFiles runId="r" files={[FILE]} />);
     await userEvent.click(screen.getByRole("button", { name: "Download report.csv" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it("previews an image through the authorized run-file route", async () => {
+    const createObjectURL = vi.fn(() => "blob:authorized-preview");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+    vi.mocked(api.getWorkflowRunFileBlob).mockResolvedValue(new Blob(["synthetic image"]));
+    const image = { ...FILE, id: "image-1", filename: "synthetic.png", content_type: "image/png" };
+
+    render(<RunFiles runId="run-1" files={[image]} />);
+
+    const preview = await screen.findByRole("img", { name: "Preview synthetic.png" });
+    expect(preview.getAttribute("src")).toBe("blob:authorized-preview");
+    expect(api.getWorkflowRunFileBlob).toHaveBeenCalledWith("run-1", "image-1");
+    expect(createObjectURL).toHaveBeenCalledOnce();
+  });
+
+  it("does not fetch inline previews for non-media files", () => {
+    render(<RunFiles runId="r" files={[FILE]} />);
+    expect(api.getWorkflowRunFileBlob).not.toHaveBeenCalled();
   });
 });

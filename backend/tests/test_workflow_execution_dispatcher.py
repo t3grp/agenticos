@@ -619,6 +619,7 @@ def repo():
     mocked.list_node_runs_at.return_value = []
     mocked.count_node_runs.return_value = 0
     mocked.get_latest_attempts.return_value = {}
+    mocked.sum_attempt_costs.return_value = Decimal(0)
     mocked.latest_attempt_result_bytes.return_value = 0
     mocked.run_organization_id.return_value = uuid.uuid4()
     mocked.inline_result_bytes.return_value = 0
@@ -643,6 +644,10 @@ def repo():
         ),
         patch("app.services.workflow_execution.dispatch_queue.workflow_run_repo", new=mocked),
         patch("app.services.workflow_execution.dispatch_queue.enqueue", new=AsyncMock()),
+        patch(
+            f"{DISPATCHER_PATH}.workflow_media_operation_repo.get_for_node_run",
+            new=AsyncMock(return_value=None),
+        ),
     ):
         yield mocked
 
@@ -1431,6 +1436,184 @@ class TestSettleCompleted:
 
 
 class TestSettleBooksCost:
+    @pytest.mark.parametrize("node_id", ["image.generate", "video.generate"])
+    async def test_media_generation_cost_is_recorded_for_organization_spend(
+        self, repo, event_log, node_id
+    ):
+        load_builtins()
+        node = _node_instance(node_id)
+        definition = REGISTRY[node_id][1]
+        run = _run(
+            mode=WorkflowRunMode.TEST.value,
+            workflow_version_id=None,
+            draft_graph_snapshot=_graph(node).model_dump(mode="json"),
+            status=WorkflowRunStatus.CANCELLED.value,
+        )
+        node_run = _node_run(
+            workflow_run_id=run.id,
+            node_instance_id=node.id,
+            status=NodeRunStatus.RUNNING.value,
+        )
+        attempt = _attempt(node_run_id=node_run.id, retry_guarantee=RetryGuarantee.NONE.value)
+        begun = _begun(
+            node, definition, attempt_id=attempt.id, node_run_id=node_run.id, workflow_run_id=run.id
+        )
+        repo.get_run_by_id_for_update.return_value = run
+        repo.get_node_run_by_id_for_update.return_value = node_run
+        repo.get_attempt.return_value = attempt
+        repo.get_outbox_for_node_run_for_update.return_value = _outbox(
+            node_run_id=node_run.id, claimed_by=begun.dispatch_token
+        )
+        repo.settle_attempt.side_effect = _settle_effect
+        repo.update_run.side_effect = lambda _db, *, run, update_data: _apply(run, update_data)
+        repo.update_node_run.side_effect = lambda _db, *, node_run, update_data: _apply(
+            node_run, update_data
+        )
+
+        await dispatcher.settle(
+            object(),
+            begun=begun,
+            outcome=dispatcher.HandlerOutcome(
+                result=Completed[_EchoOutput](output=_EchoOutput(echoed="stored")),
+                cost=Decimal("0.25"),
+            ),
+        )
+
+        repo.record_node_spend.assert_awaited_once_with(
+            ANY,
+            organization_id=run.organization_id,
+            attempt_id=attempt.id,
+            cost_usd=Decimal("0.25"),
+            cost_is_partial=False,
+        )
+
+    @pytest.mark.parametrize("replay_first", [False, True])
+    async def test_media_recovery_books_one_operation_cost_across_attempts(
+        self, repo, event_log, replay_first, monkeypatch
+    ):
+        load_builtins()
+        node = _node_instance("image.generate")
+        definition = REGISTRY["image.generate"][1]
+        run = _run(status=WorkflowRunStatus.CANCELLED.value)
+        node_run = _node_run(
+            workflow_run_id=run.id,
+            node_instance_id=node.id,
+            status=NodeRunStatus.CANCELLED.value,
+        )
+        old_attempt = _attempt(node_run_id=node_run.id, status=NodeAttemptStatus.UNCERTAIN.value)
+        replay_attempt = _attempt(node_run_id=node_run.id, attempt_no=2)
+        attempts = [old_attempt, replay_attempt]
+        spend_by_attempt: dict[uuid.UUID, Decimal] = {}
+
+        async def sum_costs(_db, *, node_run_id):
+            assert node_run_id == node_run.id
+            return sum((item.cost for item in attempts), Decimal(0))
+
+        async def record_spend(_db, *, attempt_id, cost_usd, **_kwargs):
+            spend_by_attempt[attempt_id] = cost_usd
+
+        async def book_attempt(_db, *, attempt, cost, cost_is_partial):
+            attempt.cost = cost
+            attempt.cost_is_partial = cost_is_partial
+
+        async def keep_small_result(_db, _run, outcome, serialized):
+            return outcome, serialized
+
+        repo.sum_attempt_costs.side_effect = sum_costs
+        repo.update_run.side_effect = lambda _db, *, run, update_data: _apply(run, update_data)
+        repo.record_node_spend.side_effect = record_spend
+        repo.book_attempt_cost.side_effect = book_attempt
+        repo.settle_attempt.side_effect = _settle_effect
+        repo.get_outbox_for_node_run_for_update.return_value = None
+        monkeypatch.setattr(dispatcher, "_bounded_inline_outcome", keep_small_result)
+        failed = Failed(error=WorkflowError(code="PROVIDER_ERROR", message="failed"))
+        order = [replay_attempt, old_attempt] if replay_first else [old_attempt, replay_attempt]
+
+        for attempt in order:
+            await dispatcher._settle_loaded(
+                object(),
+                begun=_begun(
+                    node,
+                    definition,
+                    attempt_id=attempt.id,
+                    attempt_no=attempt.attempt_no,
+                    node_run_id=node_run.id,
+                    workflow_run_id=run.id,
+                ),
+                outcome=dispatcher.HandlerOutcome(
+                    result=failed, cost=Decimal("0.25"), cost_is_partial=True
+                ),
+                run=run,
+                node_run=node_run,
+                attempt=attempt,
+            )
+
+        assert run.spent_cost == Decimal("0.25")
+        assert run.cost_is_partial
+        assert sum((item.cost for item in attempts), Decimal(0)) == Decimal("0.25")
+        assert sum(spend_by_attempt.values(), Decimal(0)) == Decimal("0.25")
+
+    async def test_a_larger_late_media_cost_books_only_its_unsettled_delta(
+        self, repo, event_log, monkeypatch
+    ):
+        load_builtins()
+        node = _node_instance("image.generate")
+        definition = REGISTRY["image.generate"][1]
+        run = _run(status=WorkflowRunStatus.CANCELLED.value)
+        node_run = _node_run(
+            workflow_run_id=run.id,
+            node_instance_id=node.id,
+            status=NodeRunStatus.CANCELLED.value,
+        )
+        attempts = [
+            _attempt(node_run_id=node_run.id),
+            _attempt(node_run_id=node_run.id, attempt_no=2),
+        ]
+        spend_by_attempt: dict[uuid.UUID, Decimal] = {}
+
+        async def sum_costs(_db, *, node_run_id):
+            assert node_run_id == node_run.id
+            return sum((item.cost for item in attempts), Decimal(0))
+
+        async def record_spend(_db, *, attempt_id, cost_usd, **_kwargs):
+            spend_by_attempt[attempt_id] = cost_usd
+
+        async def keep_small_result(_db, _run, outcome, serialized):
+            return outcome, serialized
+
+        repo.sum_attempt_costs.side_effect = sum_costs
+        repo.update_run.side_effect = lambda _db, *, run, update_data: _apply(run, update_data)
+        repo.record_node_spend.side_effect = record_spend
+        repo.settle_attempt.side_effect = _settle_effect
+        repo.get_outbox_for_node_run_for_update.return_value = None
+        monkeypatch.setattr(dispatcher, "_bounded_inline_outcome", keep_small_result)
+        failed = Failed(error=WorkflowError(code="PROVIDER_ERROR", message="failed"))
+
+        for attempt, amount in zip(attempts, (Decimal("0.25"), Decimal("0.40")), strict=True):
+            await dispatcher._settle_loaded(
+                object(),
+                begun=_begun(
+                    node,
+                    definition,
+                    attempt_id=attempt.id,
+                    attempt_no=attempt.attempt_no,
+                    node_run_id=node_run.id,
+                    workflow_run_id=run.id,
+                ),
+                outcome=dispatcher.HandlerOutcome(result=failed, cost=amount),
+                run=run,
+                node_run=node_run,
+                attempt=attempt,
+            )
+
+        assert run.spent_cost == Decimal("0.40")
+        assert attempts[0].cost == Decimal("0.25")
+        assert attempts[1].cost == Decimal("0.15")
+        assert spend_by_attempt == {
+            attempts[0].id: Decimal("0.25"),
+            attempts[1].id: Decimal("0.15"),
+        }
+
     @pytest.mark.parametrize("linked_child", ["unlinked", "missing", "running"])
     @pytest.mark.parametrize(
         "result,attempt_status",
@@ -2691,6 +2874,72 @@ class TestResolveOrphanedAttempt:
 
         assert node_run.status == NodeRunStatus.NEEDS_ATTENTION.value
         repo.create_outbox.assert_not_called()
+
+    async def test_a_known_media_receipt_resumes_without_repeating_submission(
+        self, repo, event_log
+    ):
+        run = _run()
+        node_run = _node_run(workflow_run_id=run.id, node_instance_id=uuid.uuid4())
+        attempt = _attempt(node_run_id=node_run.id, retry_guarantee=RetryGuarantee.NONE.value)
+        operation = SimpleNamespace(
+            phase="submitted",
+            provider_receipt={"operation_id": "job-42"},
+            estimated_cost_usd=Decimal("0.50"),
+            output=None,
+        )
+        repo.settle_attempt.side_effect = _settle_effect
+        repo.update_node_run.side_effect = lambda _db, *, node_run, update_data: _apply(
+            node_run, update_data
+        )
+        repo.update_run.side_effect = lambda _db, *, run, update_data: _apply(run, update_data)
+        repo.list_live_node_states.side_effect = _live_states_of(node_run)
+
+        with (
+            patch(
+                f"{DISPATCHER_PATH}.resolve_graph",
+                new=AsyncMock(side_effect=WorkflowGraphUnresolvableError(run_id=run.id)),
+            ),
+            patch.object(
+                dispatcher.workflow_media_operation_repo,
+                "get_for_node_run",
+                new=AsyncMock(return_value=operation),
+            ),
+        ):
+            await dispatcher.resolve_orphaned_attempt(
+                object(), run=run, node_run=node_run, attempt=attempt, outbox=None
+            )
+
+        assert attempt.status == NodeAttemptStatus.UNCERTAIN.value
+        repo.create_outbox.assert_awaited_once()
+
+    async def test_an_ambiguous_media_submission_is_not_resubmitted(self, repo, event_log):
+        run = _run()
+        node_run = _node_run(workflow_run_id=run.id, node_instance_id=uuid.uuid4())
+        attempt = _attempt(node_run_id=node_run.id, retry_guarantee=RetryGuarantee.NONE.value)
+        operation = SimpleNamespace(
+            phase="submitting",
+            provider_receipt=None,
+            estimated_cost_usd=Decimal("0.50"),
+            output=None,
+        )
+        repo.settle_attempt.side_effect = _settle_effect
+        repo.update_node_run.side_effect = lambda _db, *, node_run, update_data: _apply(
+            node_run, update_data
+        )
+        repo.update_run.side_effect = lambda _db, *, run, update_data: _apply(run, update_data)
+        repo.list_live_node_states.side_effect = _live_states_of(node_run)
+
+        with patch.object(
+            dispatcher.workflow_media_operation_repo,
+            "get_for_node_run",
+            new=AsyncMock(return_value=operation),
+        ):
+            await dispatcher.resolve_orphaned_attempt(
+                object(), run=run, node_run=node_run, attempt=attempt, outbox=None
+            )
+
+        assert node_run.status == NodeRunStatus.NEEDS_ATTENTION.value
+        repo.create_outbox.assert_not_awaited()
 
     async def test_a_terminal_owning_run_stays_terminal_instead_of_needs_attention(
         self, repo, event_log

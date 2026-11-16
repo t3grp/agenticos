@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import {
   Button,
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,6 +50,8 @@ interface StartRunDialogProps {
   canRunLive: boolean;
   /** Whether this caller may test the draft (`workflows:edit`). */
   canTest: boolean;
+  /** This graph can submit a new paid image or video generation. */
+  hasBillableMedia?: boolean;
   /** Published-contract loading or failure does not block independent draft tests. */
   liveNotice?: ReactNode;
   busy?: boolean;
@@ -94,6 +100,7 @@ export function StartRunDialog({
   onOpenChange,
   canRunLive,
   canTest,
+  hasBillableMedia = false,
   liveNotice,
   busy,
   error,
@@ -155,6 +162,13 @@ export function StartRunDialog({
           <DialogDescription>{t("startRunDescription")}</DialogDescription>
         </DialogHeader>
         {liveNotice}
+        {hasBillableMedia && (
+          <Alert variant="warning" role="status">
+            <TriangleAlert aria-hidden="true" />
+            <AlertTitle>{t("mediaRunWarningTitle")}</AlertTitle>
+            <AlertDescription>{t("mediaRunWarning")}</AlertDescription>
+          </Alert>
+        )}
         <fieldset className="space-y-4" disabled={busy}>
           <div className="space-y-1.5">
             <Label htmlFor="run-mode">{t("startRunMode")}</Label>

@@ -125,6 +125,15 @@ class VideoCall:
     so it may be billed whatever happens to this call - and when it is `made`:
     finished and billed, with only the clip left to fetch."""
 
+    receipt_callback: Callable[[str], Awaitable[None]] | None = field(default=None, repr=False)
+    """Called after an asynchronous job id is known and before it is polled."""
+
+    resume_receipt: str | None = field(default=None, repr=False)
+    """A known job id to poll without creating another provider job."""
+
+    cancel_on_interrupt: bool = field(default=True, repr=False)
+    """Whether this client or its caller owns cancellation cleanup."""
+
 
 @dataclass(frozen=True)
 class Clip:
@@ -250,6 +259,8 @@ async def _create(
         call.reached("sent")
         raise _unusable(call)
     call.reached("submitted")
+    if call.receipt_callback is not None:
+        await call.receipt_callback(found)
     return found
 
 
@@ -424,7 +435,7 @@ async def _poll(
             cancel=cancel,
         )
     except asyncio.CancelledError:
-        if cancel is not None:
+        if cancel is not None and call.cancel_on_interrupt:
             # Shielded, or the cancellation that brought us here cancels it too.
             with anyio.CancelScope(shield=True):
                 await cancel()
@@ -609,7 +620,7 @@ async def byteplus_tasks(client: httpx.AsyncClient, call: VideoCall, deadline: f
         body["duration"] = call.duration
     if call.audio is not None:
         body["generate_audio"] = call.audio
-    task_id = await _create(
+    task_id = call.resume_receipt or await _create(
         call,
         client.post(
             f"{call.base_url}/contents/generations/tasks",
@@ -621,14 +632,6 @@ async def byteplus_tasks(client: httpx.AsyncClient, call: VideoCall, deadline: f
     )
     task_url = f"{call.base_url}/contents/generations/tasks/{task_id}"
 
-    async def cancel() -> None:
-        # Only a queued task can be cancelled; on a running one this is refused,
-        # and either way the timeout is what the caller hears about.
-        try:
-            await client.delete(task_url, headers=headers, timeout=CANCEL_SECONDS)
-        except httpx.HTTPError:
-            logger.info("Cancelling video task at %s failed", call.provider, exc_info=True)
-
     task = await _poll(
         client,
         call,
@@ -637,7 +640,7 @@ async def byteplus_tasks(client: httpx.AsyncClient, call: VideoCall, deadline: f
         headers=headers,
         every=POLL_SECONDS["byteplus_tasks"],
         settled=lambda job: job.get("status") not in {"queued", "running"},
-        cancel=cancel,
+        cancel=lambda: cancel_byteplus_task(client, call, task_id),
     )
     if task.get("status") != "succeeded":
         error = task.get("error")
@@ -673,7 +676,7 @@ async def xai_videos(client: httpx.AsyncClient, call: VideoCall, deadline: float
         body["image"] = {"url": call.first_frame.data_uri()}
     else:
         body["aspect_ratio"] = call.aspect_ratio
-    request_id = await _create(
+    request_id = call.resume_receipt or await _create(
         call,
         client.post(
             f"{call.base_url}/videos/generations",
@@ -729,7 +732,7 @@ async def dashscope_tasks(client: httpx.AsyncClient, call: VideoCall, deadline: 
         parameters["duration"] = call.duration
     if call.audio is not None:
         parameters["audio"] = call.audio
-    task_id = await _create(
+    task_id = call.resume_receipt or await _create(
         call,
         client.post(
             f"{call.base_url}/services/aigc/video-generation/video-synthesis",
@@ -771,3 +774,25 @@ CLIENTS: dict[str, Client] = {
     "dashscope_tasks": dashscope_tasks,
 }
 """The client for each API shape the catalog may name."""
+
+
+async def cancel_byteplus_task(client: httpx.AsyncClient, call: VideoCall, task_id: str) -> None:
+    """Cancel a BytePlus task where the provider allows it."""
+    try:
+        await client.delete(
+            f"{call.base_url}/contents/generations/tasks/{task_id}",
+            headers={"Authorization": f"Bearer {call.api_key}"},
+            timeout=CANCEL_SECONDS,
+        )
+    except httpx.HTTPError:
+        logger.info("Cancelling video task at %s failed", call.provider)
+
+
+WORKFLOW_RESUMABLE_APIS = frozenset({"byteplus_tasks", "xai_videos", "dashscope_tasks"})
+"""Asynchronous APIs that return a job id before polling and can resume it."""
+
+
+async def cancel_workflow_job(client: httpx.AsyncClient, call: VideoCall, receipt_id: str) -> None:
+    """Best-effort cancellation for a workflow job when its API supports it."""
+    if call.provider == "byteplus":
+        await cancel_byteplus_task(client, call, receipt_id)

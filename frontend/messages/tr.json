@@ -10187,7 +10187,17 @@
             "starting" : "Başlıyor",
             "succeeded" : "Tamamlandı",
             "switchedOff" : "Kapalı",
-            "waiting" : "Beklemede"
+            "waiting" : "Beklemede",
+            "mediaProgress" : {
+               "prepared" : "Hazırlanıyor",
+               "submitting" : "Gönderiliyor",
+               "generating" : "Oluşturuluyor",
+               "saving" : "Kaydediliyor",
+               "complete" : "Tamamlandı",
+               "unknown" : "Sonuç bilinmiyor",
+               "failed" : "Başarısız",
+               "cancelled" : "İptal edildi"
+            }
          },
          "notFound" : "Workflow bulunamadı",
          "notFoundDetail" : "Bu workflow yok veya sizinle paylaşılmamış.",
@@ -10226,9 +10236,42 @@
          "runDraft" : "Taslağı test et",
          "runDuration" : "Süre",
          "runFileDownload" : "{name} indir",
+         "runFilePreview" : "{name} önizlemesi",
          "runFiles" : "Dosyalar",
          "runFilesCaption" : "Bu runın adımlarının sakladığı dosyalar",
          "runFilesNone" : "Bu run hiçbir dosya saklamadı.",
+         "mediaProvider" : "Sağlayıcı",
+         "mediaModel" : "Model",
+         "mediaProviderPlaceholder" : "Sağlayıcı seçin",
+         "mediaModelPlaceholder" : "Model seçin",
+         "mediaCatalogUnavailable" : "Medya modeli kataloğu yüklenemedi.",
+         "mediaField" : {
+            "accepted_types" : "Kabul edilen dosya türleri",
+            "provider" : "Sağlayıcı",
+            "model" : "Model",
+            "resolution" : "Çözünürlük",
+            "aspect_ratio" : "En-boy oranı",
+            "seconds" : "Süre (saniye)",
+            "audio" : "Ses",
+            "background" : "Arka plan",
+            "file" : "Dosya",
+            "first_frame" : "İlk kare",
+            "max_bytes" : "En büyük dosya boyutu (bayt)",
+            "max_cost_usd" : "Görsel başına en yüksek maliyet (USD)",
+            "max_pixels" : "En yüksek görsel piksel sayısı",
+            "output_format" : "Görsel biçimi",
+            "prompt" : "İstem",
+            "quality" : "Görsel kalitesi",
+            "size" : "Görsel boyutu",
+            "timeout_seconds" : "Zaman aşımı (saniye)"
+         },
+         "mediaProviderApiKey" : "Sağlayıcı API anahtarı",
+         "mediaRunWarningTitle" : "Medya üretimi ücretli olabilir",
+         "mediaRunWarning" : "Bu run, sağlayıcıya yeni bir görsel veya video isteği gönderebilir. Yeniden çalıştırmak yeni bir ücrete yol açabilir.",
+         "mediaAudioOn" : "Ses ekle",
+         "mediaAudioOff" : "Sessiz",
+         "videoEstimate" : "Tahmini üst sınır: {resolution} çözünürlükte {seconds} saniye için {amount}. Fiyat tarihi {since}.",
+         "videoEstimateUnavailable" : "Güncel katalog fiyatı yok. Bu adım gönderimi reddeder.",
          "runFilterAnyMode" : "Tüm sürümler",
          "runFilterAnySince" : "Tüm zamanlar",
          "runFilterAnyStatus" : "Tüm durumlar",
@@ -13165,6 +13208,18 @@
          "image_transform" : {
             "description" : "PNG, JPEG, WebP veya GIF görselini kırpın, yeniden boyutlandırın, döndürün ya da dönüştürün; meta verileri kaldırılır ve çözülmeden önce boyutu sınırlanır.",
             "name" : "Görseli dönüştür"
+         },
+         "asset_input" : {
+            "description" : "Run kapsamındaki bir görsel veya video dosyasını doğrulayın ve türlenmiş dosya referansını aktarın.",
+            "name" : "Medya varlığı"
+         },
+         "image_generate" : {
+            "description" : "Katalogdaki bir modeli ve yetkili sağlayıcı anahtarını kullanarak görsel üretin.",
+            "name" : "Görsel üret"
+         },
+         "video_generate" : {
+            "description" : "Tarihli katalog maliyet tahmini ve kabul edilmiş sağlayıcıyla video üretin.",
+            "name" : "Video üret"
          },
          "knowledge_add" : {
             "description" : "Agent’ların bulabilmesi için bir metni veya dosyayı bilgi tabanlarına ekleyin.",

@@ -460,6 +460,7 @@ export interface VideoModel {
   resolutions: string[];
   audio: "always" | "optional" | "never";
   first_frame: boolean;
+  prices: { since: string; usd_per_second: Record<string, string | number> }[];
 }
 
 /** One provider that can make video, and what may be chosen on it. */

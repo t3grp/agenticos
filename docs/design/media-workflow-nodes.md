@@ -1,13 +1,15 @@
 # Media generation nodes for workflows
 
-**Status: proposal only.** This document adds no workflow node, generation
-request, provider credential, migration or running background job.
+**Status: implemented, disabled by default.** This record describes the
+versioned nodes, durable operation boundary and staged rollout now in the
+repository. No live acceptance evidence is bundled with this change; keep the
+video provider allowlist empty until an operator records it.
 
 Baseline: T3OS `080c12941ed06cce2e92b6b03910e94ace36469e`, inspected on
 14 November 2026. Benchmark:
 [OpenBot v0.71.0](https://github.com/nightly-labs/openbot/releases/tag/v0.71.0)
 and its [Image, Video and Asset canvas release notes](https://openbot.run/changelog).
-This is an independent design using T3OS's existing generation services.
+The implementation uses the existing generation catalogs and provider clients.
 
 ## Outcome and existing capability
 
@@ -34,16 +36,15 @@ credential, budget and retry behavior.
 | `frontend/src/components/workflows/runs/run-files.tsx` | Show media outputs using the existing authorized run-file surface. |
 
 See [workflow nodes](../reference/workflow-nodes.md) for the current node contract.
-The registry presently includes `image.transform`, not the proposed generation
-node ids below.
+The registry keeps `image.transform` and adds the generation node ids below.
 
-## Proposed node contracts
+## Node contracts
 
 | Id and version | Config | Input | Output | Effect and retry |
 |---|---|---|---|---|
-| `image.generate@1` | Catalog provider/model, authorized secret id, size/quality defaults, output filename and bounded timeout | Prompt plus optional supported source-image `FileRef` | Image `FileRef`, actual MIME/dimensions, generation receipt | `write`, spends budget, `retry_guarantee=none` initially |
-| `video.generate@1` | Catalog provider/model, secret id, aspect/resolution/duration/sound defaults and bounded timeout | Prompt plus optional supported starting-image `FileRef` | Video `FileRef`, actual MIME/duration where known, generation receipt | `write`, spends budget, `retry_guarantee=none` initially |
-| `asset.input@1` | Accepted media kinds, byte/pixel/duration limits, optional required input name | An authorized run input `FileRef` | The same validated `FileRef` and metadata | `read`, no generation spend, idempotent |
+| `asset.input@1` | Accepted image/video kinds, byte and pixel limits | A run-scoped `FileRef` | The same validated `FileRef`, detected type and size, image dimensions when known | `read`, no generation spend, idempotent |
+| `image.generate@1` | Catalog provider/model, supported image options, authorized secret id and required `max_cost_usd` | Prompt | Image `FileRef`, MIME/dimensions and safe operation receipt | `write`, spends budget, `retry_guarantee=none` |
+| `video.generate@1` | Catalog provider/model, authorized secret id, resolution/aspect/duration/audio settings and bounded timeout | Prompt plus optional supported starting-image `FileRef` | MP4 `FileRef`, duration when known and safe operation receipt | `write`, spends budget, `retry_guarantee=none` |
 
 The initial Asset node accepts files supplied as authorized workflow inputs or
 earlier node outputs. It is not an unrestricted URL fetcher or a new public media
@@ -56,7 +57,7 @@ again before spending. The UI must not show an option that the provider will
 silently ignore. Image editing is offered only where the provider adapter has a
 tested input-image contract; it is not inferred from text-to-image support.
 
-Proposed result envelope, using the existing `FileRef` schema for the file field:
+The result envelope uses the existing `FileRef` schema for the file field:
 
 ```json
 {
@@ -127,10 +128,11 @@ while preserving existing agent-tool behavior and its regression tests.
 
 ## Durable operation and retry boundary
 
-Add a proposed media-operation record linked to organization, workflow run,
-node attempt, request hash, provider/model, secret reference/generation, phase
-and provider receipt where available. Retain no credential values.
-No migration number is reserved by this design.
+The migration `backend/alembic/versions/0326_workflow_media_operations.py`
+adds a media-operation record linked to organization, workflow run, node
+attempt, request hash, provider/model, secret reference/version, phase and
+provider receipt where available. It stores no credential values. It follows
+`backend/alembic/versions/0325_merge_t3_rooms_v173.py`.
 
 | Phase | Recovery behavior |
 |---|---|
@@ -205,14 +207,19 @@ palette translations and run-file previews in implementation PRs.
 
 ## Rollout and rollback
 
-Register the nodes behind a disabled deployment flag and expose them first to
-synthetic test workflows. Enable Asset, then Image, then supported Video
-providers. Old published graphs retain their exact node versions.
+The deployment setting `WORKFLOW_MEDIA_NODE_STAGE` defaults to `disabled`.
+Set it to `asset` to expose Asset. Set it to `image` to expose Asset and Image.
+Video providers stay unavailable until their provider IDs are added to the
+default-empty `WORKFLOW_MEDIA_VIDEO_ACCEPTED_PROVIDERS` list after a bounded,
+operator-recorded live acceptance. The video node also requires a resumable job
+receipt from its adapter. No acceptance receipt is included in this change.
+Old published graphs retain their exact node versions.
 
-Disabling new generation blocks new admissions but keeps stored outputs and
-receipts readable under existing permissions. Known jobs may be reconciled under
-a bounded operator policy; disabled mode never starts replacements. Retention
-and cleanup continue.
+Setting the stage back to `disabled` blocks media-node execution. Outputs already
+stored on completed runs remain readable through the normal authorized run-file
+route. A known provider job must not be replaced if its status is uncertain. An
+operator can restore the verified provider gate to resume the same receipt or
+reconcile it with the provider; disabled mode never submits a replacement.
 
 Do not remove a registered node version while a published graph references it.
 Rollback keeps a readable compatibility definition and a clear disabled-state

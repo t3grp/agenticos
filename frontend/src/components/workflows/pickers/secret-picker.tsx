@@ -34,6 +34,8 @@ export interface SecretPickerProps {
    * build has no type for simply offers nothing rather than everything.
    */
   kind?: StorableSecretKind | (string & {});
+  /** Offer only keys whose purpose id matches the selected provider. */
+  purpose?: string;
   /** A validation message from the property panel, shown under the control. */
   error?: string;
   /** Non-secret defaults shown for review when a credential is created. */
@@ -59,6 +61,7 @@ export function SecretPicker({
   onChange,
   disabled,
   kind,
+  purpose,
   error,
   label,
   initialValue,
@@ -78,7 +81,11 @@ export function SecretPicker({
   const { secrets, kinds, isLoading, create } = useSecrets();
   const { can } = usePermissions();
   const [adding, setAdding] = useState(false);
-  const offered = kind === undefined ? secrets : secrets.filter((secret) => secret.kind === kind);
+  const offered = secrets.filter(
+    (secret) =>
+      (kind === undefined || secret.kind === kind) &&
+      (purpose === undefined || secret.purpose === purpose),
+  );
   // The field's kind as this build knows it. One it has no form for offers no
   // dialog; a field naming none takes any shape, so the whole vault form opens.
   const shape = kind === undefined ? undefined : kinds.find((entry) => entry.kind === kind);
@@ -168,6 +175,7 @@ export function SecretPicker({
           initial={{ name: caption, value: initialValue }}
           kinds={kinds}
           kind={shape?.kind}
+          purposeId={purpose}
           isPending={create.isPending}
           onSubmit={async (data) => onChange((await create.mutateAsync(data)).id)}
         />

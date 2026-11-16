@@ -44,6 +44,7 @@ from app.schemas.model_profile import (
     TextToSpeechProviderRead,
     TextToSpeechVoiceRead,
     VideoModelRead,
+    VideoPriceRead,
     VideoProviderList,
     VideoProviderRead,
 )
@@ -379,6 +380,10 @@ async def list_video_models() -> Any:
                         resolutions=list(model.resolutions),
                         audio=model.audio,
                         first_frame=model.first_frame,
+                        prices=[
+                            VideoPriceRead(since=price.since, usd_per_second=price.usd_per_second)
+                            for price in model.prices
+                        ],
                     )
                     for model in entry.models
                 ],
