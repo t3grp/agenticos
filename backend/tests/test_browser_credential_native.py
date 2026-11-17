@@ -162,6 +162,20 @@ def test_totp_matches_rfc6238_vectors_and_does_not_render_its_value(
     assert code60.value == code.value and code60.valid_until == 120
 
 
+def test_default_six_digit_code_keeps_leading_zeros_and_a_normalized_seed() -> None:
+    """The path after `browser_code`'s clock guard: default SHA1/6/30 truncation,
+    zero padding, and a lowercase padded seed stored in its canonical form."""
+    key = base64.b32encode(b"12345678901234567890").decode()
+    canonical = BrowserTotp(seed=key)
+    # RFC 6238's SHA1 vector at T=59 is 94287082; six digits keep its last six.
+    assert browser_code(canonical, at=59).value.get_secret_value() == "287082"
+    padded = browser_code(canonical, at=900)
+    assert padded.value.get_secret_value() == "026920" and padded.valid_until == 930
+    lowered = BrowserTotp(seed=key.lower() + "====")
+    assert lowered.seed.get_secret_value() == key.rstrip("=")
+    assert browser_code(lowered, at=900).value == padded.value
+
+
 @pytest.mark.parametrize("clock", [-1, float("nan"), float("inf"), 30 * 2**64])
 def test_totp_rejects_invalid_clock_without_seed_in_exception(clock) -> None:
     with pytest.raises(ValueError) as refused:

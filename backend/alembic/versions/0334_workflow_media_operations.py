@@ -255,14 +255,14 @@ def upgrade() -> None:
             "AND provider_receipt->'api' = to_jsonb(provider_api) "
             "AND provider_receipt->'model' = to_jsonb(model) "
             "AND jsonb_typeof(provider_receipt->'kind') = 'string' "
-            "AND provider_receipt->>'kind' IN ('job','file') "
+            "AND provider_receipt->>'kind' IN ('job','file','response') "
             "AND jsonb_typeof(provider_receipt->'id') = 'string' "
             "AND length(provider_receipt->>'id') BETWEEN 1 AND 1024)",
             name="ck_media_operation_receipt",
         ),
         sa.CheckConstraint(
             "(phase <> 'submitted' OR provider_receipt IS NOT NULL) "
-            "AND (provider_receipt IS NULL OR (media_kind = 'video' AND submitted_at IS NOT NULL AND effect_started_at IS NOT NULL))",
+            "AND (provider_receipt IS NULL OR (submitted_at IS NOT NULL AND effect_started_at IS NOT NULL))",
             name="ck_media_operation_submission",
         ),
     )
@@ -300,4 +300,5 @@ def downgrade() -> None:
         )
     op.drop_table("workflow_media_operations")
     for table, name, _columns in reversed(_KEYS):
-        op.drop_constraint(name, table, type_="unique")
+        # Static revision-owned names; a key already gone must not block the downgrade.
+        op.execute(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {name}")

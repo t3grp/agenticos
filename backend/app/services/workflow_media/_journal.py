@@ -3,7 +3,9 @@
 import hashlib
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.workflow_media_operation import WorkflowMediaOperation
@@ -16,6 +18,22 @@ from app.services.workflow_execution.context import DispatchContext
 from app.services.workflow_media._authority import fence
 from app.services.workflow_media._errors import MediaOperationError
 from app.services.workflow_media._pricing import CostFact
+
+
+class ImageReceipt(BaseModel):
+    """The provider's own id for one image response, for billing reconciliation.
+
+    An image response cannot be collected again, so this is evidence only: it
+    names the charge a member looks up when resolving an unknown hold.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    provider: str = Field(min_length=1, max_length=64)
+    api: str = Field(min_length=1, max_length=64)
+    model: str = Field(min_length=1, max_length=128)
+    kind: Literal["response"] = "response"
+    id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$")
 
 
 class MediaJournal:
@@ -90,8 +108,9 @@ class MediaJournal:
         self._submission_token = token
         return row
 
-    async def receipt(self, receipt: VideoReceipt) -> None:
-        """Acknowledge only a closed, correctly pinned provider receipt before polling."""
+    async def receipt(self, receipt: VideoReceipt | ImageReceipt) -> None:
+        """Acknowledge only a closed, correctly pinned provider receipt before polling
+        for a video, or before an image response's output is validated."""
         async with get_worker_db_context() as db:
             row = await self._load(db)
             if (receipt.provider, receipt.api, receipt.model) != (
@@ -227,7 +246,12 @@ class MediaJournal:
 
 
 def collectable(row: WorkflowMediaOperation) -> bool:
-    """Proof that recovery can avoid a new provider submission."""
+    """Proof that recovery can avoid a new provider submission.
+
+    Only a video receipt names a job that can be collected again; an image
+    receipt is billing evidence for reconciliation, not collection proof.
+    """
     return row.phase not in {"failed", "cancelled", "prepared"} and (
-        row.provider_receipt is not None or row.output_sha256 is not None
+        row.output_sha256 is not None
+        or (row.media_kind == "video" and row.provider_receipt is not None)
     )

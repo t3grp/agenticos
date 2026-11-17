@@ -438,6 +438,12 @@ CALLS: tuple[Call, ...] = (
         },
     ),
     Call("POST", "/workflows/import", Perm.WORKFLOWS_CREATE, body={"name": "Imported"}),
+    Call(
+        "POST",
+        "/workflows/media-operations/{operation_id}/resolve",
+        Perm.BUDGETS_MANAGE,
+        body={"outcome": "not_charged"},
+    ),
     Call("GET", "/workflow-runs", Perm.WORKFLOWS_VIEW),
     # Which providers exist and what shape of credential each takes is read by
     # the Builder's model picker, so it is gated on seeing agents rather than on

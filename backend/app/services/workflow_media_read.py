@@ -143,8 +143,8 @@ def retry_effect(operation: WorkflowMediaOperation) -> WorkflowMediaRetryEffect:
         return "new_billable_submission"
     if operation.output_sha256 is not None:
         return "recover_output"
-    if operation.provider_receipt is not None:
+    if operation.provider_receipt is not None and operation.media_kind == "video":
         return "collect_existing"
-    if operation.phase in {"submitting", "unknown"}:
+    if operation.phase in {"submitting", "submitted", "unknown"}:
         return "reconciliation_required"
     return "none"

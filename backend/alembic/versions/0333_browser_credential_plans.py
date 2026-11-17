@@ -290,4 +290,5 @@ def downgrade() -> None:
     op.drop_table("browser_credential_agent_grants")
     op.drop_table("browser_credential_policies")
     for table, name in reversed(_KEYS):
-        op.drop_constraint(name, table, type_="unique")
+        # Static revision-owned names; a key already gone must not block the downgrade.
+        op.execute(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {name}")

@@ -198,7 +198,7 @@ class WorkflowMediaOperation(Base, TimestampMixin):
             "AND provider_receipt->'api' = to_jsonb(provider_api) "
             "AND provider_receipt->'model' = to_jsonb(model) "
             "AND jsonb_typeof(provider_receipt->'kind') = 'string' "
-            "AND provider_receipt->>'kind' IN ('job','file') "
+            "AND provider_receipt->>'kind' IN ('job','file','response') "
             "AND jsonb_typeof(provider_receipt->'id') = 'string' "
             "AND length(provider_receipt->>'id') BETWEEN 1 AND 1024)",
             name="ck_media_operation_receipt",
@@ -206,7 +206,7 @@ class WorkflowMediaOperation(Base, TimestampMixin):
         CheckConstraint(
             "(phase <> 'submitted' OR provider_receipt IS NOT NULL) "
             "AND (provider_receipt IS NULL OR "
-            "(media_kind = 'video' AND submitted_at IS NOT NULL AND effect_started_at IS NOT NULL))",
+            "(submitted_at IS NOT NULL AND effect_started_at IS NOT NULL))",
             name="ck_media_operation_submission",
         ),
         Index(

@@ -21,6 +21,7 @@ import {
   browserCredentialSubmissionMatches,
   isBrowserCredentialId,
 } from "@/lib/browser-credential-review";
+import { isBrowserContinuationSource } from "@/lib/browser-credential-continuation";
 import type { BrowserCredentialPlan } from "@/types/browser-credentials";
 
 export function useBrowserCredentialPlan(
@@ -64,10 +65,13 @@ export function useBrowserCredentialPlan(
   const plan = browserCredentialPlanMatches(receipt.data, runId, planId, callId, tabId)
     ? receipt.data
     : undefined;
+  // A protected continuation's review names the credential its submit used, so
+  // an acknowledged continuation source reads eligibility as a pending fill does.
   const needsEligibility =
     !!plan &&
-    plan.operation === "fill" &&
-    (plan.state === "awaiting_confirmation" || plan.state === "filled");
+    ((plan.operation === "fill" &&
+      (plan.state === "awaiting_confirmation" || plan.state === "filled")) ||
+      isBrowserContinuationSource(plan));
   const eligibility = useQuery({
     queryKey: [
       ...prefix,

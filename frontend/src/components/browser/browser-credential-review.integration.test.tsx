@@ -26,6 +26,7 @@ import {
   browserSubmissionKey,
   retainBrowserSubmissionAttempt,
 } from "@/lib/browser-credential-review";
+import { continuationSourceFixture } from "@/test-utils/browser-credential-continuation-fixtures";
 import type { BrowserCredentialPlan } from "@/types/browser-credentials";
 import type { BrowserSubmissionAttempt } from "@/lib/browser-credentials-api";
 import { useBrowserCredentialPlan } from "@/hooks/use-browser-credential-plan";
@@ -224,6 +225,18 @@ describe("exact saved credential consent", () => {
         cache: "no-store",
         params: { call_id: "browser-call", tab_id: "main" },
       }),
+    );
+  });
+
+  it("names the credential an acknowledged continuation source used, read for its exact call and tab", async () => {
+    const source = continuationSourceFixture();
+    current = source;
+    setup({ planId: source.id });
+    expect(await screen.findByText("Synthetic account")).toBeVisible();
+    expect(screen.queryByText("Current credential metadata is unavailable")).not.toBeInTheDocument();
+    expect(apiClient.get).toHaveBeenCalledWith(
+      `/runs/${ids.run}/browser-credentials`,
+      expect.objectContaining({ params: { call_id: source.call_id, tab_id: source.tab_id } }),
     );
   });
 

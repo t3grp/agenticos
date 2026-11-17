@@ -81,6 +81,8 @@ async def test_real_image_sdk_submits_once_after_a_committed_fence_and_books_the
     assert (output.width, output.height, output.byte_size) == (12, 8, len(data))
     operation = await rows.operation()
     assert operation.phase == "stored" and operation.stored_file_id == output.file.file_id
+    assert operation.provider_receipt["kind"] == "response"
+    assert operation.provider_receipt["id"] == "resp_synthetic"
     assert operation.held_bytes == 0 and operation.held_usd == Decimal("0.64")
     assert operation.incurred_usd > 0 and operation.booked_usd == 0
     assert operation.cost_source == "catalog_estimate" and not operation.accounting_complete
@@ -157,6 +159,18 @@ async def test_billed_or_unknown_provider_failure_never_turns_into_a_second_imag
     assert operation.effect_started_at is not None and operation.held_usd > 0
     if failure != "transport":
         assert operation.incurred_usd > 0
+        # The provider's response id is journaled before the SDK reads any output.
+        assert operation.provider_receipt == {
+            "provider": operation.provider,
+            "api": operation.provider_api,
+            "model": operation.model,
+            "kind": "response",
+            "id": "resp_synthetic",
+        }
+    else:
+        assert operation.provider_receipt is None and operation.phase == "unknown"
+    if failure == "missing_image":
+        assert operation.phase == "submitted"
     assert "private URL" not in outcome.result.model_dump_json()
     assert "key" not in outcome.result.model_dump_json()
     assert await file_count(rows) == 0

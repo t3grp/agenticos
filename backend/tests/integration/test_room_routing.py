@@ -10,7 +10,12 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.background import discard_deferred
-from app.core.exceptions import AlreadyExistsError, AuthorizationError, NotFoundError
+from app.core.exceptions import (
+    AlreadyExistsError,
+    AuthorizationError,
+    BadRequestError,
+    NotFoundError,
+)
 from app.db.models.agent_trigger import AgentTrigger
 from app.db.models.background_job import BackgroundJob
 from app.db.models.organization import OrganizationMember
@@ -491,3 +496,53 @@ async def test_database_constraints_refuse_cross_organization_handoff_links(db, 
         async with db.begin_nested():
             await db.execute(statement.values(organization_id=uuid4()))
     assert await fires(db) == 1
+
+
+async def test_specialist_pins_resolve_only_runnable_agents_in_the_callers_organization(db, room):
+    """`get_runnable_spec` scopes every specialist pin: another organization's agent is
+    not found, an archived one is refused, and a refusal leaves the policy unchanged."""
+    other = await seed(db)
+    service = RoomRoutingService(db)
+
+    def write(*agent_ids):
+        return RoomLeadPolicyWrite(
+            expected_revision=0,
+            enabled=True,
+            lead_agent_id=room.agent.id,
+            specialist_agent_ids=list(agent_ids),
+        )
+
+    with pytest.raises(NotFoundError):
+        await service.update_policy(room.ctx, room.conversation.id, write(other.agent.id))
+    room.agent.status = "archived"
+    await db.flush()
+    with pytest.raises(BadRequestError, match="archived"):
+        await service.update_policy(room.ctx, room.conversation.id, write(room.agent.id))
+    room.agent.status = "published"
+    await db.flush()
+    assert (await service.policy(room.ctx, room.conversation.id)).revision == 0
+    policy = await service.update_policy(room.ctx, room.conversation.id, write(room.agent.id))
+    assert [pin.agent_id for pin in policy.specialists] == [room.agent.id]
+    assert policy.specialists[0].version_id == room.version.id
+
+
+async def test_an_accountable_member_must_be_able_to_run_the_pinned_specialist(db, room):
+    teammate = User(
+        id=uuid4(),
+        email=f"{uuid4()}@example.com",
+        full_name="Teammate without the agent",
+        hashed_password="x",
+        is_active=True,
+    )
+    db.add(teammate)
+    await db.flush()
+    db.add(
+        OrganizationMember(
+            organization_id=room.ctx.organization_id, user_id=teammate.id, role="member"
+        )
+    )
+    (await db.get(Project, room.conversation.project_id)).visibility = "org"
+    room.agent.visibility = "private"
+    await db.flush()
+    with pytest.raises(NotFoundError):
+        await planning(db, room, accountable_user_id=teammate.id)

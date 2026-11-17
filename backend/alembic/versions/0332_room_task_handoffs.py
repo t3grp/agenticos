@@ -2,6 +2,11 @@
 
 Revision ID: 0332_room_task_handoffs
 Revises: 0331_merge_core_accounts
+
+The room_submissions scope key is built CONCURRENTLY, then attached with USING
+INDEX. A retry accepts only that exact standalone index. The intent CHECK is
+added NOT VALID and validated after commit, so no step scans room_submissions
+under an ACCESS EXCLUSIVE lock.
 """
 
 from collections.abc import Sequence
@@ -16,8 +21,85 @@ down_revision: str | Sequence[str] | None = "0331_merge_core_accounts"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_SCOPE_KEY = "uq_room_submission_scope"
+_SCOPE_COLUMNS = ("organization_id", "conversation_id", "id")
+_INTENT_CHECK = "room_submissions_lead_intent_check"
+
+
+def _building() -> bool:
+    return bool(
+        op.get_bind().scalar(
+            sa.text(
+                "SELECT EXISTS (SELECT 1 FROM pg_stat_progress_create_index p "
+                "JOIN pg_locks l ON l.pid = p.pid "
+                "WHERE p.pid <> pg_backend_pid() AND l.locktype = 'relation' "
+                "AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) "
+                "AND l.relation = to_regclass('room_submissions'))"
+            )
+        )
+    )
+
+
+def _scope_index_state() -> tuple[bool, bool] | None:
+    row = (
+        op.get_bind()
+        .execute(
+            sa.text(
+                "SELECT CASE WHEN c.relkind = 'i' THEN "
+                "i.indrelid = to_regclass('room_submissions') AND i.indisunique AND i.indimmediate "
+                "AND NOT i.indisprimary AND NOT i.indisexclusion AND NOT i.indnullsnotdistinct "
+                "AND i.indnkeyatts = :width AND i.indnatts = :width "
+                "AND i.indexprs IS NULL AND i.indpred IS NULL AND a.amname = 'btree' "
+                "AND NOT EXISTS (SELECT 1 FROM unnest(i.indoption::smallint[]) v WHERE v <> 0) "
+                "AND NOT EXISTS (SELECT 1 FROM unnest(i.indcollation::oid[]) v WHERE v <> 0) "
+                "AND ARRAY(SELECT pg_get_indexdef(c.oid, p, false) "
+                "FROM generate_series(1, :width) p) = CAST(:columns AS text[]) "
+                "AND NOT EXISTS (SELECT 1 FROM pg_constraint k WHERE k.conindid = c.oid) "
+                "ELSE false END AS expected, "
+                "i.indisvalid AND i.indisready AND i.indislive AS usable "
+                "FROM pg_class c LEFT JOIN pg_index i ON i.indexrelid = c.oid "
+                "LEFT JOIN pg_am a ON a.oid = c.relam WHERE c.oid = to_regclass(:name)"
+            ),
+            {"name": _SCOPE_KEY, "columns": list(_SCOPE_COLUMNS), "width": len(_SCOPE_COLUMNS)},
+        )
+        .one_or_none()
+    )
+    return None if row is None else (bool(row.expected), bool(row.usable))
+
+
+def _check_scope_index() -> tuple[bool, bool] | None:
+    if _building():
+        raise RuntimeError(
+            "An index on room_submissions is being built; let it finish before revision 0332."
+        )
+    state = _scope_index_state()
+    if state is not None and not state[0]:
+        raise RuntimeError(
+            f"Existing {_SCOPE_KEY} is not the expected standalone index; reconcile it before revision 0332."
+        )
+    return state
+
+
+def _build_scope_index() -> None:
+    """Build the unique index without blocking writes; a retry accepts only the exact index."""
+    _check_scope_index()
+    with op.get_context().autocommit_block():
+        state = _check_scope_index()
+        if state is not None and state[1]:
+            return
+        if state is not None:
+            op.drop_index(_SCOPE_KEY, table_name="room_submissions", postgresql_concurrently=True)
+        op.create_index(
+            _SCOPE_KEY,
+            "room_submissions",
+            list(_SCOPE_COLUMNS),
+            unique=True,
+            postgresql_concurrently=True,
+        )
+
 
 def upgrade() -> None:
+    _build_scope_index()
     op.add_column(
         "room_submissions",
         sa.Column("intent", sa.String(16), nullable=False, server_default="message"),
@@ -25,15 +107,16 @@ def upgrade() -> None:
     op.add_column(
         "room_submissions", sa.Column("lead_policy_revision", sa.Integer(), nullable=True)
     )
-    op.create_unique_constraint(
-        "uq_room_submission_scope", "room_submissions", ["organization_id", "conversation_id", "id"]
+    op.execute(
+        f"ALTER TABLE room_submissions ADD CONSTRAINT {_SCOPE_KEY} UNIQUE USING INDEX {_SCOPE_KEY}"
     )
-    op.create_check_constraint(
-        op.f("room_submissions_lead_intent_check"),
-        "room_submissions",
+    # NOT VALID skips the scan under this transaction's lock; existing rows are
+    # checked by VALIDATE after commit, which blocks no reads or writes.
+    op.execute(
+        f"ALTER TABLE room_submissions ADD CONSTRAINT {_INTENT_CHECK} CHECK ("
         "(intent = 'message' AND lead_policy_revision IS NULL) OR "
         "(intent = 'ask_lead' AND lead_policy_revision IS NOT NULL "
-        "AND lead_policy_revision >= 1 AND agent_id IS NOT NULL)",
+        "AND lead_policy_revision >= 1 AND agent_id IS NOT NULL)) NOT VALID"
     )
     op.create_table(
         "room_lead_policies",
@@ -236,6 +319,10 @@ def upgrade() -> None:
         "room_task_links",
         ["organization_id", "conversation_id", "created_at"],
     )
+    # Every existing row has intent 'message' and no revision, so this cannot
+    # fail on data; it runs after commit to take only SHARE UPDATE EXCLUSIVE.
+    with op.get_context().autocommit_block():
+        op.execute(f"ALTER TABLE room_submissions VALIDATE CONSTRAINT {_INTENT_CHECK}")
 
 
 def downgrade() -> None:
@@ -256,9 +343,7 @@ def downgrade() -> None:
     op.drop_table("room_task_links")
     op.drop_table("room_routing_proposals")
     op.drop_table("room_lead_policies")
-    op.drop_constraint(
-        op.f("room_submissions_lead_intent_check"), "room_submissions", type_="check"
-    )
-    op.drop_constraint("uq_room_submission_scope", "room_submissions", type_="unique")
+    op.drop_constraint(op.f(_INTENT_CHECK), "room_submissions", type_="check")
+    op.drop_constraint(_SCOPE_KEY, "room_submissions", type_="unique")
     op.drop_column("room_submissions", "lead_policy_revision")
     op.drop_column("room_submissions", "intent")

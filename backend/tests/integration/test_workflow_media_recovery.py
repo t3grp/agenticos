@@ -10,10 +10,14 @@ import pytest
 from sqlalchemy import select, update
 
 from app.core.config import settings
+from app.core.exceptions import ConflictError, NotFoundError
+from app.core.permissions import AuthContext
+from app.db.models.audit_log import AppAdminAuditLog
 from app.db.models.workflow import Workflow
 from app.db.models.workflow_run import DispatchOutbox, NodeAttempt, NodeRun, WorkflowRun
 from app.repositories import workflow_media_operation as media_repo
 from app.repositories import workflow_run as run_repo
+from app.schemas.workflow_media import WorkflowMediaCharged, WorkflowMediaNotCharged
 from app.services.media_inspection import MediaInfo
 from app.services.video_generation import Clip, VideoReceipt
 from app.services.workflow_execution import budget, context, dispatcher
@@ -23,6 +27,7 @@ from app.services.workflow_media._admission import admit
 from app.services.workflow_media._errors import MediaOperationError
 from app.services.workflow_media._journal import MediaJournal
 from app.services.workflow_media_read import WorkflowMediaReadService
+from app.services.workflow_media_resolution import WorkflowMediaResolutionService
 from app.services.workflow_registry import WorkflowInUseError, WorkflowRegistryService
 from app.workflows.contracts.results import Completed
 from tests.integration.workflow_media_runtime_support import seed_generation
@@ -357,3 +362,108 @@ async def test_retention_and_workflow_deletion_preserve_unresolved_media_evidenc
             (rows.seeded.run.id, [])
         ]
         await db.commit()
+
+
+@pytest.mark.parametrize("charged", [None, Decimal("0.7")])
+async def test_a_member_resolved_unknown_hold_leaves_outstanding_usd_and_books_a_reported_charge_once(
+    engine, monkeypatch, tmp_path, charged
+):
+    rows = await seed_generation(engine, monkeypatch, tmp_path, kind="video")
+    await prepare(rows, submitted=True)
+    await expire(rows)
+    async with rows.seeded.factory() as db:
+        assert await WorkflowReconcilerService(db).resolve_orphaned_attempts() == 1
+        await db.commit()
+    operation = await rows.operation()
+    org_id = rows.seeded.org.id
+    assert operation.phase == "unknown"
+    async with rows.seeded.factory() as db:
+        assert (
+            await media_repo.outstanding_usd(db, organization_id=org_id) == operation.reserved_usd
+        )
+    ctx = AuthContext(user_id=rows.seeded.principal.id, organization_id=org_id, role="owner")
+    body = (
+        WorkflowMediaNotCharged(outcome="not_charged")
+        if charged is None
+        else WorkflowMediaCharged(outcome="charged", charged_usd=charged)
+    )
+    async with rows.seeded.factory() as db:
+        read = await WorkflowMediaResolutionService(db).resolve(ctx, operation.id, body)
+        await db.commit()
+    assert read.phase == "failed" and read.held_usd == 0
+    assert read.retry_effect == "new_billable_submission"
+    resolved = await rows.operation()
+    assert resolved.accounting_complete and resolved.held_bytes == 0
+    assert resolved.incurred_usd == (charged or 0)
+    async with rows.seeded.factory() as db:
+        # Only a reported charge remains, as an incurred fee awaiting the ledger.
+        assert await media_repo.outstanding_usd(db, organization_id=org_id) == (charged or 0)
+        entry = (
+            await db.execute(
+                select(AppAdminAuditLog).where(
+                    AppAdminAuditLog.action == "workflow_media.hold_resolved"
+                )
+            )
+        ).scalar_one()
+        assert entry.organization_id == org_id
+        assert entry.actor_user_id == rows.seeded.principal.id
+        assert entry.target_id == str(operation.id)
+        assert entry.details["outcome"] == body.outcome
+        assert entry.details["released_usd"] == str(operation.reserved_usd)
+        with pytest.raises(ConflictError):
+            await WorkflowMediaResolutionService(db).resolve(ctx, operation.id, body)
+    async with rows.seeded.factory() as db:
+        assert await WorkflowReconcilerService(db).book_pending_media_costs() == (
+            0 if charged is None else 1
+        )
+        await db.commit()
+    async with rows.seeded.factory() as db:
+        assert await media_repo.outstanding_usd(db, organization_id=org_id) == 0
+        run = await db.get(WorkflowRun, rows.seeded.run.id)
+        assert run.spent_cost == (charged or 0)
+        # A resolved hold no longer blocks the explicit, separately billed retry.
+        await _recovery.explicit_retry(
+            db, organization_id=org_id, node_run_id=rows.begun.node_run_id, now=datetime.now(UTC)
+        )
+
+
+async def test_resolving_a_media_hold_is_organization_scoped_and_refuses_a_lower_charge(
+    engine, monkeypatch, tmp_path
+):
+    rows = await seed_generation(engine, monkeypatch, tmp_path, kind="video")
+    await prepare(rows, submitted=True)
+    await expire(rows)
+    async with rows.seeded.factory() as db:
+        assert await WorkflowReconcilerService(db).resolve_orphaned_attempts() == 1
+        await db.commit()
+    operation = await rows.operation()
+    async with rows.seeded.factory() as db:
+        await media_repo.change(
+            db,
+            operation.id,
+            organization_id=rows.seeded.org.id,
+            values={"incurred_usd": Decimal("0.4"), "cost_source": "catalog_estimate"},
+        )
+        await db.commit()
+    stranger = AuthContext(user_id=uuid4(), organization_id=uuid4(), role="owner")
+    member = AuthContext(
+        user_id=rows.seeded.principal.id, organization_id=rows.seeded.org.id, role="owner"
+    )
+    async with rows.seeded.factory() as db:
+        service = WorkflowMediaResolutionService(db)
+        with pytest.raises(NotFoundError):
+            await service.resolve(
+                stranger, operation.id, WorkflowMediaNotCharged(outcome="not_charged")
+            )
+        with pytest.raises(ConflictError, match="below the fee"):
+            await service.resolve(
+                member,
+                operation.id,
+                WorkflowMediaCharged(outcome="charged", charged_usd=Decimal("0.1")),
+            )
+        with pytest.raises(ConflictError, match="resolve it as charged"):
+            await service.resolve(
+                member, operation.id, WorkflowMediaNotCharged(outcome="not_charged")
+            )
+    unchanged = await rows.operation()
+    assert unchanged.phase == "unknown" and unchanged.held_usd == unchanged.reserved_usd

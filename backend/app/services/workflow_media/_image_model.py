@@ -10,7 +10,7 @@ from pydantic_ai.tools import RunContext
 
 from app.services.workflow_execution import context
 from app.services.workflow_media._errors import MediaOperationError
-from app.services.workflow_media._journal import MediaJournal
+from app.services.workflow_media._journal import ImageReceipt, MediaJournal
 from app.services.workflow_media._pricing import ImagePriceBasis, image_cost
 
 
@@ -28,8 +28,20 @@ class DurableImageModel(WrapperModel):
     ) -> ModelResponse:
         # The committed transition refuses a second call even if a future SDK
         # attempts an output correction despite strict execution's retry cap.
-        await self.journal.start(context.current())
+        operation = await self.journal.start(context.current())
         response = await self.wrapped.request(messages, model_settings, model_request_parameters)
+        # A synchronous image API names its response only when it answers. Journal
+        # that id first, before usage and before the SDK validates any output, so
+        # an interruption after the charge still leaves the provider's reference.
+        if response.provider_response_id is not None:
+            await self.journal.receipt(
+                ImageReceipt(
+                    provider=operation.provider,
+                    api=operation.provider_api,
+                    model=operation.model,
+                    id=response.provider_response_id,
+                )
+            )
         await self.journal.cost(image_cost(self.basis, response))
         return response
 

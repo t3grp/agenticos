@@ -272,23 +272,26 @@ async def test_estimate_cannot_read_an_inaccessible_key(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "phase,receipt,digest,effect",
+    "phase,receipt,digest,effect,kind",
     [
-        ("prepared", False, False, "none"),
-        ("submitting", False, False, "reconciliation_required"),
-        ("unknown", False, False, "reconciliation_required"),
-        ("submitted", True, False, "collect_existing"),
-        ("collecting", True, True, "recover_output"),
-        ("stored", False, True, "recover_output"),
-        ("failed", True, True, "new_billable_submission"),
-        ("cancelled", False, False, "new_billable_submission"),
+        ("prepared", False, False, "none", "video"),
+        ("submitting", False, False, "reconciliation_required", "video"),
+        ("unknown", False, False, "reconciliation_required", "video"),
+        ("submitted", True, False, "collect_existing", "video"),
+        ("collecting", True, True, "recover_output", "video"),
+        ("stored", False, True, "recover_output", "video"),
+        ("failed", True, True, "new_billable_submission", "video"),
+        ("cancelled", False, False, "new_billable_submission", "video"),
+        # An image receipt is billing evidence; it cannot collect the image again.
+        ("submitted", True, False, "reconciliation_required", "image"),
     ],
 )
 def test_retry_label_never_suggests_new_submission_for_an_unknown_effect(
-    phase, receipt, digest, effect
+    phase, receipt, digest, effect, kind
 ):
     operation = WorkflowMediaOperation(
         phase=phase,
+        media_kind=kind,
         provider_receipt={"id": "opaque"} if receipt else None,
         output_sha256="a" * 64 if digest else None,
     )

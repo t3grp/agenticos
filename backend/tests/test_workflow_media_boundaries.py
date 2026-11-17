@@ -41,6 +41,7 @@ def operation(config=None, **changes):
         workflow_run_id=uuid4(),
         output_file_id=uuid4(),
         pricing_snapshot=_pricing.snapshot(config).model_dump(mode="json"),
+        media_kind="image",
         provider_receipt=None,
         output_sha256=hashlib.sha256(data).hexdigest(),
         output_metadata=metadata.model_dump(mode="json"),
@@ -180,7 +181,11 @@ async def test_missing_journaled_image_bytes_never_authorize_a_replacement_submi
     with pytest.raises(MediaOperationError) as refused:
         await _execution._recover(row, image_config())
     assert refused.value.code == "MEDIA_OUTPUT_RECOVERY_REQUIRED"
-    row.provider_receipt = {"id": "existing-video"}
+    # An image response id is billing evidence only; it cannot collect the image.
+    row.provider_receipt = {"kind": "response", "id": "resp_synthetic"}
+    with pytest.raises(MediaOperationError, match="needs review"):
+        await _execution._recover(row, image_config())
+    row.media_kind, row.provider_receipt = "video", {"id": "existing-video"}
     assert await _execution._recover(row, image_config()) is None
     row.output_sha256 = None
     recover.reset_mock()

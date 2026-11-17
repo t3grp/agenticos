@@ -125,3 +125,27 @@ class WorkflowMediaOperationRead(BaseSchema):
     node_unresolved_usd: MediaUSD
     has_receipt: bool
     retry_effect: WorkflowMediaRetryEffect
+
+
+class WorkflowMediaCharged(BaseSchema):
+    """The provider's own billing shows this submission was charged this amount."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    outcome: Literal["charged"]
+    charged_usd: Annotated[
+        Decimal, Field(gt=0, le=Decimal("999999.999999"), decimal_places=6, allow_inf_nan=False)
+    ]
+
+
+class WorkflowMediaNotCharged(BaseSchema):
+    """The provider's own billing shows this submission was never charged."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    outcome: Literal["not_charged"]
+
+
+WorkflowMediaResolve = Annotated[
+    WorkflowMediaCharged | WorkflowMediaNotCharged, Field(discriminator="outcome")
+]

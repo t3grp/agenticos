@@ -221,7 +221,7 @@ async def _recover(operation: WorkflowMediaOperation, config: MediaConfig) -> by
     if operation.output_sha256 is None:
         return None
     data = await _output.recover_bytes(operation, config)
-    if data is None and operation.provider_receipt is None:
+    if data is None and (operation.media_kind == "image" or operation.provider_receipt is None):
         raise MediaOperationError(
             "MEDIA_OUTPUT_RECOVERY_REQUIRED",
             "The journaled image output is unavailable; a new submission needs review",
