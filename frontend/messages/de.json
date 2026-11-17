@@ -18341,6 +18341,10 @@
         "name": "Zusammenfassen oder übersetzen",
         "description": "Einen Text von einem Modell zusammenfassen, übersetzen oder umschreiben lassen."
       },
+      "asset_input": {
+        "name": "Medien-Asset prüfen",
+        "description": "Den tatsächlichen Medientyp, die Größe, die Abmessungen und die Dauer einer Datei aus dem Run prüfen, ohne Medien zu erzeugen oder abzurufen."
+      },
       "code_javascript_sandbox": {
         "name": "JavaScript in einer Sandbox",
         "description": "JavaScript auf Node mit den Dateien des Runs als dauerhaften Job auf dem Sandbox-Host der Organisation ausführen, ohne Zugangsdaten der Plattform darin."
@@ -18464,6 +18468,10 @@
       "human_approval": {
         "name": "Freigabe anfordern",
         "description": "Warten, bis eine Person freigibt oder ablehnt, und dann je nach Antwort fortfahren."
+      },
+      "image_generate": {
+        "name": "Bild erzeugen",
+        "description": "Eine begrenzte Bildanfrage mit einem Provider-Schlüssel senden, dann die Ausgabe prüfen und mit ihrem Kostenbeleg aufbewahren."
       },
       "image_transform": {
         "name": "Bild umwandeln",
@@ -18684,6 +18692,10 @@
       "trigger_workflow_failed": {
         "name": "Bei Fehlschlag eines Workflows",
         "description": "Ein Run eines Workflows, der diesen als seinen Fehler-Workflow angibt, schlägt fehl."
+      },
+      "video_generate": {
+        "name": "Video erzeugen",
+        "description": "Eine begrenzte Videoanfrage senden oder ihren dauerhaften Provider-Beleg abholen, dann den Clip prüfen und aufbewahren."
       },
       "webhook_respond": {
         "name": "Auf Webhook antworten",

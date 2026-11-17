@@ -19294,6 +19294,10 @@
         "name": "Summarize or translate",
         "description": "Have a model summarize, translate or rewrite a text."
       },
+      "asset_input": {
+        "name": "Inspect a media asset",
+        "description": "Validate a run file's actual media type, size, dimensions and duration without generating or fetching media."
+      },
       "code_javascript_sandbox": {
         "name": "JavaScript in a sandbox",
         "description": "Run JavaScript on Node with the run's files as a durable job on the organization's sandbox host, with no platform credentials inside it."
@@ -19417,6 +19421,10 @@
       "human_approval": {
         "name": "Ask for approval",
         "description": "Wait until a person approves or rejects, then go on by their answer."
+      },
+      "image_generate": {
+        "name": "Generate an image",
+        "description": "Submit one bounded image request with a provider key, then inspect and retain its output and cost receipt."
       },
       "image_transform": {
         "name": "Transform an image",
@@ -19637,6 +19645,10 @@
       "trigger_workflow_failed": {
         "name": "On failure of a workflow",
         "description": "A run of a workflow that names this one as its error workflow fails."
+      },
+      "video_generate": {
+        "name": "Generate a video",
+        "description": "Submit one bounded video request or collect its durable provider receipt, then inspect and retain the clip."
       },
       "webhook_respond": {
         "name": "Respond to webhook",

@@ -18429,6 +18429,10 @@
         "name": "Podsumuj lub przetłumacz",
         "description": "Niech model podsumuje, przetłumaczy lub przeredaguje tekst."
       },
+      "asset_input": {
+        "name": "Sprawdź zasób multimedialny",
+        "description": "Sprawdź rzeczywisty typ multimediów, rozmiar, wymiary i czas trwania pliku z runu bez generowania ani pobierania multimediów."
+      },
       "code_javascript_sandbox": {
         "name": "JavaScript w sandboksie",
         "description": "Uruchom JavaScript w Node z plikami runa jako trwałe zadanie na hoście sandboksa organizacji, bez żadnych poświadczeń platformy w środku."
@@ -18552,6 +18556,10 @@
       "human_approval": {
         "name": "Poproś o zatwierdzenie",
         "description": "Poczekaj, aż osoba zatwierdzi lub odrzuci, i kontynuuj zgodnie z jej odpowiedzią."
+      },
+      "image_generate": {
+        "name": "Wygeneruj obraz",
+        "description": "Wyślij jedno ograniczone żądanie obrazu z kluczem providera, a następnie sprawdź i zachowaj wynik oraz potwierdzenie kosztu."
       },
       "image_transform": {
         "name": "Przekształć obraz",
@@ -18772,6 +18780,10 @@
       "trigger_workflow_failed": {
         "name": "Po błędzie workflow",
         "description": "Kończy się niepowodzeniem run workflow, który wskazuje ten jako swój workflow obsługi błędów."
+      },
+      "video_generate": {
+        "name": "Wygeneruj wideo",
+        "description": "Wyślij jedno ograniczone żądanie wideo albo odbierz jego trwałe potwierdzenie od providera, a następnie sprawdź i zachowaj klip."
       },
       "webhook_respond": {
         "name": "Odpowiedz na webhook",

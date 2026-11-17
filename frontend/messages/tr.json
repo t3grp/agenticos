@@ -14059,6 +14059,10 @@
         "name": "Özetle veya çevir",
         "description": "Bir modelin metni özetlemesini, çevirmesini veya yeniden yazmasını sağlayın."
       },
+      "asset_input": {
+        "name": "Medya varlığını incele",
+        "description": "Bir run dosyasının gerçek medya türünü, boyutunu, ölçülerini ve süresini medya üretmeden veya indirmeden doğrulayın."
+      },
       "code_javascript_sandbox": {
         "name": "Sandbox’ta JavaScript",
         "description": "JavaScript’i Node üzerinde run’ın dosyalarıyla, kuruluşun sandbox sunucusunda kalıcı bir iş olarak çalıştırın; içinde hiçbir platform kimlik bilgisi bulunmaz."
@@ -14182,6 +14186,10 @@
       "human_approval": {
         "name": "Onay iste",
         "description": "Bir kişi onaylayana veya reddedene kadar bekleyin, sonra yanıtına göre devam edin."
+      },
+      "image_generate": {
+        "name": "Görsel oluştur",
+        "description": "Bir provider anahtarıyla sınırlı tek bir görsel isteği gönderin, ardından çıktıyı ve maliyet makbuzunu inceleyip saklayın."
       },
       "image_transform": {
         "name": "Görseli dönüştür",
@@ -14402,6 +14410,10 @@
       "trigger_workflow_failed": {
         "name": "Workflow başarısız olduğunda",
         "description": "Bunu hata workflow’u olarak belirleyen bir workflow’un run’ı başarısız olur."
+      },
+      "video_generate": {
+        "name": "Video oluştur",
+        "description": "Sınırlı tek bir video isteği gönderin veya kalıcı provider makbuzunu alın, ardından klibi inceleyip saklayın."
       },
       "webhook_respond": {
         "name": "Webhook’a yanıt ver",
