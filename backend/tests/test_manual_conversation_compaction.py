@@ -223,6 +223,7 @@ async def test_compaction_availability_refuses_unowned_or_nonpersonal_chats(conv
     registry.get_runnable_spec.assert_not_awaited()
 
 
+@pytest.mark.security
 async def test_compaction_availability_hides_unsupported_policy_and_agent_permissions():
     from app.api.routes.v1.conversations import compaction_availability
 
@@ -562,6 +563,7 @@ async def test_runner_refuses_a_stale_guardrail_revision_before_calling_the_summ
     assert service.finish_compaction.await_args.kwargs["status"] is RunStatus.GUARDRAIL_BLOCKED
 
 
+@pytest.mark.security
 async def test_runner_books_budget_refusal_and_does_not_replace_the_summary(
     monkeypatch: pytest.MonkeyPatch,
 ):

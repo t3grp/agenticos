@@ -664,13 +664,15 @@ class TestReauthorizingEachFrame:
         session = self._socket_session()
         inbox = SteeringInbox()
         session._steering = inbox
-        session._turn_task = asyncio.get_running_loop().create_future()  # a turn "running"
+        turn = asyncio.get_running_loop().create_future()  # a turn "running"
+        session._turn_task = turn
 
         with self._revoked():
             await session.handle_frame({"type": "steer", "text": "use the EU numbers"})
 
         assert inbox.unapplied() == []
-        session._turn_task.cancel()
+        assert turn.cancelled()
+        assert session._turn_task is None
 
     async def test_a_revoked_session_cancels_a_turn_already_running(self):
         """A turn in flight when the next frame lands on a revoked session is
@@ -4143,7 +4145,8 @@ class TestVisualReports:
         session = AgentSession(websocket, MagicMock(), MagicMock(), auth_token="live")
         reports = VisualReports()
         session._visual_reports = reports
-        session._turn_task = asyncio.get_running_loop().create_future()
+        turn = asyncio.get_running_loop().create_future()
+        session._turn_task = turn
 
         with (
             patch("app.services.agent_session.get_db_context") as db_context,
@@ -4157,7 +4160,8 @@ class TestVisualReports:
             await session.handle_frame({"type": "visual_report", "tool_call_id": "t", "errors": []})
 
         assert reports._futures == {}
-        session._turn_task.cancel()
+        assert turn.cancelled()
+        assert session._turn_task is None
 
     async def test_a_drawing_s_pictures_are_sent_to_the_tab(self):
         session = self._session()

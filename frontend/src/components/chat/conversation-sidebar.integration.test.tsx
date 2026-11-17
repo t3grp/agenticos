@@ -775,7 +775,13 @@ describe("the three icons over the list", () => {
 
     await userEvent.click(within(list()).getByRole("button", { name: "Search conversations" }));
     const dialog = await screen.findByRole("dialog", { name: "Search conversations" });
-    expect(within(dialog).getByText("Type to search your conversations by title.")).toBeVisible();
+    await userEvent.selectOptions(
+      within(dialog).getByRole("combobox", { name: "Search by" }),
+      "Conversation title",
+    );
+    expect(
+      within(dialog).getByText("Search conversation titles, including archived conversations."),
+    ).toBeVisible();
 
     serve([conversation("c-9", "Refund policy")]);
     await userEvent.type(within(dialog).getByRole("textbox"), "refund");
@@ -791,6 +797,10 @@ describe("the three icons over the list", () => {
     await screen.findAllByText("Quarterly numbers");
     await userEvent.click(within(list()).getByRole("button", { name: "Search conversations" }));
     const dialog = await screen.findByRole("dialog", { name: "Search conversations" });
+    await userEvent.selectOptions(
+      within(dialog).getByRole("combobox", { name: "Search by" }),
+      "Conversation title",
+    );
 
     serve([]);
     await userEvent.type(within(dialog).getByRole("textbox"), "nothing");

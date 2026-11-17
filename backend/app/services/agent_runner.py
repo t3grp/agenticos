@@ -86,6 +86,7 @@ from pydantic_ai.messages import (
     ToolCallPart,
     UserContent,
 )
+from pydantic_ai.models import Model
 from pydantic_ai.realtime import (
     RealtimeModel,
     RealtimeModelSettings,
@@ -4113,10 +4114,10 @@ class AgentRunnerService:
             if aside:
                 raise BadRequestError(message="A maintenance run cannot answer a side question")
             spec = _compaction_only(spec)
-            binding = next(
-                (item for item in spec.capabilities if item.id == "compaction"), None
+            binding = next((item for item in spec.capabilities if item.id == "compaction"), None)
+            strategy = (
+                "summarize" if binding is None else binding.config.get("strategy", "summarize")
             )
-            strategy = "summarize" if binding is None else binding.config.get("strategy", "summarize")
             if binding is None or strategy not in {"summarize", "tiered"}:
                 raise BadRequestError(
                     message="This agent is not configured for summarising compaction"
@@ -7285,7 +7286,9 @@ class AgentRunnerService:
             ),
             None,
         )
-        strategy = "summarize" if compaction is None else compaction.config.get("strategy", "summarize")
+        strategy = (
+            "summarize" if compaction is None else compaction.config.get("strategy", "summarize")
+        )
         if compaction is None or strategy not in {"summarize", "tiered"}:
             raise BadRequestError(message="This agent is not configured for summarising compaction")
         history = await conversations.model_history(
@@ -7335,6 +7338,13 @@ class AgentRunnerService:
                 raise RuntimeError(  # noqa: TRY301
                     "A maintenance compaction unexpectedly opened a workspace"
                 )
+            # The factory builds every agent on a concrete model with static settings.
+            model = prepared.built.agent.model
+            model_settings = prepared.built.agent.model_settings
+            if not isinstance(model, Model) or callable(model_settings):
+                raise TypeError(  # noqa: TRY301
+                    "A maintenance compaction needs a built model and static settings"
+                )
 
             # Make the billable maintenance row visible before asking the model,
             # then give the pooled connection back while the summary is running.
@@ -7351,10 +7361,10 @@ class AgentRunnerService:
                 ):
                     run_context = RunContext(
                         deps=prepared.built.deps,
-                        model=prepared.built.agent.model,
+                        model=model,
                         usage=RunUsage(),
                         messages=list(history),
-                        model_settings=prepared.built.agent.model_settings,
+                        model_settings=model_settings,
                         usage_limits=prepared.built.usage_limits,
                     )
                     compacted = await compactor.compact_now(list(history), run_context)
@@ -7397,9 +7407,7 @@ class AgentRunnerService:
             with anyio.CancelScope(shield=True):
                 finished = await self.finish_compaction(prepared, status=status, error=error)
                 await self.db.commit()
-            await change_feed.publish_run(
-                finished, "updated" if published_created else "created"
-            )
+            await change_feed.publish_run(finished, "updated" if published_created else "created")
 
         if failure is not None:
             raise failure

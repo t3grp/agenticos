@@ -144,11 +144,13 @@ class ConversationMessagePinService:
     @staticmethod
     def _read(pin: ConversationMessagePin, message: Message) -> ConversationMessagePinRead:
         """Project the current message, redacting content refused by a guardrail."""
-        return ConversationMessagePinRead(
-            message_id=message.id,
-            thread_root_message_id=message.thread_root_message_id,
-            role=message.role,
-            message_created_at=message.created_at,
-            pinned_at=pin.created_at,
-            preview=_excerpt(_said(message)),
+        return ConversationMessagePinRead.model_validate(
+            {
+                "message_id": message.id,
+                "thread_root_message_id": message.thread_root_message_id,
+                "role": message.role,
+                "message_created_at": message.created_at,
+                "pinned_at": pin.created_at,
+                "preview": _excerpt(_said(message)),
+            }
         )

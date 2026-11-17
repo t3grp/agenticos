@@ -282,6 +282,7 @@ class TestTheSidebarListsForks:
         assert by_id[fork.id].forked_from.conversation_id == source.id
         assert by_id[source.id].forked_from is None
 
+    @pytest.mark.security
     async def test_fork_pages_are_tenant_owner_and_source_scoped_and_keep_archives(
         self, db: AsyncSession
     ) -> None:
@@ -298,7 +299,6 @@ class TestTheSidebarListsForks:
             db, source=source, through=other_answer, copy_bytes=0
         )
         first.is_archived = True
-        first.forked_from_message_id = None
 
         other_owner = await _user(db)
         wrong_owner = Conversation(
@@ -364,7 +364,6 @@ class TestTheSidebarListsForks:
         assert len(page) == len(second_page) == 1
         assert {page[0].id, second_page[0].id} == {first.id, second.id}
         assert next(child for child in [*page, *second_page] if child.id == first.id).is_archived
-        assert next(child for child in [*page, *second_page] if child.id == first.id).forked_from_message_id is None
         assert other_total == 1
         assert [child.id for child in other_page] == [other_anchor.id]
 
