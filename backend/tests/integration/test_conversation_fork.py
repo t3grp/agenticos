@@ -364,7 +364,12 @@ class TestTheSidebarListsForks:
         assert len(page) == len(second_page) == 1
         assert {page[0].id, second_page[0].id} == {first.id, second.id}
         assert next(child for child in [*page, *second_page] if child.id == first.id).is_archived
-        assert next(child for child in [*page, *second_page] if child.id == first.id).forked_from_message_id is None
+        assert (
+            next(
+                child for child in [*page, *second_page] if child.id == first.id
+            ).forked_from_message_id
+            is None
+        )
         assert other_total == 1
         assert [child.id for child in other_page] == [other_anchor.id]
 

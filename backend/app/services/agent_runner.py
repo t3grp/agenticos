@@ -4115,10 +4115,10 @@ class AgentRunnerService:
             if aside:
                 raise BadRequestError(message="A maintenance run cannot answer a side question")
             spec = _compaction_only(spec)
-            binding = next(
-                (item for item in spec.capabilities if item.id == "compaction"), None
+            binding = next((item for item in spec.capabilities if item.id == "compaction"), None)
+            strategy = (
+                "summarize" if binding is None else binding.config.get("strategy", "summarize")
             )
-            strategy = "summarize" if binding is None else binding.config.get("strategy", "summarize")
             if binding is None or strategy not in {"summarize", "tiered"}:
                 raise BadRequestError(
                     message="This agent is not configured for summarising compaction"
@@ -7302,7 +7302,9 @@ class AgentRunnerService:
             ),
             None,
         )
-        strategy = "summarize" if compaction is None else compaction.config.get("strategy", "summarize")
+        strategy = (
+            "summarize" if compaction is None else compaction.config.get("strategy", "summarize")
+        )
         if compaction is None or strategy not in {"summarize", "tiered"}:
             raise BadRequestError(message="This agent is not configured for summarising compaction")
         history = await conversations.model_history(
@@ -7414,9 +7416,7 @@ class AgentRunnerService:
             with anyio.CancelScope(shield=True):
                 finished = await self.finish_compaction(prepared, status=status, error=error)
                 await self.db.commit()
-            await change_feed.publish_run(
-                finished, "updated" if published_created else "created"
-            )
+            await change_feed.publish_run(finished, "updated" if published_created else "created")
 
         if failure is not None:
             raise failure

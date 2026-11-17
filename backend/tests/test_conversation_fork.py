@@ -366,7 +366,9 @@ class TestTheOwnerListsPersonalSideThreads:
 
         forks.assert_not_awaited()
 
-    async def test_cross_tenant_or_unreadable_source_never_lists_children(self, service, monkeypatch):
+    async def test_cross_tenant_or_unreadable_source_never_lists_children(
+        self, service, monkeypatch
+    ):
         source_id = uuid4()
         missing = AsyncMock(side_effect=NotFoundError(message="Conversation not found"))
         monkeypatch.setattr(service, "get_conversation", missing)
