@@ -156,6 +156,7 @@ async def test_an_unfinished_review_cannot_be_proposed(db, redis, enabled) -> No
     assert await _jobs(db) == 0
 
 
+@pytest.mark.security
 async def test_budget_refusal_queues_nothing(db, redis, enabled, monkeypatch) -> None:
     organization, owner, service, reviewed = await _reviewed(db, redis, enabled)
 
@@ -230,6 +231,7 @@ async def test_the_proposal_holds_only_reviewed_steps_parameter_names_and_allowe
     } == {ORIGIN}
 
 
+@pytest.mark.security
 async def test_permission_loss_before_the_build_writes_no_proposal(db, redis, enabled) -> None:
     organization, owner, service, reviewed = await _reviewed(db, redis, enabled)
     await service.propose(
@@ -251,6 +253,7 @@ async def test_permission_loss_before_the_build_writes_no_proposal(db, redis, en
     assert (row.status, row.reason_code, row.source_hash) == ("review", "authority_changed", None)
 
 
+@pytest.mark.security
 async def test_budget_refusal_at_build_time_writes_no_proposal(
     db, redis, enabled, monkeypatch
 ) -> None:
