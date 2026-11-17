@@ -7,7 +7,7 @@
  * while every other surface had been translated.
  *
  * The T3 fork ships English only. Upstream's Polish, German and Turkish
- * catalogs are deleted after every upstream sync (see `T3_SYNC.md`).
+ * catalogs are deleted after every upstream sync (see `T3_FORK.md`).
  */
 export const locales = ["en"] as const;
 
