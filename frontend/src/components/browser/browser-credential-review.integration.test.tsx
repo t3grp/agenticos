@@ -233,7 +233,9 @@ describe("exact saved credential consent", () => {
     current = source;
     setup({ planId: source.id });
     expect(await screen.findByText("Synthetic account")).toBeVisible();
-    expect(screen.queryByText("Current credential metadata is unavailable")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Current credential metadata is unavailable"),
+    ).not.toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith(
       `/runs/${ids.run}/browser-credentials`,
       expect.objectContaining({ params: { call_id: source.call_id, tab_id: source.tab_id } }),
