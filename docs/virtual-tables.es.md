@@ -1,5 +1,5 @@
 ---
-source_sha: "493198cb91ea"
+source_sha: "8d167fac78c1"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -55,6 +55,27 @@ llegan a la respuesta. `null` conserva el registro completo; `[]` devuelve solo
 metadatos. Las columnas calculadas se evalúan antes de la proyección, sin tener que
 seleccionar sus dependencias. Los mismos registros aparecen inmediatamente en la
 consola; el trigger de la tabla se ejecuta de forma asíncrona sin retrasar el CRUD.
+
+## Aislamiento de organizaciones en la base de datos { #database-tenant-isolation }
+
+Las tablas lógicas permanecen en la base de datos PostgreSQL del despliegue. La
+migración RLS instala las políticas sin activarlas; el operador las activa después
+de actualizar todos los procesos de API y workers y esperar a que terminen sus
+operaciones. Una vez activadas, las operaciones normales vinculan el ID de la
+organización autenticada a la transacción actual. Sin contexto no se muestran
+filas de Tables, y una transacción no puede cambiar de organización. El límite
+incluye esquemas, registros, historial, archivos multimedia, vistas, recibos de
+operaciones, triggers, enlaces normalizados y permisos compartidos de Tables.
+
+El servicio sigue aplicando los permisos Read/Write de tablas y filas. La
+exportación y eliminación global de una cuenta usan una conexión de mantenimiento
+configurada por separado, después de autenticar y comprobar de nuevo la autoridad.
+Eliminar una membresía de organización elimina en cascada los permisos de Tables
+de esa persona en la misma transacción, incluso durante cambios de directorio que
+abarcan varias organizaciones. Los demás tipos de recursos conservan sus reglas
+de autorización. La [guía de transición para operadores](https://github.com/t3grp/agenticos/blob/t3/docs/plans/table-tenant-cutover.md)
+describe la separación de credenciales, la comprobación previa, la activación y
+la reversión.
 
 ## Cómo se construye una tabla { #how-a-table-is-built }
 

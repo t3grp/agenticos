@@ -1,5 +1,5 @@
 ---
-source_sha: "493198cb91ea"
+source_sha: "8d167fac78c1"
 ---
 
 # Virtual Tables { #virtual-tables }
@@ -55,6 +55,26 @@ erreichen die Antwort. `null` behält den ganzen Datensatz; `[]` liefert nur Met
 Berechnete Spalten werden vor der Projektion ausgewertet; ihre Abhängigkeiten müssen
 nicht ausgewählt sein. Dieselben Datensätze erscheinen sofort in der Konsole; die
 asynchrone Ausführung des Tabellen-Triggers verzögert die CRUD-Antwort nicht.
+
+## Mandantentrennung in der Datenbank { #database-tenant-isolation }
+
+Logische Tabellen bleiben in der PostgreSQL-Datenbank der Bereitstellung. Die
+RLS-Migration installiert Richtlinien, ohne sie zu aktivieren. Der Betreiber
+aktiviert sie, nachdem alle API- und Worker-Prozesse aktualisiert und ihre
+laufenden Arbeiten beendet wurden. Danach binden normale Tabellenoperationen die
+ID der authentifizierten Organisation an die aktuelle Transaktion. Ohne Kontext
+sind keine Tables-Zeilen sichtbar; eine Transaktion kann die Organisation nicht
+wechseln. Die Grenze umfasst Schemas, Datensätze, Verlauf, Medien, Ansichten,
+Operationsbestätigungen, Trigger, normalisierte Verknüpfungen und Tables-Freigaben.
+
+Read/Write-Berechtigungen für Tabellen und Zeilen prüft weiterhin der Service.
+Globale Kontoexporte und Kontolöschungen verwenden nach der Authentifizierung und
+einer erneuten Berechtigungsprüfung eine separat konfigurierte Wartungsverbindung.
+Beim Entfernen einer Organisationsmitgliedschaft werden die Tables-Freigaben der
+Person in derselben Transaktion gelöscht, auch bei Verzeichnisänderungen über
+mehrere Organisationen. Andere Ressourcentypen behalten ihre bisherigen
+Autorisierungsregeln. Das [Betriebshandbuch für die Umstellung](https://github.com/t3grp/agenticos/blob/t3/docs/plans/table-tenant-cutover.md)
+beschreibt getrennte Zugangsdaten, Vorprüfung, Aktivierung und Rücknahme.
 
 ## Wie eine Tabelle aufgebaut ist { #how-a-table-is-built }
 
