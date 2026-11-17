@@ -29,8 +29,8 @@ from tests.integration.test_room_submissions import seed
 pytestmark = pytest.mark.anyio
 
 
-async def prepared(db):
-    room = await seed(db)
+async def prepared(db, room=None, reviewer_id=None):
+    room = room or await seed(db)
     pin = AgentPin(agent_id=room.agent.id, version_id=room.version.id)
     routing = RoomRoutingService(db)
     await TaskService(db).ensure_board(
@@ -78,7 +78,7 @@ async def prepared(db):
         expected_result="List discrepancies for human review",
         specialist=pin,
         accountable_user_id=room.user.id,
-        reviewer_user_id=room.user.id,
+        reviewer_user_id=reviewer_id or room.user.id,
     )
     await routing.completed(
         source, RoutingOutput(answer="Please review", items=[item]).model_dump_json()
@@ -223,11 +223,11 @@ async def test_downgrade_refuses_to_drop_accepted_dispatch_provenance(db):
     assert await db.scalar(select(func.count()).select_from(RoomTaskLink)) == 1
 
 
-async def accepted(db):
+async def accepted(db, room=None, reviewer_id=None):
     from app.db.models.agent_trigger import AgentTrigger
     from app.db.models.task_board import TaskLink
 
-    room, proposal, item, _ = await prepared(db)
+    room, proposal, item, _ = await prepared(db, room, reviewer_id)
     await RoomRoutingService(db).decide(
         room.ctx,
         room.conversation.id,
@@ -428,6 +428,68 @@ async def test_a_cancelled_handoff_stays_cancelled_when_its_run_finishes_later(d
     assert (await tasks.get(room.ctx, task_id)).status == "cancelled"
     view = await RoomRoutingService(db).read(room.ctx, room.conversation.id, None)
     assert [card.status for card in view.tasks] == ["cancelled"]
+    discard_deferred(db)
+
+
+async def test_only_the_named_second_member_completes_what_the_requester_accepted(db):
+    from app.core.exceptions import AuthorizationError
+    from app.core.permissions import AuthContext
+    from app.db.models.organization import OrganizationMember
+    from app.db.models.user import User
+    from app.services.task_execution import TaskExecution
+
+    room = await seed(db)
+    reviewer = User(id=uuid4(), email=f"{uuid4()}@example.com", hashed_password="x", is_active=True)
+    db.add(reviewer)
+    await db.flush()
+    db.add(
+        OrganizationMember(
+            id=uuid4(),
+            organization_id=room.ctx.organization_id,
+            user_id=reviewer.id,
+            role="admin",
+        )
+    )
+    await db.flush()
+    reviewing = AuthContext(
+        user_id=reviewer.id, organization_id=room.ctx.organization_id, role="admin"
+    )
+    room, task_id, trigger = await accepted(db, room, reviewer.id)
+    assert reviewer.id != room.user.id
+    tasks = TaskService(db)
+    assert await TaskExecution(db).started(room.ctx, trigger)
+    task = await tasks.get(room.ctx, task_id)
+    executing = AuthContext(
+        user_id=room.user.id,
+        organization_id=room.ctx.organization_id,
+        role="owner",
+        routine_id=trigger.id,
+    )
+    with pytest.raises(AuthorizationError, match="cannot close or cancel its own task"):
+        await tasks.update(executing, task_id, set_status(task, "done"))
+    await finished_run(db, room, trigger, task.conversation_id, "completed")
+    waiting = await tasks.get(reviewing, task_id)
+    assert waiting.status == "waiting_for_user" and waiting.next_actor == "user"
+
+    with pytest.raises(AuthorizationError, match="review recipient's acceptance"):
+        await tasks.update(room.ctx, task_id, set_status(waiting, "done"))
+    unchanged = await tasks.get(room.ctx, task_id)
+    assert (unchanged.status, unchanged.revision) == ("waiting_for_user", waiting.revision)
+
+    view = await RoomRoutingService(db).read(reviewing, room.conversation.id, None)
+    assert [(card.status, card.reviewer_user_id) for card in view.tasks] == [
+        ("waiting_for_user", reviewer.id)
+    ]
+    wire = view.model_dump_json()
+    assert str(waiting.conversation_id) not in wire and str(waiting.outcome_id) not in wire
+    other = await seed(db)
+    with pytest.raises(NotFoundError):
+        await RoomRoutingService(db).read(other.ctx, room.conversation.id, None)
+
+    await tasks.update(reviewing, task_id, set_status(waiting, "done"))
+    assert (await tasks.get(room.ctx, task_id)).status == "done"
+    view = await RoomRoutingService(db).read(room.ctx, room.conversation.id, None)
+    assert [card.status for card in view.tasks] == ["done"]
     discard_deferred(db)
 
 
