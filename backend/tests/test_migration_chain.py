@@ -236,22 +236,27 @@ _OPENBOT_UPGRADES = {
     "0334_workflow_media_operations",
     "0335_browser_teaching",
 }
+# The core line the OpenBot join follows: the release checkpoint and the two
+# chat revisions published after it.
+_CORE_TAIL = {
+    "0336_merge_core_v1761",
+    "0337_conversation_message_pins",
+    "0338_message_reply_excerpt",
+}
 
 
 @pytest.mark.parametrize(
     ("current", "remaining"),
     [
-        ("0336_merge_core_v1761", _OPENBOT_UPGRADES),
-        ("0335_browser_teaching", {"0336_merge_core_v1761"}),
-        (("0336_merge_core_v1761", "0335_browser_teaching"), set()),
-        ("0331_merge_core_accounts", _OPENBOT_UPGRADES | {"0336_merge_core_v1761"}),
-        (
-            "0333_room_threads",
-            _CORE_UPGRADES | _OPENBOT_UPGRADES | {"0336_merge_core_v1761"},
-        ),
+        ("0338_message_reply_excerpt", _OPENBOT_UPGRADES),
+        ("0336_merge_core_v1761", _OPENBOT_UPGRADES | _CORE_TAIL - {"0336_merge_core_v1761"}),
+        ("0335_browser_teaching", _CORE_TAIL),
+        (("0338_message_reply_excerpt", "0335_browser_teaching"), set()),
+        ("0331_merge_core_accounts", _OPENBOT_UPGRADES | _CORE_TAIL),
+        ("0333_room_threads", _CORE_UPGRADES | _OPENBOT_UPGRADES | _CORE_TAIL),
         (
             "0332_merge_t3_pools_v1761",
-            _CORE_UPGRADES | _OPENBOT_UPGRADES | {"0333_room_threads", "0336_merge_core_v1761"},
+            _CORE_UPGRADES | _OPENBOT_UPGRADES | _CORE_TAIL | {"0333_room_threads"},
         ),
     ],
 )
@@ -259,11 +264,11 @@ def test_openbot_join_applies_each_missing_revision_once_in_parent_order(
     current: str | tuple[str, ...], remaining: set[str]
 ) -> None:
     chain = _chain()
-    pending = list(chain.iterate_revisions("0337_merge_core_openbot", current, implicit_base=True))
+    pending = list(chain.iterate_revisions("0339_merge_core_openbot", current, implicit_base=True))
     ordered = [revision.revision for revision in reversed(pending)]
-    assert set(ordered) == remaining | {"0337_merge_core_openbot"}
+    assert set(ordered) == remaining | {"0339_merge_core_openbot"}
     assert len(ordered) == len(remaining) + 1
-    assert ordered[-1] == "0337_merge_core_openbot"
+    assert ordered[-1] == "0339_merge_core_openbot"
     assert "0326_room_threads" not in ordered
     positions = {revision: position for position, revision in enumerate(ordered)}
     for revision in pending:
@@ -275,12 +280,12 @@ def test_openbot_join_applies_each_missing_revision_once_in_parent_order(
 
 def test_openbot_join_preserves_both_heads_and_has_no_schema_operations() -> None:
     chain = _chain()
-    assert chain.get_heads() == ["0338_credential_continuations"]
-    continuation = chain.get_revision("0338_credential_continuations")
-    assert continuation is not None and continuation.down_revision == "0337_merge_core_openbot"
-    join = chain.get_revision("0337_merge_core_openbot")
+    assert chain.get_heads() == ["0340_credential_continuations"]
+    continuation = chain.get_revision("0340_credential_continuations")
+    assert continuation is not None and continuation.down_revision == "0339_merge_core_openbot"
+    join = chain.get_revision("0339_merge_core_openbot")
     assert join is not None
-    assert join.down_revision == ("0336_merge_core_v1761", "0335_browser_teaching")
+    assert join.down_revision == ("0338_message_reply_excerpt", "0335_browser_teaching")
     module = ast.parse(Path(join.path).read_text(encoding="utf-8"))
     functions = {node.name: node for node in module.body if isinstance(node, ast.FunctionDef)}
     assert set(functions) == {"upgrade", "downgrade"}

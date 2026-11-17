@@ -347,8 +347,8 @@ approved, claimed, continued, unknown and other terminal states expose no retry.
 A continued receipt links to the fresh protected view and, when saved, to
 **My sign-ins**, without abandoning the originating run.
 
-Migration `0338_credential_continuations` follows the real
-`0337_merge_core_openbot` join. It adds the tenant-scoped receipt table and the
+Migration `0340_credential_continuations` follows the real
+`0339_merge_core_openbot` join. It adds the tenant-scoped receipt table and the
 explicit sign-in classification without rewriting published migrations or old
 ciphertext. Native downgrade refuses any continuation or protected saved-state
 evidence, including an unresolved attempt. It does not use CASCADE or delete

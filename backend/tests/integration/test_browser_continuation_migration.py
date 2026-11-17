@@ -11,7 +11,7 @@ from tests.integration.test_browser_credential_migration import load_revision, m
 from tests.integration.test_browser_credential_plans import browser as browser
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
-_MIGRATION = load_revision("0338_credential_continuations")
+_MIGRATION = load_revision("0340_credential_continuations")
 
 
 def schema(connection):

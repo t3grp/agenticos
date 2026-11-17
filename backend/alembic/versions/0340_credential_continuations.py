@@ -11,8 +11,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0338_credential_continuations"
-down_revision: str = "0337_merge_core_openbot"
+revision: str = "0340_credential_continuations"
+down_revision: str = "0339_merge_core_openbot"
 branch_labels: None = None
 depends_on: None = None
 

@@ -210,7 +210,12 @@ function reconcileTranscript(
         message.isStreaming || awaitingSave
           ? { ...message, persistedId: id }
           : {
-              ...retainNextSteps(persisted, message),
+              ...retainNextSteps(
+                persisted.isPinned === undefined && message.isPinned !== undefined
+                  ? { ...persisted, isPinned: message.isPinned }
+                  : persisted,
+                message,
+              ),
               renderKey: message.renderKey ?? message.id,
             },
       );
@@ -255,7 +260,9 @@ const chatState: StateCreator<ChatState> = (set) => ({
 
   updateMessage: (id, updater) =>
     set((state) => {
-      const index = state.messages.findIndex((message) => message.id === id);
+      const index = state.messages.findIndex(
+        (message) => message.id === id || message.persistedId === id,
+      );
       if (index < 0) return state;
       const updated = updater(state.messages[index]!);
       // History may arrive before message_saved renames the live bubble. Keep
