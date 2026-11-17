@@ -1,6 +1,7 @@
 """Native PostgreSQL rehearsal of the additive room handoff revision.
 
-Only the disposable integration fixture's transaction is changed. Existing
+The upgrade test commits to the disposable integration database, because 0332
+builds its scope key concurrently. Existing
 submission bytes survive the upgrade, and used review evidence blocks rollback.
 """
 
@@ -31,10 +32,17 @@ _TABLES = ("room_submissions", "room_lead_policies", "room_routing_proposals", "
 
 
 def migrate(connection, direction):
-    with Operations.context(
-        MigrationContext.configure(connection, opts={"target_metadata": Base.metadata})
-    ):
+    ctx = MigrationContext.configure(connection, opts={"target_metadata": Base.metadata})
+    with ctx.begin_transaction(), Operations.context(ctx):
         getattr(_MIGRATION, direction)()
+
+
+async def step(connection, direction):
+    # 0332 builds its scope key CONCURRENTLY and validates its CHECK after commit,
+    # neither of which can run inside the fixture's open transaction. Commit first,
+    # so Alembic owns the transaction its autocommit_block commits.
+    await connection.commit()
+    await connection.run_sync(lambda sync: migrate(sync, direction))
 
 
 def schema(connection):
@@ -75,24 +83,31 @@ async def test_upgrade_preserves_legacy_submission_bytes_and_matches_the_model_s
     before = await db.scalar(query, {"message": posted.message.id})
     connection = await db.connection()
     expected_schema = await connection.run_sync(schema)
-    await connection.run_sync(lambda sync: migrate(sync, "downgrade"))
-    assert await db.scalar(query, {"message": posted.message.id}) == before
-    await connection.run_sync(lambda sync: migrate(sync, "upgrade"))
-    assert await db.scalar(query, {"message": posted.message.id}) == before
-    assert tuple(
-        (
-            await db.execute(
-                text(
-                    "SELECT intent, lead_policy_revision FROM room_submissions WHERE message_id = :message"
-                ),
-                {"message": posted.message.id},
-            )
-        ).one()
-    ) == ("message", None)
-    assert await connection.run_sync(schema) == expected_schema
-    # A plain legacy post does not prevent a clean rollback of an unused feature.
-    await connection.run_sync(lambda sync: migrate(sync, "downgrade"))
-    assert await db.scalar(query, {"message": posted.message.id}) == before
+    try:
+        await step(connection, "downgrade")
+        assert await db.scalar(query, {"message": posted.message.id}) == before
+        await step(connection, "upgrade")
+        assert await db.scalar(query, {"message": posted.message.id}) == before
+        assert tuple(
+            (
+                await db.execute(
+                    text(
+                        "SELECT intent, lead_policy_revision FROM room_submissions WHERE message_id = :message"
+                    ),
+                    {"message": posted.message.id},
+                )
+            ).one()
+        ) == ("message", None)
+        assert await connection.run_sync(schema) == expected_schema
+        # A plain legacy post does not prevent a clean rollback of an unused feature.
+        await step(connection, "downgrade")
+        assert await db.scalar(query, {"message": posted.message.id}) == before
+    finally:
+        # The upgrade commits, so the shared test database must get its tables back.
+        if not await connection.run_sync(
+            lambda sync: inspect(sync).has_table("room_lead_policies")
+        ):
+            await step(connection, "upgrade")
 
 
 @pytest.mark.parametrize("evidence", ["policy", "request", "proposal", "accepted_orphan"])
