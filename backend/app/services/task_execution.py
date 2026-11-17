@@ -100,6 +100,17 @@ class TaskExecution:
     ) -> None:
         from app.repositories import room_routing as routing_repo
 
+        terminal = fields.status in _TERMINAL
+        # Refuse the executing agent before any query: a read autoflushes the
+        # caller's pending writes, and the refusal must not depend on them.
+        if (
+            ctx.routine_id is not None
+            and ctx.routine_id == link.trigger_id
+            and fields.status not in {"planned", "in_progress"}
+        ):
+            raise AuthorizationError(
+                message="The task runner publishes its result for review; its executing agent cannot close or cancel its own task"
+            )
         room_link = await routing_repo.for_task(self.db, ctx.organization_id, record.id)
         if (
             room_link is not None
@@ -108,15 +119,6 @@ class TaskExecution:
         ):
             raise AuthorizationError(
                 message="The room handoff requires its review recipient's acceptance", details={}
-            )
-        terminal = fields.status in _TERMINAL
-        if (
-            ctx.routine_id is not None
-            and ctx.routine_id == link.trigger_id
-            and fields.status not in {"planned", "in_progress"}
-        ):
-            raise AuthorizationError(
-                message="The task runner publishes its result for review; its executing agent cannot close or cancel its own task"
             )
         if terminal or fields.status in {"waiting_for_user", "blocked"}:
             await self._stop(link, ctx.organization_id)

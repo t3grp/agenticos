@@ -223,6 +223,214 @@ async def test_downgrade_refuses_to_drop_accepted_dispatch_provenance(db):
     assert await db.scalar(select(func.count()).select_from(RoomTaskLink)) == 1
 
 
+async def accepted(db):
+    from app.db.models.agent_trigger import AgentTrigger
+    from app.db.models.task_board import TaskLink
+
+    room, proposal, item, _ = await prepared(db)
+    await RoomRoutingService(db).decide(
+        room.ctx,
+        room.conversation.id,
+        proposal.id,
+        RoutingDecision(expected_revision=1, idempotency_key="run", item_ids=[item.item_id]),
+        accept=True,
+    )
+    room_link = await db.scalar(select(RoomTaskLink))
+    task_link = await db.get(TaskLink, room_link.task_id)
+    trigger = await db.get(AgentTrigger, task_link.trigger_id)
+    return room, room_link.task_id, trigger
+
+
+async def finished_run(db, room, trigger, conversation_id, status):
+    from app.db.models.agent_run import AgentRun, RunSurface
+    from app.services.task_execution import TaskExecution
+
+    run = AgentRun(
+        id=uuid4(),
+        organization_id=room.ctx.organization_id,
+        agent_id=room.agent.id,
+        agent_version_id=room.version.id,
+        user_id=room.user.id,
+        conversation_id=conversation_id,
+        surface=RunSurface.WEB.value,
+        status=status,
+        input_tokens=0,
+        output_tokens=0,
+    )
+    db.add(run)
+    await db.flush()
+    await TaskExecution(db).finished(trigger, run)
+
+
+def set_status(task, status):
+    from app.schemas.task import TaskFields, TaskUpdate
+
+    return TaskUpdate(
+        **TaskFields.model_validate(
+            task.model_dump(include=set(TaskFields.model_fields))
+        ).model_dump(exclude={"status"}),
+        status=status,
+        expected_revision=task.revision,
+    )
+
+
+async def test_a_human_only_post_beside_an_enabled_lead_starts_nothing(db):
+    from app.db.models.room_submission import RoomSubmission
+    from app.worker.jobs import RUN_ROOM_REQUEST
+
+    room, *_ = await prepared(db)
+
+    async def counts():
+        return [
+            await db.scalar(
+                select(func.count())
+                .select_from(RoomSubmission)
+                .where(RoomSubmission.agent_id.is_not(None))
+            ),
+            await db.scalar(
+                select(func.count())
+                .select_from(BackgroundJob)
+                .where(BackgroundJob.kind == RUN_ROOM_REQUEST.kind)
+            ),
+            await db.scalar(select(func.count()).select_from(RoomRoutingProposal)),
+            await db.scalar(select(func.count()).select_from(RoomTaskLink)),
+        ]
+
+    before = await counts()
+    posted = await RoomSubmissionService(db).post(
+        room.ctx,
+        room.conversation.id,
+        RoomMessageCreate(client_message_id="human", content="Lead, no action needed"),
+        room.user,
+    )
+    assert posted.request is None
+    assert await counts() == before
+    discard_deferred(db)
+
+
+async def test_foreign_and_unknown_thread_ids_are_refused_alike(db):
+    room, *_ = await prepared(db)
+    other = await seed(db)
+    foreign = await RoomSubmissionService(db).post(
+        other.ctx,
+        other.conversation.id,
+        RoomMessageCreate(client_message_id="foreign-root", content="Private foreign root"),
+        other.user,
+    )
+    reads, posts = [], []
+    for root in (foreign.message.id, uuid4()):
+        with pytest.raises(NotFoundError) as refused:
+            await RoomRoutingService(db).read(room.ctx, room.conversation.id, root)
+        reads.append((refused.value.message, refused.value.details))
+        with pytest.raises(BadRequestError) as refused:
+            await RoomSubmissionService(db).post(
+                room.ctx,
+                room.conversation.id,
+                RoomMessageCreate(
+                    client_message_id=f"thread-{root}",
+                    content="Ask in that thread",
+                    thread_root_message_id=root,
+                    intent="ask_lead",
+                ),
+                room.user,
+            )
+        posts.append((refused.value.message, refused.value.details))
+    assert reads[0] == reads[1] and posts[0] == posts[1]
+    assert str(foreign.message.id) not in repr(reads + posts)
+    discard_deferred(db)
+
+
+async def test_revoked_membership_refuses_acceptance_without_creating_a_task(db):
+    from app.core.exceptions import AuthorizationError
+
+    room, proposal, item, _ = await prepared(db)
+    await db.delete(room.member)
+    await db.flush()
+    with pytest.raises((AuthorizationError, NotFoundError)):
+        await RoomRoutingService(db).decide(
+            room.ctx,
+            room.conversation.id,
+            proposal.id,
+            RoutingDecision(expected_revision=1, idempotency_key="gone", item_ids=[item.item_id]),
+            accept=True,
+        )
+    assert await db.scalar(select(func.count()).select_from(RoomTaskLink)) == 0
+    discard_deferred(db)
+
+
+async def test_revocation_during_execution_blocks_instead_of_handing_off_for_review(db):
+    from app.db.models.organization import OrganizationMember
+
+    room, task_id, trigger = await accepted(db)
+    task = await TaskService(db).get(room.ctx, task_id)
+    await db.delete(room.member)
+    await db.flush()
+    await finished_run(db, room, trigger, task.conversation_id, "completed")
+    db.add(
+        OrganizationMember(
+            id=uuid4(),
+            organization_id=room.ctx.organization_id,
+            user_id=room.user.id,
+            role="owner",
+        )
+    )
+    await db.flush()
+    assert (await TaskService(db).get(room.ctx, task_id)).status == "blocked"
+    assert not trigger.is_active
+    discard_deferred(db)
+
+
+async def test_accepted_handoff_runs_to_review_and_cards_never_show_the_working_chat(db):
+    from app.core.exceptions import AuthorizationError
+    from app.core.permissions import AuthContext
+    from app.schemas.conversation import MessageCreate
+    from app.services.conversation import ConversationService
+    from app.services.task_execution import TaskExecution
+
+    room, task_id, trigger = await accepted(db)
+    tasks = TaskService(db)
+    assert await TaskExecution(db).started(room.ctx, trigger)
+    task = await tasks.get(room.ctx, task_id)
+    assert task.status == "in_progress" and task.conversation_id is not None
+    executing = AuthContext(
+        user_id=room.user.id,
+        organization_id=room.ctx.organization_id,
+        role="owner",
+        routine_id=trigger.id,
+    )
+    with pytest.raises(AuthorizationError, match="cannot close or cancel its own task"):
+        await tasks.update(executing, task_id, set_status(task, "done"))
+    secret = "PRIVATE WORKING RESULT 7f3a"
+    await ConversationService(db).add_message(
+        task.conversation_id,
+        MessageCreate(role="assistant", content=secret),
+        organization_id=room.ctx.organization_id,
+        user_id=None,
+    )
+    await finished_run(db, room, trigger, task.conversation_id, "completed")
+    task = await tasks.get(room.ctx, task_id)
+    assert task.status == "waiting_for_user" and task.next_actor == "user"
+    assert task.outcome_id is not None and not trigger.is_active
+    view = await RoomRoutingService(db).read(room.ctx, room.conversation.id, None)
+    assert [card.status for card in view.tasks] == ["waiting_for_user"]
+    wire = view.model_dump_json()
+    for private in (secret, str(task.conversation_id), str(task.outcome_id)):
+        assert private not in wire
+    discard_deferred(db)
+
+
+async def test_a_cancelled_handoff_stays_cancelled_when_its_run_finishes_later(db):
+    room, task_id, trigger = await accepted(db)
+    tasks = TaskService(db)
+    task = await tasks.get(room.ctx, task_id)
+    await tasks.update(room.ctx, task_id, set_status(task, "cancelled"))
+    await finished_run(db, room, trigger, task.conversation_id, "completed")
+    assert (await tasks.get(room.ctx, task_id)).status == "cancelled"
+    view = await RoomRoutingService(db).read(room.ctx, room.conversation.id, None)
+    assert [card.status for card in view.tasks] == ["cancelled"]
+    discard_deferred(db)
+
+
 async def test_database_rejects_cross_room_proposal_and_foreign_task_bindings(db):
     from sqlalchemy.exc import IntegrityError
 
