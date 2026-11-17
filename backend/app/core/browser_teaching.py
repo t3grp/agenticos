@@ -14,7 +14,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 from app.core.exceptions import BadRequestError, ConflictError
 
@@ -29,7 +29,16 @@ PARAMETER_PATTERN = r"^[a-z][a-z0-9_]{0,39}$"
 
 Action = Literal["navigate", "click", "select", "input_parameter", "scroll", "checkpoint"]
 Role = Literal[
-    "button", "link", "textbox", "combobox", "checkbox", "radio", "tab", "menuitem", "option", "switch"
+    "button",
+    "link",
+    "textbox",
+    "combobox",
+    "checkbox",
+    "radio",
+    "tab",
+    "menuitem",
+    "option",
+    "switch",
 ]
 CONTROL_ACTIONS = frozenset({"click", "select", "input_parameter"})
 
@@ -104,7 +113,12 @@ def teaching_origin(value: str) -> str:
         host = (parts.hostname or "").encode("idna").decode("ascii").lower()
     except ValueError, UnicodeError:
         raise ValueError(refused) from None
-    if parts.scheme != "https" or not host or parts.path not in ("", "/") or "." not in host.strip("[]"):
+    if (
+        parts.scheme != "https"
+        or not host
+        or parts.path not in ("", "/")
+        or "." not in host.strip("[]")
+    ):
         raise ValueError(refused)
     return f"https://{host}" + ("" if port in (None, 443) else f":{port}")
 
@@ -206,7 +220,7 @@ class ReviewedStep(_Strict):
         return None if value is None or not value.strip() else safe_label(value)
 
 
-def encoded_size(steps: list[dict[str, object]]) -> int:
+def encoded_size(steps: list[dict[str, JsonValue]]) -> int:
     """Bytes the stored step list takes, measured the way the database limit measures it."""
     return len(json.dumps(steps, separators=(", ", ": "), ensure_ascii=False).encode())
 

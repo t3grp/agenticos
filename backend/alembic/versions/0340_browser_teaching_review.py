@@ -1,7 +1,7 @@
 """Add the review and proposal half of browser teaching (#113, slice 2).
 
-Revision ID: 0338_browser_teaching_review
-Revises: 0337_browser_teaching_capture
+Revision ID: 0340_browser_teaching_review
+Revises: 0339_browser_teaching_capture
 
 A session in review gains reviewed step labels and parameter names (`review`),
 the skill name the reviewer chose, and the source hash of the reviewed content
@@ -25,8 +25,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0338_browser_teaching_review"
-down_revision: str | None = "0337_browser_teaching_capture"
+revision: str = "0340_browser_teaching_review"
+down_revision: str | None = "0339_browser_teaching_capture"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

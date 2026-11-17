@@ -93,7 +93,9 @@ def pause(row: BrowserTeachingSession, reason: TeachingReason) -> None:
         row.revision += 1
 
 
-def erase(row: BrowserTeachingSession, status: TeachingState, reason: TeachingReason | None) -> None:
+def erase(
+    row: BrowserTeachingSession, status: TeachingState, reason: TeachingReason | None
+) -> None:
     """Remove every payload; keep only the minimal audit metadata."""
     row.status = status.value
     row.reason_code = None if reason is None else reason.value
@@ -157,7 +159,9 @@ class BrowserTeachingService:
     def __init__(self, db: AsyncSession, redis: RedisClient | None) -> None:
         self.db, self.redis = db, redis
 
-    async def _live_hold(self, organization_id: UUID, user_id: UUID, run_id: UUID, call_id: str) -> Hold:
+    async def _live_hold(
+        self, organization_id: UUID, user_id: UUID, run_id: UUID, call_id: str
+    ) -> Hold:
         hold = None if self.redis is None else await _hold.current(self.redis, run_id, call_id)
         if hold is None or hold.user_id != user_id or hold.organization_id != organization_id:
             raise TeachingRefused(TeachingReason.NOT_HELD)
@@ -168,12 +172,16 @@ class BrowserTeachingService:
         user_id = _access.human_subject(ctx)
         row = await repo.get(self.db, ctx.organization_id, session_id, locked=True)
         if row is None or row.owner_user_id != user_id:
-            raise NotFoundError(message="Browser teaching not found", details={"session_id": session_id})
+            raise NotFoundError(
+                message="Browser teaching not found", details={"session_id": session_id}
+            )
         if expire_if_due(row, datetime.now(UTC)):
             await audit(self.db, row, "browser_teaching.expired")
         return row
 
-    async def start(self, ctx: AuthContext, body: TeachingStart, request_key: str | None) -> TeachingRead:
+    async def start(
+        self, ctx: AuthContext, body: TeachingStart, request_key: str | None
+    ) -> TeachingRead:
         user_id = _access.human_subject(ctx)
         organization_id = ctx.organization_id
         _access.require_enabled(organization_id)
@@ -382,7 +390,9 @@ class BrowserTeachingService:
         if row.capture_ends_at <= datetime.now(UTC):
             raise TeachingRefused(TeachingReason.TIME_LIMIT)
         await _access.authority(self.db, row.organization_id, row.owner_user_id, row.run_id)
-        hold = await self._live_hold(row.organization_id, row.owner_user_id, row.run_id, row.call_id)
+        hold = await self._live_hold(
+            row.organization_id, row.owner_user_id, row.run_id, row.call_id
+        )
         if hold.agent_id != row.agent_id or hold.tab_id != row.tab_id:
             raise TeachingRefused(TeachingReason.NOT_HELD)
         row.hold_id = hold.hold_id
@@ -414,7 +424,9 @@ class BrowserTeachingService:
 
     async def release(self, hold: Hold, reason: TeachingReason) -> None:
         """The hold ended: pause the session bound to it, if one is recording."""
-        row = await repo.active_for_view(self.db, hold.organization_id, hold.run_id, hold.call_id, locked=True)
+        row = await repo.active_for_view(
+            self.db, hold.organization_id, hold.run_id, hold.call_id, locked=True
+        )
         if row is not None and matches(row, hold) and row.status == TeachingState.RECORDING:
             pause(row, reason)
             await audit(self.db, row, "browser_teaching.paused")
@@ -434,7 +446,9 @@ class BrowserTeachingService:
         exactly this hold. A failed check pauses capture with a reason code
         rather than dropping events silently; a limit is never truncated.
         """
-        row = await repo.active_for_view(self.db, hold.organization_id, hold.run_id, hold.call_id, locked=True)
+        row = await repo.active_for_view(
+            self.db, hold.organization_id, hold.run_id, hold.call_id, locked=True
+        )
         if row is None or row.status != TeachingState.RECORDING or not matches(row, hold):
             return
         reason = await self._refusal(row, hold, observation)
@@ -442,14 +456,17 @@ class BrowserTeachingService:
             pause(row, reason)
             await audit(self.db, row, "browser_teaching.paused")
             return
-        earlier = next((item for item in row.sanitized_events if item.get("input_id") == str(input_id)), None)
-        if earlier is None and len(row.sanitized_events) >= MAX_EVENTS:
+        earlier = next(
+            (item for item in row.sanitized_events if item.get("input_id") == str(input_id)), None
+        )
+        stored = None if earlier is None else CapturedStep.model_validate(earlier)
+        if stored is None and len(row.sanitized_events) >= MAX_EVENTS:
             pause(row, TeachingReason.EVENT_LIMIT)
             await audit(self.db, row, "browser_teaching.paused")
             return
         human = observation.authentication
         step = CapturedStep(
-            sequence=len(row.sanitized_events) + 1 if earlier is None else earlier["sequence"],
+            sequence=len(row.sanitized_events) + 1 if stored is None else stored.sequence,
             input_id=input_id,
             action="checkpoint" if human else action,
             origin=observation.origin,
@@ -457,9 +474,8 @@ class BrowserTeachingService:
             direction=None if human else direction,
             human_step=human,
         )
-        if earlier is not None:
+        if stored is not None:
             # A repeated input is a no-op; the same input id with another payload is a conflict.
-            stored = CapturedStep.model_validate(earlier)
             if stored != step:
                 pause(row, TeachingReason.EVENT_CONFLICT)
                 await audit(self.db, row, "browser_teaching.paused")
@@ -487,7 +503,11 @@ class BrowserTeachingService:
             await _access.authority(self.db, row.organization_id, row.owner_user_id, row.run_id)
         except TeachingRefused as refused:
             return refused.reason
-        live = None if self.redis is None else await _hold.current(self.redis, hold.run_id, hold.call_id)
+        live = (
+            None
+            if self.redis is None
+            else await _hold.current(self.redis, hold.run_id, hold.call_id)
+        )
         if live != hold:
             return TeachingReason.OWNERSHIP_LOST
         if observation.origin not in row.allowed_origins:
