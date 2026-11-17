@@ -134,6 +134,9 @@ export function useCodingAccountUsage(account: CodingAccount) {
             refresh_pending: account.usage_refresh_pending,
           }
         : undefined,
+    // The list's copy is never fresh: without this the app's five-minute
+    // `staleTime` showed it unconfirmed, and a revoked account kept its evidence.
+    initialDataUpdatedAt: 0,
     enabled: ready && supported && account.enabled,
     retry: false,
     refetchOnWindowFocus: false,

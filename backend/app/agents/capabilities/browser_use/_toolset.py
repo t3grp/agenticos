@@ -1010,10 +1010,14 @@ def build_toolset(
             raise
 
     async def browser_credential_options(ctx: RunContext[AgentDeps]) -> str:
-        """List saved credential IDs, generations and field names eligible on this private page.
+        """List eligible saved credential references for this private browser page.
 
-        No username, password, TOTP seed/code or profile value is returned. Use the
-        references only with browser_fill_credential and the page's current field numbers.
+        Use the references only with browser_fill_credential and the page's current
+        field numbers.
+
+        Returns:
+            A JSON list of saved credential IDs, generations and field names, or a
+            fixed refusal. No username, password, TOTP seed/code or profile value.
         """
         if toolset.session is None:
             return NO_TAB
@@ -1040,12 +1044,17 @@ def build_toolset(
         authorization_generation: UUID,
         selection: BrowserFillSelection,
     ) -> str:
-        """Request a saved credential fill and keep the live page for the owner's review.
+        """Request and wait for the owner's exact destination confirmation of a saved credential fill.
 
+        The live page stays open for the owner's review.
         Choose only an ID/generation returned by browser_credential_options and fields
         from the current numbered page. The person confirms the destination in the UI.
         This never submits automatically; submission needs a separate explicit action.
         The wait is bounded and expired or resumed native handles cannot be reused.
+
+        Returns:
+            The fill's outcome once the person decides, or a fixed refusal naming its
+            reason. No credential value is ever returned.
         """
         try:
             async with toolset.tab:

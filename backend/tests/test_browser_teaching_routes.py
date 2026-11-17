@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api.deps import Auth, BrowserTeachingDraftSvc, BrowserTeachingPolicySvc, BrowserTeachingSvc
+from app.api.routes.v1 import _browser_teaching_http as http
 from app.api.routes.v1 import browser_teaching as routes
 from app.core.exceptions import BadRequestError
 from app.core.permissions import AuthContext
@@ -142,12 +143,12 @@ async def test_owner_transition_carries_the_original_context_and_revision(
 @pytest.mark.parametrize("value", ["0", "-1", "W/1", "*", '"0"', '"1', "1,2", "1\n", "10000000000"])
 async def test_invalid_revision_never_reaches_a_write(value):
     with pytest.raises(BadRequestError):
-        routes._revision(value)
+        http._revision(value)
 
 
 @pytest.mark.parametrize("value", ["1", '"1"', "9999999999"])
 async def test_revision_accepts_only_the_bounded_exact_integer(value):
-    assert routes._revision(value) == int(value.strip('"'))
+    assert http._revision(value) == int(value.strip('"'))
 
 
 async def test_missing_revision_and_client_supplied_capture_events_are_refused(api):

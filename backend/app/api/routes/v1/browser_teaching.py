@@ -1,10 +1,9 @@
 """Owner-scoped capture metadata and explicit review; no client append or replay endpoint."""
 
-import re
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import (
     Auth,
@@ -14,7 +13,7 @@ from app.api.deps import (
     no_store_response,
     require,
 )
-from app.core.exceptions import BadRequestError
+from app.api.routes.v1._browser_teaching_http import Revision, with_etag
 from app.core.permissions import Perm
 from app.schemas.browser_teaching import (
     TeachingChange,
@@ -31,20 +30,6 @@ from app.schemas.browser_teaching import (
 router = APIRouter(dependencies=[Depends(no_store_response)])
 
 
-def _revision(value: Annotated[str, Header(alias="If-Match", max_length=32)]) -> int:
-    if re.fullmatch(r'(?:[1-9][0-9]{0,9}|"[1-9][0-9]{0,9}")', value) is None:
-        raise BadRequestError(message="Provide the current teaching revision in If-Match")
-    return int(value.strip('"'))
-
-
-Revision = Annotated[int, Depends(_revision)]
-
-
-def _read(response: Response, data: TeachingRead) -> TeachingRead:
-    response.headers["ETag"] = f'"{data.revision}"'
-    return data
-
-
 @router.post(
     "/browser-teachings",
     response_model=TeachingRead,
@@ -54,7 +39,7 @@ def _read(response: Response, data: TeachingRead) -> TeachingRead:
 async def start_new(
     data: TeachingStart, ctx: Auth, service: BrowserTeachingSvc, response: Response
 ) -> TeachingRead:
-    return _read(response, await service.start(ctx, data))
+    return with_etag(response, await service.start(ctx, data))
 
 
 @router.post(
@@ -65,7 +50,7 @@ async def start_new(
 async def start_for_skill(
     skill_id: UUID, data: TeachingStart, ctx: Auth, service: BrowserTeachingSvc, response: Response
 ) -> TeachingRead:
-    return _read(response, await service.start(ctx, data, skill_id=skill_id))
+    return with_etag(response, await service.start(ctx, data, skill_id=skill_id))
 
 
 @router.get("/browser-teachings", response_model=TeachingList)
@@ -89,7 +74,7 @@ async def list_sessions(
 async def read_session(
     session_id: UUID, ctx: Auth, service: BrowserTeachingSvc, response: Response
 ) -> TeachingRead:
-    return _read(response, await service.get(ctx, session_id))
+    return with_etag(response, await service.get(ctx, session_id))
 
 
 @router.patch("/browser-teachings/{session_id}", response_model=TeachingRead)
@@ -101,21 +86,21 @@ async def change_session(
     service: BrowserTeachingSvc,
     response: Response,
 ) -> TeachingRead:
-    return _read(response, await service.change(ctx, session_id, revision, data))
+    return with_etag(response, await service.change(ctx, session_id, revision, data))
 
 
 @router.post("/browser-teachings/{session_id}/stop", response_model=TeachingRead)
 async def stop_session(
     session_id: UUID, ctx: Auth, service: BrowserTeachingSvc, response: Response
 ) -> TeachingRead:
-    return _read(response, await service.stop(ctx, session_id))
+    return with_etag(response, await service.stop(ctx, session_id))
 
 
 @router.delete("/browser-teachings/{session_id}", response_model=TeachingRead)
 async def discard_session(
     session_id: UUID, ctx: Auth, service: BrowserTeachingSvc, response: Response
 ) -> TeachingRead:
-    return _read(response, await service.discard(ctx, session_id))
+    return with_etag(response, await service.discard(ctx, session_id))
 
 
 @router.post(
@@ -131,7 +116,7 @@ async def propose(
     service: BrowserTeachingDraftSvc,
     response: Response,
 ) -> TeachingRead:
-    return _read(response, await service.propose(ctx, session_id, revision, data))
+    return with_etag(response, await service.propose(ctx, session_id, revision, data))
 
 
 @router.get("/browser-teaching-policy", response_model=TeachingPolicyRead)

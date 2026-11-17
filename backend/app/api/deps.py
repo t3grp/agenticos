@@ -1654,6 +1654,12 @@ def require(*perms: Perm) -> Callable[..., Awaitable[AuthContext]]:
     return dependency
 
 
+async def require_media_catalog_access(ctx: Auth) -> None:
+    """Read-only model metadata is shared by agent and workflow editors."""
+    if not ctx.has(Perm.WORKFLOWS_VIEW):
+        await require(Perm.AGENTS_VIEW)(ctx)
+
+
 def key_needs(perm: Perm) -> Callable[..., Awaitable[None]]:
     """Admit a key to a public route only when it was issued for `perm`.
 

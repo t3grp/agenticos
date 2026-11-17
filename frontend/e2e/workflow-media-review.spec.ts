@@ -257,6 +257,8 @@ async function installReviewFixture(page: Page, editor = false) {
   const json = new Map<string, unknown>([
     ["/api/workflows/node-catalog", { items: [editor ? editorDefinition : definition], total: 1 }],
     [`/api/workflows/${workflowId}`, editor ? { ...workflow, draft_graph: editorGraph } : workflow],
+    // The editor's version history: this draft has never been published.
+    [`/api/workflows/${workflowId}/versions`, { items: [], next_before: null }],
     ["/api/workflow-runs", { items: [], total: 0 }],
     [`/api/workflow-runs/${runId}`, run],
     [`/api/workflow-runs/${runId}/nodes`, { items: [node], total: 1 }],

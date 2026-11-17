@@ -15,7 +15,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from app.agents.model_resolver import PROVIDERS, ModelApi, is_decision_api
-from app.api.deps import Auth, ModelProfileSvc, SecretSvc, require
+from app.api.deps import Auth, ModelProfileSvc, SecretSvc, require, require_media_catalog_access
 from app.api.public_api import PUBLIC
 from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.exceptions import AuthorizationError
@@ -59,12 +59,6 @@ from app.services.video_models import providers as video_providers
 from app.services.workflow_media_catalog import video_support
 
 router = APIRouter()
-
-
-async def _media_catalog_access(ctx: Auth) -> None:
-    """Read-only model metadata is shared by agent and workflow editors."""
-    if not ctx.has(Perm.WORKFLOWS_VIEW):
-        await require(Perm.AGENTS_VIEW)(ctx)
 
 
 @router.get(
@@ -179,7 +173,7 @@ async def delete_model_profile(profile_id: UUID, service: ModelProfileSvc, ctx: 
 @router.get(
     "/image-models",
     response_model=ImageProviderList,
-    dependencies=[Depends(_media_catalog_access)],
+    dependencies=[Depends(require_media_catalog_access)],
 )
 async def list_image_models() -> Any:
     """Which providers can draw an image, and which of their models may be asked to.
@@ -360,7 +354,7 @@ async def list_text_to_speech_models() -> Any:
 @router.get(
     "/video-models",
     response_model=VideoProviderList,
-    dependencies=[Depends(_media_catalog_access)],
+    dependencies=[Depends(require_media_catalog_access)],
 )
 async def list_video_models() -> Any:
     """Which providers can make a video, and what each of their models can make.

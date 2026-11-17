@@ -6,7 +6,6 @@ import {
   browserContinuationFixture,
   continuationSourceFixture,
 } from "../src/test-utils/browser-credential-continuation-fixtures";
-import { browserEligibilityFixture } from "../src/test-utils/browser-credential-plan-fixtures";
 import type { BrowserCredentialContinuation } from "../src/types/browser-credential-continuation";
 import type { ToolApproval } from "../src/types/runs";
 
@@ -26,7 +25,6 @@ const SOURCE_PATH = "/api/runs/" + ids.run + "/browser-credential-plans/" + ids.
 const CONTINUATION_PATH = SOURCE_PATH + "/continuation";
 const CONFIRMATION_PATH = CONTINUATION_PATH + "/" + ids.continuation + "/confirmation";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const NAME = "Visual fixture: protected continuation";
 
 async function seededOwner(page: Page): Promise<string> {
   await page.goto("/vault");
@@ -105,11 +103,6 @@ test.describe("Protected continuation — fixture-only rendered evidence", () =>
               }
               if (request.method() === "GET") {
                 if (path === SOURCE_PATH) return json(route, source);
-                if (path === "/api/runs/" + ids.run + "/browser-credentials") {
-                  expect(url.searchParams.get("call_id")).toBe(source.call_id);
-                  expect(url.searchParams.get("tab_id")).toBe(source.tab_id);
-                  return json(route, [{ ...browserEligibilityFixture(), name: NAME }]);
-                }
                 expect(path).toBe(CONTINUATION_PATH);
                 if (!organization) throw new Error("The fixture requires an organization header");
                 reads++;
@@ -166,7 +159,11 @@ test.describe("Protected continuation — fixture-only rendered evidence", () =>
             exact: true,
           });
           await expect(panel.getByText(source.origin!, { exact: true })).toBeVisible();
-          await expect(dialog.getByText(NAME, { exact: true })).toBeVisible();
+          // An acknowledged submit reads no credential eligibility (only a pending
+          // fill does), so the review states the name is unverified, not a stale one.
+          await expect(
+            dialog.getByText("Current credential metadata is unavailable", { exact: true }),
+          ).toBeVisible();
           await expect(panel.getByText(/Both browser views remain protected/)).toBeVisible();
           await expect(panel.getByText(/up to seven days/)).toBeVisible();
           const checkbox = panel.getByRole("checkbox", { name: "Keep me signed in", exact: true });

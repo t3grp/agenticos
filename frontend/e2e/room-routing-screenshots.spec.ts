@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import type { RoomLeadPolicy, RoomRoutingProposal, RoomTaskCard } from "../src/types/room-routing";
 import { expect, test } from "./fixtures";
-import { AUTH_STATE, SEEDED_AGENT_NAME, SEEDED_PROJECT_NAME, json } from "./helpers";
+import { AUTH_STATE, SEEDED_PROJECT_NAME, json } from "./helpers";
 
 test.use({ storageState: AUTH_STATE });
 
@@ -53,12 +53,20 @@ for (const viewport of [
     const agent = await findSeededRow(
       page.request,
       "/api/agents",
-      (row) => row.name === SEEDED_AGENT_NAME && row.status === "published",
+      // The rule `roomResponders` applies: the seeded AgenticOS agent needs a local
+      // coding agent, so a room cannot pick it as lead and the dialog would say so.
+      (row) =>
+        row.status === "published" &&
+        row.can_run === true &&
+        !row.local_workspace &&
+        !row.local_coding_agent &&
+        !row.personal_coding_harness,
     );
-    expect(agent, "the visual fixture requires the seeded published agent").toBeTruthy();
+    expect(agent, "the visual fixture requires a seeded agent a room can pick").toBeTruthy();
+    const leadName = String(agent!.name);
     expect(
       agent!.current_version_id,
-      "the seeded published agent must have a valid published version",
+      "the seeded room agent must have a valid published version",
     ).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     const created = await page.request.post("/api/conversations", {
       data: { project_id: project!.id, title: `Room lead visual fixture (${viewport.name})` },
@@ -134,7 +142,10 @@ for (const viewport of [
       await page.route(`**/api/conversations/${roomId}/**`, async (route) => {
         const request = route.request();
         const path = new URL(request.url()).pathname;
-        if (request.method() !== "GET") {
+        // Opening a room marks it read; that receipt is the room's own, not routing.
+        if (request.method() === "POST" && path === `/api/conversations/${roomId}/read`)
+          await route.fallback();
+        else if (request.method() !== "GET") {
           unexpectedWrites.push(`${request.method()} ${path}`);
           await route.fulfill({ status: 403, json: { detail: "Visual fixture is read only" } });
         } else if (path.endsWith("/lead-policy")) await route.fulfill({ json: policy });
@@ -148,7 +159,7 @@ for (const viewport of [
       await expect(page.getByRole("textbox", { name: "Message to the team" })).toBeEnabled();
       const panel = page.locator('[data-tour="chat-room-routing"]');
       await panel.getByRole("button", { name: /Lead & tasks/ }).click();
-      await expect(panel.getByText(`Lead: ${SEEDED_AGENT_NAME}`, { exact: true })).toBeVisible();
+      await expect(panel.getByText(`Lead: ${leadName}`, { exact: true })).toBeVisible();
       const proposed = panel.getByRole("article", { name: "Task proposal", exact: true });
       await expect(proposed.getByText("Jordan (fixture)", { exact: true })).toBeVisible();
       await proposed
@@ -178,7 +189,7 @@ for (const viewport of [
       await panel.getByRole("button", { name: "Configure lead", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Configure lead", exact: true });
       await expect(dialog.getByRole("combobox", { name: "Lead agent", exact: true })).toHaveText(
-        SEEDED_AGENT_NAME,
+        leadName,
       );
       await expect(dialog.getByRole("button", { name: "Save lead", exact: true })).toBeEnabled();
       await expect(dialog.getByRole("button", { name: "Save lead", exact: true })).toBeInViewport();

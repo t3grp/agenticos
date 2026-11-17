@@ -1,15 +1,13 @@
 """Permanent image generation registration; disabled deployments retain its schema."""
 
-from functools import partial
-
 from app.workflows._registry import register
 from app.workflows.contracts.definition import NodeDefinition, Port
-from app.workflows.nodes import _media_handler
 from app.workflows.nodes._media_config import (
     ImageGenerateConfig,
     ImageGenerationOutput,
     MediaGenerateInput,
 )
+from app.workflows.nodes.image_generate._handler import available, check_resources, handle
 
 __all__ = ["ImageGenerateConfig", "ImageGenerationOutput", "MediaGenerateInput"]
 
@@ -31,8 +29,8 @@ register(
         effect_kind="write",
         retry_guarantee="none",
         spends_budget=True,
-        handler=partial(_media_handler.handle, kind="image"),
-        resource_check=partial(_media_handler.check_resources, kind="image"),
-        available=partial(_media_handler.available, "image"),
+        handler=handle,
+        resource_check=check_resources,
+        available=available,
     )
 )

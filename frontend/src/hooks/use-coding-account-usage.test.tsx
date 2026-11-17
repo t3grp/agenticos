@@ -99,6 +99,16 @@ beforeEach(() => {
   vi.mocked(api.refreshCodingAccountUsage).mockResolvedValue(report(account(), "refreshed"));
 });
 
+it("confirms the list's usage with its own read under the app's stale time", async () => {
+  // The app's QueryClient keeps data fresh for five minutes; the list copy must not count.
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+  });
+  const { result } = mount(account(), client);
+  await waitFor(() => expect(result.current.report?.usage.windows[0]?.name).toBe("current"));
+  expect(api.readCodingAccountUsage).toHaveBeenCalledTimes(1);
+});
+
 function nextAudience(change: string, initial: CodingAccount) {
   return {
     row: {

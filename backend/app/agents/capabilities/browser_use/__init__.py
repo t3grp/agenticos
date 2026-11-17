@@ -465,7 +465,7 @@ def validate_cdp_url(config: WebBrowserConfig) -> None:
         ),
         CapabilityToolInfo(
             id="browser_procedures",
-            description="Read approved procedures bound to this run for the current browser origin; each action still needs fresh observation.",
+            description="Read approved bound procedures for the live origin, without executing them.",
             side_effecting=False,
         ),
         CapabilityToolInfo(

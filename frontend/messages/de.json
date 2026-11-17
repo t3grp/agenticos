@@ -13742,6 +13742,18 @@
   },
   "capabilityConfig": {
     "browser_use": {
+      "allow_teaching": {
+        "title": "Browser-Anlernen erlauben",
+        "description": "Eine Person darf in diesem bereitgestellten Browser ausdrücklich strukturelle Aktionen aufzeichnen und einen Skill-Entwurf prüfen."
+      },
+      "learn_site_procedures": {
+        "title": "Verbesserungen für Browser-Abläufe vorschlagen",
+        "description": "Vorschläge nur zur Prüfung aus abgeschlossener Browserarbeit erlauben, wenn das handelnde Mitglied ebenfalls zustimmt. Veröffentlicht nie einen Skill."
+      },
+      "browser_credential_ids": {
+        "title": "Browser-Anmeldedaten",
+        "description": "Gespeicherte Browser-Anmeldungen oder Kontaktprofile, die dieser Agent in deinem privaten Konsolen-Chat anfordern darf. Jedes Ausfüllen erfordert eine Live-Bestätigung des Ziels."
+      },
       "cdp_url": {
         "title": "DevTools-Endpunkt",
         "description": "Chromium-DevTools-Endpunkt, den der Agent steuert - ein Browser-Dienst des Betreibers, kein Prozess im API-Container."

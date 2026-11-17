@@ -10663,6 +10663,18 @@
   },
   "capabilityConfig": {
     "browser_use": {
+      "allow_teaching": {
+        "title": "Zezwól na uczenie przeglądarki",
+        "description": "Pozwól osobie jawnie nagrywać działania strukturalne w tej przygotowanej przeglądarce i przejrzeć szkic skill."
+      },
+      "learn_site_procedures": {
+        "title": "Proponuj ulepszenia procedur przeglądarki",
+        "description": "Zezwól na sugestie wyłącznie do przeglądu z ukończonej pracy w przeglądarce, gdy działający członek również wyrazi zgodę. Nigdy nie publikuje skill."
+      },
+      "browser_credential_ids": {
+        "title": "Dane logowania przeglądarki",
+        "description": "Zapisane loginy przeglądarki lub profile kontaktowe, o które ten agent może prosić na Twoim prywatnym czacie konsoli. Każde wypełnienie wymaga potwierdzenia miejsca docelowego na żywo."
+      },
       "cdp_url": {
         "title": "Endpoint DevTools",
         "description": "Endpoint DevTools Chromium, którym agent steruje - usługa przeglądarki uruchomiona przez operatora, nie proces w kontenerze API."

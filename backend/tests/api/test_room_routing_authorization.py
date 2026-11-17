@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -16,8 +16,14 @@ from app.services.conversation import ConversationService
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 
+# Fixed, not `uuid4()`: the ids appear in the test ids, and every xdist worker
+# collects separately - a random id per worker is a different test per worker.
+_PROPOSAL = UUID("00000000-0000-4000-8000-000000000001")
+_ITEM = UUID("00000000-0000-4000-8000-000000000002")
+
+
 def routes():
-    proposal = uuid4()
+    proposal = _PROPOSAL
     return [
         ("GET", "lead-policy", None),
         ("PUT", "lead-policy", {"expected_revision": 0, "enabled": False}),
@@ -29,7 +35,7 @@ def routes():
             {
                 "expected_revision": 1,
                 "idempotency_key": "decision",
-                "selected_item_ids": [str(uuid4())],
+                "selected_item_ids": [str(_ITEM)],
             },
         ),
         (

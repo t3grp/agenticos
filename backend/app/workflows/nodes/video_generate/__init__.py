@@ -1,15 +1,13 @@
 """Permanent video registration; a known receipt resumes collection without submission."""
 
-from functools import partial
-
 from app.workflows._registry import register
 from app.workflows.contracts.definition import NodeDefinition, Port
-from app.workflows.nodes import _media_handler
 from app.workflows.nodes._media_config import (
     MediaGenerateInput,
     VideoGenerateConfig,
     VideoGenerationOutput,
 )
+from app.workflows.nodes.video_generate._handler import available, check_resources, handle
 
 __all__ = ["MediaGenerateInput", "VideoGenerateConfig", "VideoGenerationOutput"]
 
@@ -31,8 +29,8 @@ register(
         effect_kind="write",
         retry_guarantee="none",
         spends_budget=True,
-        handler=partial(_media_handler.handle, kind="video"),
-        resource_check=partial(_media_handler.check_resources, kind="video"),
-        available=partial(_media_handler.available, "video"),
+        handler=handle,
+        resource_check=check_resources,
+        available=available,
     )
 )
