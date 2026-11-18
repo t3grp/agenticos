@@ -75,7 +75,7 @@ PLATFORM_MODULES = (
     "app/services/approvals.py",
     "app/services/audit.py",
     # Owner capture summaries and audience-bound cursors stay in both permanent gates.
-    "app/services/browser_teaching/_listing.py",
+    "app/services/browser_procedure_teaching/_listing.py",
     "app/services/impersonation.py",
     "app/services/channels/mentions.py",
     "app/services/channels/handback.py",
