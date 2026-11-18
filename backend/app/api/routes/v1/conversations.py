@@ -36,7 +36,6 @@ from app.schemas.conversation import (
     ConversationCreate,
     ConversationForkCreate,
     ConversationForkList,
-    ConversationForkRead,
     ConversationList,
     ConversationRead,
     ConversationReadWithMessages,
@@ -542,9 +541,7 @@ async def list_conversation_forks(
         skip=skip,
         limit=limit,
     )
-    return ConversationForkList(
-        items=[ConversationForkRead.model_validate(item) for item in items], total=total
-    )
+    return ConversationForkList(items=items, total=total)
 
 
 @router.post(

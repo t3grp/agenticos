@@ -7,7 +7,7 @@
  */
 
 import type { AgentCheckState } from "./skill-checks";
-import type { BrowserProcedure } from "./browser-teaching";
+import type { BrowserProcedure } from "./browser-procedure-teaching";
 
 export type SkillVersionSource =
   | "backfill"

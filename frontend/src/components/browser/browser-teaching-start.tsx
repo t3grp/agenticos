@@ -16,31 +16,41 @@ import {
 } from "@/components/ui";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { useTeachingStart } from "@/hooks/use-browser-teaching";
-import { useTeachingAudience, useTeachingSkills } from "@/hooks/use-browser-teaching-settings";
-import { readBrowserTeaching, isTeachingAudienceCurrent } from "@/lib/browser-teaching-api";
+import { useBrowserProcedureTeachingStart } from "@/hooks/use-browser-procedure-teaching";
 import {
-  clearTeachingAttempt,
-  readTeachingAttempt,
-  retainTeachingAttempt,
-  teachingAttemptKey,
-  type TeachingStartAttempt,
-} from "@/lib/browser-teaching-attempts";
-import { isTeachingId, teachingOrigin, teachingOrigins } from "@/lib/browser-teaching-review";
+  useBrowserProcedureTeachingAudience,
+  useBrowserProcedureTeachingSkills,
+} from "@/hooks/use-browser-procedure-teaching-settings";
+import {
+  readBrowserProcedureTeaching,
+  isBrowserProcedureTeachingAudienceCurrent,
+} from "@/lib/browser-procedure-teaching-api";
+import {
+  clearBrowserProcedureTeachingAttempt,
+  readBrowserProcedureTeachingAttempt,
+  retainBrowserProcedureTeachingAttempt,
+  browserProcedureTeachingAttemptKey,
+  type BrowserProcedureTeachingStartAttempt,
+} from "@/lib/browser-procedure-teaching-attempts";
+import {
+  isBrowserProcedureTeachingId,
+  browserProcedureTeachingOrigin,
+  browserProcedureTeachingOrigins,
+} from "@/lib/browser-procedure-teaching-review";
 import { ROUTES } from "@/lib/constants";
 import { Perm } from "@/types/permissions";
 import { ApiError } from "@/lib/api-error";
 import type { Browse } from "@/lib/browse";
-import type { BrowserTeaching } from "@/types/browser-teaching";
+import type { BrowserProcedureTeaching } from "@/types/browser-procedure-teaching";
 import { TeachingError } from "./browser-teaching-status";
 
 type StartProps = {
   browse: Browse;
   canStart: boolean;
-  onStarted: (session: BrowserTeaching) => void;
+  onStarted: (session: BrowserProcedureTeaching) => void;
 };
 export function BrowserTeachingStart(props: StartProps) {
-  const audience = useTeachingAudience();
+  const audience = useBrowserProcedureTeachingAudience();
   const hydrated = useHydrated();
   return hydrated ? (
     <TeachingStartForm
@@ -56,29 +66,38 @@ export function BrowserTeachingStart(props: StartProps) {
   ) : null;
 }
 function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
-  const t = useTranslations("browserTeaching");
+  const t = useTranslations("browserProcedureTeaching");
   const locale = useLocale();
-  const audience = useTeachingAudience();
-  const key = teachingAttemptKey(audience, "start", [browse.runId!, browse.callId, browse.tabId!]);
-  const [initial] = useState(() => readTeachingAttempt<TeachingStartAttempt>(key, "start"));
+  const audience = useBrowserProcedureTeachingAudience();
+  const key = browserProcedureTeachingAttemptKey(audience, "start", [
+    browse.runId!,
+    browse.callId,
+    browse.tabId!,
+  ]);
+  const [initial] = useState(() =>
+    readBrowserProcedureTeachingAttempt<BrowserProcedureTeachingStartAttempt>(key, "start"),
+  );
   const { can } = usePermissions();
   const canCreate = can(Perm.skillsEdit);
-  const choices = useTeachingSkills(true);
+  const choices = useBrowserProcedureTeachingSkills(true);
   const skills =
     choices.data?.pages.flatMap((page) => page.items).filter((skill) => skill.can_edit === true) ??
     [];
   const [title, setTitle] = useState("");
-  const [origins, setOrigins] = useState(() => teachingOrigin(browse.url ?? "") ?? "");
+  const [origins, setOrigins] = useState(
+    () => browserProcedureTeachingOrigin(browse.url ?? "") ?? "",
+  );
   const [target, setTarget] = useState(canCreate ? "new" : "");
   const [saved, setSaved] = useState(initial.attempt);
   const [blocked, setBlocked] = useState(initial.blocked);
   const [error, setError] = useState<unknown>(null);
   const [reading, setReading] = useState(false);
   const busy = useRef(false);
-  const start = useTeachingStart();
-  const validOrigins = teachingOrigins(origins);
+  const start = useBrowserProcedureTeachingStart();
+  const validOrigins = browserProcedureTeachingOrigins(origins);
   const targetAllowed = target === "new" ? canCreate : skills.some((skill) => skill.id === target);
-  const leaseLive = canStart && !!browse.takeoverId && isTeachingId(browse.takeoverId);
+  const leaseLive =
+    canStart && !!browse.takeoverId && isBrowserProcedureTeachingId(browse.takeoverId);
   const valid =
     !blocked &&
     leaseLive &&
@@ -86,8 +105,11 @@ function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
     !!title.trim() &&
     title.length <= 160 &&
     targetAllowed;
-  async function settle(session: BrowserTeaching, attempt: TeachingStartAttempt) {
-    if (!isTeachingAudienceCurrent(audience)) return;
+  async function settle(
+    session: BrowserProcedureTeaching,
+    attempt: BrowserProcedureTeachingStartAttempt,
+  ) {
+    if (!isBrowserProcedureTeachingAudienceCurrent(audience)) return;
     if (
       session.id !== attempt.body.request_id ||
       session.run_id !== attempt.body.run_id ||
@@ -98,7 +120,7 @@ function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
       // i18n-exempt: fixed internal identity refusal, not transport or page copy.
       throw new Error("Teaching recovery identity mismatch");
     }
-    clearTeachingAttempt(key);
+    clearBrowserProcedureTeachingAttempt(key);
     setSaved(null);
     onStarted(session);
   }
@@ -108,9 +130,9 @@ function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
     setReading(true);
     setError(null);
     try {
-      await settle(await readBrowserTeaching(audience, saved.body.request_id), saved);
+      await settle(await readBrowserProcedureTeaching(audience, saved.body.request_id), saved);
     } catch (failure) {
-      if (isTeachingAudienceCurrent(audience)) setError(failure);
+      if (isBrowserProcedureTeachingAudienceCurrent(audience)) setError(failure);
     } finally {
       busy.current = false;
       setReading(false);
@@ -120,7 +142,7 @@ function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
     if (busy.current || blocked || (!saved && !valid)) return;
     busy.current = true;
     setError(null);
-    const attempt: TeachingStartAttempt = saved ?? {
+    const attempt: BrowserProcedureTeachingStartAttempt = saved ?? {
       kind: "start",
       targetSkillId: target === "new" ? null : target,
       body: {
@@ -133,7 +155,7 @@ function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
         allowed_origins: validOrigins!,
       },
     };
-    if (!saved && !retainTeachingAttempt(key, attempt)) {
+    if (!saved && !retainBrowserProcedureTeachingAttempt(key, attempt)) {
       setBlocked(true);
       busy.current = false;
       return;
@@ -142,14 +164,14 @@ function TeachingStartForm({ browse, canStart, onStarted }: StartProps) {
     try {
       await settle(await start.mutateAsync(attempt), attempt);
     } catch (failure) {
-      if (isTeachingAudienceCurrent(audience)) {
+      if (isBrowserProcedureTeachingAudienceCurrent(audience)) {
         setError(failure);
         if (
           !saved &&
           failure instanceof ApiError &&
           [400, 401, 403, 404, 409, 422].includes(failure.status)
         ) {
-          if (clearTeachingAttempt(key)) setSaved(null);
+          if (clearBrowserProcedureTeachingAttempt(key)) setSaved(null);
           else setBlocked(true);
         }
       }

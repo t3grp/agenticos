@@ -1,27 +1,34 @@
-"""Bounded, value-free browser teaching contracts shared across trusted boundaries."""
+"""Browser teaching capture contracts: what one stored step may contain, and nothing else.
 
-import hashlib
+A step has an exact HTTPS origin, an action, and for a control a role plus a
+hashed structural fingerprint. There is no field for a path, query, fragment,
+typed value, page text, label, input name, cookie, screenshot or script, so
+none of them can be stored by mistake. Validation errors never echo their
+input, because the refused input may itself be a secret.
+"""
+
 import json
 import re
 from enum import StrEnum
 from typing import Literal
+from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
-from app.core.browser_origins import browser_origin
 from app.core.exceptions import BadRequestError, ConflictError
 
 MAX_EVENTS = 500
 MAX_EVENT_BYTES = 128 * 1024
 MAX_CAPTURE_SECONDS = 30 * 60
 RETENTION_SECONDS = 24 * 60 * 60
-MAX_GENERATION_SECONDS = 180
-PARAMETER_PATTERN = r"^[a-z][a-z0-9_]{0,31}$"
-FINGERPRINT_PATTERN = r"^sha256:[0-9a-f]{64}$"
+MAX_ORIGINS = 10
+MAX_LABEL = 80
+MAX_PARAMETERS = 20
+PARAMETER_PATTERN = r"^[a-z][a-z0-9_]{0,39}$"
 
-TeachingAction = Literal["navigate", "click", "select", "input_parameter", "scroll", "checkpoint"]
-TeachingRole = Literal[
+Action = Literal["navigate", "click", "select", "input_parameter", "scroll", "checkpoint"]
+Role = Literal[
     "button",
     "link",
     "textbox",
@@ -33,98 +40,118 @@ TeachingRole = Literal[
     "option",
     "switch",
 ]
+CONTROL_ACTIONS = frozenset({"click", "select", "input_parameter"})
 
 
 class TeachingState(StrEnum):
     RECORDING = "recording"
     PAUSED = "paused"
     REVIEW = "review"
-    PROPOSED = "proposed"
     DISCARDED = "discarded"
     EXPIRED = "expired"
-
-
-class TeachingGeneration(StrEnum):
-    NONE = "none"
-    QUEUED = "queued"
-    GENERATING = "generating"
-    SUCCEEDED = "succeeded"
-    REFUSED = "refused"
-    UNKNOWN = "unknown"
-    CANCELLED = "cancelled"
+    PROPOSING = "proposing"
+    PROPOSED = "proposed"
 
 
 class TeachingReason(StrEnum):
+    """Stable reason codes; the only detail a refusal or a paused row carries."""
+
     DISABLED = "teaching_disabled"
     UNAVAILABLE = "teaching_unavailable"
+    NOT_HELD = "browser_not_held"
     OWNERSHIP_LOST = "browser_ownership_lost"
-    PROTECTED = "credential_output_protected"
     AUTHORITY_CHANGED = "authority_changed"
     EXPIRED = "teaching_expired"
     EVENT_LIMIT = "event_limit_reached"
     BYTE_LIMIT = "event_bytes_limit_reached"
     TIME_LIMIT = "capture_time_limit_reached"
     AUTHENTICATION = "human_authentication_required"
-    UNSUPPORTED_ACTION = "human_step_required"
     ORIGIN_REFUSED = "origin_not_allowed"
-    NATIVE_UNAVAILABLE = "capture_unavailable"
+    CAPTURE_FAILED = "capture_unavailable"
     PAUSED_BY_OWNER = "paused_by_owner"
     STALE_REVISION = "stale_revision"
     EVENT_CONFLICT = "event_sequence_conflict"
-    REVIEW_REQUIRED = "review_required"
-    BUDGET_REFUSED = "generation_budget_refused"
-    INVALID_DRAFT = "draft_not_usable"
-    GENERATION_FAILED = "generation_failed"
-    GENERATION_UNKNOWN = "generation_outcome_unknown"
-    OPTED_OUT = "learning_opted_out"
-    TASK_NOT_COMPLETED = "task_not_completed"
+    REQUEST_REUSED = "idempotency_key_reused"
+    ALREADY_RECORDING = "teaching_already_active"
+    WRONG_STATE = "invalid_transition"
+    BUDGET = "budget_exceeded"
+    REVIEW_INCOMPLETE = "review_incomplete"
+    REVIEW_UNKNOWN_STEP = "review_unknown_step"
+    SKILL_NAME = "skill_name_refused"
 
 
 class TeachingRefused(BadRequestError):
-    """Only a fixed code leaves a capture or model boundary, never its input/error."""
-
     def __init__(self, reason: TeachingReason) -> None:
         self.reason = reason
-        super().__init__(
-            message="Browser teaching unavailable", details={"reason_code": reason.value}
-        )
+        super().__init__(message="Browser teaching refused", details={"reason_code": reason.value})
 
 
-def stale_revision() -> ConflictError:
-    return ConflictError(
-        message="Browser teaching changed; read its current revision",
-        details={"reason_code": TeachingReason.STALE_REVISION.value},
-    )
+class TeachingConflict(ConflictError):
+    def __init__(self, reason: TeachingReason) -> None:
+        self.reason = reason
+        super().__init__(message="Browser teaching conflict", details={"reason_code": reason.value})
 
 
-class TeachingModel(BaseModel):
+def teaching_origin(value: str) -> str:
+    """Normalize an exact HTTPS origin, or raise `ValueError` without repeating the input.
+
+    Refuses anything that is more than an origin: userinfo, a path, a query, a
+    fragment or a wildcard. The host is lower-cased and IDNA-encoded and the
+    default port is dropped, so one site has one spelling.
+    """
+    refused = "Use an exact HTTPS origin such as https://portal.example.com"
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > 512
+        or any(char.isspace() or ord(char) < 32 or char in "*?#\\@" for char in value)
+    ):
+        raise ValueError(refused)
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+        host = (parts.hostname or "").encode("idna").decode("ascii").lower()
+    except ValueError, UnicodeError:
+        raise ValueError(refused) from None
+    if (
+        parts.scheme != "https"
+        or not host
+        or parts.path not in ("", "/")
+        or "." not in host.strip("[]")
+    ):
+        raise ValueError(refused)
+    return f"https://{host}" + ("" if port in (None, 443) else f":{port}")
+
+
+class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
 
-class StructuralTarget(TeachingModel):
-    role: TeachingRole
-    fingerprint: str = Field(pattern=FINGERPRINT_PATTERN)
+class StructuralTarget(_Strict):
+    role: Role
+    fingerprint: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
 
 
-class CaptureObservation(TeachingModel):
-    """An isolated-world descriptor; neither labels nor field values have a field."""
+class Observation(_Strict):
+    """What the page observer may report about the page and the input's target."""
 
     origin: str
     target: StructuralTarget | None = None
-    human_required: bool = False
+    authentication: bool = False
+    """The target or its form is a password, one-time-code or CAPTCHA control."""
 
     @field_validator("origin")
     @classmethod
     def _origin(cls, value: str) -> str:
-        return browser_origin(value)
+        return teaching_origin(value)
 
 
-class CapturedAction(TeachingModel):
-    """The input id is derived from the server connection and server input sequence."""
+class CapturedStep(_Strict):
+    """One stored step. `input_id` is derived on the server from the hold and its input count."""
 
     sequence: int = Field(ge=1, le=MAX_EVENTS)
     input_id: UUID
-    action: TeachingAction
+    action: Action
     origin: str
     target: StructuralTarget | None = None
     direction: Literal["up", "down"] | None = None
@@ -133,215 +160,74 @@ class CapturedAction(TeachingModel):
     @field_validator("origin")
     @classmethod
     def _origin(cls, value: str) -> str:
-        return browser_origin(value)
+        return teaching_origin(value)
 
     @model_validator(mode="after")
-    def _shape(self) -> CapturedAction:
-        if (self.action in {"click", "select", "input_parameter"}) != (self.target is not None):
-            raise ValueError("Only a control action has a structural target")
-        if (self.action == "scroll") != (self.direction is not None):
-            raise ValueError("Only a scroll has a direction")
-        if self.human_step and self.action != "checkpoint":
-            raise ValueError("A human step is a checkpoint")
+    def _consistent(self) -> CapturedStep:
+        valid = (
+            (self.action in CONTROL_ACTIONS) == (self.target is not None)
+            and (self.action == "scroll") == (self.direction is not None)
+            and (not self.human_step or self.action == "checkpoint")
+        )
+        if not valid:
+            raise ValueError("Step fields do not match its action")
         return self
 
 
-class TeachingParameter(TeachingModel):
-    name: str = Field(pattern=PARAMETER_PATTERN)
-    description: str = Field(min_length=1, max_length=240)
+_DIGIT_RUN = re.compile(r"\d{6,}")
+_LONG_WORD = re.compile(r"\S{33,}")
 
 
-class ReviewedAction(TeachingModel):
-    """The person supplies descriptions; structural facts still come from capture."""
+def safe_label(value: str) -> str:
+    """A reviewer's short description of a step, or `ValueError` without repeating it.
+
+    A label is the reviewer's own words about a control, never a value from the
+    page. Refused: control characters, anything shaped like a URL or an e-mail
+    address, a run of six digits or more (an OTP, an account or card number) and
+    a single unbroken token longer than 32 characters (a pasted key or token).
+    This catches a value pasted by mistake; it is not a promise about meaning.
+    """
+    refused = "Describe the step in a few plain words, without values from the page"
+    text = value.strip()
+    if (
+        not text
+        or len(text) > MAX_LABEL
+        or any(ord(char) < 32 or ord(char) == 127 for char in text)
+        or "://" in text
+        or "www." in text.lower()
+        or "@" in text
+        or _DIGIT_RUN.search(text)
+        or _LONG_WORD.search(text)
+    ):
+        raise ValueError(refused)
+    return text
+
+
+class ReviewedStep(_Strict):
+    """The reviewer's safe description of one captured step, and its parameter if it is one.
+
+    `parameter` names a case-specific input, such as `invoice_number`. It is a
+    name only: the value typed during the demonstration was never recorded.
+    """
 
     sequence: int = Field(ge=1, le=MAX_EVENTS)
-    label: str = Field(min_length=1, max_length=160)
+    label: str | None = None
     parameter: str | None = Field(default=None, pattern=PARAMETER_PATTERN)
-    path_template: str | None = Field(default=None, max_length=512)
-    omit: bool = False
 
-    @field_validator("path_template")
+    @field_validator("label")
     @classmethod
-    def _path(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        # Templates contain explicit review text and named parameters. Queries,
-        # fragments, encoded tokens, authorities and dot traversal are refused.
-        if (
-            not value.startswith("/")
-            or value.startswith("//")
-            or any(char in value for char in "?#%\\:@")
-            or any(ord(char) < 32 or ord(char) == 127 for char in value)
-            or any(part in {".", ".."} for part in value.split("/"))
-        ):
-            raise ValueError("Use a reviewed path template without URL tokens")
-        without_parameters = re.sub(r"\{[a-z][a-z0-9_]{0,31}\}", "", value)
-        if "{" in without_parameters or "}" in without_parameters:
-            raise ValueError("Use named path parameters")
-        return value
+    def _label(cls, value: str | None) -> str | None:
+        return None if value is None or not value.strip() else safe_label(value)
 
 
-class TeachingReview(TeachingModel):
-    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    description: str = Field(min_length=1, max_length=500)
-    actions: tuple[ReviewedAction, ...] = Field(min_length=1, max_length=MAX_EVENTS)
-    parameters: tuple[TeachingParameter, ...] = Field(default=(), max_length=50)
-    prerequisites: tuple[str, ...] = Field(default=(), max_length=16)
-    success_checks: tuple[str, ...] = Field(min_length=1, max_length=16)
-
-    @field_validator("prerequisites", "success_checks")
-    @classmethod
-    def _short_checks(cls, values: tuple[str, ...]) -> tuple[str, ...]:
-        if any(not value.strip() or len(value) > 240 for value in values):
-            raise ValueError("Use short, explicit review checks")
-        return values
-
-    @model_validator(mode="after")
-    def _unique(self) -> TeachingReview:
-        if len({item.sequence for item in self.actions}) != len(self.actions) or len(
-            {item.name for item in self.parameters}
-        ) != len(self.parameters):
-            raise ValueError("Review each step and parameter once")
-        if list(self.actions) != sorted(self.actions, key=lambda item: item.sequence):
-            raise ValueError("Keep the captured order")
-        names = {item.name for item in self.parameters}
-        for action in self.actions:
-            used = set(re.findall(r"\{([a-z][a-z0-9_]{0,31})\}", action.path_template or ""))
-            if action.parameter is not None:
-                used.add(action.parameter)
-            if not used <= names:
-                raise ValueError("Define every reviewed parameter")
-        return self
+def encoded_size(steps: list[dict[str, JsonValue]]) -> int:
+    """Bytes the stored step list takes, measured the way the database limit measures it."""
+    return len(json.dumps(steps, separators=(", ", ": "), ensure_ascii=False).encode())
 
 
-class ProcedureStep(TeachingModel):
-    action: TeachingAction
-    origin: str
-    label: str = Field(min_length=1, max_length=160)
-    role: TeachingRole | None = None
-    parameter: str | None = Field(default=None, pattern=PARAMETER_PATTERN)
-    path_template: str | None = None
-    direction: Literal["up", "down"] | None = None
-    human_step: bool = False
-
-    @field_validator("origin")
-    @classmethod
-    def _origin(cls, value: str) -> str:
-        return browser_origin(value)
-
-    @model_validator(mode="after")
-    def _shape(self) -> ProcedureStep:
-        controls = {"click", "select", "input_parameter"}
-        if (
-            (self.action in controls) != (self.role is not None)
-            or (self.action in {"select", "input_parameter"}) != (self.parameter is not None)
-            or (self.action == "navigate") != (self.path_template is not None)
-            or (self.action == "scroll") != (self.direction is not None)
-            or (self.action == "checkpoint") != self.human_step
-        ):
-            raise ValueError("Procedure fields must describe the reviewed action")
-        ReviewedAction(
-            sequence=1, label=self.label, parameter=self.parameter, path_template=self.path_template
-        )
-        return self
-
-
-class BrowserProcedure(TeachingModel):
-    schema_version: Literal[1] = 1
-    origins: tuple[str, ...] = Field(min_length=1, max_length=10)
-    steps: tuple[ProcedureStep, ...] = Field(min_length=1, max_length=MAX_EVENTS)
-    parameters: tuple[TeachingParameter, ...] = Field(max_length=50)
-    prerequisites: tuple[str, ...] = Field(max_length=16)
-    success_checks: tuple[str, ...] = Field(min_length=1, max_length=16)
-    source_session_id: UUID
-    source_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    source: Literal["manual", "refinement"]
-    verified_success: bool = False
-
-    @field_validator("origins")
-    @classmethod
-    def _origins(cls, values: tuple[str, ...]) -> tuple[str, ...]:
-        return tuple(browser_origin(value) for value in values)
-
-    @field_validator("prerequisites", "success_checks")
-    @classmethod
-    def _checks(cls, values: tuple[str, ...]) -> tuple[str, ...]:
-        return TeachingReview._short_checks(values)
-
-    @model_validator(mode="after")
-    def _scope(self) -> BrowserProcedure:
-        names = {parameter.name for parameter in self.parameters}
-        if len(names) != len(self.parameters) or len(set(self.origins)) != len(self.origins):
-            raise ValueError("Procedure scopes and parameters must be unique")
-        if self.source == "manual" and self.verified_success:
-            raise ValueError("A manual demonstration is not verified task success")
-        for step in self.steps:
-            used = set(re.findall(r"\{([a-z][a-z0-9_]{0,31})\}", step.path_template or ""))
-            if step.parameter is not None:
-                used.add(step.parameter)
-            if step.origin not in self.origins or not used <= names:
-                raise ValueError("Procedure actions must stay within reviewed scopes")
-        return self
-
-
-def canonical_bytes(value: object) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-
-
-def reviewed_procedure(
-    *,
-    session_id: UUID,
-    origins: tuple[str, ...],
-    captured: tuple[CapturedAction, ...],
-    review: TeachingReview,
-    source: Literal["manual", "refinement"],
-    verified_success: bool,
-) -> BrowserProcedure:
-    """Build only from captured facts and an explicit complete human review."""
-    if tuple(item.sequence for item in captured) != tuple(item.sequence for item in review.actions):
-        raise TeachingRefused(TeachingReason.REVIEW_REQUIRED)
-    steps: list[ProcedureStep] = []
-    for event, action in zip(captured, review.actions, strict=True):
-        if action.omit:
-            continue
-        if (
-            event.origin not in origins
-            or (event.action in {"input_parameter", "select"}) != (action.parameter is not None)
-            or (event.action == "navigate") != (action.path_template is not None)
-        ):
-            raise TeachingRefused(TeachingReason.REVIEW_REQUIRED)
-        steps.append(
-            ProcedureStep(
-                action=event.action,
-                origin=event.origin,
-                label=action.label,
-                role=None if event.target is None else event.target.role,
-                parameter=action.parameter,
-                path_template=action.path_template,
-                direction=event.direction,
-                human_step=event.human_step,
-            )
-        )
-    if not steps:
-        raise TeachingRefused(TeachingReason.REVIEW_REQUIRED)
-    payload = {
-        "origins": origins,
-        "review": review.model_dump(mode="json"),
-        "captured": [item.model_dump(mode="json") for item in captured],
-        "source": source,
-        "verified_success": verified_success,
-    }
-    encoded = canonical_bytes(payload)
-    if len(encoded) > MAX_EVENT_BYTES:
-        raise TeachingRefused(TeachingReason.BYTE_LIMIT)
-    return BrowserProcedure(
-        origins=origins,
-        steps=tuple(steps),
-        parameters=review.parameters,
-        prerequisites=review.prerequisites,
-        success_checks=review.success_checks,
-        source_session_id=session_id,
-        source_hash=hashlib.sha256(encoded).hexdigest(),
-        source=source,
-        verified_success=verified_success,
-    )
+def revision_from_if_match(value: str | None) -> int | None:
+    """The revision an `If-Match` header names (`3` or `"3"`), or `None` when it names none."""
+    if value is None:
+        return None
+    text = value.strip().removeprefix("W/").strip('"')
+    return int(text) if text.isdecimal() and len(text) <= 9 else None

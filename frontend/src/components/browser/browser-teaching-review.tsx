@@ -5,19 +5,29 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, ConfirmDialog } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { useBrowserTeaching } from "@/hooks/use-browser-teaching";
-import { useTeachingAudience } from "@/hooks/use-browser-teaching-settings";
+import { useBrowserProcedureTeaching } from "@/hooks/use-browser-procedure-teaching";
+import { useBrowserProcedureTeachingAudience } from "@/hooks/use-browser-procedure-teaching-settings";
 import { usePermissions } from "@/hooks/use-permissions";
-import { clearTeachingAttempt, teachingAttemptKey } from "@/lib/browser-teaching-attempts";
-import { teachingDeadlineLive, teachingDraftPending } from "@/lib/browser-teaching-review";
+import {
+  clearBrowserProcedureTeachingAttempt,
+  browserProcedureTeachingAttemptKey,
+} from "@/lib/browser-procedure-teaching-attempts";
+import {
+  browserProcedureTeachingDeadlineLive,
+  browserProcedureTeachingDraftPending,
+} from "@/lib/browser-procedure-teaching-review";
 import { ROUTES } from "@/lib/constants";
 import { Perm } from "@/types/permissions";
 import { BrowserTeachingReviewForm } from "./browser-teaching-review-form";
 import { BrowserTeachingPreference } from "./browser-teaching-preference";
-import { TeachingError, TeachingStatus, TeachingTime } from "./browser-teaching-status";
+import {
+  TeachingError,
+  BrowserProcedureTeachingStatus,
+  TeachingTime,
+} from "./browser-teaching-status";
 
 export function BrowserTeachingReview({ sessionId }: { sessionId: string }) {
-  const audience = useTeachingAudience();
+  const audience = useBrowserProcedureTeachingAudience();
   return (
     <TeachingReviewContent
       key={JSON.stringify([audience.actor, audience.organization, sessionId])}
@@ -26,16 +36,17 @@ export function BrowserTeachingReview({ sessionId }: { sessionId: string }) {
   );
 }
 function TeachingReviewContent({ sessionId }: { sessionId: string }) {
-  const t = useTranslations("browserTeaching");
+  const t = useTranslations("browserProcedureTeaching");
   const locale = useLocale();
-  const state = useBrowserTeaching(sessionId);
+  const state = useBrowserProcedureTeaching(sessionId);
   const { session } = state;
   const { can } = usePermissions();
   const [discard, setDiscard] = useState(false);
   const busy = useRef(false);
-  const draftKey = teachingAttemptKey(state.audience, "propose", [sessionId]);
+  const draftKey = browserProcedureTeachingAttemptKey(state.audience, "propose", [sessionId]);
   useEffect(() => {
-    if (session && session.generation_state !== "none") clearTeachingAttempt(draftKey);
+    if (session && session.generation_state !== "none")
+      clearBrowserProcedureTeachingAttempt(draftKey);
   }, [session, draftKey]);
   async function act(action: "stop" | "discard") {
     if (!session || busy.current) return;
@@ -52,7 +63,7 @@ function TeachingReviewContent({ sessionId }: { sessionId: string }) {
   const canReview =
     session?.status === "review" &&
     (session.generation_state === "none" || session.generation_state === "refused") &&
-    teachingDeadlineLive(session.expires_at, state.now) &&
+    browserProcedureTeachingDeadlineLive(session.expires_at, state.now) &&
     (session.source === "manual" || session.verified_success);
   const proposalAccess = can(Perm.skillsEdit) && can(Perm.runsView);
   return (
@@ -86,7 +97,7 @@ function TeachingReviewContent({ sessionId }: { sessionId: string }) {
             aria-label={t("captureSummary")}
             data-tour="teaching-summary"
           >
-            <TeachingStatus session={session} />
+            <BrowserProcedureTeachingStatus session={session} />
             <p className="text-muted-foreground text-sm break-words">
               {session.allowed_origins.join(", ")}
             </p>
@@ -130,7 +141,7 @@ function TeachingReviewContent({ sessionId }: { sessionId: string }) {
                 </Button>
               )}
             </div>
-            {state.pollingEnded && teachingDraftPending(session) && (
+            {state.pollingEnded && browserProcedureTeachingDraftPending(session) && (
               <p role="status" className="text-muted-foreground text-sm">
                 {t("pollingEnded")}
               </p>

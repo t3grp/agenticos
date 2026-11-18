@@ -7,7 +7,7 @@
  */
 
 import type { ReachedAgent } from "@/types/authoring";
-import type { BrowserProcedure } from "@/types/browser-teaching";
+import type { BrowserProcedure } from "@/types/browser-procedure-teaching";
 import { apiClient } from "./api-client";
 
 export type ProposalStatus = "pending" | "applied" | "discarded";
@@ -34,6 +34,8 @@ export interface SkillChangeRecord {
   /** What wrote it: an agent's workspace, the assistant, or a library update. */
   source?: "workspace" | "improve" | "library" | "browser_teaching" | null;
   browser_procedure?: BrowserProcedure | null;
+  /** The reviewed browser demonstration it was built from (#113); null for any other source. */
+  browser_teaching_id?: string | null;
   /** The authoring assistant's request behind it; null for a change a workspace wrote. */
   authoring_request_id?: string | null;
   rationale?: string;

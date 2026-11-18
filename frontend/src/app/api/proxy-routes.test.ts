@@ -48,6 +48,7 @@ import * as mlCalls from "./ml/calls/[[...path]]/route";
 import * as projects from "./projects/[[...path]]/route";
 import * as browserSignIns from "./browser-sign-ins/[[...path]]/route";
 import * as browserTeachings from "./browser-teachings/[[...path]]/route";
+import * as browserProcedureTeachings from "./browser-procedures/teachings/[[...path]]/route";
 import * as browserTeachingPolicy from "./browser-teaching-policy/route";
 import * as channelLink from "./me/channel-link/[[...path]]/route";
 import * as notifications from "./notifications/[[...path]]/route";
@@ -146,6 +147,7 @@ const MOUNTED: [string, Record<string, unknown>][] = [
   ["audit", audit],
   ["browser-sign-ins", browserSignIns],
   ["browser-teachings", browserTeachings],
+  ["browser-procedures/teachings", browserProcedureTeachings],
   ["browser-teaching-policy", browserTeachingPolicy],
   ["catalog", catalog],
   ["channels", channels],

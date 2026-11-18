@@ -11,14 +11,14 @@ import anyio
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from app.agents.capabilities.browser_use._credential_page import NativeCommand, NativeMethod
-from app.core.browser_teaching import (
-    CaptureObservation,
+from app.core.browser_procedure_teaching import (
+    BrowserProcedureTeachingModel,
+    BrowserProcedureTeachingObservation,
+    BrowserProcedureTeachingReason,
+    BrowserProcedureTeachingRefused,
+    BrowserProcedureTeachingRole,
     StructuralTarget,
-    TeachingModel,
-    TeachingReason,
-    TeachingRefused,
-    TeachingRole,
-    canonical_bytes,
+    browser_procedure_canonical_bytes,
 )
 
 _DESCRIBE = r"""
@@ -105,7 +105,7 @@ class _World(BaseModel):
     executionContextId: int = Field(ge=1)
 
 
-class _Part(TeachingModel):
+class _Part(BrowserProcedureTeachingModel):
     tag: Literal[
         "html",
         "body",
@@ -133,12 +133,12 @@ class _Part(TeachingModel):
     position: int = Field(ge=1, le=10000)
 
 
-class _Target(TeachingModel):
-    role: TeachingRole
+class _Target(BrowserProcedureTeachingModel):
+    role: BrowserProcedureTeachingRole
     structure: tuple[_Part, ...] = Field(min_length=1, max_length=16)
 
 
-class _Observation(TeachingModel):
+class _Observation(BrowserProcedureTeachingModel):
     origin: str = Field(max_length=2048)
     target: _Target | None
     human_required: bool
@@ -153,7 +153,7 @@ class _Answer(BaseModel):
     exceptionDetails: object | None = None
 
 
-class TeachingPage:
+class BrowserProcedureTeachingPage:
     def __init__(self, command: NativeCommand) -> None:
         self._command = command
 
@@ -163,13 +163,15 @@ class TeachingPage:
                 return await self._command(method, params)
         except Exception:
             # Browser errors can contain an echoed URL, input, script or value.
-            raise TeachingRefused(TeachingReason.NATIVE_UNAVAILABLE) from None
+            raise BrowserProcedureTeachingRefused(
+                BrowserProcedureTeachingReason.NATIVE_UNAVAILABLE
+            ) from None
 
     async def observe(
         self, mode: Literal["point", "focus", "origin"], *, x: float = 0, y: float = 0
-    ) -> CaptureObservation:
+    ) -> BrowserProcedureTeachingObservation:
         if not 0 <= x <= 4000 or not 0 <= y <= 4000:
-            raise TeachingRefused(TeachingReason.NATIVE_UNAVAILABLE)
+            raise BrowserProcedureTeachingRefused(BrowserProcedureTeachingReason.NATIVE_UNAVAILABLE)
         try:
             with anyio.fail_after(6):
                 frame = _Tree.model_validate(
@@ -202,12 +204,16 @@ class TeachingPage:
                     await self._rpc("Page.getFrameTree", {})
                 ).frameTree.frame
             if frame != after or answer.exceptionDetails is not None:
-                raise TeachingRefused(TeachingReason.NATIVE_UNAVAILABLE)
+                raise BrowserProcedureTeachingRefused(
+                    BrowserProcedureTeachingReason.NATIVE_UNAVAILABLE
+                )
             value = answer.result.value
             target = value.target
             if value.human_required and target is not None:
-                raise TeachingRefused(TeachingReason.NATIVE_UNAVAILABLE)
-            return CaptureObservation(
+                raise BrowserProcedureTeachingRefused(
+                    BrowserProcedureTeachingReason.NATIVE_UNAVAILABLE
+                )
+            return BrowserProcedureTeachingObservation(
                 origin=value.origin,
                 human_required=value.human_required,
                 target=None
@@ -215,8 +221,12 @@ class TeachingPage:
                 else StructuralTarget(
                     role=target.role,
                     fingerprint="sha256:"
-                    + hashlib.sha256(canonical_bytes(target.model_dump(mode="json"))).hexdigest(),
+                    + hashlib.sha256(
+                        browser_procedure_canonical_bytes(target.model_dump(mode="json"))
+                    ).hexdigest(),
                 ),
             )
         except ValidationError, ValueError, TimeoutError:
-            raise TeachingRefused(TeachingReason.NATIVE_UNAVAILABLE) from None
+            raise BrowserProcedureTeachingRefused(
+                BrowserProcedureTeachingReason.NATIVE_UNAVAILABLE
+            ) from None

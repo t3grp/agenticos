@@ -4,37 +4,39 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Label } from "@/components/ui";
 import { ApiError } from "@/lib/api-error";
-import type { useBrowserTeaching } from "@/hooks/use-browser-teaching";
+import type { useBrowserProcedureTeaching } from "@/hooks/use-browser-procedure-teaching";
 import { useHydrated } from "@/hooks/use-hydrated";
 import {
-  clearTeachingAttempt,
-  readTeachingAttempt,
-  retainTeachingAttempt,
-  teachingAttemptKey,
-  type TeachingDraftAttempt,
-} from "@/lib/browser-teaching-attempts";
-import { isTeachingAudienceCurrent } from "@/lib/browser-teaching-api";
-import { teachingBudgetValid } from "@/lib/browser-teaching-review";
-import type { BrowserTeaching } from "@/types/browser-teaching";
+  clearBrowserProcedureTeachingAttempt,
+  readBrowserProcedureTeachingAttempt,
+  retainBrowserProcedureTeachingAttempt,
+  browserProcedureTeachingAttemptKey,
+  type BrowserProcedureTeachingDraftAttempt,
+} from "@/lib/browser-procedure-teaching-attempts";
+import { isBrowserProcedureTeachingAudienceCurrent } from "@/lib/browser-procedure-teaching-api";
+import { browserProcedureTeachingBudgetValid } from "@/lib/browser-procedure-teaching-review";
+import type { BrowserProcedureTeaching } from "@/types/browser-procedure-teaching";
 import { TeachingError } from "./browser-teaching-status";
 
 type DraftProps = {
-  session: BrowserTeaching;
-  state: ReturnType<typeof useBrowserTeaching>;
+  session: BrowserProcedureTeaching;
+  state: ReturnType<typeof useBrowserProcedureTeaching>;
 };
 export function BrowserTeachingDraft(props: DraftProps) {
   const hydrated = useHydrated();
   return hydrated ? (
     <TeachingDraftForm
-      key={teachingAttemptKey(props.state.audience, "propose", [props.session.id])}
+      key={browserProcedureTeachingAttemptKey(props.state.audience, "propose", [props.session.id])}
       {...props}
     />
   ) : null;
 }
 function TeachingDraftForm({ session, state }: DraftProps) {
-  const t = useTranslations("browserTeaching");
-  const key = teachingAttemptKey(state.audience, "propose", [session.id]);
-  const [initial] = useState(() => readTeachingAttempt<TeachingDraftAttempt>(key, "propose"));
+  const t = useTranslations("browserProcedureTeaching");
+  const key = browserProcedureTeachingAttemptKey(state.audience, "propose", [session.id]);
+  const [initial] = useState(() =>
+    readBrowserProcedureTeachingAttempt<BrowserProcedureTeachingDraftAttempt>(key, "propose"),
+  );
   const [mode, setMode] = useState<"reviewed" | "assistant">("reviewed");
   const [budget, setBudget] = useState("");
   const [saved, setSaved] = useState(initial.attempt);
@@ -42,16 +44,20 @@ function TeachingDraftForm({ session, state }: DraftProps) {
   const [error, setError] = useState<unknown>(null);
   const busy = useRef(false);
   async function propose() {
-    if (busy.current || blocked || (!saved && mode === "assistant" && !teachingBudgetValid(budget)))
+    if (
+      busy.current ||
+      blocked ||
+      (!saved && mode === "assistant" && !browserProcedureTeachingBudgetValid(budget))
+    )
       return;
     busy.current = true;
     setError(null);
-    const attempt: TeachingDraftAttempt = saved ?? {
+    const attempt: BrowserProcedureTeachingDraftAttempt = saved ?? {
       kind: "propose",
       revision: session.revision,
       body: mode === "reviewed" ? { mode } : { mode, max_cost_usd: budget },
     };
-    if (!saved && !retainTeachingAttempt(key, attempt)) {
+    if (!saved && !retainBrowserProcedureTeachingAttempt(key, attempt)) {
       setBlocked(true);
       busy.current = false;
       return;
@@ -64,16 +70,17 @@ function TeachingDraftForm({ session, state }: DraftProps) {
         revision: attempt.revision,
         body: attempt.body,
       });
-      if (isTeachingAudienceCurrent(state.audience)) clearTeachingAttempt(key);
+      if (isBrowserProcedureTeachingAudienceCurrent(state.audience))
+        clearBrowserProcedureTeachingAttempt(key);
     } catch (failure) {
-      if (isTeachingAudienceCurrent(state.audience)) {
+      if (isBrowserProcedureTeachingAudienceCurrent(state.audience)) {
         setError(failure);
         if (
           !saved &&
           failure instanceof ApiError &&
           [400, 401, 403, 404, 409, 422].includes(failure.status)
         ) {
-          if (clearTeachingAttempt(key)) setSaved(null);
+          if (clearBrowserProcedureTeachingAttempt(key)) setSaved(null);
           else setBlocked(true);
         }
       }
@@ -154,7 +161,7 @@ function TeachingDraftForm({ session, state }: DraftProps) {
                 onChange={(event) => setBudget(event.target.value)}
               />
               <p className="text-muted-foreground text-xs">{t("assistantBudgetHelp")}</p>
-              {budget && !teachingBudgetValid(budget) && (
+              {budget && !browserProcedureTeachingBudgetValid(budget) && (
                 <p role="alert" className="text-destructive text-sm">
                   {t("invalidBudget")}
                 </p>
@@ -163,7 +170,8 @@ function TeachingDraftForm({ session, state }: DraftProps) {
           )}
           <Button
             disabled={
-              state.command.isPending || (mode === "assistant" && !teachingBudgetValid(budget))
+              state.command.isPending ||
+              (mode === "assistant" && !browserProcedureTeachingBudgetValid(budget))
             }
             onClick={() => void propose()}
           >

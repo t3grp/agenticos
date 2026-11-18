@@ -1,177 +1,89 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError } from "@/lib/api-error";
-import {
-  changeBrowserTeaching,
-  discardBrowserTeaching,
-  isTeachingAudienceCurrent,
-  proposeBrowserTeaching,
-  readBrowserTeaching,
-  startBrowserTeaching,
-  stopBrowserTeaching,
-} from "@/lib/browser-teaching-api";
-import {
-  isTeachingId,
-  teachingDraftPending,
-  TEACHING_POLL_MS,
-  TEACHING_POLL_WINDOW_MS,
-} from "@/lib/browser-teaching-review";
-import { qk } from "@/lib/query-keys";
-import type { BrowserTeaching, TeachingChange, TeachingPropose } from "@/types/browser-teaching";
-import type { TeachingStartAttempt } from "@/lib/browser-teaching-attempts";
-import { useTeachingAudience } from "./use-browser-teaching-settings";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
-export type TeachingCommand =
-  | { action: "change"; session: BrowserTeaching; body: TeachingChange }
-  | { action: "stop" | "discard"; session: BrowserTeaching }
-  | { action: "propose"; session: BrowserTeaching; revision: number; body: TeachingPropose };
-function matchingIdentity(next: BrowserTeaching, previous: BrowserTeaching) {
-  return (
-    next.id === previous.id &&
-    next.run_id === previous.run_id &&
-    next.call_id === previous.call_id &&
-    next.tab_id === previous.tab_id &&
-    next.agent_id === previous.agent_id &&
-    next.target_skill_id === previous.target_skill_id
-  );
+import { getErrorMessage } from "@/lib/api-error";
+import {
+  getBrowserTeaching,
+  proposeBrowserTeaching,
+  reviewBrowserTeaching,
+  type BrowserTeaching,
+  type ReviewedStep,
+} from "@/lib/browser-teaching-api";
+import { qk } from "@/lib/query-keys";
+import { useAuthStore, useOrgStore } from "@/stores";
+
+/** How often a queued proposal build is checked on until it settles. */
+const PROPOSING_POLL_MS = 2000;
+
+export interface UseBrowserTeachingResult {
+  teaching: BrowserTeaching | undefined;
+  isLoading: boolean;
+  error: unknown;
+  /** Who is reading, so a view can drop its draft when the identity changes. */
+  identity: string;
+  saveReview: (steps: ReviewedStep[]) => Promise<BrowserTeaching | undefined>;
+  /** Propose from `base`, the session a review save just returned, or the one in hand. */
+  propose: (name: string, base?: BrowserTeaching) => Promise<void>;
+  isSaving: boolean;
+  isProposing: boolean;
 }
-export function useBrowserTeaching(id: string | null, observedRevision?: number | null) {
-  const audience = useTeachingAudience();
-  const client = useQueryClient();
-  const key = useMemo(
-    () => qk.browserTeaching.detail(audience.actor, audience.organization, id ?? ""),
-    [audience.actor, audience.organization, id],
-  );
-  const ready = !!audience.actor && !!audience.organization && !!id && isTeachingId(id);
-  const [pollUntil, setPollUntil] = useState(() => Date.now() + TEACHING_POLL_WINDOW_MS);
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    // Local deadlines must keep expiring after the finite network polling window.
-    const timer = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(timer);
-  }, []);
-  const query = useQuery({
+
+/**
+ * One Teach a task recording under review, and the two writes a reviewer makes.
+ *
+ * The cache key names the organization and the person, so switching either
+ * reads afresh instead of showing someone else's steps. Each write sends the
+ * revision it was based on; a refusal (a stale revision included) is toasted
+ * and the session is read again.
+ */
+export function useBrowserTeaching(id: string): UseBrowserTeachingResult {
+  const t = useTranslations("errors");
+  const queryClient = useQueryClient();
+  const orgId = useOrgStore((state) => state.activeOrgId) ?? "current";
+  const userId = useAuthStore((state) => state.user?.id) ?? "anonymous";
+  const key = qk.browserTeaching.one(orgId, userId, id);
+  const { data, isLoading, error } = useQuery({
     queryKey: key,
-    queryFn: async ({ signal }) => {
-      const result = await readBrowserTeaching(audience, id!, signal);
-      if (result.id !== id) {
-        // i18n-exempt: a fixed internal identity refusal; transport text is not displayed.
-        throw new Error("Teaching response identity mismatch");
-      }
-      return result;
-    },
-    enabled: ready,
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-    refetchOnMount: "always",
-    refetchInterval: (entry) =>
-      now < pollUntil &&
-      (teachingDraftPending(entry.state.data) ||
-        entry.state.data?.status === "recording" ||
-        entry.state.data?.status === "paused" ||
-        entry.state.data?.reason_code === "task_not_completed")
-        ? TEACHING_POLL_MS
-        : false,
+    queryFn: () => getBrowserTeaching(id),
+    refetchInterval: (query) =>
+      query.state.data?.status === "proposing" ? PROPOSING_POLL_MS : false,
   });
-  useEffect(() => {
-    if (ready && observedRevision != null && observedRevision > (query.data?.revision ?? 0))
-      void client.invalidateQueries({ queryKey: key });
-  }, [ready, observedRevision, query.data?.revision, client, key]);
-  const command = useMutation({
-    mutationKey: [...key, "command"],
-    retry: false,
-    gcTime: 0,
-    onMutate: () => client.cancelQueries({ queryKey: key }),
-    mutationFn: async (input: TeachingCommand) => {
-      const current = input.session;
-      const next =
-        input.action === "change"
-          ? await changeBrowserTeaching(audience, current.id, current.revision, input.body)
-          : input.action === "propose"
-            ? await proposeBrowserTeaching(audience, current.id, input.revision, input.body)
-            : input.action === "stop"
-              ? await stopBrowserTeaching(audience, current.id)
-              : await discardBrowserTeaching(audience, current.id);
-      if (!matchingIdentity(next, current)) {
-        // i18n-exempt: a mismatched response cannot settle a saved uncertain attempt.
-        throw new Error("Teaching response identity mismatch");
-      }
-      return next;
+
+  const settle = {
+    onSuccess: (next: BrowserTeaching) => queryClient.setQueryData(key, next),
+    onError: async (cause: unknown) => {
+      toast.error(getErrorMessage(cause, t));
+      await queryClient.invalidateQueries({ queryKey: key });
     },
-    onSuccess: (next) => {
-      if (!isTeachingAudienceCurrent(audience)) return;
-      client.setQueryData<BrowserTeaching>(key, (previous) =>
-        previous && previous.revision > next.revision ? previous : next,
-      );
-      setPollUntil(Date.now() + TEACHING_POLL_WINDOW_MS);
-    },
-    onSettled: () => {
-      if (isTeachingAudienceCurrent(audience))
-        void client.invalidateQueries({
-          queryKey: qk.browserTeaching.all(audience.actor, audience.organization),
-        });
-    },
-  });
-  const authorityRefused =
-    command.error instanceof ApiError &&
-    [401, 403, 404].includes(command.error.status) &&
-    command.submittedAt >= query.dataUpdatedAt;
-  const refresh = async () => {
-    if (!ready) return undefined;
-    setNow(Date.now());
-    setPollUntil(Date.now() + TEACHING_POLL_WINDOW_MS);
-    return query.refetch();
   };
+  const reviewing = useMutation({
+    mutationFn: ({ revision, steps }: { revision: number; steps: ReviewedStep[] }) =>
+      reviewBrowserTeaching(id, revision, steps),
+    ...settle,
+  });
+  const proposing = useMutation({
+    mutationFn: ({ revision, name }: { revision: number; name: string }) =>
+      proposeBrowserTeaching(id, revision, name),
+    ...settle,
+  });
+
   return {
-    audience,
-    ready,
-    query,
-    command,
-    refresh,
-    now,
-    session: !query.error && !authorityRefused ? query.data : undefined,
-    pollingEnded: now >= pollUntil,
+    teaching: data,
+    isLoading,
+    error,
+    identity: `${orgId}:${userId}`,
+    saveReview: async (steps) =>
+      data === undefined
+        ? undefined
+        : reviewing.mutateAsync({ revision: data.revision, steps }).catch(() => undefined),
+    propose: async (name, base = data) => {
+      if (base === undefined) return;
+      await proposing.mutateAsync({ revision: base.revision, name }).catch(() => undefined);
+    },
+    isSaving: reviewing.isPending,
+    isProposing: proposing.isPending,
   };
-}
-export function useTeachingStart() {
-  const audience = useTeachingAudience();
-  const client = useQueryClient();
-  return useMutation({
-    mutationKey: [...qk.browserTeaching.all(audience.actor, audience.organization), "start"],
-    retry: false,
-    gcTime: 0,
-    mutationFn: async (attempt: TeachingStartAttempt) => {
-      const next = await startBrowserTeaching(audience, attempt.body, attempt.targetSkillId);
-      if (
-        next.id !== attempt.body.request_id ||
-        next.run_id !== attempt.body.run_id ||
-        next.call_id !== attempt.body.call_id ||
-        next.tab_id !== attempt.body.tab_id ||
-        next.target_skill_id !== attempt.targetSkillId
-      ) {
-        // i18n-exempt: fixed internal refusal, not a page-derived message.
-        throw new Error("Teaching start response identity mismatch");
-      }
-      return next;
-    },
-    onSuccess: (next) => {
-      if (!isTeachingAudienceCurrent(audience)) return;
-      client.setQueryData(
-        qk.browserTeaching.detail(audience.actor, audience.organization, next.id),
-        next,
-      );
-      void client.invalidateQueries({
-        queryKey: qk.browserTeaching.list(audience.actor, audience.organization),
-      });
-    },
-    onError: () => {
-      if (isTeachingAudienceCurrent(audience))
-        void client.invalidateQueries({
-          queryKey: qk.browserTeaching.all(audience.actor, audience.organization),
-        });
-    },
-  });
 }

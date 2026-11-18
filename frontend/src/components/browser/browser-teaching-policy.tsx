@@ -5,20 +5,23 @@ import { useTranslations } from "next-intl";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Button, ConfirmDialog, Switch } from "@/components/ui";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useTeachingAudience, useTeachingPolicy } from "@/hooks/use-browser-teaching-settings";
+import {
+  useBrowserProcedureTeachingAudience,
+  useBrowserProcedureTeachingPolicy,
+} from "@/hooks/use-browser-procedure-teaching-settings";
 import { Perm } from "@/types/permissions";
 import { TeachingError } from "./browser-teaching-status";
 
 export function BrowserTeachingPolicy() {
-  const audience = useTeachingAudience();
+  const audience = useBrowserProcedureTeachingAudience();
   const { can } = usePermissions();
   return can(Perm.orgSettings) ? (
     <PolicyContent key={JSON.stringify([audience.actor, audience.organization])} />
   ) : null;
 }
 function PolicyContent() {
-  const t = useTranslations("browserTeaching");
-  const policy = useTeachingPolicy();
+  const t = useTranslations("browserProcedureTeaching");
+  const policy = useBrowserProcedureTeachingPolicy();
   const [confirm, setConfirm] = useState<boolean | null>(null);
   const current = policy.data;
   return (

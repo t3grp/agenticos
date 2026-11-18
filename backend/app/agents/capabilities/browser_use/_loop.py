@@ -63,7 +63,7 @@ from app.agents.capabilities.browser_use._endpoint import EndpointError
 from app.agents.capabilities.browser_use._page import DomainRefused, StaleElement
 from app.agents.capabilities.browser_use._plans import PlanStep, record, replay
 from app.agents.capabilities.browser_use._preview import Preview
-from app.agents.capabilities.browser_use._teaching_hooks import TeachingCapture
+from app.agents.capabilities.browser_use._teaching_capture import BrowserTeachingCapture
 
 REPEAT_LIMIT = 3
 """How often the identical action on the identical page is tried before giving up.
@@ -223,7 +223,8 @@ class BrowseSession:
     """Steps taken in this tab across every call, which is what the frames number."""
     last: Snapshot | None = None
     """The page as the agent last read it, whose element numbers a direct action names."""
-    teaching: TeachingCapture | None = None
+    teaching: BrowserTeachingCapture | None = None
+    """Structural capture for a person's input while they hold this tab, if admitted."""
 
     def restart(self) -> None:
         """Forget the task, keep the tab - for a call that starts a new one in it."""
@@ -832,6 +833,7 @@ async def held(
                 await teaching.end()
         raise
     kept: str | None = None
+    teaching = session.teaching
 
     async def pictures() -> None:
         location: tuple[str, str] | None = None

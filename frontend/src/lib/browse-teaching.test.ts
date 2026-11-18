@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { applyBrowserFrame, protectBrowse } from "./browse";
-import { TEACHING_IDS as ids, teachingBrowseFixture } from "@/test-utils/browser-teaching";
+import {
+  BROWSER_PROCEDURE_TEACHING_IDS as ids,
+  browserProcedureTeachingBrowseFixture,
+} from "@/test-utils/browser-procedure-teaching";
 import type { BrowserFrame } from "@/types/chat";
 
 const frame = (data: Partial<BrowserFrame>): BrowserFrame => ({
-  kind: "browser_teaching",
+  kind: "browser_procedure_teaching",
   call_id: "teaching-call",
   run_id: ids.run,
   tab_id: "main",
@@ -13,7 +16,7 @@ const frame = (data: Partial<BrowserFrame>): BrowserFrame => ({
 });
 describe("server-issued teaching state in a live browser", () => {
   it("accepts the exact current holder token and clears it when a different held event omits one", () => {
-    const current = [teachingBrowseFixture({ takeoverId: null })];
+    const current = [browserProcedureTeachingBrowseFixture({ takeoverId: null })];
     const held = applyBrowserFrame(
       current,
       frame({ kind: "browser_held", by_user_id: ids.owner, takeover_id: ids.takeover }),
@@ -25,18 +28,25 @@ describe("server-issued teaching state in a live browser", () => {
   it.each(["browser_released", "browser_opened", "browser_finished"] as const)(
     "erases the lease on %s",
     (kind) => {
-      const result = applyBrowserFrame([teachingBrowseFixture()], frame({ kind, outcome: "done" }));
+      const result = applyBrowserFrame(
+        [browserProcedureTeachingBrowseFixture()],
+        frame({ kind, outcome: "done" }),
+      );
       expect(result[0]?.takeoverId).toBeNull();
     },
   );
   it("does not reacquire a lease after a browse finishes", () => {
-    const stopped = teachingBrowseFixture({ outcome: "done", takeoverId: null, heldById: null });
+    const stopped = browserProcedureTeachingBrowseFixture({
+      outcome: "done",
+      takeoverId: null,
+      heldById: null,
+    });
     expect(
       applyBrowserFrame([stopped], frame({ kind: "browser_held", takeover_id: ids.takeover }))[0],
     ).toBe(stopped);
   });
   it("retains only the newest notification for a known teaching session and reads no approval from it", () => {
-    const current = [teachingBrowseFixture()];
+    const current = [browserProcedureTeachingBrowseFixture()];
     const notified = applyBrowserFrame(
       current,
       frame({
@@ -73,13 +83,13 @@ describe("server-issued teaching state in a live browser", () => {
   });
   it("drops a teaching notification for an unknown call or a different known run", () => {
     expect(applyBrowserFrame([], frame({ teaching_session_id: ids.session }))).toEqual([]);
-    const current = [teachingBrowseFixture()];
+    const current = [browserProcedureTeachingBrowseFixture()];
     expect(
       applyBrowserFrame(current, frame({ run_id: ids.other, teaching_session_id: ids.session })),
     ).toBe(current);
   });
   it("erases all teaching and holder metadata on protection, including late notifications", () => {
-    const current = teachingBrowseFixture({
+    const current = browserProcedureTeachingBrowseFixture({
       teachingSessionId: ids.session,
       teachingRevision: 5,
       teachingStatus: "recording",

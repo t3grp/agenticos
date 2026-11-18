@@ -107,6 +107,11 @@ async def connect_in_worker() -> None:
     _redis = client
 
 
+def client() -> RedisClient | None:
+    """The shared Redis client, for state the API and a run's worker must both read."""
+    return _redis
+
+
 def available() -> bool:
     """Whether this process can publish a live view at all - a CLI or a test cannot."""
     return _redis is not None
@@ -551,7 +556,7 @@ async def _teaching_connection(
     ):
         yield None
         return
-    from app.services.browser_teaching._lease import close_connection, open_connection
+    from app.services.browser_procedure_teaching._lease import close_connection, open_connection
 
     connection_id = uuid4()
     if not await open_connection(redis, run_id, call_id, connection_id, access.user_id):
@@ -630,7 +635,7 @@ async def stream(websocket: WebSocket, *, auth_token: str, run_id: str, call_id:
             lost = True
             return False
         if connection_id is not None:
-            from app.services.browser_teaching._lease import renew_connection
+            from app.services.browser_procedure_teaching._lease import renew_connection
 
             if (
                 not fresh.own

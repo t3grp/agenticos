@@ -742,18 +742,17 @@ describe("useChat - the streamed answer", () => {
     }
   });
 
-  const SPEAKS_POLISH = {
+  const NEVER_CHOSE = {
     id: "u-1",
     email: "ada@example.com",
     is_active: true,
     created_at: "2026-10-21T00:00:00Z",
-    locale: "pl" as const,
   };
 
   it("switches the account's language when an agent was asked to", () => {
     // What "switch to English" in a chat does (#2301): the console follows the
     // account, so the page changes as the agent's call answers.
-    useAuthStore.setState({ user: SPEAKS_POLISH });
+    useAuthStore.setState({ user: NEVER_CHOSE });
     renderHook(() => useChat(), { wrapper });
     receive("model_request_start", {});
 
@@ -768,18 +767,18 @@ describe("useChat - the streamed answer", () => {
   });
 
   it("leaves the language alone for any other tool", () => {
-    useAuthStore.setState({ user: SPEAKS_POLISH });
+    useAuthStore.setState({ user: NEVER_CHOSE });
     renderHook(() => useChat(), { wrapper });
     receive("model_request_start", {});
 
     receive("tool_call", { tool_call_id: "tc-1", tool_name: "web_search", args: {} });
     receive("tool_result", { tool_call_id: "tc-1", content: '{"locale": "en"}' });
 
-    expect(useAuthStore.getState().user?.locale).toBe("pl");
+    expect(useAuthStore.getState().user?.locale).toBeUndefined();
   });
 
   it("shows the role an agent saved for the person without a reload (#2301)", () => {
-    useAuthStore.setState({ user: SPEAKS_POLISH });
+    useAuthStore.setState({ user: NEVER_CHOSE });
     renderHook(() => useChat(), { wrapper });
     receive("model_request_start", {});
 
@@ -4336,7 +4335,7 @@ describe("useChat - watching a browse", () => {
 
   it("routes teaching receipts for the current browse while protection clears all teaching state", () => {
     const { result } = renderHook(() => useChat(), { wrapper });
-    browserFrame("browser_teaching", {
+    browserFrame("browser_procedure_teaching", {
       step: 0,
       run_id: "run-1",
       teaching_session_id: "capture-1",
@@ -4350,7 +4349,7 @@ describe("useChat - watching a browse", () => {
       by_user_id: "u1",
       takeover_id: "server-takeover",
     });
-    browserFrame("browser_teaching", {
+    browserFrame("browser_procedure_teaching", {
       step: 1,
       run_id: "run-1",
       teaching_session_id: "capture-1",
@@ -4365,7 +4364,7 @@ describe("useChat - watching a browse", () => {
       teachingRevision: 2,
       teachingReason: "lease_lost",
     });
-    browserFrame("browser_teaching", {
+    browserFrame("browser_procedure_teaching", {
       step: 2,
       run_id: "run-1",
       teaching_session_id: "capture-1",
@@ -4374,7 +4373,7 @@ describe("useChat - watching a browse", () => {
     });
     expect(result.current.browses[0]?.teachingRevision).toBe(2);
     browserFrame("browser_protected", { step: 3, run_id: "run-1", output_protected: true });
-    browserFrame("browser_teaching", {
+    browserFrame("browser_procedure_teaching", {
       step: 4,
       run_id: "run-1",
       teaching_session_id: "capture-2",

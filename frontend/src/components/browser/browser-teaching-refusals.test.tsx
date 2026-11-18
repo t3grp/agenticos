@@ -6,22 +6,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api-client";
 import { ApiError } from "@/lib/api-error";
 import {
-  readTeachingAttempt,
-  retainTeachingAttempt,
-  teachingAttemptKey,
-  type TeachingDraftAttempt,
-  type TeachingStartAttempt,
-} from "@/lib/browser-teaching-attempts";
+  readBrowserProcedureTeachingAttempt,
+  retainBrowserProcedureTeachingAttempt,
+  browserProcedureTeachingAttemptKey,
+  type BrowserProcedureTeachingDraftAttempt,
+  type BrowserProcedureTeachingStartAttempt,
+} from "@/lib/browser-procedure-teaching-attempts";
 import { qk } from "@/lib/query-keys";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import {
-  TEACHING_IDS as ids,
-  teachingBrowseFixture,
-  teachingFixture,
-  teachingReviewFixture,
-} from "@/test-utils/browser-teaching";
-import type { BrowserTeaching, TeachingStart } from "@/types/browser-teaching";
+  BROWSER_PROCEDURE_TEACHING_IDS as ids,
+  browserProcedureTeachingBrowseFixture,
+  browserProcedureTeachingFixture,
+  browserProcedureTeachingReviewFixture,
+} from "@/test-utils/browser-procedure-teaching";
+import type {
+  BrowserProcedureTeaching,
+  BrowserProcedureTeachingStart,
+} from "@/types/browser-procedure-teaching";
 import { BrowserTeachingStart } from "./browser-teaching-start";
 import { BrowserTeachingControls } from "./browser-teaching-controls";
 import { BrowserTeachingReview } from "./browser-teaching-review";
@@ -51,9 +54,13 @@ vi.mock("@/components/dashboard/page-header", () => ({
 }));
 
 const audience = { actor: ids.owner, organization: ids.org };
-const startKey = teachingAttemptKey(audience, "start", [ids.run, "teaching-call", "main"]);
-const draftKey = teachingAttemptKey(audience, "propose", [ids.session]);
-const startAttempt = (): TeachingStartAttempt => ({
+const startKey = browserProcedureTeachingAttemptKey(audience, "start", [
+  ids.run,
+  "teaching-call",
+  "main",
+]);
+const draftKey = browserProcedureTeachingAttemptKey(audience, "propose", [ids.session]);
+const startAttempt = (): BrowserProcedureTeachingStartAttempt => ({
   kind: "start",
   targetSkillId: null,
   body: {
@@ -66,7 +73,7 @@ const startAttempt = (): TeachingStartAttempt => ({
     allowed_origins: ["https://reports.example"],
   },
 });
-const draftAttempt = (): TeachingDraftAttempt => ({
+const draftAttempt = (): BrowserProcedureTeachingDraftAttempt => ({
   kind: "propose",
   revision: 2,
   body: { mode: "assistant", max_cost_usd: "1.250000" },
@@ -80,7 +87,7 @@ const refusal = (status: number) =>
     },
   });
 let client: QueryClient;
-let current: BrowserTeaching;
+let current: BrowserProcedureTeaching;
 let readRefusal: ApiError | null;
 function setup(node: ReactNode) {
   client = new QueryClient({
@@ -89,7 +96,13 @@ function setup(node: ReactNode) {
   return render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
 }
 function mountStart(onStarted = vi.fn()) {
-  setup(<BrowserTeachingStart browse={teachingBrowseFixture()} canStart onStarted={onStarted} />);
+  setup(
+    <BrowserTeachingStart
+      browse={browserProcedureTeachingBrowseFixture()}
+      canStart
+      onStarted={onStarted}
+    />,
+  );
   return onStarted;
 }
 async function readyStart() {
@@ -112,8 +125,8 @@ async function readyConsent(kind: "Start" | "Draft") {
   }
   return readyDraft();
 }
-function acceptedStart(body: TeachingStart): BrowserTeaching {
-  return teachingFixture({
+function acceptedStart(body: BrowserProcedureTeachingStart): BrowserProcedureTeaching {
+  return browserProcedureTeachingFixture({
     id: body.request_id,
     run_id: body.run_id,
     call_id: body.call_id,
@@ -132,7 +145,7 @@ beforeEach(() => {
     accessToken: "synthetic-test-token",
   });
   useOrgStore.setState({ activeOrgId: ids.org });
-  current = teachingFixture({ review: teachingReviewFixture() });
+  current = browserProcedureTeachingFixture({ review: browserProcedureTeachingReviewFixture() });
   readRefusal = null;
   vi.mocked(apiClient.get).mockImplementation(async (path) => {
     if (path === "/browser-teaching-policy")
@@ -190,7 +203,9 @@ describe("teaching consent requires safe attempt retention", () => {
       mountStart();
       await userEvent.click(await readyStart());
       await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(readTeachingAttempt(startKey, "start").attempt).toBeNull());
+      await waitFor(() =>
+        expect(readBrowserProcedureTeachingAttempt(startKey, "start").attempt).toBeNull(),
+      );
       await waitFor(() =>
         expect(screen.getByRole("button", { name: "Start recording" })).toBeEnabled(),
       );
@@ -204,7 +219,9 @@ describe("teaching consent requires safe attempt retention", () => {
       vi.mocked(apiClient.post).mockRejectedValue(refusal(status));
       await userEvent.click(await readyDraft());
       await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(readTeachingAttempt(draftKey, "propose").attempt).toBeNull());
+      await waitFor(() =>
+        expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toBeNull(),
+      );
       expect(screen.queryByText("PRIVATE REFUSAL TEXT")).toBeNull();
       expect(apiClient.post).toHaveBeenCalledTimes(1);
     },
@@ -220,7 +237,7 @@ describe("teaching consent requires safe attempt retention", () => {
         name: kind === "Start" ? "Retry the same Start request" : "Retry the same Draft request",
       });
       expect(
-        readTeachingAttempt(
+        readBrowserProcedureTeachingAttempt(
           kind === "Start" ? startKey : draftKey,
           kind === "Start" ? "start" : "propose",
         ).attempt,
@@ -233,8 +250,8 @@ describe("teaching consent requires safe attempt retention", () => {
 
 describe("previously uncertain teaching attempts survive later refusals", () => {
   it("requires a fresh saved review before drafting again after generation refusal", async () => {
-    current = teachingFixture({
-      review: teachingReviewFixture(),
+    current = browserProcedureTeachingFixture({
+      review: browserProcedureTeachingReviewFixture(),
       generation_state: "refused",
       reason_code: "generation_failed",
     });
@@ -258,8 +275,8 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
       ).toBeEnabled(),
     );
     expect(apiClient.patch).toHaveBeenCalledExactlyOnceWith(
-      "/browser-teachings/" + ids.session,
-      { action: "review", review: teachingReviewFixture() },
+      "/browser-procedures/teachings/" + ids.session,
+      { action: "review", review: browserProcedureTeachingReviewFixture() },
       expect.objectContaining({
         headers: { "X-Organization-Id": ids.org, "If-Match": '"2"' },
         retryAfterRefresh: false,
@@ -270,7 +287,7 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
 
   it("hides retained review metadata for the exact membership refusal without clearing uncertainty", async () => {
     const saved = draftAttempt();
-    expect(retainTeachingAttempt(draftKey, saved)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, saved)).toBe(true);
     setup(<BrowserTeachingReview sessionId={ids.session} />);
     await screen.findByRole("button", { name: "Retry the same Draft request" });
     readRefusal = new ApiError(400, "PRIVATE MEMBERSHIP TEXT", {
@@ -284,13 +301,13 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
     await screen.findByText(/unavailable to the current person/);
     expect(screen.queryByText(current.title)).toBeNull();
     expect(screen.queryByText("PRIVATE MEMBERSHIP TEXT")).toBeNull();
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("keeps the original Start after a refused explicit retry and GET-only Check again", async () => {
     const saved = startAttempt();
-    expect(retainTeachingAttempt(startKey, saved)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(startKey, saved)).toBe(true);
     const raw = sessionStorage.getItem(startKey);
     const started = mountStart();
     const retry = await screen.findByRole("button", { name: "Retry the same Start request" });
@@ -302,12 +319,12 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
     await waitFor(() =>
       expect(apiClient.get).toHaveBeenCalledWith(
-        "/browser-teachings/" + saved.body.request_id,
+        "/browser-procedures/teachings/" + saved.body.request_id,
         expect.anything(),
       ),
     );
     expect(apiClient.post).toHaveBeenCalledExactlyOnceWith(
-      "/browser-teachings",
+      "/browser-procedures/teachings",
       saved.body,
       expect.objectContaining({ retryAfterRefresh: false }),
     );
@@ -318,7 +335,7 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
 
   it("keeps the original Draft revision and budget through write/read refusal", async () => {
     const saved = draftAttempt();
-    expect(retainTeachingAttempt(draftKey, saved)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, saved)).toBe(true);
     const raw = sessionStorage.getItem(draftKey);
     setup(<BrowserTeachingReview sessionId={ids.session} />);
     const retry = await screen.findByRole("button", { name: "Retry the same Draft request" });
@@ -329,7 +346,7 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
     await userEvent.click(retry);
     await screen.findByText(/unavailable to the current person/);
     expect(apiClient.post).toHaveBeenCalledExactlyOnceWith(
-      "/browser-teachings/" + ids.session + "/propose",
+      "/browser-procedures/teachings/" + ids.session + "/propose",
       saved.body,
       expect.objectContaining({
         headers: { "X-Organization-Id": ids.org, "If-Match": '"2"' },
@@ -348,13 +365,13 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
     "does not settle Start recovery with mismatched %s",
     async (field) => {
       const saved = startAttempt();
-      expect(retainTeachingAttempt(startKey, saved)).toBe(true);
+      expect(retainBrowserProcedureTeachingAttempt(startKey, saved)).toBe(true);
       current = { ...acceptedStart(saved.body), [field]: ids.other };
       const started = mountStart();
       await userEvent.click(await screen.findByRole("button", { name: "Check again" }));
       await screen.findByRole("alert");
       expect(started).not.toHaveBeenCalled();
-      expect(readTeachingAttempt(startKey, "start").attempt).toEqual(saved);
+      expect(readBrowserProcedureTeachingAttempt(startKey, "start").attempt).toEqual(saved);
       expect(apiClient.post).not.toHaveBeenCalled();
     },
   );
@@ -370,7 +387,7 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
       });
       await userEvent.click(await readyDraft());
       await screen.findByRole("button", { name: "Retry the same Draft request" });
-      expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual({
+      expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual({
         kind: "propose",
         revision: 2,
         body: { mode: "reviewed" },
@@ -382,21 +399,24 @@ describe("previously uncertain teaching attempts survive later refusals", () => 
 
   it("hides malformed per-ID recovery data without replacing a saved Draft", async () => {
     const saved = draftAttempt();
-    expect(retainTeachingAttempt(draftKey, saved)).toBe(true);
-    current = teachingFixture({ id: ids.other, title: "Wrong capture must stay hidden" });
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, saved)).toBe(true);
+    current = browserProcedureTeachingFixture({
+      id: ids.other,
+      title: "Wrong capture must stay hidden",
+    });
     setup(<BrowserTeachingReview sessionId={ids.session} />);
     await screen.findByText(/unavailable to the current person/);
     expect(screen.queryByText(current.title)).toBeNull();
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 });
 
 describe("teaching consent races stay with their original audience", () => {
   it("sends one Start for two immediate clicks and preserves its one request ID", async () => {
-    let resolve!: (value: BrowserTeaching) => void;
+    let resolve!: (value: BrowserProcedureTeaching) => void;
     vi.mocked(apiClient.post).mockReturnValue(
-      new Promise<BrowserTeaching>((done) => {
+      new Promise<BrowserProcedureTeaching>((done) => {
         resolve = done;
       }),
     );
@@ -407,21 +427,22 @@ describe("teaching consent races stay with their original audience", () => {
       fireEvent.click(button);
     });
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1));
-    const body = vi.mocked(apiClient.post).mock.calls[0]![1] as TeachingStart;
-    expect(readTeachingAttempt<TeachingStartAttempt>(startKey, "start").attempt?.body).toEqual(
-      body,
-    );
+    const body = vi.mocked(apiClient.post).mock.calls[0]![1] as BrowserProcedureTeachingStart;
+    expect(
+      readBrowserProcedureTeachingAttempt<BrowserProcedureTeachingStartAttempt>(startKey, "start")
+        .attempt?.body,
+    ).toEqual(body);
     await act(async () => {
       resolve(acceptedStart(body));
     });
     await waitFor(() => expect(started).toHaveBeenCalledTimes(1));
-    expect(readTeachingAttempt(startKey, "start").attempt).toBeNull();
+    expect(readBrowserProcedureTeachingAttempt(startKey, "start").attempt).toBeNull();
   });
 
   it("sends one Draft for two immediate clicks at the reviewed revision", async () => {
-    let resolve!: (value: BrowserTeaching) => void;
+    let resolve!: (value: BrowserProcedureTeaching) => void;
     vi.mocked(apiClient.post).mockReturnValue(
-      new Promise<BrowserTeaching>((done) => {
+      new Promise<BrowserProcedureTeaching>((done) => {
         resolve = done;
       }),
     );
@@ -436,23 +457,25 @@ describe("teaching consent races stay with their original audience", () => {
       resolve(current);
     });
     await screen.findByText("Draft queued");
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toBeNull();
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toBeNull();
   });
 
   it.each(["actor", "organization"] as const)(
     "does not let a late Start reopen controls after %s remount",
     async (scope) => {
-      let resolve!: (value: BrowserTeaching) => void;
+      let resolve!: (value: BrowserProcedureTeaching) => void;
       vi.mocked(apiClient.post).mockReturnValue(
-        new Promise<BrowserTeaching>((done) => {
+        new Promise<BrowserProcedureTeaching>((done) => {
           resolve = done;
         }),
       );
-      setup(<BrowserTeachingControls browse={teachingBrowseFixture()} canControl />);
+      setup(
+        <BrowserTeachingControls browse={browserProcedureTeachingBrowseFixture()} canControl />,
+      );
       await userEvent.click(screen.getByRole("button", { name: "Teach a browser procedure" }));
       await userEvent.click(await readyStart());
       await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1));
-      const body = vi.mocked(apiClient.post).mock.calls[0]![1] as TeachingStart;
+      const body = vi.mocked(apiClient.post).mock.calls[0]![1] as BrowserProcedureTeachingStart;
       const raw = sessionStorage.getItem(startKey);
       act(() => {
         if (scope === "actor")
@@ -474,7 +497,7 @@ describe("teaching consent races stay with their original audience", () => {
       expect(sessionStorage.getItem(startKey)).toBe(raw);
       expect(
         client.getQueryData(
-          qk.browserTeaching.detail(
+          qk.browserProcedureTeaching.detail(
             scope === "actor" ? ids.other : ids.owner,
             scope === "organization" ? ids.other : ids.org,
             body.request_id,
@@ -487,9 +510,9 @@ describe("teaching consent races stay with their original audience", () => {
   it.each(["actor", "organization"] as const)(
     "does not revive a Draft after %s remount and denied read",
     async (scope) => {
-      let resolve!: (value: BrowserTeaching) => void;
+      let resolve!: (value: BrowserProcedureTeaching) => void;
       vi.mocked(apiClient.post).mockReturnValue(
-        new Promise<BrowserTeaching>((done) => {
+        new Promise<BrowserProcedureTeaching>((done) => {
           resolve = done;
         }),
       );

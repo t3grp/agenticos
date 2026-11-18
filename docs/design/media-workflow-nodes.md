@@ -255,7 +255,7 @@ requests remain covered by the catalog's required sound-on rate.
 
 ## Durable operation and retry boundary
 
-`0334_workflow_media_operations`, after `0333_browser_credential_plans`, adds
+`0343_workflow_media_operations`, after `0342_browser_credential_plans`, adds
 the operation record and tenant lineage constraints. It links the organization,
 run, node, original and collecting attempts, immutable request hash, provider/API/
 model, secret reference and authorization generation, original price basis,

@@ -72,7 +72,7 @@ class RefreshCodingAccountUsage(Payload):
     request_id: UUID
 
 
-class DraftBrowserTeaching(Payload):
+class DraftBrowserProcedureTeaching(Payload):
     organization_id: UUID
     session_id: UUID
     revision: int = Field(ge=1)
@@ -253,6 +253,18 @@ class AdvanceSkillCheck(Payload):
 
     check_id: UUID
     organization_id: UUID
+
+
+class BuildTeachingProposal(Payload):
+    """Build the one skill proposal a reviewed browser demonstration asked for (#113).
+
+    Keyed by the session and the hash of the reviewed content; the job rechecks
+    authority, budget and the session's state before it writes anything.
+    """
+
+    organization_id: UUID
+    session_id: UUID
+    source_hash: str = Field(min_length=64, max_length=64)
 
 
 class RunEval(Payload):
@@ -796,6 +808,15 @@ ADVANCE_SKILL_CHECK = Task(
 )
 SWEEP_SKILL_CHECKS = _sweep("sweep-skill-checks")
 
+SWEEP_BROWSER_TEACHINGS = _sweep("sweep-browser-teachings", timeout=timedelta(minutes=2))
+BUILD_TEACHING_PROPOSAL = Task(
+    kind="build-teaching-proposal",
+    payload_type=BuildTeachingProposal,
+    pool=Pool.SYSTEM,
+    max_attempts=3,
+    timeout=timedelta(minutes=2),
+    priority=Priority.INTERACTIVE,
+)
 CHECK_AGENT_TRIGGERS = _sweep("check-agent-triggers")
 POLL_PORTAL_GRANTS = _sweep("poll-portal-grants")
 DELIVER_NOTIFICATIONS = _sweep("deliver-notifications")
@@ -861,16 +882,18 @@ REFRESH_CODING_ACCOUNT_USAGE = Task(
 )
 
 
-DRAFT_BROWSER_TEACHING = Task(
-    kind="draft-browser-teaching",
-    payload_type=DraftBrowserTeaching,
+DRAFT_BROWSER_PROCEDURE_TEACHING = Task(
+    kind="draft-browser-procedure-teaching",
+    payload_type=DraftBrowserProcedureTeaching,
     pool=Pool.AGENT,
     max_attempts=1,
     timeout=timedelta(minutes=4),
     priority=Priority.INTERACTIVE,
     retry_refusal="Read the browser teaching receipt; an uncertain draft is never retried automatically",
 )
-SWEEP_BROWSER_TEACHINGS = _sweep("sweep-browser-teachings", timeout=timedelta(minutes=2))
+SWEEP_BROWSER_PROCEDURE_TEACHINGS = _sweep(
+    "sweep-browser-procedure-teachings", timeout=timedelta(minutes=2)
+)
 
 REVERT_CODING_TASK = Task(
     retry_refusal="Retry the revert from its conversation so its files and current access can be checked again",
@@ -927,7 +950,8 @@ TASKS: dict[str, TaskKind] = {
         DELIVER_CHANNEL_HANDBACK,
         MOVE_PROJECT_WORKSPACE,
         REVERT_CODING_TASK,
-        DRAFT_BROWSER_TEACHING,
+        DRAFT_BROWSER_PROCEDURE_TEACHING,
+        SWEEP_BROWSER_PROCEDURE_TEACHINGS,
         SWEEP_BROWSER_TEACHINGS,
         REFRESH_CODING_ACCOUNT_USAGE,
         INGEST_DOCUMENT,
@@ -999,6 +1023,8 @@ TASKS: dict[str, TaskKind] = {
         WATCH_SWEEP,
         WEEKLY_USAGE_REPORT,
         MONTHLY_USAGE_REPORT,
+        SWEEP_BROWSER_TEACHINGS,
+        BUILD_TEACHING_PROPOSAL,
         FAILURE_LEDGER_DIGEST,
     )
 }

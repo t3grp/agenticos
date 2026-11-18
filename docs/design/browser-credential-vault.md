@@ -347,14 +347,15 @@ approved, claimed, continued, unknown and other terminal states expose no retry.
 A continued receipt links to the fresh protected view and, when saved, to
 **My sign-ins**, without abandoning the originating run.
 
-Migration `0340_credential_continuations` follows the real
-`0339_merge_core_openbot` join. It adds the tenant-scoped receipt table and the
+Migration `0345_credential_continuations` follows
+`0344_browser_procedure_teaching`. It adds the tenant-scoped receipt table and the
 explicit sign-in classification without rewriting published migrations or old
 ciphertext. Native downgrade refuses any continuation or protected saved-state
 evidence, including an unresolved attempt. It does not use CASCADE or delete
-evidence to force rollback. The standalone 0333 migration fixture removes and
-restores the real dependent 0338 tables in dependency order; the pure 0337
-no-DDL planner check remains meaningful beneath the new head.
+evidence to force rollback. The standalone credential-plan migration fixture
+removes and restores dependent feature tables in dependency order. The migration
+planner checks the linear path from the existing capture/review head through
+the credential, media and procedure-teaching additions.
 
 The context/cookie command behavior was checked against the primary Chrome
 DevTools Protocol [Storage domain](https://chromedevtools.github.io/devtools-protocol/tot/Storage/)
@@ -538,8 +539,9 @@ including records from late callbacks and child loggers at changed levels.
 ## Rollout, migration and rollback
 
 No existing credential is converted automatically. Migration
-`0333_browser_credential_plans` follows `0332_room_task_handoffs`, retaining
-published `0326_provider_account_pools` and `0331_merge_core_accounts` history.
+`0342_browser_credential_plans` follows `0341_room_task_handoffs`, retaining
+the published core and capture/review migration history through
+`0340_browser_teaching_review`.
 It adds four policy/grant/plan tables and tenant keys `uq_agents_org_id`,
 `uq_agent_runs_org_id` and `uq_organization_secrets_org_id`. Key indexes build
 concurrently outside transactional DDL and then attach as constraints. Active

@@ -37,6 +37,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.browser_procedure_teaching import (
+    BrowserProcedureTeachingReason,
+    BrowserProcedureTeachingState,
+)
 from app.core.browser_teaching import TeachingReason, TeachingState
 
 BrowseOutcome = Literal["done", "blocked", "exhausted", "failed"]
@@ -72,6 +76,7 @@ class BrowserEvent(BaseModel):
         "browser_control_error",
         "browser_protected",
         "browser_teaching",
+        "browser_procedure_teaching",
     ]
 
     call_id: str = Field(
@@ -104,9 +109,9 @@ class BrowserEvent(BaseModel):
     """Sticky page protection, including on old-call frames and reconnect snapshots."""
     takeover_id: UUID | None = None
     teaching_session_id: UUID | None = None
-    teaching_status: TeachingState | None = None
+    teaching_status: TeachingState | BrowserProcedureTeachingState | None = None
     teaching_revision: int | None = Field(default=None, ge=1)
-    teaching_reason: TeachingReason | None = None
+    teaching_reason: TeachingReason | BrowserProcedureTeachingReason | None = None
     """Stable tab identity across selected views and resumed turns."""
 
     native_id: str | None = None

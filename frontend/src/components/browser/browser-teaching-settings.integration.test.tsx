@@ -8,14 +8,17 @@ import { ApiError } from "@/lib/api-error";
 import { qk } from "@/lib/query-keys";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
-import { TEACHING_IDS as ids, teachingSummaryFixture } from "@/test-utils/browser-teaching";
+import {
+  BROWSER_PROCEDURE_TEACHING_IDS as ids,
+  browserProcedureTeachingSummaryFixture,
+} from "@/test-utils/browser-procedure-teaching";
 import { Perm } from "@/types/permissions";
 import type {
-  TeachingList,
-  TeachingPolicy,
-  TeachingPreference,
-  TeachingToggle,
-} from "@/types/browser-teaching";
+  BrowserProcedureTeachingList,
+  BrowserProcedureTeachingPolicy,
+  BrowserProcedureTeachingPreference,
+  BrowserProcedureTeachingToggle,
+} from "@/types/browser-procedure-teaching";
 import { BrowserTeachingList } from "./browser-teaching-list";
 import { BrowserTeachingPolicy } from "./browser-teaching-policy";
 import { BrowserTeachingPreference } from "./browser-teaching-preference";
@@ -59,9 +62,9 @@ const refused = (status: number, reason_code = "teaching_unavailable") =>
     error: { code: "BAD_REQUEST", message: "PRIVATE REFUSAL TEXT", details: { reason_code } },
   });
 let client: QueryClient;
-let policy: TeachingPolicy;
-let preference: TeachingPreference;
-let list: TeachingList;
+let policy: BrowserProcedureTeachingPolicy;
+let preference: BrowserProcedureTeachingPreference;
+let list: BrowserProcedureTeachingList;
 function setup(node: ReactNode) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -84,14 +87,14 @@ beforeEach(() => {
   useOrgStore.setState({ activeOrgId: ids.org });
   policy = { enabled: false, generation: ids.other, deployment_enabled: true };
   preference = { agent_id: ids.agent, enabled: false, generation: ids.other, allowed: true };
-  list = { items: [teachingSummaryFixture()], next_cursor: null };
+  list = { items: [browserProcedureTeachingSummaryFixture()], next_cursor: null };
   vi.mocked(apiClient.get).mockImplementation(async (path) => {
     if (path === "/browser-teaching-policy") return policy as never;
     if (path.endsWith("/browser-teaching-preference")) return preference as never;
     return list as never;
   });
   vi.mocked(apiClient.put).mockImplementation(async (path, body) => {
-    const toggle = body as TeachingToggle;
+    const toggle = body as BrowserProcedureTeachingToggle;
     if (path === "/browser-teaching-policy") {
       policy = { ...policy, enabled: toggle.enabled, generation: ids.proposal };
       return policy as never;
@@ -117,12 +120,15 @@ describe("durable teaching discovery refusal and pagination", () => {
   });
 
   it("passes the opaque next cursor unchanged and stops at the last page", async () => {
-    const second = teachingSummaryFixture({ id: ids.other, title: "Second owner capture" });
+    const second = browserProcedureTeachingSummaryFixture({
+      id: ids.other,
+      title: "Second owner capture",
+    });
     vi.mocked(apiClient.get).mockImplementation(
       async (_path, options) =>
         (new URLSearchParams(options?.params).get("cursor") === opaque
           ? { items: [second], next_cursor: null }
-          : { items: [teachingSummaryFixture()], next_cursor: opaque }) as never,
+          : { items: [browserProcedureTeachingSummaryFixture()], next_cursor: opaque }) as never,
     );
     setup(<BrowserTeachingList />);
     await screen.findByRole("heading", { name: "Monthly report demonstration" });
@@ -130,7 +136,7 @@ describe("durable teaching discovery refusal and pagination", () => {
     await screen.findByRole("heading", { name: second.title });
     expect(screen.getAllByRole("link", { name: "Open capture" })).toHaveLength(2);
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      "/browser-teachings",
+      "/browser-procedures/teachings",
       expect.objectContaining({
         params: { limit: "20", cursor: opaque },
         headers: { "X-Organization-Id": ids.org },
@@ -148,7 +154,7 @@ describe("durable teaching discovery refusal and pagination", () => {
         throw refused(400, "invalid_cursor");
       return {
         items: [
-          teachingSummaryFixture({
+          browserProcedureTeachingSummaryFixture({
             title: restarted ? "Fresh owner capture" : "Previously cached capture",
           }),
         ],
@@ -181,7 +187,9 @@ describe("durable teaching discovery refusal and pagination", () => {
       await screen.findByRole("heading", { name: "Monthly report demonstration" });
       vi.mocked(apiClient.get).mockRejectedValue(refused(status));
       await act(async () => {
-        await client.invalidateQueries({ queryKey: qk.browserTeaching.list(ids.owner, ids.org) });
+        await client.invalidateQueries({
+          queryKey: qk.browserProcedureTeaching.list(ids.owner, ids.org),
+        });
       });
       await screen.findByRole("alert");
       expect(screen.queryByText("Monthly report demonstration")).toBeNull();
@@ -193,13 +201,13 @@ describe("durable teaching discovery refusal and pagination", () => {
   );
 
   it("keeps a pending next-page read from being submitted again by a second Load more click", async () => {
-    let resolve!: (value: TeachingList) => void;
-    const pending = new Promise<TeachingList>((done) => {
+    let resolve!: (value: BrowserProcedureTeachingList) => void;
+    const pending = new Promise<BrowserProcedureTeachingList>((done) => {
       resolve = done;
     });
     vi.mocked(apiClient.get).mockImplementation(async (_path, options) => {
       if (new URLSearchParams(options?.params).get("cursor")) return pending as never;
-      return { items: [teachingSummaryFixture()], next_cursor: opaque } as never;
+      return { items: [browserProcedureTeachingSummaryFixture()], next_cursor: opaque } as never;
     });
     setup(<BrowserTeachingList />);
     await screen.findByRole("heading", { name: "Monthly report demonstration" });
@@ -295,7 +303,9 @@ describe("organization teaching policy uses explicit current-generation decision
     await screen.findByRole("button", { name: "Save" });
     vi.mocked(apiClient.get).mockRejectedValue(refused(400));
     await act(async () => {
-      await client.invalidateQueries({ queryKey: qk.browserTeaching.policy(ids.owner, ids.org) });
+      await client.invalidateQueries({
+        queryKey: qk.browserProcedureTeaching.policy(ids.owner, ids.org),
+      });
     });
     await waitFor(() =>
       expect(screen.queryByRole("switch", { name: policyName, hidden: true })).toBeNull(),
@@ -347,7 +357,7 @@ describe("member learning preference refuses unavailable authority and permits r
     preference = { ...preference, enabled: true, allowed: false, generation: ids.takeover };
     await act(async () => {
       await client.invalidateQueries({
-        queryKey: qk.browserTeaching.preference(ids.owner, ids.org, ids.agent),
+        queryKey: qk.browserProcedureTeaching.preference(ids.owner, ids.org, ids.agent),
       });
     });
     const toggle = screen.getByRole("switch", { name: preferenceName });
@@ -370,7 +380,7 @@ describe("member learning preference refuses unavailable authority and permits r
     vi.mocked(apiClient.get).mockRejectedValue(refused(400));
     await act(async () => {
       await client.invalidateQueries({
-        queryKey: qk.browserTeaching.preference(ids.owner, ids.org, ids.agent),
+        queryKey: qk.browserProcedureTeaching.preference(ids.owner, ids.org, ids.agent),
       });
     });
     await screen.findByRole("alert");

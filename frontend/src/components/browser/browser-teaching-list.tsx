@@ -4,18 +4,25 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Card, CardContent } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { useTeachingAudience, useTeachingList } from "@/hooks/use-browser-teaching-settings";
+import {
+  useBrowserProcedureTeachingAudience,
+  useBrowserProcedureTeachingList,
+} from "@/hooks/use-browser-procedure-teaching-settings";
 import { ROUTES } from "@/lib/constants";
-import { TeachingError, TeachingStatus, TeachingTime } from "./browser-teaching-status";
+import {
+  TeachingError,
+  BrowserProcedureTeachingStatus,
+  TeachingTime,
+} from "./browser-teaching-status";
 
 export function BrowserTeachingList() {
-  const audience = useTeachingAudience();
+  const audience = useBrowserProcedureTeachingAudience();
   return <TeachingListContent key={JSON.stringify([audience.actor, audience.organization])} />;
 }
 function TeachingListContent() {
-  const t = useTranslations("browserTeaching");
+  const t = useTranslations("browserProcedureTeaching");
   const locale = useLocale();
-  const list = useTeachingList();
+  const list = useBrowserProcedureTeachingList();
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5">
@@ -44,7 +51,7 @@ function TeachingListContent() {
                   <h2 className="font-medium break-words">
                     {session.title || t("expiredCapture")}
                   </h2>
-                  <TeachingStatus session={session} />
+                  <BrowserProcedureTeachingStatus session={session} />
                   <p className="text-muted-foreground text-xs break-words">
                     {session.allowed_origins.join(", ")}
                   </p>

@@ -18,7 +18,6 @@ somebody's machine long before CI's database ever sees it. `ScriptDirectory`
 reads the files, and the files are the whole of the question.
 """
 
-import ast
 from pathlib import Path
 
 import pytest
@@ -230,46 +229,36 @@ def test_unreleased_core_follows_published_threads_without_duplicate_ddl() -> No
         assert script.down_revision == parent
 
 
-_OPENBOT_UPGRADES = {
-    "0332_room_task_handoffs",
-    "0333_browser_credential_plans",
-    "0334_workflow_media_operations",
-    "0335_browser_teaching",
+_T3_TEACHING_REVISIONS = {
+    "0339_browser_teaching_capture",
+    "0340_browser_teaching_review",
 }
-# The core line the OpenBot join follows: the release checkpoint and the two
-# chat revisions published after it.
-_CORE_TAIL = {
-    "0336_merge_core_v1761",
-    "0337_conversation_message_pins",
-    "0338_message_reply_excerpt",
+_OPENBOT_UPGRADES = {
+    "0341_room_task_handoffs",
+    "0342_browser_credential_plans",
+    "0343_workflow_media_operations",
+    "0344_browser_procedure_teaching",
+    "0345_credential_continuations",
 }
 
 
 @pytest.mark.parametrize(
     ("current", "remaining"),
     [
-        ("0338_message_reply_excerpt", _OPENBOT_UPGRADES),
-        ("0336_merge_core_v1761", _OPENBOT_UPGRADES | _CORE_TAIL - {"0336_merge_core_v1761"}),
-        ("0335_browser_teaching", _CORE_TAIL),
-        (("0338_message_reply_excerpt", "0335_browser_teaching"), set()),
-        ("0331_merge_core_accounts", _OPENBOT_UPGRADES | _CORE_TAIL),
-        ("0333_room_threads", _CORE_UPGRADES | _OPENBOT_UPGRADES | _CORE_TAIL),
-        (
-            "0332_merge_t3_pools_v1761",
-            _CORE_UPGRADES | _OPENBOT_UPGRADES | _CORE_TAIL | {"0333_room_threads"},
-        ),
+        ("0338_message_reply_excerpt", _T3_TEACHING_REVISIONS | _OPENBOT_UPGRADES),
+        ("0339_browser_teaching_capture", {"0340_browser_teaching_review"} | _OPENBOT_UPGRADES),
+        ("0340_browser_teaching_review", _OPENBOT_UPGRADES),
     ],
 )
-def test_openbot_join_applies_each_missing_revision_once_in_parent_order(
-    current: str | tuple[str, ...], remaining: set[str]
+def test_openbot_features_apply_after_the_published_t3_teaching_chain(
+    current: str, remaining: set[str]
 ) -> None:
     chain = _chain()
-    pending = list(chain.iterate_revisions("0339_merge_core_openbot", current, implicit_base=True))
+    pending = list(chain.iterate_revisions("0345_credential_continuations", current))
     ordered = [revision.revision for revision in reversed(pending)]
-    assert set(ordered) == remaining | {"0339_merge_core_openbot"}
-    assert len(ordered) == len(remaining) + 1
-    assert ordered[-1] == "0339_merge_core_openbot"
-    assert "0326_room_threads" not in ordered
+    assert set(ordered) == remaining
+    assert len(ordered) == len(remaining)
+    assert ordered[-1] == "0345_credential_continuations"
     positions = {revision: position for position, revision in enumerate(ordered)}
     for revision in pending:
         parents = revision.down_revision
@@ -278,20 +267,21 @@ def test_openbot_join_applies_each_missing_revision_once_in_parent_order(
                 assert positions[parent] < positions[revision.revision]
 
 
-def test_openbot_join_preserves_both_heads_and_has_no_schema_operations() -> None:
+def test_openbot_features_extend_the_published_chain_without_rewriting_it() -> None:
     chain = _chain()
-    assert chain.get_heads() == ["0340_credential_continuations"]
-    continuation = chain.get_revision("0340_credential_continuations")
-    assert continuation is not None and continuation.down_revision == "0339_merge_core_openbot"
-    join = chain.get_revision("0339_merge_core_openbot")
-    assert join is not None
-    assert join.down_revision == ("0338_message_reply_excerpt", "0335_browser_teaching")
-    module = ast.parse(Path(join.path).read_text(encoding="utf-8"))
-    functions = {node.name: node for node in module.body if isinstance(node, ast.FunctionDef)}
-    assert set(functions) == {"upgrade", "downgrade"}
-    for function in functions.values():
-        assert len(function.body) == 1
-        assert isinstance(function.body[0], ast.Pass)
+    assert chain.get_heads() == ["0345_credential_continuations"]
+    expected = {
+        "0339_browser_teaching_capture": "0338_message_reply_excerpt",
+        "0340_browser_teaching_review": "0339_browser_teaching_capture",
+        "0341_room_task_handoffs": "0340_browser_teaching_review",
+        "0342_browser_credential_plans": "0341_room_task_handoffs",
+        "0343_workflow_media_operations": "0342_browser_credential_plans",
+        "0344_browser_procedure_teaching": "0343_workflow_media_operations",
+        "0345_credential_continuations": "0344_browser_procedure_teaching",
+    }
+    for revision, parent in expected.items():
+        script = chain.get_revision(revision)
+        assert script is not None and script.down_revision == parent
 
 
 # `alembic_version.version_num` is `VARCHAR(32)`, which alembic creates and never

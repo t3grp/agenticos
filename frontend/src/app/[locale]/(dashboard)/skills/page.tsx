@@ -79,7 +79,7 @@ function Chip({
 
 export default function SkillsPage() {
   const locale = useLocale();
-  const teaching = useTranslations("browserTeaching");
+  const teaching = useTranslations("browserProcedureTeaching");
   const [selectedSkill, skillView] = useUrlOverlay("skill");
   const t = useTranslations("pages.skills");
   const tc = useTranslations("common");

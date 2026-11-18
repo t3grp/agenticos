@@ -3,58 +3,65 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Checkbox, Input, Label, Textarea } from "@/components/ui";
-import type { useBrowserTeaching } from "@/hooks/use-browser-teaching";
-import { isTeachingAudienceCurrent } from "@/lib/browser-teaching-api";
+import type { useBrowserProcedureTeaching } from "@/hooks/use-browser-procedure-teaching";
+import { isBrowserProcedureTeachingAudienceCurrent } from "@/lib/browser-procedure-teaching-api";
 import {
-  clearTeachingAttempt,
-  readTeachingAttempt,
-  teachingAttemptKey,
-  type TeachingDraftAttempt,
-} from "@/lib/browser-teaching-attempts";
+  clearBrowserProcedureTeachingAttempt,
+  readBrowserProcedureTeachingAttempt,
+  browserProcedureTeachingAttemptKey,
+  type BrowserProcedureTeachingDraftAttempt,
+} from "@/lib/browser-procedure-teaching-attempts";
 import {
-  initialTeachingReview,
-  teachingReviewIssue,
-  type TeachingReviewIssue,
-} from "@/lib/browser-teaching-review";
-import type { BrowserTeaching, TeachingReview } from "@/types/browser-teaching";
+  initialBrowserProcedureTeachingReview,
+  browserProcedureTeachingReviewIssue,
+  type BrowserProcedureTeachingReviewIssue,
+} from "@/lib/browser-procedure-teaching-review";
+import type {
+  BrowserProcedureTeaching,
+  BrowserProcedureTeachingReview,
+} from "@/types/browser-procedure-teaching";
 import { TeachingError } from "./browser-teaching-status";
 import { BrowserTeachingDraft } from "./browser-teaching-draft";
 
-type TeachingState = ReturnType<typeof useBrowserTeaching>;
+type BrowserProcedureTeachingState = ReturnType<typeof useBrowserProcedureTeaching>;
 export function BrowserTeachingReviewForm({
   session,
   state,
 }: {
-  session: BrowserTeaching;
-  state: TeachingState;
+  session: BrowserProcedureTeaching;
+  state: BrowserProcedureTeachingState;
 }) {
-  const t = useTranslations("browserTeaching");
-  const [review, setReview] = useState(() => initialTeachingReview(session));
+  const t = useTranslations("browserProcedureTeaching");
+  const [review, setReview] = useState(() => initialBrowserProcedureTeachingReview(session));
   const [events, setEvents] = useState(session.events);
   const [baseRevision, setBaseRevision] = useState(session.revision);
-  const [issue, setIssue] = useState<TeachingReviewIssue | null>(null);
+  const [issue, setIssue] = useState<BrowserProcedureTeachingReviewIssue | null>(null);
   const [dirty, setDirty] = useState(false);
   const [settlementBlocked, setSettlementBlocked] = useState(false);
+  const [draftAttemptEpoch, setDraftAttemptEpoch] = useState(0);
   const stale = baseRevision !== session.revision;
   const busy = state.command.isPending;
-  function edit(next: TeachingReview) {
+  function edit(next: BrowserProcedureTeachingReview) {
     setReview(next);
     setDirty(true);
     setIssue(null);
   }
   async function save() {
-    const problem = teachingReviewIssue(session, review);
+    const problem = browserProcedureTeachingReviewIssue(session, review);
     setIssue(problem);
     if (problem || stale || busy) return;
-    const attemptKey = teachingAttemptKey(state.audience, "propose", [session.id]);
-    const saved = readTeachingAttempt<TeachingDraftAttempt>(attemptKey, "propose");
+    const attemptKey = browserProcedureTeachingAttemptKey(state.audience, "propose", [session.id]);
+    const saved = readBrowserProcedureTeachingAttempt<BrowserProcedureTeachingDraftAttempt>(
+      attemptKey,
+      "propose",
+    );
     try {
       const next = await state.command.mutateAsync({
         action: "change",
         session,
         body: { action: "review", review },
       });
-      if (!isTeachingAudienceCurrent(state.audience)) return;
+      if (!isBrowserProcedureTeachingAudienceCurrent(state.audience)) return;
       let blocked = false;
       if (
         saved.attempt &&
@@ -64,13 +71,19 @@ export function BrowserTeachingReviewForm({
       ) {
         // Review and Draft share the server row lock. Only this acknowledged
         // newer review fences the captured tuple; an uncertain PATCH does not.
-        const retained = readTeachingAttempt<TeachingDraftAttempt>(attemptKey, "propose");
+        const retained = readBrowserProcedureTeachingAttempt<BrowserProcedureTeachingDraftAttempt>(
+          attemptKey,
+          "propose",
+        );
         blocked = retained.blocked;
         if (JSON.stringify(retained.attempt) === JSON.stringify(saved.attempt))
-          blocked = !clearTeachingAttempt(attemptKey);
+          blocked = !clearBrowserProcedureTeachingAttempt(attemptKey);
+        // The query cache may advance before this acknowledged write clears storage.
+        // Remount the Draft form afterward so it reloads the settled attempt state.
+        setDraftAttemptEpoch((epoch) => epoch + 1);
       }
       setSettlementBlocked(blocked);
-      setReview(initialTeachingReview(next));
+      setReview(initialBrowserProcedureTeachingReview(next));
       setEvents(next.events);
       setBaseRevision(next.revision);
       setDirty(false);
@@ -90,7 +103,7 @@ export function BrowserTeachingReviewForm({
           <Button
             variant="outline"
             onClick={() => {
-              setReview(initialTeachingReview(session));
+              setReview(initialBrowserProcedureTeachingReview(session));
               setEvents(session.events);
               setBaseRevision(session.revision);
               setDirty(false);
@@ -317,7 +330,11 @@ export function BrowserTeachingReviewForm({
         !dirty &&
         !stale &&
         !settlementBlocked && (
-          <BrowserTeachingDraft key={session.revision} session={session} state={state} />
+          <BrowserTeachingDraft
+            key={`${session.revision}:${draftAttemptEpoch}`}
+            session={session}
+            state={state}
+          />
         )}
     </section>
   );

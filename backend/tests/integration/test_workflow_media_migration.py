@@ -18,7 +18,7 @@ from tests.integration.workflow_media_support import seed_media
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 _ROOT = Path(__file__).parents[2]
-_PATH = _ROOT / "alembic/versions/0334_workflow_media_operations.py"
+_PATH = _ROOT / "alembic/versions/0343_workflow_media_operations.py"
 _SPEC = importlib.util.spec_from_file_location("workflow_media_migration", _PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 _MIGRATION = importlib.util.module_from_spec(_SPEC)
@@ -58,22 +58,23 @@ def schema(connection):
     }
 
 
-async def test_media_has_the_real_browser_predecessor_and_preserves_published_accounts():
+async def test_media_follows_the_rebased_credential_chain_and_preserves_published_accounts():
     config = Config(str(_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(_ROOT / "alembic"))
     scripts = ScriptDirectory.from_config(config)
     assert (
-        scripts.get_revision("0334_workflow_media_operations").down_revision
-        == "0333_browser_credential_plans"
+        scripts.get_revision("0343_workflow_media_operations").down_revision
+        == "0342_browser_credential_plans"
     )
     assert (
-        scripts.get_revision("0333_browser_credential_plans").down_revision
-        == "0332_room_task_handoffs"
+        scripts.get_revision("0342_browser_credential_plans").down_revision
+        == "0341_room_task_handoffs"
     )
     assert (
-        scripts.get_revision("0332_room_task_handoffs").down_revision == "0331_merge_core_accounts"
+        scripts.get_revision("0341_room_task_handoffs").down_revision
+        == "0340_browser_teaching_review"
     )
-    assert scripts.get_revision("0331_merge_core_accounts").down_revision == "0330_role_navigation"
+    assert scripts.get_heads() == ["0345_credential_continuations"]
     assert scripts.get_revision("0333_room_threads").down_revision == "0332_merge_t3_pools_v1761"
     assert scripts.get_revision("0332_merge_t3_pools_v1761").down_revision == (
         "0331_merge_t3_rooms_and_v1761",

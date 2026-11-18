@@ -1,4 +1,4 @@
-"""Revision 0333 preserves published history, legacy bytes and used credential evidence."""
+"""Revision 0342 preserves published history, legacy bytes and used credential evidence."""
 
 import importlib.util
 from pathlib import Path
@@ -30,17 +30,17 @@ def load_revision(stem: str) -> ModuleType:
     return migration
 
 
-_MIGRATION = load_revision("0333_browser_credential_plans")
+_MIGRATION = load_revision("0342_browser_credential_plans")
 _DESCENDANTS = (
-    load_revision("0334_workflow_media_operations"),
-    load_revision("0335_browser_teaching"),
-    load_revision("0340_credential_continuations"),
+    load_revision("0343_workflow_media_operations"),
+    load_revision("0344_browser_procedure_teaching"),
+    load_revision("0345_credential_continuations"),
 )
 assert tuple(migration.down_revision for migration in _DESCENDANTS[:2]) == (
     _MIGRATION.revision,
     _DESCENDANTS[0].revision,
 )
-assert _DESCENDANTS[2].down_revision == "0339_merge_core_openbot"
+assert _DESCENDANTS[2].down_revision == "0344_browser_procedure_teaching"
 _TABLES = (
     "browser_credential_policies",
     "browser_credential_agent_grants",
@@ -56,8 +56,8 @@ def migrate(connection, direction, migration=_MIGRATION):
 
 
 async def step(connection, direction):
-    # The create_all fixture includes later consumers of 0333's tenant keys.
-    # Exercise their real downgrade/upgrade in dependency order; a direct 0333
+    # The create_all fixture includes later consumers of 0342's tenant keys.
+    # Exercise their real downgrade/upgrade in dependency order; a direct 0342
     # downgrade is retained below only for its own used-evidence refusal test.
     migrations = (
         (*reversed(_DESCENDANTS), _MIGRATION)
@@ -99,18 +99,31 @@ def schema(connection):
     return result
 
 
-async def test_chain_retains_the_published_account_migration_and_real_room_predecessor():
+async def test_chain_rebases_browser_credential_plans_after_the_current_t3_head():
     config = Config(str(_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(_ROOT / "alembic"))
     scripts = ScriptDirectory.from_config(config)
     assert (
-        scripts.get_revision("0333_browser_credential_plans").down_revision
-        == "0332_room_task_handoffs"
+        scripts.get_revision("0341_room_task_handoffs").down_revision
+        == "0340_browser_teaching_review"
     )
     assert (
-        scripts.get_revision("0332_room_task_handoffs").down_revision == "0331_merge_core_accounts"
+        scripts.get_revision("0342_browser_credential_plans").down_revision
+        == "0341_room_task_handoffs"
     )
-    assert scripts.get_revision("0331_merge_core_accounts").down_revision == "0330_role_navigation"
+    assert (
+        scripts.get_revision("0343_workflow_media_operations").down_revision
+        == "0342_browser_credential_plans"
+    )
+    assert (
+        scripts.get_revision("0344_browser_procedure_teaching").down_revision
+        == "0343_workflow_media_operations"
+    )
+    assert (
+        scripts.get_revision("0345_credential_continuations").down_revision
+        == "0344_browser_procedure_teaching"
+    )
+    assert scripts.get_heads() == ["0345_credential_continuations"]
     assert scripts.get_revision("0333_room_threads").down_revision == "0332_merge_t3_pools_v1761"
     assert scripts.get_revision("0332_merge_t3_pools_v1761").down_revision == (
         "0331_merge_t3_rooms_and_v1761",

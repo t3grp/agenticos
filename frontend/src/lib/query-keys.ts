@@ -10,21 +10,26 @@ import type { LogQuery, RunHistoryQuery } from "@/lib/workflows/types";
 import type { SharingResourceType } from "@/types/sharing";
 
 export const qk = {
-  browserTeaching: {
+  browserProcedureTeaching: {
     all: (actor: string | undefined, organization: string | null) =>
-      ["browser-teaching", actor, organization] as const,
+      ["browser-procedure-teaching", actor, organization] as const,
     detail: (actor: string | undefined, organization: string | null, id: string) =>
-      ["browser-teaching", actor, organization, "detail", id] as const,
+      ["browser-procedure-teaching", actor, organization, "detail", id] as const,
     policy: (actor: string | undefined, organization: string | null) =>
-      ["browser-teaching", actor, organization, "policy"] as const,
+      ["browser-procedure-teaching", actor, organization, "policy"] as const,
     preference: (actor: string | undefined, organization: string | null, id: string) =>
-      ["browser-teaching", actor, organization, "preference", id] as const,
+      ["browser-procedure-teaching", actor, organization, "preference", id] as const,
     run: (actor: string | undefined, organization: string | null, id: string) =>
-      ["browser-teaching", actor, organization, "run", id] as const,
+      ["browser-procedure-teaching", actor, organization, "run", id] as const,
     skills: (actor: string | undefined, organization: string | null) =>
-      ["browser-teaching", actor, organization, "skills"] as const,
+      ["browser-procedure-teaching", actor, organization, "skills"] as const,
     list: (actor: string | undefined, organization: string | null) =>
-      ["browser-teaching", actor, organization, "list"] as const,
+      ["browser-procedure-teaching", actor, organization, "list"] as const,
+  },
+  browserTeaching: {
+    /** One simple review session, fenced by the reader's organization and identity. */
+    one: (orgId: string, userId: string, id: string) =>
+      ["browser-teaching", orgId, userId, id] as const,
   },
   roomRouting: {
     all: (account: string | undefined, tenant: string | null, conversation: string | null) =>

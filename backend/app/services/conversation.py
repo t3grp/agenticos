@@ -70,6 +70,7 @@ from app.schemas.conversation import (
     ConversationCost,
     ConversationCreate,
     ConversationForkOrigin,
+    ConversationForkRead,
     ConversationUpdate,
     MessageCreate,
     MessageRead,
@@ -1924,7 +1925,7 @@ class ConversationService:
         message_id: UUID | None = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> tuple[list[Conversation], int]:
+    ) -> tuple[list[ConversationForkRead], int]:
         """List this owner's personal forks, including archived children.
 
         A project conversation may be visible to its members, but its forks use
@@ -1957,13 +1958,22 @@ class ConversationService:
         # it is the trusted origin for every row in this source-scoped query. Use
         # it directly instead of a second title lookup that could race a delete
         # and leave a response without the required origin object.
-        for fork in forks:
-            fork.forked_from = ConversationForkOrigin(
-                conversation_id=source.id,
-                message_id=fork.forked_from_message_id,
-                title=source.title,
+        items = [
+            ConversationForkRead(
+                id=fork.id,
+                title=fork.title,
+                created_at=fork.created_at,
+                updated_at=fork.updated_at,
+                is_archived=fork.is_archived,
+                forked_from=ConversationForkOrigin(
+                    conversation_id=source.id,
+                    message_id=fork.forked_from_message_id,
+                    title=source.title,
+                ),
             )
-        return forks, total
+            for fork in forks
+        ]
+        return items, total
 
     async def update_conversation(
         self,

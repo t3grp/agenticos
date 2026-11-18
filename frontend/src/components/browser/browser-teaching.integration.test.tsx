@@ -8,19 +8,19 @@ import { ApiError } from "@/lib/api-error";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import {
-  TEACHING_IDS as ids,
-  teachingBrowseFixture,
-  teachingFixture,
-  teachingReviewFixture,
-  teachingSummaryFixture,
-} from "@/test-utils/browser-teaching";
+  BROWSER_PROCEDURE_TEACHING_IDS as ids,
+  browserProcedureTeachingBrowseFixture,
+  browserProcedureTeachingFixture,
+  browserProcedureTeachingReviewFixture,
+  browserProcedureTeachingSummaryFixture,
+} from "@/test-utils/browser-procedure-teaching";
 import { Perm } from "@/types/permissions";
 import type {
-  BrowserTeaching,
-  TeachingChange,
-  TeachingPropose,
-  TeachingStart,
-} from "@/types/browser-teaching";
+  BrowserProcedureTeaching,
+  BrowserProcedureTeachingChange,
+  BrowserProcedureTeachingPropose,
+  BrowserProcedureTeachingStart,
+} from "@/types/browser-procedure-teaching";
 import { BrowserTeachingReview } from "./browser-teaching-review";
 import { BrowserTeachingControls } from "./browser-teaching-controls";
 import { BrowserTeachingList } from "./browser-teaching-list";
@@ -54,7 +54,7 @@ vi.mock("@/components/dashboard/page-header", () => ({
   ),
 }));
 let client: QueryClient;
-let current: BrowserTeaching;
+let current: BrowserProcedureTeaching;
 let policy: { enabled: boolean; generation: string | null; deployment_enabled: boolean };
 let preference: { agent_id: string; enabled: boolean; generation: string | null; allowed: boolean };
 function setup(element: ReactNode) {
@@ -80,7 +80,7 @@ beforeEach(() => {
   sessionStorage.clear();
   useAuthStore.setState({ user: { id: ids.owner } as never, accessToken: "test" });
   useOrgStore.setState({ activeOrgId: ids.org });
-  current = teachingFixture();
+  current = browserProcedureTeachingFixture();
   policy = { enabled: true, generation: ids.other, deployment_enabled: true };
   preference = { agent_id: ids.agent, enabled: false, generation: null, allowed: true };
   vi.mocked(apiClient.get).mockImplementation(async (path) => {
@@ -88,12 +88,12 @@ beforeEach(() => {
     if (path.endsWith("/browser-teaching-preference")) return preference as never;
     if (path.startsWith("/runs/")) return { id: ids.run, agent_id: ids.agent } as never;
     if (path === "/skills") return { items: [], total: 0 } as never;
-    if (path === "/browser-teachings")
-      return { items: [teachingSummaryFixture()], next_cursor: null } as never;
+    if (path === "/browser-procedures/teachings")
+      return { items: [browserProcedureTeachingSummaryFixture()], next_cursor: null } as never;
     return current as never;
   });
   vi.mocked(apiClient.patch).mockImplementation(async (_path, body) => {
-    const change = body as TeachingChange;
+    const change = body as BrowserProcedureTeachingChange;
     current = {
       ...current,
       revision: current.revision + 1,
@@ -105,7 +105,7 @@ beforeEach(() => {
   });
   vi.mocked(apiClient.post).mockImplementation(async (path, body) => {
     if (path.endsWith("/propose")) {
-      const request = body as TeachingPropose;
+      const request = body as BrowserProcedureTeachingPropose;
       current = {
         ...current,
         generation_state: "queued",
@@ -116,8 +116,8 @@ beforeEach(() => {
     } else if (path.endsWith("/stop"))
       current = { ...current, status: "review", revision: current.revision + 1 };
     else {
-      const request = body as TeachingStart;
-      current = teachingFixture({
+      const request = body as BrowserProcedureTeachingStart;
+      current = browserProcedureTeachingFixture({
         id: request.request_id,
         run_id: request.run_id,
         call_id: request.call_id,
@@ -172,7 +172,7 @@ describe("reviewed browser procedure", () => {
       await screen.findByRole("heading", { name: "Monthly report demonstration" }),
     ).toBeVisible();
     expect(apiClient.get).toHaveBeenCalledWith(
-      "/browser-teachings/" + ids.session,
+      "/browser-procedures/teachings/" + ids.session,
       expect.any(Object),
     );
   });
@@ -198,7 +198,7 @@ describe("reviewed browser procedure", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     const draft = await readyDraft();
     expect(apiClient.patch).toHaveBeenCalledWith(
-      `/browser-teachings/${ids.session}`,
+      `/browser-procedures/teachings/${ids.session}`,
       expect.objectContaining({
         action: "review",
         review: expect.objectContaining({
@@ -236,14 +236,14 @@ describe("reviewed browser procedure", () => {
     await userEvent.click(draft);
     await screen.findByText("Draft queued");
     expect(apiClient.post).toHaveBeenCalledWith(
-      `/browser-teachings/${ids.session}/propose`,
+      `/browser-procedures/teachings/${ids.session}/propose`,
       { mode: "reviewed" },
       expect.objectContaining({ headers: { "X-Organization-Id": ids.org, "If-Match": '"3"' } }),
     );
     expect(screen.queryByRole("button", { name: "Create draft from reviewed steps" })).toBeNull();
   });
   it("clears hidden invalid parameter/path values only when a step is explicitly omitted", async () => {
-    current = teachingFixture({ review: teachingReviewFixture() });
+    current = browserProcedureTeachingFixture({ review: browserProcedureTeachingReviewFixture() });
     reviewPage();
     await readyDraft();
     fill("Step 2 parameter name", "not valid");
@@ -262,7 +262,7 @@ describe("reviewed browser procedure", () => {
     expect(screen.getByLabelText("Step 2 parameter name")).toHaveValue("");
   });
   it("requires an explicit bounded assistant budget and preserves the exact choice", async () => {
-    current = teachingFixture({ review: teachingReviewFixture() });
+    current = browserProcedureTeachingFixture({ review: browserProcedureTeachingReviewFixture() });
     reviewPage();
     await readyDraft();
     await userEvent.click(
@@ -283,7 +283,7 @@ describe("reviewed browser procedure", () => {
     );
   });
   it("retains a lost Draft response across reload and Check again performs no write", async () => {
-    current = teachingFixture({ review: teachingReviewFixture() });
+    current = browserProcedureTeachingFixture({ review: browserProcedureTeachingReviewFixture() });
     vi.mocked(apiClient.post).mockRejectedValue(new TypeError("lost acknowledgement"));
     const first = reviewPage();
     await userEvent.click(await readyDraft());
@@ -312,7 +312,10 @@ describe("reviewed browser procedure", () => {
     expect(requests[1]![2]?.headers).toEqual(requests[0]![2]?.headers);
   });
   it("never offers another draft for an unknown outcome and preserves proposal authority", async () => {
-    current = teachingFixture({ review: teachingReviewFixture(), generation_state: "unknown" });
+    current = browserProcedureTeachingFixture({
+      review: browserProcedureTeachingReviewFixture(),
+      generation_state: "unknown",
+    });
     reviewPage();
     await screen.findByText(/drafting outcome is uncertain/i);
     expect(screen.queryByRole("button", { name: /Create draft/ })).toBeNull();
@@ -321,7 +324,7 @@ describe("reviewed browser procedure", () => {
   it.each([true, false])(
     "uses the existing proposal handoff when proposal authority is %s",
     async (allowed) => {
-      current = teachingFixture({
+      current = browserProcedureTeachingFixture({
         status: "proposed",
         generation_state: "succeeded",
         proposal_id: ids.proposal,
@@ -340,7 +343,7 @@ describe("reviewed browser procedure", () => {
     },
   );
   it("holds a refinement until both completion states are recorded", async () => {
-    current = teachingFixture({
+    current = browserProcedureTeachingFixture({
       source: "refinement",
       reason_code: "task_not_completed",
       verified_success: false,
@@ -376,7 +379,7 @@ describe("reviewed browser procedure", () => {
 
 describe("live teaching control and recovery", () => {
   it("reads teaching metadata only after opening the controls and starts with the server token", async () => {
-    setup(<BrowserTeachingControls browse={teachingBrowseFixture()} canControl />);
+    setup(<BrowserTeachingControls browse={browserProcedureTeachingBrowseFixture()} canControl />);
     expect(apiClient.get).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Teach a browser procedure" }));
     await screen.findByLabelText("Demonstration title");
@@ -385,7 +388,7 @@ describe("live teaching control and recovery", () => {
     await waitFor(() => expect(start).toBeEnabled());
     await userEvent.click(start);
     await screen.findByRole("button", { name: "Pause recording" });
-    const request = vi.mocked(apiClient.post).mock.calls[0]![1] as TeachingStart;
+    const request = vi.mocked(apiClient.post).mock.calls[0]![1] as BrowserProcedureTeachingStart;
     expect(request).toMatchObject({
       run_id: ids.run,
       call_id: "teaching-call",
@@ -409,7 +412,7 @@ describe("live teaching control and recovery", () => {
   it("does not admit Start without the exact current holder lease", async () => {
     setup(
       <BrowserTeachingControls
-        browse={teachingBrowseFixture({ heldById: ids.other })}
+        browse={browserProcedureTeachingBrowseFixture({ heldById: ids.other })}
         canControl
       />,
     );
@@ -421,11 +424,17 @@ describe("live teaching control and recovery", () => {
   });
   it("preserves an uncertain Start across reload and recovers it with only GET", async () => {
     vi.mocked(apiClient.post).mockImplementation(async (_path, value) => {
-      const body = value as TeachingStart;
-      current = teachingFixture({ id: body.request_id, status: "recording", title: body.title });
+      const body = value as BrowserProcedureTeachingStart;
+      current = browserProcedureTeachingFixture({
+        id: body.request_id,
+        status: "recording",
+        title: body.title,
+      });
       throw new TypeError("lost acknowledgement");
     });
-    const first = setup(<BrowserTeachingControls browse={teachingBrowseFixture()} canControl />);
+    const first = setup(
+      <BrowserTeachingControls browse={browserProcedureTeachingBrowseFixture()} canControl />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Teach a browser procedure" }));
     await screen.findByLabelText("Demonstration title");
     fill("Demonstration title", "Recover this capture");
@@ -438,7 +447,7 @@ describe("live teaching control and recovery", () => {
     client.clear();
     setup(
       <BrowserTeachingControls
-        browse={teachingBrowseFixture({ takeoverId: null })}
+        browse={browserProcedureTeachingBrowseFixture({ takeoverId: null })}
         canControl={false}
       />,
     );
@@ -452,14 +461,17 @@ describe("live teaching control and recovery", () => {
   it("mounts no teaching controls for protected output or an unidentified view", () => {
     const view = setup(
       <BrowserTeachingControls
-        browse={teachingBrowseFixture({ outputProtected: true })}
+        browse={browserProcedureTeachingBrowseFixture({ outputProtected: true })}
         canControl
       />,
     );
     expect(screen.queryByRole("button")).toBeNull();
     view.rerender(
       <QueryClientProvider client={client}>
-        <BrowserTeachingControls browse={teachingBrowseFixture({ runId: null })} canControl />
+        <BrowserTeachingControls
+          browse={browserProcedureTeachingBrowseFixture({ runId: null })}
+          canControl
+        />
       </QueryClientProvider>,
     );
     expect(screen.queryByRole("button")).toBeNull();
@@ -479,7 +491,13 @@ describe("discovery and default-off controls", () => {
   });
   it("shows a redacted expired entry without inventing its old title", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
-      items: [teachingSummaryFixture({ status: "expired", title: "", allowed_origins: [] })],
+      items: [
+        browserProcedureTeachingSummaryFixture({
+          status: "expired",
+          title: "",
+          allowed_origins: [],
+        }),
+      ],
       next_cursor: null,
     } as never);
     setup(<BrowserTeachingList />);

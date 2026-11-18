@@ -1,308 +1,141 @@
-import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { apiClient } from "@/lib/api-client";
-import { ApiError } from "@/lib/api-error";
-import { qk } from "@/lib/query-keys";
-import { useAuthStore } from "@/stores/auth-store";
-import { useOrgStore } from "@/stores/org-store";
-import {
-  TEACHING_IDS as ids,
-  teachingFixture,
-  teachingReviewFixture,
-} from "@/test-utils/browser-teaching";
-import type { BrowserTeaching } from "@/types/browser-teaching";
-import { useBrowserTeaching, useTeachingStart } from "./use-browser-teaching";
-import { teachingDeadlineLive } from "@/lib/browser-teaching-review";
+import type { BrowserTeaching } from "@/lib/browser-teaching-api";
+import { useAuthStore, useOrgStore } from "@/stores";
+import { useBrowserTeaching } from "./use-browser-teaching";
 
 vi.mock("@/lib/api-client", () => ({
-  apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+  apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
 }));
-let client: QueryClient;
-let current: BrowserTeaching;
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+
 function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
+
+const TEACHING: BrowserTeaching = {
+  id: "t1",
+  agent_id: "a1",
+  run_id: "r1",
+  title: "Download invoice",
+  allowed_origins: ["https://portal.example.test"],
+  status: "review",
+  revision: 4,
+  reason_code: null,
+  events: [
+    {
+      sequence: 1,
+      action: "input_parameter",
+      origin: "https://portal.example.test",
+      target: { role: "textbox", fingerprint: "sha256:synthetic" },
+      direction: null,
+      human_step: false,
+    },
+  ],
+  review: [],
+  parameters: [],
+  proposal_name: null,
+  proposal_id: null,
+  expires_at: "2026-11-18T09:00:00Z",
+};
+
+const STEP = { sequence: 1, label: "Invoice number", parameter: "invoice_number" };
+
 beforeEach(() => {
   vi.clearAllMocks();
-  client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  useAuthStore.setState({ user: { id: ids.owner } as never, accessToken: "test" });
-  useOrgStore.setState({ activeOrgId: ids.org });
-  current = teachingFixture();
-  vi.mocked(apiClient.get).mockImplementation(async () => current as never);
-});
-afterEach(() => {
-  cleanup();
-  client.clear();
-  vi.restoreAllMocks();
-  vi.useRealTimers();
+  useOrgStore.setState({ activeOrgId: "org-1" });
+  useAuthStore.setState({ user: { id: "user-1" } as never });
+  vi.mocked(apiClient.get).mockResolvedValue(TEACHING);
 });
 
-describe("owner teaching session", () => {
-  it("does not publish a command result if the audience changes at mutation settlement", async () => {
-    client = new QueryClient({
-      mutationCache: new MutationCache({
-        onSuccess: () => useOrgStore.setState({ activeOrgId: ids.other }),
-      }),
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    vi.mocked(apiClient.get).mockImplementation(async (_path, options) => {
-      if ((options?.headers as Record<string, string>)["X-Organization-Id"] !== ids.org)
-        throw new ApiError(404, "Unavailable");
-      return current as never;
-    });
-    vi.mocked(apiClient.post).mockResolvedValue(teachingFixture({ revision: 3 }) as never);
-    const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-    await waitFor(() => expect(result.current.session).toBeDefined());
-    await act(async () => {
-      await result.current.command.mutateAsync({ action: "stop", session: current });
-    });
-    expect(
-      (
-        client.getQueryData(qk.browserTeaching.detail(ids.owner, ids.org, ids.session)) as
-          BrowserTeaching | undefined
-      )?.revision,
-    ).not.toBe(3);
-    expect(result.current.session).toBeUndefined();
+describe("reviewing a taught task", () => {
+  it("reads the session and names the reader's identity", async () => {
+    const { result } = renderHook(() => useBrowserTeaching("t1"), { wrapper });
+
+    await waitFor(() => expect(result.current.teaching).toEqual(TEACHING));
+    expect(apiClient.get).toHaveBeenCalledWith("/browser-teachings/t1");
+    expect(result.current.identity).toBe("org-1:user-1");
   });
 
-  it("keeps capture deadlines current after the finite GET polling window ends", async () => {
-    vi.useFakeTimers();
-    current = teachingFixture({
-      status: "paused",
-      capture_ends_at: new Date(Date.now() + 240_000).toISOString(),
-    });
-    const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
+  it("saves a review against the revision it read", async () => {
+    const saved = { ...TEACHING, revision: 5, review: [STEP], parameters: ["invoice_number"] };
+    vi.mocked(apiClient.patch).mockResolvedValue(saved);
+    const { result } = renderHook(() => useBrowserTeaching("t1"), { wrapper });
+    await waitFor(() => expect(result.current.teaching).toBeDefined());
+
+    let answer: BrowserTeaching | undefined;
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(181_000);
+      answer = await result.current.saveReview([STEP]);
     });
-    expect(result.current.pollingEnded).toBe(true);
-    expect(teachingDeadlineLive(current.capture_ends_at, result.current.now)).toBe(true);
-    const reads = vi.mocked(apiClient.get).mock.calls.length;
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(teachingDeadlineLive(current.capture_ends_at, result.current.now)).toBe(false);
-    expect(apiClient.get).toHaveBeenCalledTimes(reads);
-    expect(apiClient.post).not.toHaveBeenCalled();
+
+    expect(answer).toEqual(saved);
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      "/browser-teachings/t1",
+      { action: "review", steps: [STEP] },
+      { headers: { "If-Match": "4" } },
+    );
+    await waitFor(() => expect(result.current.teaching?.revision).toBe(5));
   });
 
-  it("loads the exact private receipt and refuses invalid identities without fetching", async () => {
-    const { result, rerender } = renderHook(({ id }) => useBrowserTeaching(id), {
-      wrapper,
-      initialProps: { id: "bad" },
-    });
-    expect(result.current.ready).toBe(false);
-    expect(apiClient.get).not.toHaveBeenCalled();
-    await act(async () => {
-      expect(await result.current.refresh()).toBeUndefined();
-    });
-    rerender({ id: ids.session });
-    await waitFor(() => expect(result.current.session?.id).toBe(ids.session));
-    expect(apiClient.get).toHaveBeenCalledWith(
-      `/browser-teachings/${ids.session}`,
-      expect.objectContaining({ cache: "no-store", headers: { "X-Organization-Id": ids.org } }),
-    );
-  });
-  it("withholds a mismatched response rather than displaying another capture", async () => {
-    current = teachingFixture({ id: ids.other });
-    const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-    await waitFor(() => expect(result.current.query.isError).toBe(true));
-    expect(result.current.session).toBeUndefined();
-  });
-  it.each([401, 403, 404])(
-    "hides a previously read receipt when the fresh read refuses %s",
-    async (status) => {
-      const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-      await waitFor(() => expect(result.current.session).toBeDefined());
-      vi.mocked(apiClient.get).mockRejectedValue(new ApiError(status, "PRIVATE REFUSAL"));
-      await act(async () => {
-        await result.current.refresh();
-      });
-      expect(result.current.session).toBeUndefined();
-    },
-  );
-  it("refetches a newer event revision without interpreting it as draft approval", async () => {
-    const { result, rerender } = renderHook(({ rev }) => useBrowserTeaching(ids.session, rev), {
-      wrapper,
-      initialProps: { rev: 2 },
-    });
-    await waitFor(() => expect(result.current.session?.revision).toBe(2));
-    current = teachingFixture({ revision: 3, status: "paused" });
-    rerender({ rev: 3 });
-    await waitFor(() => expect(result.current.session?.revision).toBe(3));
-    expect(apiClient.post).not.toHaveBeenCalled();
-  });
-  it.each(["change", "stop", "discard", "propose"] as const)(
-    "uses the explicit %s transition and reads its outcome",
-    async (action) => {
-      const next = teachingFixture({ revision: 3 });
-      const method =
-        action === "change"
-          ? apiClient.patch
-          : action === "discard"
-            ? apiClient.delete
-            : apiClient.post;
-      vi.mocked(method).mockImplementation(async () => {
-        current = next;
-        return next as never;
-      });
-      const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-      await waitFor(() => expect(result.current.session).toBeDefined());
-      await act(async () => {
-        await result.current.command.mutateAsync(
-          action === "change"
-            ? {
-                action,
-                session: current,
-                body: { action: "review", review: teachingReviewFixture() },
-              }
-            : action === "propose"
-              ? { action, session: current, revision: 2, body: { mode: "reviewed" } }
-              : { action, session: current },
-        );
-      });
-      expect(method).toHaveBeenCalledTimes(1);
-      await waitFor(() => expect(result.current.session?.revision).toBe(3));
-    },
-  );
-  it.each(["id", "run_id", "call_id", "tab_id", "agent_id", "target_skill_id"] as const)(
-    "rejects a mutation response for a different %s",
-    async (field) => {
-      vi.mocked(apiClient.post).mockResolvedValue(teachingFixture({ [field]: ids.other }) as never);
-      const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-      await waitFor(() => expect(result.current.session).toBeDefined());
-      await act(async () => {
-        await expect(
-          result.current.command.mutateAsync({ action: "stop", session: current }),
-        ).rejects.toThrow("identity mismatch");
-      });
-      expect(result.current.session?.id).toBe(ids.session);
-    },
-  );
-  it("keeps a more recent GET revision when an older mutation response arrives", async () => {
-    let finish!: (value: never) => void;
-    vi.mocked(apiClient.post).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-    );
-    const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-    await waitFor(() => expect(result.current.session).toBeDefined());
-    let pending!: Promise<BrowserTeaching>;
-    act(() => {
-      pending = result.current.command.mutateAsync({ action: "stop", session: current });
-    });
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalled());
-    current = teachingFixture({ revision: 5 });
-    client.setQueryData(qk.browserTeaching.detail(ids.owner, ids.org, ids.session), current);
-    await act(async () => {
-      finish(teachingFixture({ revision: 3 }) as never);
-      await pending;
-    });
-    expect(result.current.session?.revision).toBe(5);
-  });
-  it("does not deliver delayed data after actor A -> B -> A", async () => {
-    let finish!: (value: never) => void;
-    vi.mocked(apiClient.get).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-    );
-    const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalled());
-    act(() => {
-      useAuthStore.setState({ user: { id: ids.other } as never });
-      useAuthStore.setState({ user: { id: ids.owner } as never });
-    });
-    await act(async () => finish(current as never));
-    await waitFor(() => expect(result.current.query.isError).toBe(true));
-    expect(result.current.session).toBeUndefined();
-  });
-  it("bounds pending reads and restarts only GET checks", async () => {
-    vi.useFakeTimers();
-    current = teachingFixture({ generation_state: "queued" });
-    const { result } = renderHook(() => useBrowserTeaching(ids.session), { wrapper });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(181_000);
-    });
-    expect(result.current.pollingEnded).toBe(true);
-    const calls = vi.mocked(apiClient.get).mock.calls.length;
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(10_000);
-    });
-    expect(apiClient.get).toHaveBeenCalledTimes(calls);
-    await act(async () => {
-      await result.current.refresh();
-      await vi.advanceTimersByTimeAsync(1);
-    });
-    expect(result.current.pollingEnded).toBe(false);
-    expect(apiClient.post).not.toHaveBeenCalled();
-  });
-});
+  it("proposes from the session a save returned, not the stale one", async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ ...TEACHING, status: "proposing", revision: 6 });
+    const { result } = renderHook(() => useBrowserTeaching("t1"), { wrapper });
+    await waitFor(() => expect(result.current.teaching).toBeDefined());
 
-describe("explicit teaching start", () => {
-  const attempt = {
-    kind: "start" as const,
-    targetSkillId: null,
-    body: {
-      request_id: ids.session,
-      run_id: ids.run,
-      call_id: "teaching-call",
-      tab_id: "main",
-      takeover_id: ids.takeover,
-      title: "Synthetic capture",
-      allowed_origins: ["https://reports.example"],
-    },
-  };
-  it("does not cache a Start after its successful response crosses an organization change", async () => {
-    client = new QueryClient({
-      mutationCache: new MutationCache({
-        onSuccess: () => useOrgStore.setState({ activeOrgId: ids.other }),
-      }),
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    vi.mocked(apiClient.post).mockResolvedValue(current as never);
-    const { result } = renderHook(useTeachingStart, { wrapper });
     await act(async () => {
-      await result.current.mutateAsync(attempt);
+      await result.current.propose("download-invoice", { ...TEACHING, revision: 5 });
     });
-    expect(
-      client.getQueryData(qk.browserTeaching.detail(ids.owner, ids.org, ids.session)),
-    ).toBeUndefined();
-    expect(
-      client.getQueryData(qk.browserTeaching.detail(ids.owner, ids.other, ids.session)),
-    ).toBeUndefined();
-  });
-  it("stores only a matching acknowledged result in the owner cache", async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(current as never);
-    const { result } = renderHook(useTeachingStart, { wrapper });
-    await act(async () => {
-      await result.current.mutateAsync(attempt);
-    });
-    expect(client.getQueryData(qk.browserTeaching.detail(ids.owner, ids.org, ids.session))).toEqual(
-      current,
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/browser-teachings/t1/propose",
+      { name: "download-invoice" },
+      { headers: { "If-Match": "5" } },
     );
   });
-  it.each(["id", "run_id", "call_id", "tab_id", "target_skill_id"] as const)(
-    "keeps a Start response with changed %s unresolved",
-    async (field) => {
-      vi.mocked(apiClient.post).mockResolvedValue(teachingFixture({ [field]: ids.other }) as never);
-      const { result } = renderHook(useTeachingStart, { wrapper });
-      await act(async () => {
-        await expect(result.current.mutateAsync(attempt)).rejects.toThrow("identity mismatch");
-      });
-      expect(
-        client.getQueryData(qk.browserTeaching.detail(ids.owner, ids.org, ids.session)),
-      ).toBeUndefined();
-    },
-  );
+
+  it("says so when a stale edit is refused and reads the session again", async () => {
+    vi.mocked(apiClient.patch).mockRejectedValue(new Error("409"));
+    const { result } = renderHook(() => useBrowserTeaching("t1"), { wrapper });
+    await waitFor(() => expect(result.current.teaching).toBeDefined());
+
+    let answer: BrowserTeaching | undefined = TEACHING;
+    await act(async () => {
+      answer = await result.current.saveReview([STEP]);
+    });
+
+    expect(answer).toBeUndefined();
+    expect(toast.error).toHaveBeenCalled();
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledTimes(2));
+  });
+
+  it("reads afresh for another organization instead of showing the previous review", async () => {
+    const { result, rerender } = renderHook(() => useBrowserTeaching("t1"), { wrapper });
+    await waitFor(() => expect(result.current.teaching).toBeDefined());
+
+    act(() => useOrgStore.setState({ activeOrgId: "org-2" }));
+    rerender();
+
+    expect(result.current.identity).toBe("org-2:user-1");
+    expect(result.current.teaching).toBeUndefined();
+  });
+
+  it("writes nothing before the session has loaded", async () => {
+    vi.mocked(apiClient.get).mockReturnValue(new Promise(() => undefined));
+    const { result } = renderHook(() => useBrowserTeaching("t1"), { wrapper });
+
+    await act(async () => {
+      expect(await result.current.saveReview([STEP])).toBeUndefined();
+      await result.current.propose("download-invoice");
+    });
+
+    expect(apiClient.patch).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
 });

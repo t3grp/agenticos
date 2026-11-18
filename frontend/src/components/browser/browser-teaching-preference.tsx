@@ -2,11 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { Button, Switch } from "@/components/ui";
-import { useTeachingAudience, useTeachingPreference } from "@/hooks/use-browser-teaching-settings";
+import {
+  useBrowserProcedureTeachingAudience,
+  useBrowserProcedureTeachingPreference,
+} from "@/hooks/use-browser-procedure-teaching-settings";
 import { TeachingError } from "./browser-teaching-status";
 
 export function BrowserTeachingPreference({ agentId }: { agentId: string }) {
-  const audience = useTeachingAudience();
+  const audience = useBrowserProcedureTeachingAudience();
   return (
     <PreferenceContent
       key={JSON.stringify([audience.actor, audience.organization, agentId])}
@@ -15,8 +18,8 @@ export function BrowserTeachingPreference({ agentId }: { agentId: string }) {
   );
 }
 function PreferenceContent({ agentId }: { agentId: string }) {
-  const t = useTranslations("browserTeaching");
-  const preference = useTeachingPreference(agentId);
+  const t = useTranslations("browserProcedureTeaching");
+  const preference = useBrowserProcedureTeachingPreference(agentId);
   const current = preference.data;
   return (
     <section aria-label={t("preferenceTitle")} className="space-y-2 rounded-lg border p-3">

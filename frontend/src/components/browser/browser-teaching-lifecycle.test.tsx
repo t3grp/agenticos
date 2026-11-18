@@ -9,21 +9,25 @@ import { ApiError } from "@/lib/api-error";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { Perm } from "@/types/permissions";
-import type { BrowserTeaching, TeachingChange, TeachingStart } from "@/types/browser-teaching";
+import type {
+  BrowserProcedureTeaching,
+  BrowserProcedureTeachingChange,
+  BrowserProcedureTeachingStart,
+} from "@/types/browser-procedure-teaching";
 import {
-  readTeachingAttempt,
-  clearTeachingAttempt,
-  retainTeachingAttempt,
-  teachingAttemptKey,
-  type TeachingDraftAttempt,
-  type TeachingStartAttempt,
-} from "@/lib/browser-teaching-attempts";
+  readBrowserProcedureTeachingAttempt,
+  clearBrowserProcedureTeachingAttempt,
+  retainBrowserProcedureTeachingAttempt,
+  browserProcedureTeachingAttemptKey,
+  type BrowserProcedureTeachingDraftAttempt,
+  type BrowserProcedureTeachingStartAttempt,
+} from "@/lib/browser-procedure-teaching-attempts";
 import {
-  TEACHING_IDS as ids,
-  teachingBrowseFixture,
-  teachingFixture,
-  teachingReviewFixture,
-} from "@/test-utils/browser-teaching";
+  BROWSER_PROCEDURE_TEACHING_IDS as ids,
+  browserProcedureTeachingBrowseFixture,
+  browserProcedureTeachingFixture,
+  browserProcedureTeachingReviewFixture,
+} from "@/test-utils/browser-procedure-teaching";
 import { BrowserTeachingControls } from "./browser-teaching-controls";
 import { BrowserTeachingReview } from "./browser-teaching-review";
 import { BrowserTeachingStart } from "./browser-teaching-start";
@@ -56,13 +60,17 @@ vi.mock("@/components/dashboard/page-header", () => ({
     </header>
   ),
 }));
-let current: BrowserTeaching;
+let current: BrowserProcedureTeaching;
 let client: QueryClient;
 let policy: { enabled: boolean; generation: string | null; deployment_enabled: boolean };
 const audience = { actor: ids.owner, organization: ids.org };
-const startKey = teachingAttemptKey(audience, "start", [ids.run, "teaching-call", "main"]);
-const draftKey = teachingAttemptKey(audience, "propose", [ids.session]);
-const draftAttempt = (revision = 2): TeachingDraftAttempt => ({
+const startKey = browserProcedureTeachingAttemptKey(audience, "start", [
+  ids.run,
+  "teaching-call",
+  "main",
+]);
+const draftKey = browserProcedureTeachingAttemptKey(audience, "propose", [ids.session]);
+const draftAttempt = (revision = 2): BrowserProcedureTeachingDraftAttempt => ({
   kind: "propose",
   revision,
   body: { mode: "assistant", max_cost_usd: "1.25" },
@@ -81,12 +89,14 @@ async function review() {
   setup(<BrowserTeachingReview sessionId={ids.session} />);
   return screen.findByRole("button", { name: "Save reviewed steps" });
 }
-async function openControls(browse = teachingBrowseFixture({ teachingSessionId: ids.session })) {
+async function openControls(
+  browse = browserProcedureTeachingBrowseFixture({ teachingSessionId: ids.session }),
+) {
   const view = setup(<BrowserTeachingControls browse={browse} canControl />);
   await userEvent.click(screen.getByRole("button", { name: "Teach a browser procedure" }));
   return view;
 }
-function savedStart(): TeachingStartAttempt {
+function savedStart(): BrowserProcedureTeachingStartAttempt {
   return {
     kind: "start",
     targetSkillId: null,
@@ -101,7 +111,7 @@ function savedStart(): TeachingStartAttempt {
     },
   };
 }
-function stopReceipt(session: BrowserTeaching): BrowserTeaching {
+function stopReceipt(session: BrowserProcedureTeaching): BrowserProcedureTeaching {
   return {
     ...session,
     revision: session.revision + 1,
@@ -128,7 +138,7 @@ beforeEach(() => {
   sessionStorage.clear();
   useAuthStore.setState({ user: { id: ids.owner } as never, accessToken: "test" });
   useOrgStore.setState({ activeOrgId: ids.org });
-  current = teachingFixture({ review: teachingReviewFixture() });
+  current = browserProcedureTeachingFixture({ review: browserProcedureTeachingReviewFixture() });
   policy = { enabled: true, generation: ids.other, deployment_enabled: true };
   vi.mocked(apiClient.get).mockImplementation(async (path) => {
     if (path === "/browser-teaching-policy") return policy as never;
@@ -139,7 +149,7 @@ beforeEach(() => {
     return current as never;
   });
   vi.mocked(apiClient.patch).mockImplementation(async (_path, body) => {
-    const change = body as TeachingChange;
+    const change = body as BrowserProcedureTeachingChange;
     current = {
       ...current,
       revision: current.revision + 1,
@@ -154,8 +164,8 @@ beforeEach(() => {
     else if (path.endsWith("/propose"))
       current = { ...current, generation_state: "queued", revision: current.revision + 1 };
     else {
-      const start = body as TeachingStart;
-      current = teachingFixture({
+      const start = body as BrowserProcedureTeachingStart;
+      current = browserProcedureTeachingFixture({
         id: start.request_id,
         title: start.title,
         status: "recording",
@@ -176,14 +186,16 @@ afterEach(() => {
 
 describe("review lifecycle uses current complete capture evidence", () => {
   it("fences the unresolved Draft only after an acknowledged newer review, then requires a separate new Draft click", async () => {
-    expect(retainTeachingAttempt(draftKey, draftAttempt())).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, draftAttempt())).toBe(true);
     await review();
     await screen.findByRole("button", { name: "Retry the same Draft request" });
     fill("Skill description", "Explicitly reviewed after the uncertain response");
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
-    await waitFor(() => expect(readTeachingAttempt(draftKey, "propose").attempt).toBeNull());
+    await waitFor(() =>
+      expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toBeNull(),
+    );
     expect(apiClient.patch).toHaveBeenCalledWith(
-      "/browser-teachings/" + ids.session,
+      "/browser-procedures/teachings/" + ids.session,
       expect.objectContaining({ action: "review" }),
       expect.objectContaining({ headers: { "X-Organization-Id": ids.org, "If-Match": '"2"' } }),
     );
@@ -192,7 +204,7 @@ describe("review lifecycle uses current complete capture evidence", () => {
       await screen.findByRole("button", { name: "Create draft from reviewed steps" }),
     );
     expect(apiClient.post).toHaveBeenCalledWith(
-      "/browser-teachings/" + ids.session + "/propose",
+      "/browser-procedures/teachings/" + ids.session + "/propose",
       { mode: "reviewed" },
       expect.objectContaining({ headers: { "X-Organization-Id": ids.org, "If-Match": '"3"' } }),
     );
@@ -200,12 +212,12 @@ describe("review lifecycle uses current complete capture evidence", () => {
 
   it("preserves the old attempt when Draft wins the lock until a fresh GET confirms its queued receipt", async () => {
     const saved = draftAttempt();
-    expect(retainTeachingAttempt(draftKey, saved)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, saved)).toBe(true);
     const get = vi.mocked(apiClient.get).getMockImplementation()!;
     let awaitingReceipt = false;
     let receipt!: () => void;
     vi.mocked(apiClient.get).mockImplementation(async (path, options) => {
-      if (awaitingReceipt && path.startsWith("/browser-teachings/"))
+      if (awaitingReceipt && path.startsWith("/browser-procedures/teachings/"))
         return new Promise((resolve) => {
           receipt = () => resolve(current as never);
         });
@@ -228,17 +240,19 @@ describe("review lifecycle uses current complete capture evidence", () => {
     await within(screen.getByRole("region", { name: "Review every step" })).findByText(
       "This request is unavailable. Check again to read the current state.",
     );
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
     await waitFor(() => expect(receipt).toBeDefined());
     await act(async () => receipt());
     await screen.findByText("Draft queued");
-    await waitFor(() => expect(readTeachingAttempt(draftKey, "propose").attempt).toBeNull());
+    await waitFor(() =>
+      expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toBeNull(),
+    );
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("retains uncertainty after a lost review acknowledgment until a later explicit save is acknowledged", async () => {
     const saved = draftAttempt();
-    expect(retainTeachingAttempt(draftKey, saved)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, saved)).toBe(true);
     const patch = vi.mocked(apiClient.patch).getMockImplementation()!;
     vi.mocked(apiClient.patch).mockImplementationOnce(async () => {
       current = { ...current, revision: 3 };
@@ -248,17 +262,19 @@ describe("review lifecycle uses current complete capture evidence", () => {
     fill("Skill description", "Explicit review");
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     await screen.findByText(/capture changed after you opened/);
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(saved);
     expect(apiClient.post).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Load current review" }));
     vi.mocked(apiClient.patch).mockImplementation(patch);
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
-    await waitFor(() => expect(readTeachingAttempt(draftKey, "propose").attempt).toBeNull());
+    await waitFor(() =>
+      expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toBeNull(),
+    );
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("does not clear a different retained Draft created while the review acknowledgment was in flight", async () => {
-    expect(retainTeachingAttempt(draftKey, draftAttempt())).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, draftAttempt())).toBe(true);
     let finish!: () => void;
     vi.mocked(apiClient.patch).mockImplementation(
       () =>
@@ -274,27 +290,27 @@ describe("review lifecycle uses current complete capture evidence", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     await waitFor(() => expect(finish).toBeDefined());
     const newer = draftAttempt(9);
-    expect(clearTeachingAttempt(draftKey)).toBe(true);
-    expect(retainTeachingAttempt(draftKey, newer)).toBe(true);
+    expect(clearBrowserProcedureTeachingAttempt(draftKey)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, newer)).toBe(true);
     await act(async () => finish());
     await screen.findByRole("button", { name: "Retry the same Draft request" });
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(newer);
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(newer);
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("does not settle a retained Draft whose revision is newer than this acknowledged review", async () => {
     const newer = draftAttempt(9);
-    expect(retainTeachingAttempt(draftKey, newer)).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, newer)).toBe(true);
     await review();
     fill("Skill description", "Older review");
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     await screen.findByRole("button", { name: "Retry the same Draft request" });
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(newer);
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(newer);
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("keeps the old audience's retry tuple when organization changes at the review acknowledgment", async () => {
-    expect(retainTeachingAttempt(draftKey, draftAttempt())).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, draftAttempt())).toBe(true);
     setup(
       <BrowserTeachingReview sessionId={ids.session} />,
       new MutationCache({
@@ -305,12 +321,14 @@ describe("review lifecycle uses current complete capture evidence", () => {
     fill("Skill description", "Review before switching workspace");
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     await waitFor(() => expect(useOrgStore.getState().activeOrgId).toBe(ids.other));
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(draftAttempt());
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(
+      draftAttempt(),
+    );
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("reports unavailable storage when a known review cannot clear its obsolete attempt", async () => {
-    expect(retainTeachingAttempt(draftKey, draftAttempt())).toBe(true);
+    expect(retainBrowserProcedureTeachingAttempt(draftKey, draftAttempt())).toBe(true);
     await review();
     fill("Skill description", "Review with unavailable storage");
     vi.spyOn(sessionStorage, "removeItem").mockImplementation(() => {
@@ -318,7 +336,9 @@ describe("review lifecycle uses current complete capture evidence", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     await screen.findByText(/cannot safely retain this attempt/);
-    expect(readTeachingAttempt(draftKey, "propose").attempt).toEqual(draftAttempt());
+    expect(readBrowserProcedureTeachingAttempt(draftKey, "propose").attempt).toEqual(
+      draftAttempt(),
+    );
     expect(
       screen.queryByRole("button", { name: "Create draft from reviewed steps" }),
     ).not.toBeInTheDocument();
@@ -329,7 +349,11 @@ describe("review lifecycle uses current complete capture evidence", () => {
     const read = vi.spyOn(sessionStorage, "getItem");
     expect(
       renderToString(
-        <BrowserTeachingStart browse={teachingBrowseFixture()} canStart onStarted={vi.fn()} />,
+        <BrowserTeachingStart
+          browse={browserProcedureTeachingBrowseFixture()}
+          canStart
+          onStarted={vi.fn()}
+        />,
       ),
     ).toBe("");
     expect(
@@ -343,7 +367,7 @@ describe("review lifecycle uses current complete capture evidence", () => {
   it("requires loading a newer complete review before saving over a stale form", async () => {
     await review();
     fill("Skill description", "Unsaved description");
-    const remote = teachingReviewFixture();
+    const remote = browserProcedureTeachingReviewFixture();
     remote.description = "Reviewed on another device";
     current = { ...current, review: remote, revision: 4 };
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
@@ -357,7 +381,7 @@ describe("review lifecycle uses current complete capture evidence", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save reviewed steps" }));
     await waitFor(() => expect(apiClient.patch).toHaveBeenCalledTimes(1));
     expect(apiClient.patch).toHaveBeenCalledWith(
-      "/browser-teachings/" + ids.session,
+      "/browser-procedures/teachings/" + ids.session,
       expect.objectContaining({ action: "review" }),
       expect.objectContaining({ headers: { "X-Organization-Id": ids.org, "If-Match": '"4"' } }),
     );
@@ -395,7 +419,7 @@ describe("review lifecycle uses current complete capture evidence", () => {
   it.each(["manual", "refinement"] as const)(
     "explicitly stops a %s capture once despite a second quick click",
     async (source) => {
-      current = teachingFixture({ status: "recording", source });
+      current = browserProcedureTeachingFixture({ status: "recording", source });
       let complete!: () => void;
       vi.mocked(apiClient.post).mockImplementation(
         () =>
@@ -424,7 +448,7 @@ describe("review lifecycle uses current complete capture evidence", () => {
         ).not.toBeInTheDocument(),
       );
       expect(apiClient.post).toHaveBeenCalledWith(
-        "/browser-teachings/" + ids.session + "/stop",
+        "/browser-procedures/teachings/" + ids.session + "/stop",
         {},
         expect.any(Object),
       );
@@ -441,7 +465,7 @@ describe("review lifecycle uses current complete capture evidence", () => {
   );
 
   it("keeps an authoritative Stop refusal visible without erasing the capture", async () => {
-    current = teachingFixture({ status: "paused" });
+    current = browserProcedureTeachingFixture({ status: "paused" });
     vi.mocked(apiClient.post).mockRejectedValue(new ApiError(409, "PRIVATE REFUSAL"));
     setup(<BrowserTeachingReview sessionId={ids.session} />);
     await userEvent.click(await screen.findByRole("button", { name: "Stop and review" }));
@@ -474,7 +498,11 @@ describe("review lifecycle uses current complete capture evidence", () => {
       if (kind === "Draft") await review();
       else {
         setup(
-          <BrowserTeachingStart browse={teachingBrowseFixture()} canStart onStarted={vi.fn()} />,
+          <BrowserTeachingStart
+            browse={browserProcedureTeachingBrowseFixture()}
+            canStart
+            onStarted={vi.fn()}
+          />,
         );
         fill("Demonstration title", "Synthetic review");
       }
@@ -500,13 +528,13 @@ describe("review lifecycle uses current complete capture evidence", () => {
 
 describe("start destinations and current live control", () => {
   it("follows a fresh teaching notification without reviving an older local New capture choice", async () => {
-    const initial = teachingBrowseFixture({ teachingSessionId: ids.session });
+    const initial = browserProcedureTeachingBrowseFixture({ teachingSessionId: ids.session });
     const view = await openControls(initial);
     await userEvent.click(
       await screen.findByRole("button", { name: "Record another demonstration" }),
     );
     expect(await screen.findByLabelText("Demonstration title")).toHaveValue("");
-    current = teachingFixture({
+    current = browserProcedureTeachingFixture({
       id: ids.other,
       title: "Another current capture",
       status: "paused",
@@ -518,7 +546,7 @@ describe("start destinations and current live control", () => {
     );
     expect(await screen.findByRole("button", { name: "Resume recording" })).toBeEnabled();
     expect(screen.queryByLabelText("Demonstration title")).not.toBeInTheDocument();
-    current = teachingFixture();
+    current = browserProcedureTeachingFixture();
     view.rerender(
       <QueryClientProvider client={client}>
         <BrowserTeachingControls browse={initial} canControl />
@@ -549,7 +577,7 @@ describe("start destinations and current live control", () => {
     const started = vi.fn();
     setup(
       <BrowserTeachingStart
-        browse={teachingBrowseFixture({ url: null })}
+        browse={browserProcedureTeachingBrowseFixture({ url: null })}
         canStart
         onStarted={started}
       />,
@@ -568,7 +596,7 @@ describe("start destinations and current live control", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => expect(started).toHaveBeenCalledTimes(1));
     expect(apiClient.post).toHaveBeenCalledWith(
-      "/skills/" + ids.skill + "/browser-teachings",
+      "/skills/" + ids.skill + "/browser-procedures/teachings",
       expect.objectContaining({
         allowed_origins: ["https://reports.example", "https://admin.example"],
       }),
@@ -581,7 +609,7 @@ describe("start destinations and current live control", () => {
     vi.mocked(apiClient.get).mockRejectedValue(new ApiError(403, "PRIVATE SKILL NAMES"));
     setup(
       <BrowserTeachingStart
-        browse={teachingBrowseFixture({ url: "not an origin" })}
+        browse={browserProcedureTeachingBrowseFixture({ url: "not an origin" })}
         canStart
         onStarted={vi.fn()}
       />,
@@ -593,8 +621,8 @@ describe("start destinations and current live control", () => {
   });
 
   it("coalesces repeated Check again clicks into one pure recovery read", async () => {
-    expect(retainTeachingAttempt(startKey, savedStart())).toBe(true);
-    let finish!: (value: BrowserTeaching) => void;
+    expect(retainBrowserProcedureTeachingAttempt(startKey, savedStart())).toBe(true);
+    let finish!: (value: BrowserProcedureTeaching) => void;
     vi.mocked(apiClient.get).mockImplementation(async (path) =>
       path === "/skills"
         ? ({ items: [], total: 0 } as never)
@@ -603,7 +631,13 @@ describe("start destinations and current live control", () => {
           }),
     );
     const started = vi.fn();
-    setup(<BrowserTeachingStart browse={teachingBrowseFixture()} canStart onStarted={started} />);
+    setup(
+      <BrowserTeachingStart
+        browse={browserProcedureTeachingBrowseFixture()}
+        canStart
+        onStarted={started}
+      />,
+    );
     const check = await screen.findByRole("button", { name: "Check again" });
     act(() => {
       fireEvent.click(check);
@@ -619,20 +653,23 @@ describe("start destinations and current live control", () => {
     const mutationCache = new MutationCache({
       onSuccess: () => useOrgStore.setState({ activeOrgId: ids.other }),
     });
-    setup(<BrowserTeachingControls browse={teachingBrowseFixture()} canControl />, mutationCache);
+    setup(
+      <BrowserTeachingControls browse={browserProcedureTeachingBrowseFixture()} canControl />,
+      mutationCache,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Teach a browser procedure" }));
     fill("Demonstration title", "Private initial organization");
     const start = screen.getByRole("button", { name: "Start recording" });
     await waitFor(() => expect(start).toBeEnabled());
     await userEvent.click(start);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(readTeachingAttempt(startKey, "start").attempt).not.toBeNull();
+    expect(readBrowserProcedureTeachingAttempt(startKey, "start").attempt).not.toBeNull();
     expect(screen.queryByText("Private initial organization")).not.toBeInTheDocument();
     expect(apiClient.post).toHaveBeenCalledTimes(1);
   });
 
   it("can start a separate demonstration after an ended capture while retaining its review link", async () => {
-    current = teachingFixture({ title: "", status: "expired" });
+    current = browserProcedureTeachingFixture({ title: "", status: "expired" });
     await openControls();
     await screen.findByRole("link", { name: "Review capture" });
     await userEvent.click(screen.getByRole("button", { name: "Record another demonstration" }));
@@ -641,8 +678,11 @@ describe("start destinations and current live control", () => {
   });
 
   it("keeps a paused capture readable without borrowing another person's takeover", async () => {
-    current = teachingFixture({ status: "paused" });
-    const browse = teachingBrowseFixture({ teachingSessionId: ids.session, heldById: ids.other });
+    current = browserProcedureTeachingFixture({ status: "paused" });
+    const browse = browserProcedureTeachingBrowseFixture({
+      teachingSessionId: ids.session,
+      heldById: ids.other,
+    });
     const view = await openControls(browse);
     expect(await screen.findByRole("button", { name: "Resume recording" })).toBeDisabled();
     expect(screen.getByText(/Take over this live browser/)).toBeVisible();
@@ -668,7 +708,8 @@ describe("start destinations and current live control", () => {
     const get = vi.mocked(apiClient.get).getMockImplementation()!;
     let missing = true;
     vi.mocked(apiClient.get).mockImplementation(async (path, options) => {
-      if (missing && path.startsWith("/browser-teachings/")) throw new ApiError(404, "PRIVATE");
+      if (missing && path.startsWith("/browser-procedures/teachings/"))
+        throw new ApiError(404, "PRIVATE");
       return get(path, options);
     });
     await openControls();
@@ -681,10 +722,10 @@ describe("start destinations and current live control", () => {
 
   it("offers a GET-only refresh after its live capture polling window ends", async () => {
     vi.useFakeTimers();
-    current = teachingFixture({ status: "recording" });
+    current = browserProcedureTeachingFixture({ status: "recording" });
     setup(
       <BrowserTeachingControls
-        browse={teachingBrowseFixture({
+        browse={browserProcedureTeachingBrowseFixture({
           teachingSessionId: ids.session,
           teachingStatus: "recording",
         })}
@@ -726,7 +767,7 @@ describe("start destinations and current live control", () => {
             throw new ApiError(403, "PRIVATE");
           return get(path, options);
         });
-      await openControls(teachingBrowseFixture());
+      await openControls(browserProcedureTeachingBrowseFixture());
       const expected =
         kind === "deployment"
           ? "Browser teaching is unavailable on this deployment."
@@ -740,7 +781,7 @@ describe("start destinations and current live control", () => {
   );
 
   it("can stop an unfinished refinement through the current panel", async () => {
-    current = teachingFixture({ source: "refinement", status: "recording" });
+    current = browserProcedureTeachingFixture({ source: "refinement", status: "recording" });
     await openControls();
     await userEvent.click(await screen.findByRole("button", { name: "Stop this suggestion" }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1));
@@ -748,7 +789,7 @@ describe("start destinations and current live control", () => {
   });
 
   it("coalesces immediate Pause clicks and displays a refused transition", async () => {
-    current = teachingFixture({ status: "recording" });
+    current = browserProcedureTeachingFixture({ status: "recording" });
     let refuse!: () => void;
     vi.mocked(apiClient.patch).mockImplementation(
       () =>

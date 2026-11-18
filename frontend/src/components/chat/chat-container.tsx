@@ -1116,6 +1116,7 @@ export function ChatContainer({
         openId === undefined ||
         sideThreadRequestRef.current !== null
       ) {
+        // i18n-exempt: Internal invariant; the catch shows the localized createFailed alert.
         throw new Error("Side thread cannot be created in this conversation");
       }
       const request = {};
@@ -1131,6 +1132,7 @@ export function ChatContainer({
           fork.forked_from.conversation_id !== openId ||
           fork.forked_from.message_id !== messageId
         ) {
+          // i18n-exempt: Internal response check; the catch shows the localized createFailed alert.
           throw new Error("Side thread response does not match its source answer");
         }
         setActiveSideThread({ scopeKey, sourceConversationId: openId, fork });

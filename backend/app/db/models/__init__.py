@@ -28,9 +28,12 @@ from app.db.models.conversation_last_read import ConversationLastRead
 from app.db.models.browser_sign_in import BrowserSignIn
 from app.db.models.browser_credential_continuation import BrowserCredentialContinuation
 from app.db.models.browser_teaching import (
-    BrowserTeachingPolicy,
-    BrowserTeachingPreference,
     BrowserTeachingSession,
+)
+from app.db.models.browser_procedure_teaching import (
+    BrowserProcedureTeachingPolicy,
+    BrowserProcedureTeachingPreference,
+    BrowserProcedureTeachingSession,
 )
 from app.db.models.browser_credential import (
     BrowserCredentialAgentGrant,
@@ -265,9 +268,10 @@ __all__ = [
     "Visual",
     "ApiKey",
     "BrowserSignIn",
-    "BrowserTeachingPolicy",
-    "BrowserTeachingPreference",
     "BrowserTeachingSession",
+    "BrowserProcedureTeachingPolicy",
+    "BrowserProcedureTeachingPreference",
+    "BrowserProcedureTeachingSession",
     "BrowserCredentialAgentGrant",
     "BrowserCredentialMemberGrant",
     "BrowserCredentialPlan",

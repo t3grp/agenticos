@@ -87,7 +87,7 @@ describe("useLiveBrowse", () => {
     receive(frame({ kind: "browser_protected", output_protected: true }));
     receive(
       frame({
-        kind: "browser_teaching",
+        kind: "browser_procedure_teaching",
         teaching_session_id: "capture",
         teaching_revision: 1,
         teaching_status: "recording",

@@ -92,8 +92,8 @@ from app.agents.capabilities.browser_use._plans import plan_key
 from app.agents.capabilities.browser_use._preview import Preview
 from app.agents.capabilities.browser_use._protected import BrowserOutputGuard
 from app.agents.capabilities.browser_use._route import BrowserRoute, recheck
-from app.agents.capabilities.browser_use._teaching_hooks import TeachingCapture
-from app.agents.capabilities.browser_use._teaching_page import TeachingPage
+from app.agents.capabilities.browser_use._teaching_capture import BrowserTeachingCapture
+from app.agents.capabilities.browser_use._teaching_page import BrowserProcedureTeachingPage
 from app.agents.capabilities.skills._log import SkillUseLog
 from app.agents.deps import AgentDeps
 from app.core.browser_continuation import (
@@ -103,15 +103,19 @@ from app.core.browser_continuation import (
 )
 from app.core.browser_fill import BrowserFillRefused, BrowserFillSelection
 from app.core.browser_origins import browser_origin
+from app.core.browser_procedure_teaching import BrowserProcedureTeachingRefused
 from app.core.browser_session import ProtectedSignIn
-from app.core.browser_teaching import TeachingRefused
+from app.core.config import settings
 from app.core.sanitize import UrlRefusedError
 from app.db.session import get_db_context
-from app.services import browse_plans, browser_sign_in, live_browse
+from app.services import browse_plans, browser_sign_in, browser_teaching, live_browse
 from app.services.browser_credentials import BrowserCredentialPlanService
 from app.services.browser_credentials._continuation import ContinuationClaim
 from app.services.browser_credentials._controller import BrowserCredentialController
 from app.services.browser_credentials._saved_sessions import protected_restore
+from app.services.browser_procedure_teaching._capture import (
+    BrowserProcedureTeachingCapture as ProcedureCapture,
+)
 
 BROWSER_TAB_REQUIREMENT = "agenticos_browser_tab_requirement"
 
@@ -173,7 +177,7 @@ async def _live(
     call_id: str,
     task: str,
     get_guard: Callable[[], BrowserOutputGuard | None] | None = None,
-    get_teaching: Callable[[], TeachingCapture | None] | None = None,
+    get_teaching: Callable[[], BrowserTeachingCapture | None] | None = None,
 ) -> tuple[BrowserEventSink | None, BrowserControl | None, str | None]:
     """Where this browse's frames go, where its people's commands come from, and its run.
 
@@ -270,10 +274,13 @@ async def _live(
 
     async def sink(event: BrowserEvent) -> bool:
         nonlocal last_image, bound_guard, last_step, tab_id
+        teaching = None if get_teaching is None else get_teaching()
+        if teaching is not None:
+            # Transforming an event may stop a recorder, whose cleanup can
+            # publish a final status event through this same sink. Do that
+            # before taking event_lock; the composite closes admission first.
+            event = await teaching.event(event)
         async with event_lock:
-            teaching = None if get_teaching is None else get_teaching()
-            if teaching is not None:
-                event = teaching.event(event)
             guard = None if get_guard is None else get_guard()
             if guard is None:
                 return await publish_event(event)
@@ -811,22 +818,6 @@ def build_toolset(
                     sign_ins=sign_ins,
                     route=pinned_route,
                 )
-            redis = live_browse.credential_redis()
-            if allow_teaching and isinstance(opened.page, CdpPage) and redis is not None:
-                from app.services.browser_teaching._capture import BrowserTeachingCapture
-
-                opened.teaching = await BrowserTeachingCapture.create(
-                    deps=ctx.deps,
-                    tab_id=toolset.tab_id,
-                    redis=redis,
-                    page=TeachingPage(opened.page._credential_command),
-                    guard=opened.page.output_guard,
-                    step=lambda: opened.steps,
-                    locate=opened.page._locate,
-                )
-                if opened.teaching is not None:
-                    assert toolset._stack is not None
-                    toolset._stack.push_async_callback(opened.teaching.close)
         except (httpx.HTTPError, OSError) as exc:
             # Only while opening: the browser was never reached - a name that does
             # not resolve, a refused connection, an endpoint answering 5xx. The
@@ -840,8 +831,48 @@ def build_toolset(
                 type(exc).__name__,
             )
             return UNREACHABLE
-        else:
-            return opened
+        # Teaching capture only in the deployment's own server browser, never in a
+        # hosted endpoint or a person's native desktop tab.
+        provisioned = (
+            not hosted
+            and not resume_local
+            and bool(settings.BROWSER_SIGN_IN_CDP_URL)
+            and cdp_url.rstrip("/") == settings.BROWSER_SIGN_IN_CDP_URL.rstrip("/")
+        )
+        simple_capture = browser_teaching.attach(
+            ctx.deps,
+            opened.page,
+            provisioned=provisioned
+            and isinstance(opened.page, CdpPage)
+            and not opened.page.output_guard.active,
+            tab_id=opened.tab_id,
+        )
+        procedure_capture = None
+        redis = live_browse.credential_redis()
+        if (
+            allow_teaching
+            and provisioned
+            and isinstance(opened.page, CdpPage)
+            and not opened.page.output_guard.active
+            and redis is not None
+        ):
+            procedure_capture = await ProcedureCapture.create(
+                deps=ctx.deps,
+                tab_id=toolset.tab_id,
+                redis=redis,
+                page=BrowserProcedureTeachingPage(opened.page._credential_command),
+                guard=opened.page.output_guard,
+                step=lambda: opened.steps,
+                locate=opened.page._locate,
+            )
+        if simple_capture is not None or procedure_capture is not None:
+            assert isinstance(opened.page, CdpPage)
+            opened.teaching = BrowserTeachingCapture(
+                simple_capture, procedure_capture, opened.page.output_guard
+            )
+            assert toolset._stack is not None
+            toolset._stack.push_async_callback(opened.teaching.close)
+        return opened
 
     async def direct_view(ctx: RunContext[AgentDeps], goal: str) -> tuple[DirectView, bool]:
         """The view this run's direct actions are drawn in, and whether it is new."""
@@ -1258,14 +1289,16 @@ def build_toolset(
             return NO_TAB
         if not isinstance(session.page, CdpPage) or session.page.output_guard.active:
             return "Browser procedures are unavailable for this page."
-        from app.services.browser_teaching._discovery import discover
+        from app.services.browser_procedure_teaching._discovery import discover
 
         try:
             with anyio.fail_after(15):
-                observed = await TeachingPage(session.page._credential_command).observe("origin")
+                observed = await BrowserProcedureTeachingPage(
+                    session.page._credential_command
+                ).observe("origin")
                 async with get_db_context() as db:
                     procedures = await discover(db, ctx.deps, skill_log, observed.origin)
-        except TeachingRefused:
+        except BrowserProcedureTeachingRefused:
             return "Browser procedures are unavailable for this page or current authority."
         except Exception:
             return "Browser procedure discovery is unavailable."

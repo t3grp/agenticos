@@ -52,6 +52,7 @@ from app.api.routes.v1 import secrets
 from app.api.routes.v1 import runs as agent_runs
 from app.api.routes.v1 import stats
 from app.api.routes.v1 import skill_changes
+from app.api.routes.v1 import browser_teaching
 from app.api.routes.v1 import auto_skill_learning
 from app.api.routes.v1 import context_changes, skill_checks
 from app.api.routes.v1 import workspaces as agent_workspaces
@@ -81,7 +82,7 @@ from app.api.routes.v1 import memory as memory_files
 from app.api.routes.v1 import onboarding, outcomes, primary_conversations, system_agents
 from app.api.routes.v1 import browser_sign_ins
 from app.api.routes.v1 import browser_credentials
-from app.api.routes.v1 import browser_teaching
+from app.api.routes.v1 import browser_procedure_teaching
 from app.api.routes.v1 import coding_accounts
 from app.api.routes.v1 import permissions
 from app.api.routes.v1 import email_webhook, imessage_webhook, sms_webhook, telegram_webhook, phone
@@ -153,7 +154,9 @@ v1_router.include_router(embed_widget.router, prefix="/embed", tags=["embed"])
 v1_router.include_router(embed_generated_media.router, prefix="/embed", tags=["embed"])
 v1_router.include_router(agent_runs.router, tags=["runs"])
 v1_router.include_router(browser_credentials.router, tags=["browser-credentials"])
-v1_router.include_router(browser_teaching.router, tags=["browser-teaching"])
+v1_router.include_router(
+    browser_procedure_teaching.router, tags=["browser-procedure-teaching"]
+)
 v1_router.include_router(stats.router, tags=["stats"])
 v1_router.include_router(agent_skills.router, prefix="/skills", tags=["skills"])
 v1_router.include_router(skill_checks.router, prefix="/skills", tags=["skills:checks"])
@@ -314,6 +317,9 @@ v1_router.include_router(workflow_run_socket.router, tags=["workflow-runs"])
 v1_router.include_router(change_events.router, tags=["change-events"])
 v1_router.include_router(device_hub.router, tags=["devices"])
 v1_router.include_router(browse_live.router, tags=["browse-live"])
+v1_router.include_router(
+    browser_teaching.router, prefix="/browser-teachings", tags=["browser-teaching"]
+)
 
 v1_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 

@@ -7,25 +7,28 @@ from uuid import UUID
 from app.agents.browser_events import BrowserCommand, BrowserEvent, BrowserEventSink
 from app.agents.capabilities.browser_use._decision import Action
 from app.agents.capabilities.browser_use._elements import Element
-from app.core.browser_teaching import CaptureObservation, TeachingAction
+from app.core.browser_procedure_teaching import (
+    BrowserProcedureTeachingAction,
+    BrowserProcedureTeachingObservation,
+)
 
 
 @dataclass(frozen=True)
-class TeachingInput:
+class BrowserProcedureTeachingInput:
     input_id: UUID
-    action: TeachingAction
-    observation: CaptureObservation | None
+    action: BrowserProcedureTeachingAction
+    observation: BrowserProcedureTeachingObservation | None
     direction: Literal["up", "down"] | None = None
 
 
-class TeachingCapture(Protocol):
+class BrowserProcedureTeachingCapture(Protocol):
     async def begin_task(self, call_id: str, emit: BrowserEventSink | None) -> None: ...
 
     async def before_action(
         self, action: Action, element: Element | None
-    ) -> TeachingInput | None: ...
+    ) -> BrowserProcedureTeachingInput | None: ...
 
-    async def after_action(self, prepared: TeachingInput | None) -> None: ...
+    async def after_action(self, prepared: BrowserProcedureTeachingInput | None) -> None: ...
 
     async def finish_task(self, *, completed: bool) -> None: ...
 
@@ -38,9 +41,11 @@ class TeachingCapture(Protocol):
         emit: BrowserEventSink,
     ) -> UUID | None: ...
 
-    async def before_input(self, command: BrowserCommand) -> TeachingInput | None: ...
+    async def before_input(
+        self, command: BrowserCommand
+    ) -> BrowserProcedureTeachingInput | None: ...
 
-    async def after_input(self, prepared: TeachingInput | None) -> None: ...
+    async def after_input(self, prepared: BrowserProcedureTeachingInput | None) -> None: ...
 
     async def failed_input(self) -> None: ...
 

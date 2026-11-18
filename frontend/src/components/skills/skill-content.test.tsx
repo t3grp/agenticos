@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api-client";
 import { ApiError } from "@/lib/api-error";
 import { SkillContent } from "./skill-content";
-import { browserProcedureFixture } from "@/test-utils/browser-teaching";
+import { browserProcedureFixture } from "@/test-utils/browser-procedure-teaching";
 // This file verifies rich Markdown, so load the real lazy chunk before its render assertions.
 import "@/components/chat/markdown-content.impl";
 

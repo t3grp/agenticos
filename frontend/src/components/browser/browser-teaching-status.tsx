@@ -2,20 +2,24 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui";
-import { teachingReason } from "@/lib/browser-teaching-review";
-import type { TeachingSummary } from "@/types/browser-teaching";
+import { browserProcedureTeachingReason } from "@/lib/browser-procedure-teaching-review";
+import type { BrowserProcedureTeachingSummary } from "@/types/browser-procedure-teaching";
 
 export function TeachingError({ error }: { error: unknown }) {
-  const t = useTranslations("browserTeaching");
-  const reason = teachingReason(error);
+  const t = useTranslations("browserProcedureTeaching");
+  const reason = browserProcedureTeachingReason(error);
   return (
     <p role="alert" className="text-destructive text-sm">
       {reason ? t(`reason.${reason}`) : t("requestUnavailable")}
     </p>
   );
 }
-export function TeachingStatus({ session }: { session: TeachingSummary }) {
-  const t = useTranslations("browserTeaching");
+export function BrowserProcedureTeachingStatus({
+  session,
+}: {
+  session: BrowserProcedureTeachingSummary;
+}) {
+  const t = useTranslations("browserProcedureTeaching");
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Badge variant="outline">{t(`status.${session.status}`)}</Badge>

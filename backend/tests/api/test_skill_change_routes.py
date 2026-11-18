@@ -48,6 +48,7 @@ def _row(**overrides: Any) -> MagicMock:
     row.source = None
     row.browser_procedure = None
     row.authoring_request_id = None
+    row.browser_teaching_id = None
     row.rationale = ""
     row.evidence = []
     row.evidence_dropped = 0

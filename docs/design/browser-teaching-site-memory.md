@@ -128,7 +128,7 @@ capture with a visible reason; it does not silently truncate a procedure.
 
 ## Runtime persistence and states
 
-The dedicated `browser_teaching_sessions` row records:
+The dedicated `browser_procedure_teaching_sessions` row records:
 `id`, `organization_id`, `owner_user_id`, `agent_id`, `run_id`,
 `controller_id`, `connection_id`, `takeover_id`, `call_id`, `tab_id`,
 `target_skill_id`, `allowed_origins`, `source`, `status`, `revision`,
@@ -138,10 +138,12 @@ The dedicated `browser_teaching_sessions` row records:
 
 The browser identities are references, not CDP endpoints or credentials.
 The row records authority and provenance; it does not own a second browser.
-Migration `0335_browser_teaching` follows the real
-`0334_workflow_media_operations` revision. The feature branch and core migration
-head remain separate until the release's explicit merge revision; neither
-published history nor the predecessor is renamed or replaced.
+Migration `0344_browser_procedure_teaching` follows
+`0343_workflow_media_operations` in the forward chain after the existing
+`0340_browser_teaching_review` head. The existing quick-capture table and
+review migrations remain unchanged. Both capture flows acquire the same
+transaction-scoped lock for the organization, run and call before admitting a
+recording, so they cannot record the same browser view concurrently.
 
 | State | Allowed next states | Effect |
 |---|---|---|
@@ -161,16 +163,21 @@ background queue. A missed job must be retriable without reviving recording.
 All responses contain sanitized procedure metadata only. Routes call a teaching
 service, which coordinates repositories and browser ownership checks.
 
+Advanced authoring uses the `/v1/browser-procedures/teachings` API and the
+`/skills/teaching` pages. The existing `/v1/browser-teachings` API and
+`/browse/teachings/{id}` review page retain their quick-capture contract. Both
+produce ordinary pending skill proposals that require an explicit decision.
+
 | Route | Contract |
 |---|---|
-| `POST /v1/browser-teachings` | Start a new-skill candidate. Collection gate uses `skills:edit`; service also requires current permission to use the agent and own the browser lease. The client-generated `request_id` identifies one exact start intent. |
-| `POST /v1/skills/{skill_id}/browser-teachings` | Start a candidate for an existing skill. The service resolves `skills:edit` on that exact skill, including grants; no broad role gate overrides the grant. |
-| `GET /v1/browser-teachings` | Discover the current personal owner's captures in the active organization using bounded, newest-first cursor pages. The response contains only closed summary metadata. |
-| `GET /v1/browser-teachings/{id}` | Owner-only metadata and review payload, scoped to the current organization. |
-| `PATCH /v1/browser-teachings/{id}` | Pause/resume or edit review fields using `If-Match` and the current revision. |
-| `POST /v1/browser-teachings/{id}/stop` | Atomically stop capture and enter review. Repeated stop returns the same review state. |
-| `POST /v1/browser-teachings/{id}/propose` | Validate reviewed content, check current authority and budget, then enqueue one proposal build. Same source hash produces one proposal. |
-| `DELETE /v1/browser-teachings/{id}` | Discard an unproposed session and erase payloads. This does not undo browser actions or delete an already applied skill. |
+| `POST /v1/browser-procedures/teachings` | Start a new-skill candidate. Collection gate uses `skills:edit`; service also requires current permission to use the agent and own the browser lease. The client-generated `request_id` identifies one exact start intent. |
+| `POST /v1/skills/{skill_id}/browser-procedures/teachings` | Start a candidate for an existing skill. The service resolves `skills:edit` on that exact skill, including grants; no broad role gate overrides the grant. |
+| `GET /v1/browser-procedures/teachings` | Discover the current personal owner's captures in the active organization using bounded, newest-first cursor pages. The response contains only closed summary metadata. |
+| `GET /v1/browser-procedures/teachings/{id}` | Owner-only metadata and review payload, scoped to the current organization. |
+| `PATCH /v1/browser-procedures/teachings/{id}` | Pause/resume or edit review fields using `If-Match` and the current revision. |
+| `POST /v1/browser-procedures/teachings/{id}/stop` | Atomically stop capture and enter review. Repeated stop returns the same review state. |
+| `POST /v1/browser-procedures/teachings/{id}/propose` | Validate reviewed content, check current authority and budget, then enqueue one proposal build. Same source hash produces one proposal. |
+| `DELETE /v1/browser-procedures/teachings/{id}` | Discard an unproposed session and erase payloads. This does not undo browser actions or delete an already applied skill. |
 | `GET`, `PUT /v1/browser-teaching-policy` | Read the organization opt-in and deployment admission; changing it requires current `org:settings` and the exact policy generation. |
 | `GET`, `PUT /v1/agents/{agent_id}/browser-teaching-preference` | Read or change the acting member's opt-in for this agent using its exact generation. A known choice can still be revoked after agent access is lost. |
 

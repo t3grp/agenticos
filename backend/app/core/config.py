@@ -1241,8 +1241,9 @@ class Settings(BaseSettings):
     # `BROWSER_CDP_ALLOWED_HOSTS` like any agent's. Empty hides the option.
     BROWSER_SIGN_IN_CDP_URL: str = ""
 
-    # Teaching is separately admitted for synthetic/test organizations first.
-    # Organization policy and the published agent/member opt-ins can only narrow it.
+    # Browser teaching capture (#113). Off by default; when on, only the listed
+    # organizations may use the provisioned browser. Policy and agent/member
+    # preferences can further narrow rich procedure teaching.
     BROWSER_TEACHING_ENABLED: bool = False
     BROWSER_TEACHING_ORGANIZATION_IDS: list[UUID] = []
 
@@ -1254,7 +1255,6 @@ class Settings(BaseSettings):
     BROWSER_CREDENTIAL_TOTP_ENABLED: bool = False
     BROWSER_CREDENTIAL_PROFILE_ENABLED: bool = False
     BROWSER_CREDENTIAL_SHARED_ENABLED: bool = False
-
     # The browser a visual is drawn to a picture with (#2171), where no frame can
     # run it: a chat app's reply and a dashboard thumbnail of a page. The compose
     # `browser` service, `http://browser:9222`, whose host has to be in

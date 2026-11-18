@@ -1,149 +1,114 @@
-"""Owner-scoped capture metadata and explicit review; no client append or replay endpoint."""
+"""Teach a task: record, review and propose a browser demonstration as a skill (#113).
+
+No route accepts recorder events. Steps are appended only by the capture in the
+run's worker, at the held tab's input boundary. Every route refuses while the
+deployment flag is off, except read, stop, pause and discard, which only close
+or erase. A row that is not the caller's own answers `404`, like a missing one.
+
+Review edits labels and parameter names only. Propose queues one proposal build;
+the result is an ordinary pending skill proposal, applied or discarded through
+`/skill-changes`. Nothing here publishes or binds a skill.
+"""
 
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Header, status
 
-from app.api.deps import (
-    Auth,
-    BrowserTeachingDraftSvc,
-    BrowserTeachingPolicySvc,
-    BrowserTeachingSvc,
-    no_store_response,
-    require,
-)
-from app.api.routes.v1._browser_teaching_http import Revision, with_etag
+from app.api.deps import Auth, BrowserTeachingSvc, require
+from app.core.browser_teaching import revision_from_if_match
 from app.core.permissions import Perm
 from app.schemas.browser_teaching import (
-    TeachingChange,
-    TeachingList,
-    TeachingPolicyRead,
-    TeachingPolicyWrite,
-    TeachingPreferenceRead,
-    TeachingPreferenceWrite,
+    TeachingEdit,
     TeachingPropose,
     TeachingRead,
+    TeachingReview,
     TeachingStart,
 )
 
-router = APIRouter(dependencies=[Depends(no_store_response)])
+router = APIRouter()
 
 
 @router.post(
-    "/browser-teachings",
+    "",
     response_model=TeachingRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require(Perm.SKILLS_EDIT))],
 )
-async def start_new(
-    data: TeachingStart, ctx: Auth, service: BrowserTeachingSvc, response: Response
-) -> TeachingRead:
-    return with_etag(response, await service.start(ctx, data))
-
-
-@router.post(
-    "/skills/{skill_id}/browser-teachings",
-    response_model=TeachingRead,
-    status_code=status.HTTP_201_CREATED,
-)
-async def start_for_skill(
-    skill_id: UUID, data: TeachingStart, ctx: Auth, service: BrowserTeachingSvc, response: Response
-) -> TeachingRead:
-    return with_etag(response, await service.start(ctx, data, skill_id=skill_id))
-
-
-@router.get("/browser-teachings", response_model=TeachingList)
-async def list_sessions(
+async def start_browser_teaching(
+    body: TeachingStart,
     ctx: Auth,
     service: BrowserTeachingSvc,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
-    cursor: Annotated[str | None, Query(max_length=512)] = None,
+    idempotency_key: Annotated[
+        str | None,
+        Header(
+            alias="Idempotency-Key",
+            max_length=255,
+            description="A retry under the same key returns the same session.",
+        ),
+    ] = None,
 ) -> Any:
-    """Find the current personal owner's captures, newest first in the active organization.
+    """Start recording in a browser view the caller holds now.
 
-    A page carries only closed summary metadata. Opening a capture or making a
-    decision still requires its per-ID owner read and existing effect authority.
-    Cursors are opaque and audience-bound; an invalid cursor returns
-    BAD_REQUEST with details.reason_code=invalid_cursor. Start again without it.
+    The caller must have taken over the view as the run's own person; the run must
+    be running and theirs. Refused with `browser_not_held` otherwise.
     """
-    return await service.list(ctx, limit=limit, cursor=cursor)
+    return await service.start(ctx, body, idempotency_key)
 
 
-@router.get("/browser-teachings/{session_id}", response_model=TeachingRead)
-async def read_session(
-    session_id: UUID, ctx: Auth, service: BrowserTeachingSvc, response: Response
-) -> TeachingRead:
-    return with_etag(response, await service.get(ctx, session_id))
+@router.get("/{session_id}", response_model=TeachingRead)
+async def get_browser_teaching(session_id: UUID, ctx: Auth, service: BrowserTeachingSvc) -> Any:
+    """The caller's own session, with its sanitized structural steps."""
+    return await service.get(ctx, session_id)
 
 
-@router.patch("/browser-teachings/{session_id}", response_model=TeachingRead)
-async def change_session(
+@router.patch("/{session_id}", response_model=TeachingRead)
+async def change_browser_teaching(
     session_id: UUID,
-    data: TeachingChange,
-    revision: Revision,
+    body: TeachingEdit,
     ctx: Auth,
     service: BrowserTeachingSvc,
-    response: Response,
-) -> TeachingRead:
-    return with_etag(response, await service.change(ctx, session_id, revision, data))
+    if_match: Annotated[str | None, Header(alias="If-Match", max_length=32)] = None,
+) -> Any:
+    """Pause, resume, or replace the review's labels and parameter names.
 
-
-@router.post("/browser-teachings/{session_id}/stop", response_model=TeachingRead)
-async def stop_session(
-    session_id: UUID, ctx: Auth, service: BrowserTeachingSvc, response: Response
-) -> TeachingRead:
-    return with_etag(response, await service.stop(ctx, session_id))
-
-
-@router.delete("/browser-teachings/{session_id}", response_model=TeachingRead)
-async def discard_session(
-    session_id: UUID, ctx: Auth, service: BrowserTeachingSvc, response: Response
-) -> TeachingRead:
-    return with_etag(response, await service.discard(ctx, session_id))
+    `If-Match` must name the current revision, or the answer is `409`. Sending the
+    stored review again returns the session unchanged.
+    """
+    revision = revision_from_if_match(if_match)
+    if isinstance(body, TeachingReview):
+        return await service.review(ctx, session_id, body, revision)
+    return await service.change(ctx, session_id, body, revision)
 
 
 @router.post(
-    "/browser-teachings/{session_id}/propose",
-    response_model=TeachingRead,
-    status_code=status.HTTP_202_ACCEPTED,
+    "/{session_id}/propose", response_model=TeachingRead, status_code=status.HTTP_202_ACCEPTED
 )
-async def propose(
+async def propose_browser_teaching(
     session_id: UUID,
-    data: TeachingPropose,
-    revision: Revision,
+    body: TeachingPropose,
     ctx: Auth,
-    service: BrowserTeachingDraftSvc,
-    response: Response,
-) -> TeachingRead:
-    return with_etag(response, await service.propose(ctx, session_id, revision, data))
+    service: BrowserTeachingSvc,
+    if_match: Annotated[str | None, Header(alias="If-Match", max_length=32)] = None,
+) -> Any:
+    """Queue one skill proposal from the reviewed steps, parameter names and allowed origins.
+
+    Checks authority and the organization's budget first, and the build checks
+    them again. Repeating it for the same name returns the same session and
+    never a second proposal.
+    """
+    return await service.propose(ctx, session_id, body, revision_from_if_match(if_match))
 
 
-@router.get("/browser-teaching-policy", response_model=TeachingPolicyRead)
-async def read_policy(ctx: Auth, service: BrowserTeachingPolicySvc) -> TeachingPolicyRead:
-    return await service.get(ctx)
+@router.post("/{session_id}/stop", response_model=TeachingRead)
+async def stop_browser_teaching(session_id: UUID, ctx: Auth, service: BrowserTeachingSvc) -> Any:
+    """Close capture and enter review. Repeating it returns the same review state."""
+    return await service.stop(ctx, session_id)
 
 
-@router.put(
-    "/browser-teaching-policy",
-    response_model=TeachingPolicyRead,
-    dependencies=[Depends(require(Perm.ORG_SETTINGS))],
-)
-async def update_policy(
-    data: TeachingPolicyWrite, ctx: Auth, service: BrowserTeachingPolicySvc
-) -> TeachingPolicyRead:
-    return await service.update(ctx, data)
-
-
-@router.get("/agents/{agent_id}/browser-teaching-preference", response_model=TeachingPreferenceRead)
-async def read_preference(
-    agent_id: UUID, ctx: Auth, service: BrowserTeachingPolicySvc
-) -> TeachingPreferenceRead:
-    return await service.preference(ctx, agent_id)
-
-
-@router.put("/agents/{agent_id}/browser-teaching-preference", response_model=TeachingPreferenceRead)
-async def update_preference(
-    agent_id: UUID, data: TeachingPreferenceWrite, ctx: Auth, service: BrowserTeachingPolicySvc
-) -> TeachingPreferenceRead:
-    return await service.update_preference(ctx, agent_id, data)
+@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+async def discard_browser_teaching(
+    session_id: UUID, ctx: Auth, service: BrowserTeachingSvc
+) -> None:
+    """Erase the recording. It does not undo anything done in the browser."""
+    await service.discard(ctx, session_id)

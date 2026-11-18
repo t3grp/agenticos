@@ -1,150 +1,121 @@
-"""Authenticated teaching requests contain identities and reviewed metadata, never inputs."""
+"""Browser teaching request and response bodies. Responses hold sanitized metadata only."""
 
 from datetime import datetime
-from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.browser_origins import browser_origin
 from app.core.browser_teaching import (
-    BrowserProcedure,
-    CapturedAction,
-    TeachingGeneration,
-    TeachingModel,
+    MAX_EVENTS,
+    MAX_ORIGINS,
+    MAX_PARAMETERS,
+    CapturedStep,
+    ReviewedStep,
     TeachingReason,
-    TeachingReview,
     TeachingState,
+    teaching_origin,
 )
+from app.schemas.skill import skill_name_refusal
 
 
-class TeachingStart(TeachingModel):
-    request_id: UUID
+class _Request(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+
+class TeachingStart(_Request):
+    """Start recording in a browser view the caller holds right now.
+
+    Organization and person come from the authenticated context, never from here.
+    """
+
     run_id: UUID
     call_id: str = Field(min_length=1, max_length=200)
-    tab_id: str = Field(min_length=1, max_length=200)
-    takeover_id: UUID
     title: str = Field(min_length=1, max_length=160)
-    allowed_origins: tuple[str, ...] = Field(min_length=1, max_length=10)
+    allowed_origins: tuple[str, ...] = Field(min_length=1, max_length=MAX_ORIGINS)
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, value: str) -> str:
+        value = value.strip()
+        if not value or any(ord(char) < 32 or ord(char) == 127 for char in value):
+            raise ValueError("Use a short plain title")
+        return value
 
     @field_validator("allowed_origins")
     @classmethod
     def _origins(cls, values: tuple[str, ...]) -> tuple[str, ...]:
-        canonical = tuple(browser_origin(value) for value in values)
-        if len(set(canonical)) != len(canonical):
-            raise ValueError("Name each exact origin once")
-        return canonical
+        origins = tuple(teaching_origin(value) for value in values)
+        if len(set(origins)) != len(origins):
+            raise ValueError("List each origin once")
+        return origins
 
 
-class TeachingChange(TeachingModel):
-    action: Literal["pause", "resume", "review"]
-    takeover_id: UUID | None = None
-    review: TeachingReview | None = None
+class TeachingChange(_Request):
+    """Pause or resume capture. The current revision is sent in `If-Match`."""
 
-    @model_validator(mode="after")
-    def _shape(self) -> TeachingChange:
-        if (self.action == "resume") != (self.takeover_id is not None) or (
-            self.action == "review"
-        ) != (self.review is not None):
-            raise ValueError("Supply only the data for this transition")
-        return self
+    action: Literal["pause", "resume"]
 
 
-class TeachingPropose(TeachingModel):
-    mode: Literal["reviewed", "assistant"] = "reviewed"
-    max_cost_usd: Decimal | None = Field(default=None, gt=0, le=10, max_digits=12, decimal_places=6)
+class TeachingReview(_Request):
+    """Replace the reviewed labels and parameter names. The current revision is sent in `If-Match`.
 
-    @model_validator(mode="after")
-    def _explicit_budget(self) -> TeachingPropose:
-        if (self.mode == "assistant") != (self.max_cost_usd is not None):
-            raise ValueError(
-                "Assistant drafting requires an explicit budget; reviewed drafts use none"
-            )
-        return self
+    Each step is named by its sequence. A step with neither a label nor a
+    parameter is simply not reviewed yet. Sending exactly the stored review again
+    changes nothing, whatever the revision.
+    """
+
+    action: Literal["review"]
+    steps: tuple[ReviewedStep, ...] = Field(max_length=MAX_EVENTS)
+
+    @field_validator("steps")
+    @classmethod
+    def _steps(cls, steps: tuple[ReviewedStep, ...]) -> tuple[ReviewedStep, ...]:
+        sequences = [step.sequence for step in steps]
+        if len(set(sequences)) != len(sequences):
+            raise ValueError("Review each step once")
+        if len({step.parameter for step in steps if step.parameter}) > MAX_PARAMETERS:
+            raise ValueError(f"Use at most {MAX_PARAMETERS} parameters")
+        return tuple(sorted(steps, key=lambda step: step.sequence))
 
 
-class TeachingRead(TeachingModel):
+TeachingEdit = Annotated[TeachingChange | TeachingReview, Field(discriminator="action")]
+
+
+class TeachingPropose(_Request):
+    """Ask for one skill proposal from the reviewed steps. The current revision is sent in `If-Match`."""
+
+    name: str = Field(
+        min_length=1, max_length=64, description="The new skill's name, such as `download-invoice`"
+    )
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, value: str) -> str:
+        refusal = skill_name_refusal(value)
+        if refusal is not None:
+            raise ValueError(refusal)
+        return value
+
+
+class TeachingRead(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     id: UUID
     agent_id: UUID
     run_id: UUID
     call_id: str
     tab_id: str
-    target_skill_id: UUID | None
     title: str
     allowed_origins: tuple[str, ...]
-    source: Literal["manual", "refinement"]
-    verified_success: bool = False
     status: TeachingState
     revision: int
     reason_code: TeachingReason | None
-    events: tuple[CapturedAction, ...]
-    review: TeachingReview | None
-    procedure: BrowserProcedure | None
-    generation_state: TeachingGeneration
-    generation_mode: Literal["reviewed", "assistant"] | None
-    max_cost_usd: Decimal | None
+    events: tuple[CapturedStep, ...]
+    review: tuple[ReviewedStep, ...]
+    parameters: tuple[str, ...]
+    proposal_name: str | None
     proposal_id: UUID | None
     created_at: datetime
-    expires_at: datetime
     capture_ends_at: datetime
-
-
-class TeachingSummary(TeachingModel):
-    """Owner discovery metadata; opening a capture still requires its authorized read."""
-
-    id: UUID
-    agent_id: UUID
-    target_skill_id: UUID | None
-    title: str = Field(max_length=160)
-    allowed_origins: tuple[str, ...] = Field(max_length=10)
-    source: Literal["manual", "refinement"]
-    verified_success: bool
-    status: TeachingState
-    revision: int = Field(ge=1)
-    reason_code: TeachingReason | None
-    generation_state: TeachingGeneration
-    proposal_id: UUID | None
-    created_at: datetime
     expires_at: datetime
-    capture_ends_at: datetime
-
-
-class TeachingList(TeachingModel):
-    """Newest-first owner page with an opaque, owner-and-organization-bound cursor."""
-
-    items: tuple[TeachingSummary, ...] = Field(max_length=100)
-    next_cursor: str | None
-
-
-class TeachingPolicyWrite(TeachingModel):
-    generation: UUID | None
-    enabled: bool
-
-
-class TeachingPolicyRead(TeachingModel):
-    enabled: bool
-    generation: UUID | None
-    deployment_enabled: bool
-
-
-class TeachingPreferenceWrite(TeachingModel):
-    generation: UUID | None
-    enabled: bool
-
-
-class TeachingPreferenceRead(TeachingModel):
-    agent_id: UUID
-    enabled: bool
-    generation: UUID | None
-    allowed: bool
-
-
-class DiscoveredProcedure(TeachingModel):
-    skill_id: UUID
-    skill_version_id: UUID
-    skill_name: str
-    procedure: BrowserProcedure
-    instruction: Literal[
-        "Observe the live page before every action; rematch the intended control and stop if it differs."
-    ] = "Observe the live page before every action; rematch the intended control and stop if it differs."

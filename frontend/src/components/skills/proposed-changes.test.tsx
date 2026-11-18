@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProposedChanges } from "./proposed-changes";
 import type { SkillChangeRecord } from "@/lib/skill-changes-api";
-import { browserProcedureFixture } from "@/test-utils/browser-teaching";
+import { browserProcedureFixture } from "@/test-utils/browser-procedure-teaching";
 
 const state = vi.hoisted(() => ({
   runsView: true,

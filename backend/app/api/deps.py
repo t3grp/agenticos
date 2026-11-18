@@ -92,9 +92,12 @@ from app.services.browser_credentials import (
     BrowserCredentialPlanService,
     BrowserCredentialPolicyService,
 )
-from app.services.browser_teaching._service import BrowserTeachingService
-from app.services.browser_teaching._policy import BrowserTeachingPolicyService
-from app.services.browser_teaching._generation import BrowserTeachingDraftService
+from app.services.browser_teaching import BrowserTeachingService
+from app.services.browser_procedure_teaching._service import BrowserProcedureTeachingService
+from app.services.browser_procedure_teaching._policy import BrowserProcedureTeachingPolicyService
+from app.services.browser_procedure_teaching._generation import (
+    BrowserProcedureTeachingDraftService,
+)
 from app.services.user import UserService
 from app.services.session import SessionService
 from app.services.web_push import WebPushService
@@ -1347,27 +1350,43 @@ BrowserCredentialPolicySvc = Annotated[
 
 
 def get_browser_teaching_service(db: DBSession, redis: Redis) -> BrowserTeachingService:
+    """Create BrowserTeachingService over the request's session and the shared Redis."""
     return BrowserTeachingService(db, redis)
 
 
 BrowserTeachingSvc = Annotated[BrowserTeachingService, Depends(get_browser_teaching_service)]
 
 
-def get_browser_teaching_policy_service(db: DBSession) -> BrowserTeachingPolicyService:
-    return BrowserTeachingPolicyService(db)
+def get_browser_procedure_teaching_service(
+    db: DBSession, redis: Redis
+) -> BrowserProcedureTeachingService:
+    return BrowserProcedureTeachingService(db, redis)
 
 
-BrowserTeachingPolicySvc = Annotated[
-    BrowserTeachingPolicyService, Depends(get_browser_teaching_policy_service)
+BrowserProcedureTeachingSvc = Annotated[
+    BrowserProcedureTeachingService, Depends(get_browser_procedure_teaching_service)
 ]
 
 
-def get_browser_teaching_draft_service(db: DBSession, redis: Redis) -> BrowserTeachingDraftService:
-    return BrowserTeachingDraftService(db, redis)
+def get_browser_procedure_teaching_policy_service(
+    db: DBSession,
+) -> BrowserProcedureTeachingPolicyService:
+    return BrowserProcedureTeachingPolicyService(db)
 
 
-BrowserTeachingDraftSvc = Annotated[
-    BrowserTeachingDraftService, Depends(get_browser_teaching_draft_service)
+BrowserProcedureTeachingPolicySvc = Annotated[
+    BrowserProcedureTeachingPolicyService, Depends(get_browser_procedure_teaching_policy_service)
+]
+
+
+def get_browser_procedure_teaching_draft_service(
+    db: DBSession, redis: Redis
+) -> BrowserProcedureTeachingDraftService:
+    return BrowserProcedureTeachingDraftService(db, redis)
+
+
+BrowserProcedureTeachingDraftSvc = Annotated[
+    BrowserProcedureTeachingDraftService, Depends(get_browser_procedure_teaching_draft_service)
 ]
 
 

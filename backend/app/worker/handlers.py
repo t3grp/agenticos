@@ -45,8 +45,13 @@ def ingest() -> Handlers:
 
 def production() -> Handlers:
     """Every kind, for a worker that runs the agent and system pools on its own loop."""
-    from app.services.browser_teaching._generation import draft_browser_teaching
-    from app.services.browser_teaching._maintenance import sweep_browser_teachings
+    from app.services.browser_procedure_teaching._generation import (
+        draft_browser_procedure_teaching,
+    )
+    from app.services.browser_procedure_teaching._maintenance import (
+        sweep_browser_procedure_teachings,
+    )
+    from app.services.browser_teaching import build_teaching_proposal, sweep_browser_teachings
     from app.services.coding_account_usage import refresh_usage
     from app.services.sandbox_workspace import retry_pending_destroys
     from app.worker.tasks import (
@@ -93,8 +98,13 @@ def production() -> Handlers:
             Handler(jobs.DELIVER_ROUTINE_ANSWER, trigger_tasks.deliver_routine_answer),
             Handler(jobs.RUN_AGENT, run_tasks.run_agent),
             Handler(jobs.REVERT_CODING_TASK, coding_tasks.revert_coding_task),
-            Handler(jobs.DRAFT_BROWSER_TEACHING, draft_browser_teaching),
+            Handler(jobs.BUILD_TEACHING_PROPOSAL, build_teaching_proposal),
             Handler(jobs.SWEEP_BROWSER_TEACHINGS, _each_tick(sweep_browser_teachings)),
+            Handler(jobs.DRAFT_BROWSER_PROCEDURE_TEACHING, draft_browser_procedure_teaching),
+            Handler(
+                jobs.SWEEP_BROWSER_PROCEDURE_TEACHINGS,
+                _each_tick(sweep_browser_procedure_teachings),
+            ),
             Handler(jobs.REFRESH_CODING_ACCOUNT_USAGE, refresh_usage),
             Handler(jobs.RUN_EVAL, eval_tasks.run_eval),
             Handler(jobs.RUN_AUTHORING, authoring_tasks.run_authoring),

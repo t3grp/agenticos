@@ -39,9 +39,11 @@ export interface Browse {
   heldById?: string | null;
   takeoverId?: string | null;
   teachingSessionId?: string | null;
-  teachingStatus?: import("@/types/browser-teaching").TeachingStatus | null;
+  teachingStatus?:
+    import("@/types/browser-procedure-teaching").BrowserProcedureTeachingStatus | null;
   teachingRevision?: number | null;
-  teachingReason?: import("@/types/browser-teaching").TeachingReason | null;
+  teachingReason?:
+    import("@/types/browser-procedure-teaching").BrowserProcedureTeachingReason | null;
   goal: string;
   maxSteps: number | null;
   url: string | null;
@@ -228,7 +230,7 @@ function applyTo(browse: Browse, frame: BrowserFrame): Browse {
         takeoverId: frame.takeover_id ?? null,
         pointer: null,
       };
-    case "browser_teaching":
+    case "browser_procedure_teaching":
       if (
         !frame.teaching_session_id ||
         (frame.teaching_session_id === browse.teachingSessionId &&

@@ -55,7 +55,7 @@ from app.schemas.skill_version import (
     VersionResourceSummary,
 )
 from app.services.access import AGENT, SKILL, accessible_ids, resolve_access
-from app.services.browser_teaching._versions import procedure_for_version
+from app.services.browser_procedure_teaching._versions import procedure_for_version
 from app.services.resource_usage import in_use_by
 
 ARCHIVE_AFTER = timedelta(days=30)

@@ -1,6 +1,6 @@
 """Native PostgreSQL rehearsal of the additive room handoff revision.
 
-The upgrade test commits to the disposable integration database, because 0332
+The upgrade test commits to the disposable integration database, because 0341
 builds its scope key concurrently. Existing
 submission bytes survive the upgrade, and used review evidence blocks rollback.
 """
@@ -23,7 +23,7 @@ from tests.integration.test_room_routing import room as room
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
-_PATH = Path(__file__).parents[2] / "alembic" / "versions" / "0332_room_task_handoffs.py"
+_PATH = Path(__file__).parents[2] / "alembic" / "versions" / "0341_room_task_handoffs.py"
 _SPEC = importlib.util.spec_from_file_location("room_handoff_migration", _PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 _MIGRATION = importlib.util.module_from_spec(_SPEC)
@@ -38,7 +38,7 @@ def migrate(connection, direction):
 
 
 async def step(connection, direction):
-    # 0332 builds its scope key CONCURRENTLY and validates its CHECK after commit,
+    # 0341 builds its scope key CONCURRENTLY and validates its CHECK after commit,
     # neither of which can run inside the fixture's open transaction. Commit first,
     # so Alembic owns the transaction its autocommit_block commits.
     await connection.commit()

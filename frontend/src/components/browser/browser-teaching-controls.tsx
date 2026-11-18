@@ -12,21 +12,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui";
-import { useBrowserTeaching } from "@/hooks/use-browser-teaching";
+import { useBrowserProcedureTeaching } from "@/hooks/use-browser-procedure-teaching";
 import {
-  useTeachingAudience,
-  useTeachingPolicy,
-  useTeachingRun,
-} from "@/hooks/use-browser-teaching-settings";
-import { isTeachingAudienceCurrent } from "@/lib/browser-teaching-api";
-import { isTeachingId, teachingDeadlineLive } from "@/lib/browser-teaching-review";
+  useBrowserProcedureTeachingAudience,
+  useBrowserProcedureTeachingPolicy,
+  useBrowserProcedureTeachingRun,
+} from "@/hooks/use-browser-procedure-teaching-settings";
+import { isBrowserProcedureTeachingAudienceCurrent } from "@/lib/browser-procedure-teaching-api";
+import {
+  isBrowserProcedureTeachingId,
+  browserProcedureTeachingDeadlineLive,
+} from "@/lib/browser-procedure-teaching-review";
 import { DIALOG_FORM, DIALOG_SCROLL } from "@/lib/dialog-sizes";
 import { ROUTES } from "@/lib/constants";
 import { isRunning, type Browse } from "@/lib/browse";
-import type { BrowserTeaching } from "@/types/browser-teaching";
+import type { BrowserProcedureTeaching } from "@/types/browser-procedure-teaching";
 import { BrowserTeachingStart } from "./browser-teaching-start";
 import { BrowserTeachingPreference } from "./browser-teaching-preference";
-import { TeachingError, TeachingStatus } from "./browser-teaching-status";
+import { TeachingError, BrowserProcedureTeachingStatus } from "./browser-teaching-status";
 
 export function BrowserTeachingControls({
   browse,
@@ -35,7 +38,7 @@ export function BrowserTeachingControls({
   browse: Browse;
   canControl: boolean;
 }) {
-  const audience = useTeachingAudience();
+  const audience = useBrowserProcedureTeachingAudience();
   if (!browse.runId || !browse.tabId || browse.outputProtected) return null;
   return (
     <TeachingControls
@@ -52,7 +55,7 @@ export function BrowserTeachingControls({
   );
 }
 function TeachingControls({ browse, canControl }: { browse: Browse; canControl: boolean }) {
-  const t = useTranslations("browserTeaching");
+  const t = useTranslations("browserProcedureTeaching");
   const [open, setOpen] = useState(false);
   const notification = browse.teachingSessionId ?? null;
   const [selection, setSelection] = useState({ notification, id: notification });
@@ -105,12 +108,12 @@ function TeachingPanel({
   id: string | null;
   select: (id: string | null) => void;
 }) {
-  const t = useTranslations("browserTeaching");
+  const t = useTranslations("browserProcedureTeaching");
   const locale = useLocale();
-  const audience = useTeachingAudience();
-  const state = useBrowserTeaching(id, browse.teachingRevision);
-  const policy = useTeachingPolicy();
-  const run = useTeachingRun(browse.runId!, true);
+  const audience = useBrowserProcedureTeachingAudience();
+  const state = useBrowserProcedureTeaching(id, browse.teachingRevision);
+  const policy = useBrowserProcedureTeachingPolicy();
+  const run = useBrowserProcedureTeachingRun(browse.runId!, true);
   const session =
     state.session &&
     state.session.run_id === browse.runId &&
@@ -123,7 +126,7 @@ function TeachingPanel({
     isRunning(browse) &&
     browse.heldById === audience.actor &&
     !!browse.takeoverId &&
-    isTeachingId(browse.takeoverId);
+    isBrowserProcedureTeachingId(browse.takeoverId);
   const admission =
     !!policy.data?.enabled && policy.data.deployment_enabled && !!run.data?.agent_id;
   const busy = useRef(false);
@@ -146,15 +149,15 @@ function TeachingPanel({
       busy.current = false;
     }
   }
-  function onStarted(next: BrowserTeaching) {
-    if (isTeachingAudienceCurrent(audience)) select(next.id);
+  function onStarted(next: BrowserProcedureTeaching) {
+    if (isBrowserProcedureTeachingAudienceCurrent(audience)) select(next.id);
   }
   return (
     <>
       {session ? (
         <section className="space-y-3" data-tour="teaching-capture">
           <h3 className="font-medium break-words">{session.title || t("expiredCapture")}</h3>
-          <TeachingStatus session={session} />
+          <BrowserProcedureTeachingStatus session={session} />
           <p className="text-muted-foreground text-sm">
             {t("capturedSteps", { count: session.events.length })}
           </p>
@@ -172,7 +175,7 @@ function TeachingPanel({
               <Button
                 disabled={
                   !holding ||
-                  !teachingDeadlineLive(session.capture_ends_at, state.now) ||
+                  !browserProcedureTeachingDeadlineLive(session.capture_ends_at, state.now) ||
                   state.command.isPending
                 }
                 onClick={() => void act("resume")}
