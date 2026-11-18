@@ -2,12 +2,15 @@ import type { Page, Route, WebSocketRoute } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { AUTH_STATE, OWNER_EMAIL, pageHeading } from "./helpers";
 import {
-  TEACHING_IDS as ids,
-  teachingFixture,
-  teachingReviewFixture,
-  teachingSummaryFixture,
-} from "../src/test-utils/browser-teaching";
-import type { BrowserTeaching, TeachingStart } from "../src/types/browser-teaching";
+  BROWSER_PROCEDURE_TEACHING_IDS as ids,
+  browserProcedureTeachingFixture,
+  browserProcedureTeachingReviewFixture,
+  browserProcedureTeachingSummaryFixture,
+} from "../src/test-utils/browser-procedure-teaching";
+import type {
+  BrowserProcedureTeaching,
+  BrowserProcedureTeachingStart,
+} from "../src/types/browser-procedure-teaching";
 
 test.use({ storageState: AUTH_STATE });
 const SIZES = [
@@ -39,7 +42,7 @@ async function seed(page: Page) {
     nativePolicy.status(),
     "the real stack provides the teaching contract before fixtures",
   ).toBe(200);
-  const nativeList = await page.request.get("/api/browser-teachings?limit=1", {
+  const nativeList = await page.request.get("/api/browser-procedures/teachings?limit=1", {
     headers: { "X-Organization-Id": organization },
   });
   expect(nativeList.status(), "owner discovery is implemented on this source").toBe(200);
@@ -74,44 +77,49 @@ test.describe("Browser teaching — fixture-only visual evidence", () => {
       async ({ page }, info) => {
         await page.setViewportSize(size);
         await seed(page);
-        let session: BrowserTeaching = teachingFixture({ review: teachingReviewFixture() });
+        let session: BrowserProcedureTeaching = browserProcedureTeachingFixture({
+          review: browserProcedureTeachingReviewFixture(),
+        });
         const writes: unknown[] = [];
         await readPreference(page);
-        await page.route(/\/api\/browser-teachings(?:\/[^?]+)?(?:\?.*)?$/, async (route) => {
-          const path = new URL(route.request().url()).pathname;
-          if (route.request().method() === "GET") {
-            if (path === "/api/browser-teachings")
-              return json(route, {
-                items: [
-                  teachingSummaryFixture(session),
-                  teachingSummaryFixture({
-                    id: ids.other,
-                    title: "Visual fixture: completed-work suggestion",
-                    source: "refinement",
-                    verified_success: true,
-                  }),
-                ],
-                next_cursor: null,
-              });
-            expect(path).toBe("/api/browser-teachings/" + ids.session);
-            return json(route, session);
-          }
-          expect(route.request().method()).toBe("POST");
-          expect(path).toBe("/api/browser-teachings/" + ids.session + "/propose");
-          expect(route.request().headers()["if-match"]).toBe('"' + session.revision + '"');
-          const body = route.request().postDataJSON();
-          expect(body).toEqual({ mode: "reviewed" });
-          writes.push(body);
-          session = {
-            ...session,
-            status: "proposed",
-            generation_state: "succeeded",
-            generation_mode: "reviewed",
-            proposal_id: ids.proposal,
-            revision: session.revision + 1,
-          };
-          await json(route, session);
-        });
+        await page.route(
+          /\/api\/browser-procedures\/teachings(?:\/[^?]+)?(?:\?.*)?$/,
+          async (route) => {
+            const path = new URL(route.request().url()).pathname;
+            if (route.request().method() === "GET") {
+              if (path === "/api/browser-procedures/teachings")
+                return json(route, {
+                  items: [
+                    browserProcedureTeachingSummaryFixture(session),
+                    browserProcedureTeachingSummaryFixture({
+                      id: ids.other,
+                      title: "Visual fixture: completed-work suggestion",
+                      source: "refinement",
+                      verified_success: true,
+                    }),
+                  ],
+                  next_cursor: null,
+                });
+              expect(path).toBe("/api/browser-procedures/teachings/" + ids.session);
+              return json(route, session);
+            }
+            expect(route.request().method()).toBe("POST");
+            expect(path).toBe("/api/browser-procedures/teachings/" + ids.session + "/propose");
+            expect(route.request().headers()["if-match"]).toBe('"' + session.revision + '"');
+            const body = route.request().postDataJSON();
+            expect(body).toEqual({ mode: "reviewed" });
+            writes.push(body);
+            session = {
+              ...session,
+              status: "proposed",
+              generation_state: "succeeded",
+              generation_mode: "reviewed",
+              proposal_id: ids.proposal,
+              revision: session.revision + 1,
+            };
+            await json(route, session);
+          },
+        );
         await page.goto("/skills/teaching");
         await expect(
           page.getByRole("heading", { name: "Monthly report demonstration", exact: true }),
@@ -165,9 +173,9 @@ test.describe("Browser teaching — fixture-only visual evidence", () => {
       async ({ page }, info) => {
         await page.setViewportSize(size);
         const { owner } = await seed(page);
-        let session: BrowserTeaching | null = null;
+        let session: BrowserProcedureTeaching | null = null;
         let socket: WebSocketRoute | null = null;
-        const writes: TeachingStart[] = [];
+        const writes: BrowserProcedureTeachingStart[] = [];
         await readPreference(page);
         await page.route("**/api/browser-teaching-policy", (route) =>
           json(route, { enabled: true, generation: ids.other, deployment_enabled: true }),
@@ -178,34 +186,37 @@ test.describe("Browser teaching — fixture-only visual evidence", () => {
         await page.route(/\/api\/skills(?:\?.*)?$/, (route) =>
           json(route, { items: [], total: 0 }),
         );
-        await page.route(/\/api\/browser-teachings(?:\/[^?]+)?(?:\?.*)?$/, async (route) => {
-          const path = new URL(route.request().url()).pathname;
-          if (route.request().method() === "GET") {
-            expect(session).not.toBeNull();
-            expect(path).toBe("/api/browser-teachings/" + session!.id);
-            return json(route, session);
-          }
-          expect(path).toBe("/api/browser-teachings");
-          expect(route.request().method()).toBe("POST");
-          const body = route.request().postDataJSON() as TeachingStart;
-          expect(body).toMatchObject({
-            run_id: ids.run,
-            call_id: CALL,
-            tab_id: "main",
-            takeover_id: ids.takeover,
-            allowed_origins: [ORIGIN],
-          });
-          expect(body).not.toHaveProperty("control_connection_id");
-          writes.push(body);
-          session = teachingFixture({
-            id: body.request_id,
-            status: "recording",
-            revision: 1,
-            title: body.title,
-            events: [],
-          });
-          await json(route, session);
-        });
+        await page.route(
+          /\/api\/browser-procedures\/teachings(?:\/[^?]+)?(?:\?.*)?$/,
+          async (route) => {
+            const path = new URL(route.request().url()).pathname;
+            if (route.request().method() === "GET") {
+              expect(session).not.toBeNull();
+              expect(path).toBe("/api/browser-procedures/teachings/" + session!.id);
+              return json(route, session);
+            }
+            expect(path).toBe("/api/browser-procedures/teachings");
+            expect(route.request().method()).toBe("POST");
+            const body = route.request().postDataJSON() as BrowserProcedureTeachingStart;
+            expect(body).toMatchObject({
+              run_id: ids.run,
+              call_id: CALL,
+              tab_id: "main",
+              takeover_id: ids.takeover,
+              allowed_origins: [ORIGIN],
+            });
+            expect(body).not.toHaveProperty("control_connection_id");
+            writes.push(body);
+            session = browserProcedureTeachingFixture({
+              id: body.request_id,
+              status: "recording",
+              revision: 1,
+              title: body.title,
+              events: [],
+            });
+            await json(route, session);
+          },
+        );
         await page.routeWebSocket(new RegExp("/api/v1/ws/browse/" + ids.run + "/" + CALL), (ws) => {
           socket = ws;
           ws.send(
