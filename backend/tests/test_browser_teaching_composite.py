@@ -99,6 +99,7 @@ async def test_begin_with_socket_keeps_the_simple_hold_and_starts_rich_capture()
     )
 
 
+@pytest.mark.security
 async def test_protect_closes_admission_before_cleanup_and_redacts_the_gap() -> None:
     cleanup_started = asyncio.Event()
     finish_cleanup = asyncio.Event()
@@ -144,6 +145,7 @@ async def test_protect_closes_admission_before_cleanup_and_redacts_the_gap() -> 
     procedure.protect.assert_awaited_once()
 
 
+@pytest.mark.security
 async def test_already_protected_page_blocks_both_recorders_and_redacts_events() -> None:
     simple, procedure = _captures()
     guard = BrowserOutputGuard()
@@ -169,6 +171,7 @@ async def test_already_protected_page_blocks_both_recorders_and_redacts_events()
     procedure.event.assert_not_called()
 
 
+@pytest.mark.security
 @pytest.mark.parametrize("failing", ["simple", "procedure"])
 async def test_recorder_failure_is_private_and_does_not_disable_the_other(
     failing: str, caplog: pytest.LogCaptureFixture
@@ -207,6 +210,7 @@ async def test_recorder_failure_is_private_and_does_not_disable_the_other(
         procedure.after_input.assert_not_awaited()
 
 
+@pytest.mark.security
 async def test_rich_event_failure_protects_output_and_stops_both_recorders(
     caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
