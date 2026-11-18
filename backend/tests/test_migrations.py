@@ -2042,9 +2042,9 @@ class TestRoomThreadMigration:
         teaching = script.get_revision("0339_browser_teaching_capture")
         assert teaching is not None
         assert teaching.down_revision == "0338_message_reply_excerpt"
-        review = script.get_revision("0340_browser_teaching_review")
-        assert review is not None
-        assert review.down_revision == "0339_browser_teaching_capture"
+        teaching_review = script.get_revision("0340_browser_teaching_review")
+        assert teaching_review is not None
+        assert teaching_review.down_revision == "0339_browser_teaching_capture"
         assert script.get_heads() == ["0340_browser_teaching_review"]
 
     def test_existing_quotes_survive_roundtrip_and_models_match_head(self) -> None:
