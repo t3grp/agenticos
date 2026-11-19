@@ -3626,6 +3626,11 @@
       "waitingOn": "Waiting on you: <b>{items}</b>."
     },
     "lastActive": "Last active {when}",
+    "layoutError": {
+      "description": "Your saved layout hasn't changed. Try again to show it.",
+      "retry": "Try again",
+      "title": "Couldn't load your dashboard layout"
+    },
     "morePageActions": "More page actions",
     "noSessionDataAvailable": "No session data available.",
     "options": {
