@@ -179,12 +179,16 @@ exclude it from model context, telemetry, transcripts and shared room messages,
 and use the supported provider endpoint. The broker verifies completion through
 its own node state, not through a client-submitted success flag.
 
-Persist the connector's node identity across ordinary idle periods and restarts.
-Configure persistent versus ephemeral registration deliberately, including the
-enterprise OAuth Client path; do not rely on provider defaults. Track node-key
-expiry separately and request reauthentication when required.
-Do not create a new tailnet device on every chat turn. Node replacement is a new
-enrollment decision and must not silently inherit the old node's grants.
+The initial release uses persistent connector nodes for both personal and
+organization connections. Preserve the node identity across ordinary idle periods
+and restarts; explicitly select persistent registration on the enterprise OAuth
+Client path instead of relying on its ephemeral default. Ephemeral/session-only
+connectors are deferred.
+
+Track node-key expiry separately and request reauthentication when required. Do
+not create a new tailnet device on every chat turn. Node replacement is a new
+enrollment decision and must not silently inherit the old node's grants. Persistent
+nodes require the explicit provider cleanup described in section 11.
 
 ### OAuth choices
 
@@ -215,9 +219,15 @@ authentication. Each stage can refuse the operation.
 
 The proposed broker is a small service using tsnet. Run it in an isolated
 process/container for each ownership scope, active organization and connection.
-A personal profile may follow its member across organizations, as existing
-personal connections do, but it must be explicitly enabled in the active
-organization and use a separately isolated runtime there.
+Each connection and its node are bound to exactly one organization context.
+
+A personal connection is owned by its member and its credentials remain sealed
+to that member, but its network enrollment is usable only in the organization
+where it was created. Using Tailscale in a second organization requires a separate
+connection, node identity and explicit enrollment, including any provider approval,
+device quota and cleanup obligations. Do not reuse the first organization's node,
+private state or proxy. This is intentionally stricter than the existing personal
+MCP credential model.
 
 A shared operating-system Tailscale interface, shared SOCKS listener or shared
 node-state directory is not a tenant boundary. Do not expose the host network,
@@ -357,7 +367,7 @@ These are proposed concepts, not database migrations or finalized API schemas.
 
 | Record | Information to retain |
 | --- | --- |
-| Network connection | Opaque id, personal/organization ownership, enabled organizations, provider, tailnet/node identity, status, policy version and vault references. |
+| Network connection | Opaque id, personal/organization ownership, exactly one organization context, provider, its own tailnet/node identity, status, policy version and vault references. |
 | Enrollment attempt | Initiating user/session, connection, expected network where known, attempt generation, expiry, result and cleanup state. |
 | Device/service target | Connection id, stable peer identity, display label, supported protocol, exact destination, ports, approved account/path where applicable and credential reference. |
 | Operational grant | Eligible principals/groups, published agents, targets, actions, expiry and approval requirements. |
@@ -481,7 +491,7 @@ Every item below is a future gate, not a completed test.
 
 - [ ] Two users in the same organization cannot access each other's personal connection, state, peer list or proxy.
 - [ ] Two organizations with overlapping Tailscale addresses cannot cross-route or share cached destinations.
-- [ ] A user in multiple organizations cannot carry one organization's operational grant into another.
+- [ ] A user in multiple organizations needs a separate connection/node enrollment in each; neither node state nor operational grants can cross organization contexts.
 - [ ] Unprivileged runtimes cannot read node state, reach broker control endpoints or bypass the authorized proxy.
 - [ ] Resource grants, organization scopes, target/actions and agent restrictions are all enforced server-side.
 - [ ] A room reader, mention, delegate, retry or agent switch cannot borrow another participant's authority.
