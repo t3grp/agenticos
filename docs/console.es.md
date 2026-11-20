@@ -1,5 +1,5 @@
 ---
-source_sha: "d960ed9487a9"
+source_sha: "5f969c5c2b2a"
 ---
 
 # La consola { #the-console }
@@ -713,6 +713,12 @@ configurar la espera y limitar los agents que responden. Los avisos muestran qui
 eligió a los agents. Si esta opción está desactivada, siguen vigentes los ajustes
 anteriores de respuestas automáticas. Consulta [selección con AI](projects.md#ai-responder-selection)
 para conocer su funcionamiento y coste.
+
+Los agents también pueden [reaccionar con su propio nombre](projects.md#agent-reactions).
+Pasa el puntero por una reacción o enfócala para ver su atribución al agent.
+Tu selección cambia únicamente tu propia reacción. Una reacción puede confirmar
+un mensaje sin una respuesta vacía en el chat; abre los detalles del run para
+revisar la acción guardada y su destino.
 
 **Select context** crea un hilo a partir de un rango de mensajes. El contexto
 aparece separado de las respuestas y puedes trasladar, devolver o editar el rango.

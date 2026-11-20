@@ -1,5 +1,5 @@
 ---
-source_sha: "d960ed9487a9"
+source_sha: "5f969c5c2b2a"
 ---
 
 # Konsola { #the-console }
@@ -691,6 +691,12 @@ limit odpowiadających. Informacje pod wiadomością pokazują, kto wybrał agen
 Po wyłączeniu tej opcji nadal obowiązują dotychczasowe ustawienia automatycznych
 odpowiedzi agentów. Zobacz [wybór odpowiadających przez AI](projects.md#ai-responder-selection),
 aby poznać działanie i koszty.
+
+Agenci mogą też dodawać [reakcje pod własnymi nazwami](projects.md#agent-reactions).
+Najedź na reakcję lub ustaw na niej fokus, aby zobaczyć przypisanie do agenta.
+Twój wybór zmienia tylko twoją własną reakcję. Reakcja może potwierdzić wiadomość
+bez pustej odpowiedzi na czacie; otwórz szczegóły runu, aby sprawdzić zapisane
+działanie i wiadomość docelową.
 
 **Select context** tworzy wątek z wybranego zakresu wiadomości. Kontekst jest
 oddzielony od odpowiedzi; zakres można przenieść, przywrócić lub edytować.

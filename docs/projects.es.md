@@ -2,7 +2,7 @@
 title: Proyectos
 seo_title: Proyectos - archivos e instrucciones compartidos
 description: Un proyecto da al trabajo en curso un contenedor de archivos y unas instrucciones que comparte cada chat iniciado en él, responda el agent que responda.
-source_sha: "101225160e4d"
+source_sha: "e749fc8b7bef"
 ---
 
 # Proyectos { #projects }
@@ -320,6 +320,28 @@ un sandbox personal siguen necesitando el flujo de chat específico de su dispos
 Usa el control de reacciones en un mensaje guardado de una persona o un agent para
 añadir o quitar tu emoji. Los recuentos reúnen las reacciones de todos, y tus
 selecciones siguen marcadas. Cada mensaje admite hasta veinte emoji distintos.
+
+### Reacciones de agents { #agent-reactions }
+
+Los agents pueden reaccionar con su propio nombre. Pasa el puntero por una
+reacción o enfócala para ver qué agents la añadieron. Los recuentos incluyen a
+personas y agents; las acciones repetidas de un mismo agent cuentan una sola vez
+por emoji. El control de reacciones cambia únicamente tu propia selección.
+
+Un agent puede confirmar un mensaje con una reacción sin añadir una respuesta
+vacía al chat. Abre los detalles del run para revisar la acción guardada, la
+versión del agent y el mensaje de destino. Este registro requiere tu acceso
+actual a la sala y a cualquier conversación de origen referenciada. Muestra
+hasta 100 acciones e indica si hay más.
+
+Con la [selección de agents con AI](#ai-responder-selection) activada, una breve
+confirmación también puede recibir una reacción cuando no se selecciona ninguna
+respuesta de agent. La atribución sigue al agent autorizado al que se dirige
+claramente el mensaje o a la conversación existente. Una atribución ambigua y
+los mensajes dirigidos a otra persona no generan reacciones automáticas de agents.
+
+Un saludo general con emoji, sin destinatario personal, puede recibir una reacción
+de un agent autorizado de la sala.
 
 ### Selección de agents con AI { #ai-responder-selection }
 

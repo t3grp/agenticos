@@ -11763,6 +11763,143 @@ class TestRoomAndSecretBoundaries:
             ["room", "room", "prior", "room", "prior"] if prior_check else ["room"] * 3
         )
 
+    @pytest.mark.security
+    async def test_room_resume_reactivates_submission_before_reaction_tool(self):
+        from app.services.room_agent_message_reaction import RoomAgentReactionPort
+
+        service = AgentRunnerService(_db())
+        ctx = _ctx()
+        requester = AuthContext(
+            user_id=uuid.uuid4(),
+            organization_id=ctx.organization_id,
+            role=OrgRoleName.MEMBER,
+        )
+        conversation = uuid.uuid4()
+        run = _parked_run(
+            conversation_id=conversation,
+            organization_id=ctx.organization_id,
+            user_id=requester.user_id,
+            surface=RunSurface.WEB.value,
+            status=RunStatus.AWAITING_APPROVAL.value,
+            paused_state={
+                "messages": [],
+                "tool_call_ids": {},
+                "admitted_as": {"audience_room_key": f"room:conversation:{conversation}"},
+            },
+        )
+        submission = SimpleNamespace(
+            id=uuid.uuid4(),
+            organization_id=ctx.organization_id,
+            conversation_id=conversation,
+            requester_id=requester.user_id,
+            message_id=uuid.uuid4(),
+            thread_root_message_id=None,
+            agent_id=run.agent_id,
+            version_id=run.agent_version_id,
+            intent="message",
+            run_id=run.id,
+            status="awaiting_approval",
+            error=None,
+        )
+        room = SimpleNamespace(id=conversation)
+        message = SimpleNamespace(id=submission.message_id)
+        order = []
+
+        async def resume_authority(_self, run_id, organization_id, *, required):
+            assert (run_id, organization_id, required) == (run.id, ctx.organization_id, True)
+            order.append(("resume_authority", submission.status))
+            return requester
+
+        async def authority(_self, current):
+            assert current is submission
+            order.append(("authority", current.status))
+            return requester, room, message
+
+        @asynccontextmanager
+        async def fresh_db():
+            yield service.db
+
+        async def record_tool(_self, **kwargs):
+            assert submission.status == "running"
+            assert kwargs["context"].accepted_message_id == submission.message_id
+            order.append(("reaction", submission.status))
+            return SimpleNamespace(
+                id=uuid.uuid4(),
+                reaction_only=kwargs["reaction_only"],
+                message_id=kwargs["message_id"],
+                emoji=kwargs["emoji"],
+            )
+
+        async def drive(_prepared, **options):
+            reaction_context = service._assemble.await_args.kwargs["room_reaction_context"]
+            assert reaction_context is not None
+            assert reaction_context.organization_id == submission.organization_id
+            assert reaction_context.conversation_id == submission.conversation_id
+            assert reaction_context.submission_id == submission.id
+            assert reaction_context.requester_id == submission.requester_id
+            assert reaction_context.accepted_message_id == submission.message_id
+            assert reaction_context.agent_id == submission.agent_id
+            assert reaction_context.agent_version_id == submission.version_id
+            await options["on_run_open"](run)
+            assert submission.status == "running"
+            port = RoomAgentReactionPort(context=reaction_context, run_id=run.id)
+            await port.react(
+                "👍",
+                message_id=None,
+                reaction_only=True,
+                tool_call_id="resume-reaction-1",
+            )
+            assert port.reaction_only_tool_call_ids == {"resume-reaction-1"}
+            await options["check_model_request"](service.db)
+            return SimpleNamespace(message_id=None)
+
+        with (
+            patch(
+                "app.repositories.room_submission.for_run",
+                new=AsyncMock(return_value=submission),
+            ),
+            patch("app.services.room_submission.hold_subject", new=AsyncMock()),
+            patch(
+                "app.services.room_submission.room_repo.get",
+                new=AsyncMock(return_value=submission),
+            ),
+            patch(
+                "app.services.room_submission.room_repo.head",
+                new=AsyncMock(return_value=submission),
+            ),
+            patch("app.services.room_submission.room_repo.save", new=AsyncMock()) as save,
+            patch(
+                "app.services.room_submission.RoomSubmissionService.authority",
+                new=authority,
+            ),
+            patch(
+                "app.services.room_submission.RoomSubmissionService.resume_authority",
+                new=resume_authority,
+            ),
+            patch("app.services.room_submission.announce_request"),
+            patch(
+                "app.services.room_agent_message_reaction.get_db_context",
+                fresh_db,
+            ),
+            patch(
+                "app.services.room_agent_message_reaction.RoomAgentReactionService.record_tool",
+                new=record_tool,
+            ),
+        ):
+            _, _, execute = await self._resume_at_boundary(
+                service,
+                ctx,
+                run,
+                drive=drive,
+            )
+
+        assert submission.status == "running"
+        assert ("authority", "awaiting_approval") in order
+        assert ("reaction", "running") in order
+        assert order[-1] == ("resume_authority", "running")
+        save.assert_awaited_once_with(service.db, submission)
+        execute.assert_awaited_once()
+
     @pytest.mark.parametrize("room_kind", ["project", "conversation"])
     async def test_revoked_room_authority_stops_before_prior_checks_or_model_execution(
         self, room_kind

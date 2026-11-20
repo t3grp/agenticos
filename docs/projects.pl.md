@@ -2,7 +2,7 @@
 title: Projekty
 seo_title: Projekty - wspólne pliki i instrukcje czatów
 description: Projekt daje bieżącej pracy jeden kontener plików i jeden zestaw instrukcji, wspólne dla każdego czatu w nim, niezależnie od tego, który agent odpowiada.
-source_sha: "101225160e4d"
+source_sha: "e749fc8b7bef"
 ---
 
 # Projekty { #projects }
@@ -306,6 +306,27 @@ przepływu czatu.
 Użyj kontrolki reakcji przy zapisanej wiadomości człowieka lub agenta, aby dodać
 albo usunąć swoją emoji. Liczniki sumują reakcje wszystkich osób, a twoje własne
 wybory pozostają oznaczone. Jedna wiadomość może mieć do dwudziestu różnych emoji.
+
+### Reakcje agentów { #agent-reactions }
+
+Agenci mogą reagować pod własnymi nazwami. Najedź na reakcję lub ustaw na niej
+fokus, aby zobaczyć, którzy agenci ją dodali. Liczniki obejmują osoby i agentów;
+powtórne działania tego samego agenta liczą się raz dla danej emoji. Kontrolka
+reakcji zmienia tylko twój własny wybór.
+
+Agent może potwierdzić wiadomość reakcją bez dodawania pustej odpowiedzi na czacie.
+Otwórz szczegóły runu, aby sprawdzić zapisane działanie, wersję agenta i wiadomość
+docelową. Ten zapis wymaga twojego bieżącego dostępu do pokoju i każdej wskazanej
+dyskusji źródłowej. Pokazuje do 100 działań i informuje, gdy istnieją kolejne.
+
+Gdy [wybór odpowiadających przez AI](#ai-responder-selection) jest włączony,
+krótkie potwierdzenie może też otrzymać reakcję, jeśli nie wybrano odpowiedzi
+agenta. Przypisanie wynika z jednoznacznego zwrotu do uprawnionego agenta albo
+z dotychczasowej rozmowy. Niejednoznaczne przypisanie i wiadomości skierowane do
+innej osoby nie wywołują automatycznych reakcji agentów.
+
+Ogólne powitanie wyrażone emoji, bez wskazania konkretnego odbiorcy, może otrzymać
+reakcję od uprawnionego agenta w pokoju.
 
 ### Wybór odpowiadających przez AI { #ai-responder-selection }
 

@@ -256,6 +256,7 @@ retranslated is how a stale translation stops being visible.
 | Shared human/agent chat, mentions, room membership and Agentes comparison | `docs/design/agentes-chat-parity.md` (repo only; behavior and validation boundaries) |
 | Selected thread context, message moves and cross-room references | `docs/design/agentes-thread-ranges.md` (repo only; implementation and validation boundaries) |
 | Optional AI room responder selection, durable decisions and visible receipts | `docs/design/agentes-automatic-routing.md` (repo only; implementation and validation boundaries) |
+| Agent-attributed room reactions, native tools and run action audit | `docs/design/agentes-agent-reactions.md` (repo only; implementation and validation boundaries) |
 | Workflows — the visual editor: canvas, palette, bindings, autosave, publish, versions | `docs/workflows.md` |
 | Projects: shared files, instructions and chats | `docs/projects.md` |
 | Agent messages: direct messages between agents, in a thread the console shows | `docs/agent-messages.md` |

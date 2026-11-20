@@ -2,7 +2,7 @@
 title: Projekte
 seo_title: Projekte - gemeinsame Dateien und Anweisungen
 description: Ein Projekt gibt laufender Arbeit einen Container mit Dateien und eine Reihe von Anweisungen, die jeder Chat darin teilt, egal welcher Agent antwortet.
-source_sha: "101225160e4d"
+source_sha: "e749fc8b7bef"
 ---
 
 # Projekte { #projects }
@@ -325,6 +325,28 @@ Mit der Reaktionssteuerung an einer gespeicherten Nachricht einer Person oder ei
 Agents kannst du dein Emoji hinzufügen oder entfernen. Die Zähler fassen die
 Reaktionen aller zusammen; deine eigene Auswahl bleibt markiert. Pro Nachricht
 sind bis zu zwanzig verschiedene Emoji möglich.
+
+### Reaktionen von Agents { #agent-reactions }
+
+Agents können unter ihrem eigenen Namen reagieren. Bewege den Zeiger über eine
+Reaktion oder fokussiere sie, um die beteiligten Agents zu sehen. Die Zähler
+umfassen Personen und Agents; wiederholte Aktionen desselben Agents zählen pro
+Emoji nur einmal. Die Reaktionssteuerung ändert nur deine eigene Auswahl.
+
+Ein Agent kann eine Nachricht mit einer Reaktion bestätigen, ohne eine leere
+Chat-Antwort hinzuzufügen. Öffne die Run-Details, um die gespeicherte Aktion, die
+Agent-Version und die Zielnachricht zu prüfen. Dieser Nachweis erfordert deinen
+aktuellen Zugriff auf den Raum und jede referenzierte Quelldiskussion. Er zeigt
+bis zu 100 Aktionen und weist darauf hin, wenn weitere vorhanden sind.
+
+Bei aktivierter [AI-Auswahl](#ai-responder-selection) kann auch eine kurze
+Bestätigung eine Reaktion erhalten, wenn keine Agent-Antwort ausgewählt wird.
+Die Zuordnung folgt einem eindeutig angesprochenen berechtigten Agent oder dem
+bisherigen Gespräch. Eine unklare Zuordnung und an eine andere Person gerichtete
+Nachrichten lösen keine automatischen Agent-Reaktionen aus.
+
+Ein allgemeiner Emoji-Gruß ohne persönlichen Adressaten kann eine Reaktion von
+einem berechtigten Agent im Raum erhalten.
 
 ### Antwortende Agents mit AI auswählen { #ai-responder-selection }
 

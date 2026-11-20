@@ -590,6 +590,48 @@ class RoomSubmissionService:
             raise AlreadyExistsError(message="The original room message has changed")
         return ctx, conversation, message
 
+    async def mark_resumed_running(self, run_id: UUID, organization_id: UUID) -> None:
+        """Return a parked room request to the active queue state before replay."""
+        submission = await room_repo.for_run(
+            self.db,
+            run_id,
+            organization_id=organization_id,
+        )
+        if submission is None:
+            raise AlreadyExistsError(message="This room request no longer owns its run")
+
+        await hold_subject(
+            self.db,
+            LockScope.CONVERSATION_TURN,
+            submission.conversation_id,
+        )
+        current = await room_repo.get(
+            self.db,
+            submission.id,
+            organization_id=organization_id,
+            lock=True,
+        )
+        if (
+            current is None
+            or current.conversation_id != submission.conversation_id
+            or current.run_id != run_id
+            or current.status not in {"running", "awaiting_approval", "awaiting_answer"}
+        ):
+            raise AlreadyExistsError(message="This room request no longer owns its run")
+
+        first = await room_repo.head(self.db, current.conversation_id)
+        if first is None or first.id != current.id:
+            raise AlreadyExistsError(message="This room request is no longer the current turn")
+
+        # Revalidate after the resumed run has built successfully. A removed
+        # member or responder must not regain access during a long build.
+        await self.authority(current)
+        if current.status != "running":
+            current.status = "running"
+            current.error = None
+            await room_repo.save(self.db, current)
+            announce_request(self.db, current)
+
     async def resume_authority(
         self, run_id: UUID, organization_id: UUID, *, required: bool = False
     ) -> AuthContext | None:

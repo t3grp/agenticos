@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import messages from "../../../messages/en.json";
 import { RunTimeline } from "./run-timeline";
-import type { RunTranscript, RunTranscriptMessage } from "@/types/runs";
+import type { RunTranscript, RunTranscriptMessage, RunTranscriptRoomReaction } from "@/types/runs";
 
 /**
  * The trace view's claims: the whole thread is asked for and the focused run's
@@ -66,6 +66,24 @@ function turn(overrides: Partial<RunTranscriptMessage> = {}): RunTranscriptMessa
     content: "Done.",
     created_at: "2026-08-14T09:00:00Z",
     run_id: "run-1",
+    ...overrides,
+  };
+}
+
+function roomReaction(
+  overrides: Partial<RunTranscriptRoomReaction> = {},
+): RunTranscriptRoomReaction {
+  return {
+    message_id: "message-target",
+    agent_id: "agent-1",
+    agent_name: "Reviewer",
+    agent_version_id: "version-1",
+    emoji: "👀",
+    reaction_only: true,
+    source: "tool",
+    tool_call_id: "tool-call-1",
+    decision_id: null,
+    created_at: "2026-11-20T08:00:00Z",
     ...overrides,
   };
 }
@@ -359,6 +377,103 @@ describe("adding an answer to a dataset", () => {
     const offered = screen.getAllByRole("button", { name: "Add to dataset" });
     expect(offered.map((button) => button.dataset.message)).toEqual(["a-2", "a-3"]);
     expect(offered.map((button) => button.dataset.ratedDown)).toEqual(["true", "false"]);
+  });
+});
+
+describe("room reaction audit", () => {
+  it("shows ledger actions separately with target and provenance", () => {
+    serve({
+      items: [
+        turn({
+          id: "message-human",
+          role: "user",
+          content: "Please review the launch brief.",
+          run_id: "run-0",
+        }),
+      ],
+      room_reactions: [
+        {
+          message_id: "message-human",
+          agent_id: "agent-1",
+          agent_name: "Reviewer",
+          agent_version_id: "version-1",
+          emoji: "👀",
+          reaction_only: true,
+          source: "tool",
+          tool_call_id: "tool-call-1",
+          decision_id: null,
+          created_at: "2026-11-20T08:00:00Z",
+        },
+        {
+          message_id: "message-human",
+          agent_id: "agent-2",
+          agent_name: "Router",
+          agent_version_id: "version-2",
+          emoji: "✅",
+          reaction_only: false,
+          source: "automatic",
+          tool_call_id: null,
+          decision_id: "decision-2",
+          created_at: "2026-11-20T08:00:01Z",
+        },
+      ],
+      room_reactions_truncated: true,
+    });
+
+    renderTimeline();
+
+    const audit = screen.getByRole("region", { name: "Room reaction actions" });
+    expect(within(audit).getByText("Agent Reviewer reacted")).toBeVisible();
+    expect(within(audit).getAllByText("Please review the launch brief.")).toHaveLength(2);
+    expect(within(audit).getAllByText("message-human")).toHaveLength(2);
+    expect(within(audit).getByText("agent-1")).toBeVisible();
+    expect(within(audit).getByText("version-1")).toBeVisible();
+    expect(within(audit).getByText("👀")).toBeVisible();
+    expect(within(audit).getByText("Tool call")).toBeVisible();
+    expect(within(audit).getByText("tool-call-1")).toBeVisible();
+    expect(within(audit).getByText("Automatic selection")).toBeVisible();
+    expect(within(audit).getByText("decision-2")).toBeVisible();
+    expect(within(audit).getByText("Reaction-only run")).toBeVisible();
+    expect(within(audit).getByText("This audit is capped at 100 actions.")).toBeVisible();
+    expect(screen.queryByText("react_to_room_message")).toBeNull();
+  });
+
+  it.each([null, "room-1"])("shows an action without transcript turns for %s", (conversationId) => {
+    serve({
+      conversation_id: conversationId,
+      items: [],
+      room_reactions: [roomReaction()],
+    });
+
+    renderTimeline();
+
+    const audit = screen.getByRole("region", { name: "Room reaction actions" });
+    expect(within(audit).getByText("Agent Reviewer reacted")).toBeVisible();
+    expect(within(audit).getByText("Target text is not in this transcript")).toBeVisible();
+    expect(within(audit).getByText("message-target")).toBeVisible();
+  });
+
+  it("shows an authorized assistant target already present in the transcript", () => {
+    serve({
+      items: [
+        turn({ id: "message-target", role: "assistant", content: "The review is complete." }),
+      ],
+      room_reactions: [roomReaction({ reaction_only: false })],
+    });
+
+    renderTimeline();
+
+    const audit = screen.getByRole("region", { name: "Room reaction actions" });
+    expect(within(audit).getByText("The review is complete.")).toBeVisible();
+    expect(within(audit).queryByText("Target text is not in this transcript")).toBeNull();
+  });
+
+  it("treats an older transcript without reaction fields as empty", () => {
+    serve({ items: [] });
+
+    renderTimeline();
+
+    expect(screen.queryByRole("region", { name: "Room reaction actions" })).toBeNull();
   });
 });
 

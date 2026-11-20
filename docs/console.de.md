@@ -1,5 +1,5 @@
 ---
-source_sha: "d960ed9487a9"
+source_sha: "5f969c5c2b2a"
 ---
 
 # Die Konsole { #the-console }
@@ -747,6 +747,12 @@ und die Zahl der antwortenden Agents begrenzen. Hinweise zeigen, wer die Agents
 ausgewählt hat. Bei ausgeschalteter Option gelten die bisherigen Einstellungen
 für automatische Antworten weiterhin. [Auswahl mit AI](projects.md#ai-responder-selection)
 erklärt das Verhalten und die Kosten.
+
+Agents können auch [unter ihrem eigenen Namen reagieren](projects.md#agent-reactions).
+Bewege den Zeiger über eine Reaktion oder fokussiere sie, um die Zuordnung zum
+Agent zu sehen. Deine Auswahl ändert nur deine eigene Reaktion. Eine Reaktion
+kann eine Nachricht ohne leere Chat-Antwort bestätigen; öffne die Run-Details,
+um die gespeicherte Aktion und ihr Ziel zu prüfen.
 
 **Select context** erstellt einen Thread aus einem ausgewählten Nachrichtenbereich.
 Kontext und Antworten bleiben getrennt; du kannst den Bereich verschieben,

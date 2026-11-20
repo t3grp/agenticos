@@ -188,6 +188,7 @@ export default defineConfig({
         "src/components/chat/room-directory-list.tsx",
         "src/components/chat/room-create-form.tsx",
         "src/components/chat/room-message-reactions.tsx",
+        "src/components/chat/room-message-reaction-chip.tsx",
         "src/components/chat/room-thread-button.tsx",
         "src/components/chat/room-thread-panel.tsx",
         "src/components/chat/room-thread-context-source-picker.tsx",

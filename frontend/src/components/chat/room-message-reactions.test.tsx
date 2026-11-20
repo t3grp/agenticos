@@ -37,7 +37,12 @@ function draw(canReact = true) {
 beforeEach(() => {
   hooks.reactions = [
     { emoji: "👍", count: 3, reacted_by_me: true },
-    { emoji: "🎉", count: 1, reacted_by_me: false },
+    {
+      emoji: "🎉",
+      count: 1,
+      reacted_by_me: false,
+      agents: [{ agent_id: "agent-1", name: "Launch agent" }],
+    },
   ];
   hooks.add.mockReset().mockResolvedValue(true);
   hooks.remove.mockReset().mockResolvedValue(true);
@@ -53,7 +58,13 @@ describe("RoomMessageReactions", () => {
 
     const selected = screen.getByRole("button", { name: "👍 3" });
     expect(selected).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "🎉 1" })).toHaveAttribute("aria-pressed", "false");
+    const agentReaction = screen.getByRole("button", {
+      name: "🎉 1 · Agents: Launch agent",
+    });
+    expect(agentReaction).toHaveAttribute("aria-pressed", "false");
+    await user.hover(agentReaction);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Agents: Launch agent");
+    await user.unhover(agentReaction);
     await user.click(selected);
 
     expect(hooks.remove).toHaveBeenCalledWith("👍");
@@ -80,5 +91,20 @@ describe("RoomMessageReactions", () => {
     await user.type(screen.getByRole("textbox", { name: "Type or paste an emoji" }), "👩🏽‍💻");
     await user.click(screen.getByRole("button", { name: "Add", exact: true }));
     expect(hooks.add).toHaveBeenCalledWith("👩🏽‍💻");
+  });
+
+  it("reveals agent attribution on keyboard focus without granting reaction access", async () => {
+    const user = userEvent.setup();
+    draw(false);
+
+    await user.tab();
+    const attribution = screen.getByRole("button", { name: "🎉 1 · Agents: Launch agent" });
+    expect(attribution).toHaveFocus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Agents: Launch agent");
+    expect(attribution).not.toHaveAttribute("aria-pressed");
+    await user.click(attribution);
+
+    expect(hooks.add).not.toHaveBeenCalled();
+    expect(hooks.remove).not.toHaveBeenCalled();
   });
 });

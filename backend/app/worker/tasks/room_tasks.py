@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.capabilities.room_reactions._contract import RoomReactionRunContext
 from app.core.background import start_deferred
 from app.core.exceptions import AlreadyExistsError, AppException
 from app.db.models.agent_run import AgentRun, RunSurface
@@ -188,6 +189,20 @@ async def run_request(job: RoomRequestJob) -> None:
             assert agent_id is not None and version_id is not None, (
                 "authority checked the pinned agent"
             )
+            room_reaction_context = (
+                RoomReactionRunContext(
+                    organization_id=submission.organization_id,
+                    conversation_id=submission.conversation_id,
+                    submission_id=submission.id,
+                    requester_id=submission.requester_id,
+                    accepted_message_id=message.id,
+                    agent_id=agent_id,
+                    agent_version_id=version_id,
+                    thread_root_message_id=submission.thread_root_message_id,
+                )
+                if submission.intent == "message"
+                else None
+            )
             history = await ConversationService(db).model_history(
                 conversation_id,
                 limit=60,
@@ -286,6 +301,7 @@ async def run_request(job: RoomRequestJob) -> None:
                                 if bound_room_context
                                 else ()
                             ),
+                            room_reaction_context=room_reaction_context,
                             on_segment=settled,
                             stream=frames.drive,
                         )

@@ -2351,6 +2351,8 @@
       "readingPlan": "Reading the plan",
       "readingSkillFiles": "Reading a skill's files",
       "readingToolResult": "Reading a stored tool result",
+      "reactingToRoomMessage": "Reacting in the room",
+      "roomReaction": "Room reaction",
       "relevanceScore": "Relevance: {score}",
       "removeStep": "Remove Step",
       "removingStep": "Removing a step",
@@ -3344,6 +3346,7 @@
     "roomReactions": {
       "add": "Add reaction",
       "customPlaceholder": "Type or paste an emoji",
+      "reactedByAgents": "Agents: {names}",
       "submit": "Add",
       "retry": "Try again",
       "error": "Reactions could not be loaded."
@@ -9019,6 +9022,21 @@
       "took": "Took",
       "toolInput": "Input",
       "toolOutput": "Output",
+      "roomReactionAgentId": "Agent ID",
+      "roomReactionAgentVersionId": "Agent version ID",
+      "roomReactionAudit": "Room reaction actions",
+      "roomReactionAuditTruncated": "This audit is capped at 100 actions.",
+      "roomReactionByAgent": "Agent {name} reacted",
+      "roomReactionCreatedAt": "Recorded",
+      "roomReactionDecisionId": "Decision ID",
+      "roomReactionEmojiLabel": "Reaction: {emoji}",
+      "roomReactionOnly": "Reaction-only run",
+      "roomReactionSource": "Source",
+      "roomReactionSourceAutomatic": "Automatic selection",
+      "roomReactionSourceTool": "Tool call",
+      "roomReactionTarget": "Target message",
+      "roomReactionTargetUnavailable": "Target text is not in this transcript",
+      "roomReactionToolCallId": "Tool call ID",
       "transcriptCouldNotBeRead": "The transcript could not be read",
       "tryAgain": "Try again",
       "turnAgent": "Agent",
@@ -14632,6 +14650,14 @@
       "name": "Planning",
       "needs": "Nothing extra.",
       "never": "Never gives the agent permission to do anything; a plan is only a list."
+    },
+    "room_reactions": {
+      "does": "Lets the agent react to a visible message in the current room thread.",
+      "example1": "Add 👀 to a message the agent has read",
+      "example2": "Add ✅ to a message that confirms a task is complete",
+      "name": "Room reactions",
+      "needs": "The agent must be responding in a shared room conversation, and the message must be visible in that thread.",
+      "never": "Never reacts outside the current room thread or changes a human reaction."
     },
     "background_tools": {
       "does": "Lets the agent start a slow tool - a long browse - and carry on with the rest of the request, using the result when it arrives.",

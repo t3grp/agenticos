@@ -44,6 +44,9 @@ from app.agents.capabilities.mirage import (
     ResolvedMount,
     ResolvedTerminal,
 )
+from app.agents.capabilities.room_reactions._contract import (
+    RESOURCE as ROOM_REACTIONS_RESOURCE,
+)
 from app.agents.capabilities.skills import SAFE_SKILL_TOOLS, Skills
 from app.agents.capabilities.web_research import WebResearch, WebResearchConfig
 from app.agents.hand_off import HAND_OFF_TOOL
@@ -169,6 +172,7 @@ class TestToolDeclarations:
         # names it offers rather than what a platform answers.
         CHANNEL_DIRECTORY_RESOURCE: SimpleNamespace(),
         "channel_actions": SimpleNamespace(),
+        ROOM_REACTIONS_RESOURCE: SimpleNamespace(),
         # The folders the runner resolved; one scratch folder needs no credential.
         MIRAGE_MOUNTS_RESOURCE: ResolvedTerminal(
             mounts=(ResolvedMount("/scratch/", "ram", "write", False, {}, "scratch"),)
@@ -640,6 +644,7 @@ class TestReadOnlyDeclarations:
             ("artifacts", "export_artifact"),
             ("channel_actions", "send_chat_message"),
             ("channel_actions", "react_to_chat_message"),
+            ("room_reactions", "react_to_room_message"),
             ("artifacts", "share_artifact"),
             ("computer_use", "computer_screenshot"),
             ("computer_use", "computer_act"),
@@ -1314,7 +1319,13 @@ def test_exactly_the_capabilities_a_call_cannot_run_live_say_so():
             "burst",
             "proof_scenario",
         },
-        "never": {"channel_tools", "channel_actions", "follow_ups", "drafts"},
+        "never": {
+            "channel_tools",
+            "channel_actions",
+            "follow_ups",
+            "drafts",
+            "room_reactions",
+        },
     }
 
 

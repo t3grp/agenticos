@@ -1,14 +1,19 @@
 """Tenant-bound room message reactions and their batched transcript summaries."""
 
 from collections.abc import Sequence
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import distinct, func, literal, select
+from sqlalchemy import func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.conversation import Conversation, Message
+from app.db.models.room_agent_message_reaction import RoomAgentMessageReaction
 from app.db.models.room_message_reaction import RoomMessageReaction
-from app.schemas.room_reaction import RoomMessageReactionRead
+from app.schemas.room_reaction import (
+    RoomMessageReactionAgentRead,
+    RoomMessageReactionRead,
+)
 
 
 async def get_room_message(
@@ -58,16 +63,18 @@ async def distinct_emoji_count(
     conversation_id: UUID,
     message_id: UUID,
 ) -> int:
-    return (
-        await db.scalar(
-            select(func.count(distinct(RoomMessageReaction.emoji))).where(
-                RoomMessageReaction.organization_id == organization_id,
-                RoomMessageReaction.conversation_id == conversation_id,
-                RoomMessageReaction.message_id == message_id,
-            )
-        )
-        or 0
+    human = select(RoomMessageReaction.emoji.label("emoji")).where(
+        RoomMessageReaction.organization_id == organization_id,
+        RoomMessageReaction.conversation_id == conversation_id,
+        RoomMessageReaction.message_id == message_id,
     )
+    agents = select(RoomAgentMessageReaction.emoji.label("emoji")).where(
+        RoomAgentMessageReaction.organization_id == organization_id,
+        RoomAgentMessageReaction.conversation_id == conversation_id,
+        RoomAgentMessageReaction.message_id == message_id,
+    )
+    combined = human.union(agents).subquery()
+    return await db.scalar(select(func.count()).select_from(combined)) or 0
 
 
 async def has_emoji(
@@ -81,14 +88,24 @@ async def has_emoji(
     return bool(
         await db.scalar(
             select(
-                select(RoomMessageReaction.id)
-                .where(
-                    RoomMessageReaction.organization_id == organization_id,
-                    RoomMessageReaction.conversation_id == conversation_id,
-                    RoomMessageReaction.message_id == message_id,
-                    RoomMessageReaction.emoji == emoji,
+                or_(
+                    select(RoomMessageReaction.id)
+                    .where(
+                        RoomMessageReaction.organization_id == organization_id,
+                        RoomMessageReaction.conversation_id == conversation_id,
+                        RoomMessageReaction.message_id == message_id,
+                        RoomMessageReaction.emoji == emoji,
+                    )
+                    .exists(),
+                    select(RoomAgentMessageReaction.id)
+                    .where(
+                        RoomAgentMessageReaction.organization_id == organization_id,
+                        RoomAgentMessageReaction.conversation_id == conversation_id,
+                        RoomAgentMessageReaction.message_id == message_id,
+                        RoomAgentMessageReaction.emoji == emoji,
+                    )
+                    .exists(),
                 )
-                .exists()
             )
         )
     )
@@ -131,7 +148,7 @@ async def list_aggregates(
     message_ids: Sequence[UUID],
     user_id: UUID | None,
 ) -> dict[UUID, list[RoomMessageReactionRead]]:
-    """Read one authorized page of messages' emoji totals in one query."""
+    """Read one authorized page of human and agent emoji aggregates."""
     if not message_ids:
         return {}
     reacted_by_me = (
@@ -139,12 +156,13 @@ async def list_aggregates(
         if user_id is not None
         else literal(False)
     )
-    result = await db.execute(
+    human_rows = await db.execute(
         select(
             RoomMessageReaction.message_id,
             RoomMessageReaction.emoji,
             func.count(RoomMessageReaction.id).label("count"),
             reacted_by_me.label("reacted_by_me"),
+            func.min(RoomMessageReaction.created_at).label("first_created_at"),
         )
         .where(
             RoomMessageReaction.organization_id == organization_id,
@@ -154,13 +172,62 @@ async def list_aggregates(
         .group_by(RoomMessageReaction.message_id, RoomMessageReaction.emoji)
         .order_by(func.min(RoomMessageReaction.created_at), RoomMessageReaction.emoji)
     )
+    agent_rows = await db.execute(
+        select(
+            RoomAgentMessageReaction.message_id,
+            RoomAgentMessageReaction.emoji,
+            RoomAgentMessageReaction.agent_id,
+            RoomAgentMessageReaction.agent_name,
+            RoomAgentMessageReaction.created_at,
+            RoomAgentMessageReaction.id,
+        )
+        .where(
+            RoomAgentMessageReaction.organization_id == organization_id,
+            RoomAgentMessageReaction.conversation_id == conversation_id,
+            RoomAgentMessageReaction.message_id.in_(message_ids),
+        )
+        .order_by(
+            RoomAgentMessageReaction.message_id,
+            RoomAgentMessageReaction.emoji,
+            RoomAgentMessageReaction.agent_id,
+            RoomAgentMessageReaction.created_at,
+            RoomAgentMessageReaction.id,
+        )
+        .distinct(
+            RoomAgentMessageReaction.message_id,
+            RoomAgentMessageReaction.emoji,
+            RoomAgentMessageReaction.agent_id,
+        )
+    )
+    keys: set[tuple[UUID, str]] = set()
+    human_counts: dict[tuple[UUID, str], int] = {}
+    reacted_by_me_values: dict[tuple[UUID, str], bool] = {}
+    first_created: dict[tuple[UUID, str], datetime] = {}
+    for row in human_rows:
+        key = (row.message_id, row.emoji)
+        keys.add(key)
+        human_counts[key] = row.count
+        reacted_by_me_values[key] = bool(row.reacted_by_me)
+        first_created[key] = row.first_created_at
+    agents_by_key: dict[tuple[UUID, str], dict[UUID, RoomMessageReactionAgentRead]] = {}
+    for row in agent_rows:
+        key = (row.message_id, row.emoji)
+        keys.add(key)
+        first_created[key] = min(first_created.get(key, row.created_at), row.created_at)
+        agents_by_key.setdefault(key, {}).setdefault(
+            row.agent_id,
+            RoomMessageReactionAgentRead(agent_id=row.agent_id, name=row.agent_name),
+        )
     grouped: dict[UUID, list[RoomMessageReactionRead]] = {}
-    for row in result:
-        grouped.setdefault(row.message_id, []).append(
+    for message_id, emoji in sorted(keys, key=lambda item: (first_created[item], item[1])):
+        key = (message_id, emoji)
+        agents = list(agents_by_key.get(key, {}).values())
+        grouped.setdefault(message_id, []).append(
             RoomMessageReactionRead(
-                emoji=row.emoji,
-                count=row.count,
-                reacted_by_me=bool(row.reacted_by_me),
+                emoji=emoji,
+                count=human_counts.get(key, 0) + len(agents),
+                reacted_by_me=reacted_by_me_values.get(key, False),
+                agents=agents,
             )
         )
     return grouped

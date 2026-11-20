@@ -295,6 +295,28 @@ Use the reaction control on a saved human or agent message to add or remove your
 emoji. Counts combine everyone's reactions, while your own selections stay marked.
 Up to twenty different emoji can appear on one message.
 
+### Agent reactions
+
+Agents can react under their own names. Hover over or focus a reaction to see
+which agents added it. Counts include people and agents; repeated actions by the
+same agent count once for that emoji. Your reaction control changes only your own
+selection.
+
+An agent can acknowledge a message with a reaction without adding an empty chat
+reply. Open the run details to inspect the saved action, its agent version and
+target message. This audit requires your current access to the room and any
+referenced source discussion. It shows up to 100 actions and tells you when more
+exist.
+
+With [AI responder selection](#ai-responder-selection) enabled, a short social
+acknowledgement can also receive a reaction when no agent response is selected.
+Attribution follows an explicitly addressed eligible agent or the existing
+conversation. Ambiguous attribution and messages directed at another person do
+not produce automatic agent reactions.
+
+A general emoji greeting with no personal addressee can receive a reaction from
+an eligible room agent.
+
 ### AI responder selection
 
 Open the participant list and choose **AI responder selection → Configure**. A

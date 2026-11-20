@@ -20,7 +20,7 @@ notification, attachment and transcript services.
 | Human mentions notify without adding members | [`notification-producers.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/notification-producers.ts) | `room_mention`, current conversation access checked again when read |
 | Thread follow, unread state and lifecycle | [`threads.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/threads.ts) | Room thread state, explicit follow/mute and a cursor through the last viewed reply |
 | Selected context ranges, same-room moves and cross-room references | [`threads.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/threads.ts) | [Range snapshot, atomic edit/move/return, and live audience checks](agentes-thread-ranges.md), added in draft PR 190 |
-| Emoji reactions and attachment sharing | [`chat.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/apps/server/src/routes/app/chat.ts) | Human emoji aggregates, existing upload cards and attachment routing in room posts |
+| Emoji reactions and attachment sharing | [`chat.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/apps/server/src/routes/app/chat.ts) | Human and [agent-attributed reactions](agentes-agent-reactions.md), existing upload cards and attachment routing in room posts |
 
 Agentes fixes a direct message at two participants. In-place conversion to a
 larger room is intentional here: the requested workflow lets a person add any
@@ -121,11 +121,17 @@ requester's current room and agent permissions.
 
 ## Reactions and thread state
 
-Reactions are one signed-in person's emoji on a saved human or assistant message.
-Ensure-on and ensure-off requests are idempotent. There can be at most twenty
-distinct emoji on one message; another person can join an existing emoji at that
-limit. Responses aggregate count and the current viewer's own selection, without
-returning an actor directory.
+Human reactions are one signed-in person's emoji on a saved human or assistant
+message. Ensure-on and ensure-off requests are idempotent. Agents record their
+own [attributed actions](agentes-agent-reactions.md) through a native room tool or
+a conservative social acknowledgement from an accepted routing decision. The
+combined limit is twenty distinct emoji per message; another person or agent can
+join an existing emoji at that limit.
+
+Counts include each distinct agent once per emoji alongside human selections.
+Responses expose frozen agent names but keep `reacted_by_me` human-only. A solo
+reaction can finish without an empty assistant message; its durable action remains
+visible in the authorized run audit, including on conversationless router runs.
 
 A thread can be open, closed or archived. A new reply reopens a closed thread.
 An archived thread does not accept replies; unarchiving restores the state it had
@@ -149,7 +155,8 @@ another room event is relayed. Polling remains a recovery path.
 The migration chain continues from `0345_credential_continuations` through
 `0346_room_participants`, `0347_room_mention_requests`,
 `0348_room_message_reactions`, `0349_room_thread_state` and the follow-up
-`0350_room_thread_context` and `0351_room_auto_routing`. Legacy room requests
+`0350_room_thread_context`, `0351_room_auto_routing` and
+`0352_room_agent_reactions`. Legacy room requests
 remain primary requests with explicit dispatch. Downgrades refuse to erase used
 feature evidence. Schema changes are exercised against disposable PostgreSQL;
 production migration and deployment are separate operations.
@@ -160,7 +167,8 @@ The room worker executes published cloud-compatible agents. Desktop and personal
 sandbox execution still depend on a person's connected device and are not
 silently moved into a server job. AI routing is optional, while existing quotes,
 pins, search, thread navigation and presence are reused. Agent-attributed social
-reactions and the native room reaction tool remain a separate follow-up.
+reactions and the native room reaction tool are a separate draft slice, with their
+own persistence, authority and runner validation.
 
 This comparison does not cover Agentes's wiki, business applications or plugin
 ecosystem. Selected context ranges and conversation-segment moves are implemented

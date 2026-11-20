@@ -884,6 +884,7 @@ def load_builtins() -> None:
         phone_calls,
         planning,
         proof_scenario,
+        room_reactions,
         sandbox,
         secret_request,
         skills,
