@@ -109,7 +109,7 @@ export function RoomAutoRoutingSettingsForm({
 
   return (
     <form onSubmit={(event) => void submit(event)} className="space-y-5">
-      {controller.error && (
+      {controller.error != null && (
         <div role="alert" className="flex items-center gap-2 text-sm">
           <span className="text-destructive">{t("policyUnavailable")}</span>
           <Button type="button" variant="ghost" size="sm" onClick={() => void controller.refetch()}>
