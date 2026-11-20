@@ -2,7 +2,7 @@
 title: Proyectos
 seo_title: Proyectos - archivos e instrucciones compartidos
 description: Un proyecto da al trabajo en curso un contenedor de archivos y unas instrucciones que comparte cada chat iniciado en él, responda el agent que responda.
-source_sha: "24e2df11cc74"
+source_sha: "101225160e4d"
 ---
 
 # Proyectos { #projects }
@@ -320,6 +320,29 @@ un sandbox personal siguen necesitando el flujo de chat específico de su dispos
 Usa el control de reacciones en un mensaje guardado de una persona o un agent para
 añadir o quitar tu emoji. Los recuentos reúnen las reacciones de todos, y tus
 selecciones siguen marcadas. Cada mensaje admite hasta veinte emoji distintos.
+
+### Selección de agents con AI { #ai-responder-selection }
+
+Abre la lista de participantes y elige **AI responder selection → Configure**.
+Un responsable de la sala puede permitir que un agent elija qué agents con
+respuestas automáticas activadas deben responder a mensajes sin menciones,
+usando un perfil de modelo de la organización. Puede no elegir a ninguno si no
+hace falta responder. Las menciones directas y **Ask lead** mantienen la
+prioridad. Desactivar la selección con AI conserva los ajustes anteriores de
+respuestas automáticas de cada agent.
+
+Elige un tiempo de espera y un máximo de uno a cuatro agents. Los valores
+predeterminados son 2,5 segundos y un agent. Hasta ocho mensajes consecutivos de
+la misma persona en la misma discusión pueden compartir una decisión. El routing
+usa el modelo de la organización seleccionado para llamadas de pago, con un
+budget de 0,05 USD por run y un límite de ocho segundos. El historial normal de
+runs registra el consumo.
+
+Un aviso bajo el mensaje aceptado identifica al router y a los agents elegidos,
+o indica que no hacía falta responder. Las decisiones pendientes se actualizan
+al terminar. Un resultado desconocido no se reintenta automáticamente. Puedes
+desactivar la regla aunque su router o perfil de modelo anterior ya no esté
+disponible; volver a activarla requiere opciones válidas actualmente.
 
 ### Hilos laterales { #side-threads }
 

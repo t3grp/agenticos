@@ -661,6 +661,12 @@ them or an agent to request its response. Room attachments, emoji reactions,
 thread following and unread markers use the same saved transcript. See
 [team rooms](projects.md#team-rooms) for membership, responder and thread behavior.
 
+The participant list also offers **AI responder selection**. A room manager can
+choose a router and organization model profile, set the quiet window and limit
+responders. Receipts show who chose the agents. When this option is off, existing
+per-agent automatic reply settings still apply. See
+[AI responder selection](projects.md#ai-responder-selection) for behavior and costs.
+
 **Select context** creates a thread from a chosen message range. The thread keeps
 context separate from replies and supports moving, returning or editing the range.
 You can also reference a compatible source conversation. See

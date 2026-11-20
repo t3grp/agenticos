@@ -501,6 +501,8 @@ export function RoomThreadPanel({
                 )}
                 <MessageList
                   messages={messages}
+                  conversationId={conversationId}
+                  isRoom={isRoom}
                   roomReactionsEnabled={reactionsEnabled}
                   canReactToRoomMessages={canPost}
                   onReply={draft.setReply}

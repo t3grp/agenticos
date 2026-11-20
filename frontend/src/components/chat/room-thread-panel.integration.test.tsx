@@ -14,6 +14,11 @@ import { RoomThreadPanel } from "./room-thread-panel";
 import type { MessagePinActions } from "./message-list";
 import type { PinnedMessageTarget } from "./pinned-messages";
 
+const routingScope = vi.hoisted(() => ({
+  conversationId: null as string | null,
+  isRoom: false,
+}));
+
 vi.mock("@/lib/api-client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
@@ -71,40 +76,48 @@ vi.mock("./message-item", () => ({
 vi.mock("./message-list", () => ({
   MessageList: ({
     messages,
+    conversationId,
+    isRoom,
     allowReply,
     onReply,
     messagePinActions,
   }: {
     messages: ChatMessage[];
+    conversationId?: string | null;
+    isRoom?: boolean;
     allowReply: boolean;
     onReply: (reply: MessageReply) => void;
     messagePinActions?: MessagePinActions;
-  }) => (
-    <div>
-      {messages.map((message) => (
-        <article key={message.id} data-message-id={message.id}>
-          <p>{message.content}</p>
-          {messagePinActions && (
-            <button
-              disabled={messagePinActions.pendingMessageId === message.id}
-              onClick={() => messagePinActions.togglePin(message.id, true)}
-            >
-              Pin {message.id}
-            </button>
-          )}
-          {allowReply && (
-            <button
-              onClick={() =>
-                onReply({ messageId: message.id, role: message.role, excerpt: message.content })
-              }
-            >
-              Quote {message.id}
-            </button>
-          )}
-        </article>
-      ))}
-    </div>
-  ),
+  }) => {
+    routingScope.conversationId = conversationId ?? null;
+    routingScope.isRoom = isRoom === true;
+    return (
+      <div>
+        {messages.map((message) => (
+          <article key={message.id} data-message-id={message.id}>
+            <p>{message.content}</p>
+            {messagePinActions && (
+              <button
+                disabled={messagePinActions.pendingMessageId === message.id}
+                onClick={() => messagePinActions.togglePin(message.id, true)}
+              >
+                Pin {message.id}
+              </button>
+            )}
+            {allowReply && (
+              <button
+                onClick={() =>
+                  onReply({ messageId: message.id, role: message.role, excerpt: message.content })
+                }
+              >
+                Quote {message.id}
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
+    );
+  },
 }));
 
 let client: QueryClient;
@@ -188,6 +201,8 @@ function serve(path: string) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  routingScope.conversationId = null;
+  routingScope.isRoom = false;
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   useAuthStore.setState({
     user: {
@@ -238,6 +253,12 @@ afterEach(() => {
 });
 
 describe("RoomThreadPanel", () => {
+  it("passes the room identity to MessageList for thread routing receipts", async () => {
+    render(view(), { wrapper });
+    await screen.findByText("Saved reply A");
+    await waitFor(() => expect(routingScope).toEqual({ conversationId: "room-a", isRoom: true }));
+  });
+
   it("keeps private pin actions available for an authorized read-only root and its replies", async () => {
     const togglePin = vi.fn();
     const messagePinActions = { pendingMessageId: null, togglePin };

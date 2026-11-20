@@ -16,6 +16,7 @@ notification, attachment and transcript services.
 |---|---|---|
 | Public/private rooms and explicit human/agent membership | [`channels.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/channels.ts) | `RoomParticipantService`, room directory and participant controls |
 | Identity-based mentions and selected bot responders | [`messages.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/messages.ts), [`dispatch.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/dispatch.ts) | `RoomMessageCreate.mentions`, canonical saved recipients and one queued request per selected agent |
+| Optional model routing, burst grouping and visible responder choices | [`router.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/router.ts), [`router-jev.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/router-jev.ts) | [AI responder selection](agentes-automatic-routing.md), durable decisions over the normal agent runner and room queue |
 | Human mentions notify without adding members | [`notification-producers.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/notification-producers.ts) | `room_mention`, current conversation access checked again when read |
 | Thread follow, unread state and lifecycle | [`threads.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/threads.ts) | Room thread state, explicit follow/mute and a cursor through the last viewed reply |
 | Selected context ranges, same-room moves and cross-room references | [`threads.ts`](https://github.com/agentes-chat/agentes-chat/blob/05468176f2af476513bea2bb1138d95d244d148b/packages/engine/src/threads.ts) | [Range snapshot, atomic edit/move/return, and live audience checks](agentes-thread-ranges.md), added in draft PR 190 |
@@ -82,11 +83,17 @@ New agents are mention-only by default. A manager may opt a room agent into
 automatic replies. This differs from Agentes's default and matches the requested
 explicit-mention workflow.
 
-T3OS uses a bounded deterministic selector for those opted-in agents. Simple
-acknowledgements select none; a named candidate is preferred; a broad request can
-select at most four; otherwise the first eligible configured agent is selected.
-Explicit human or agent mentions are not expanded. The selected responders are
-frozen with the accepted post. This is not Agentes's model-based routing policy.
+Without an enabled AI routing policy, a bounded deterministic selector handles
+those opted-in agents. Simple acknowledgements select none; a named candidate is
+preferred; a broad request can select at most four; otherwise the first eligible
+configured agent is selected. Explicit human or agent mentions are not expanded.
+
+A manager can separately enable [AI responder selection](agentes-automatic-routing.md)
+with a current room router and an organization model profile. It uses recent
+context, bounded contiguous message groups and frozen eligible candidates to
+select zero to four responders. The normal runner records its budget and usage;
+durable decisions recheck current authority before dispatch. Visible receipts
+identify the router and selected agents. An uncertain paid call is not replayed.
 
 `Ask lead` remains a separate explicit planning action. Human mentions may
 accompany it. Agent mentions and `Ask lead` cannot be combined, and the composer
@@ -142,7 +149,7 @@ another room event is relayed. Polling remains a recovery path.
 The migration chain continues from `0345_credential_continuations` through
 `0346_room_participants`, `0347_room_mention_requests`,
 `0348_room_message_reactions`, `0349_room_thread_state` and the follow-up
-`0350_room_thread_context`. Legacy room requests
+`0350_room_thread_context` and `0351_room_auto_routing`. Legacy room requests
 remain primary requests with explicit dispatch. Downgrades refuse to erase used
 feature evidence. Schema changes are exercised against disposable PostgreSQL;
 production migration and deployment are separate operations.
@@ -151,9 +158,9 @@ production migration and deployment are separate operations.
 
 The room worker executes published cloud-compatible agents. Desktop and personal
 sandbox execution still depend on a person's connected device and are not
-silently moved into a server job. Automatic selection is bounded rules rather
-than an additional paid routing model. Existing quotes, pins, search, thread
-navigation and presence are reused.
+silently moved into a server job. AI routing is optional, while existing quotes,
+pins, search, thread navigation and presence are reused. Agent-attributed social
+reactions and the native room reaction tool remain a separate follow-up.
 
 This comparison does not cover Agentes's wiki, business applications or plugin
 ecosystem. Selected context ranges and conversation-segment moves are implemented

@@ -1,5 +1,5 @@
 ---
-source_sha: "35c74bcfea87"
+source_sha: "d960ed9487a9"
 ---
 
 # Die Konsole { #the-console }
@@ -740,6 +740,13 @@ anzufordern. Raum-Anhänge, Emoji-Reaktionen, Thread-Beobachtung und
 Ungelesen-Markierungen nutzen denselben gespeicherten Verlauf. Mehr zu
 Mitgliedschaft, Antwortverhalten und Threads steht unter
 [Teamräume](projects.md#team-rooms).
+
+Die Teilnehmerliste bietet auch **AI responder selection**. Ein Raum-Manager kann
+einen Router und ein Modellprofil der Organisation wählen, die Wartezeit festlegen
+und die Zahl der antwortenden Agents begrenzen. Hinweise zeigen, wer die Agents
+ausgewählt hat. Bei ausgeschalteter Option gelten die bisherigen Einstellungen
+für automatische Antworten weiterhin. [Auswahl mit AI](projects.md#ai-responder-selection)
+erklärt das Verhalten und die Kosten.
 
 **Select context** erstellt einen Thread aus einem ausgewählten Nachrichtenbereich.
 Kontext und Antworten bleiben getrennt; du kannst den Bereich verschieben,

@@ -4,6 +4,7 @@ import { Fragment, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
+import { useRoomAutoRoutingDecisions } from "@/hooks/use-room-auto-routing-decisions";
 import { useAgents } from "@/hooks";
 import { appLinkFromChat } from "@/lib/app-return";
 import { consoleLink, pointAt } from "@/lib/assistant-highlight";
@@ -15,6 +16,7 @@ import type { RoomThreadMovedStub } from "@/types/room-thread-context";
 import type { PinnedPrompts } from "./chat-container";
 import type { ConversationSideThreadActions } from "./conversation-side-threads";
 import { MessageItem } from "./message-item";
+import { RoomAutoRoutingReceipt } from "./room-auto-routing-receipt";
 import { RoomThreadContextStub } from "./room-thread-context-stub";
 
 export interface MessagePinActions {
@@ -24,6 +26,8 @@ export interface MessagePinActions {
 
 interface MessageListProps {
   messages: ChatMessage[];
+  conversationId?: string | null;
+  isRoom?: boolean;
   delegations?: Delegation[];
   sideThreadActions?: ConversationSideThreadActions;
   messagePinActions?: MessagePinActions;
@@ -246,6 +250,8 @@ export function layoutMessages(messages: ChatMessage[]): MessageLayout[] {
 
 export function MessageList({
   messages: sourceMessages,
+  conversationId = null,
+  isRoom = false,
   delegations,
   sideThreadActions,
   messagePinActions,
@@ -270,6 +276,8 @@ export function MessageList({
   const { agents } = useAgents({ includeArchived: true });
   const byId = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
   const router = useRouter();
+  const automaticRouting = useRoomAutoRoutingDecisions(conversationId, isRoom, messages);
+  const tAutomaticRouting = useTranslations("chat.roomAutoRouting.receipt");
 
   const layout = useMemo(() => layoutMessages(messages), [messages]);
   const stubPositions = useMemo(() => {
@@ -333,58 +341,84 @@ export function MessageList({
 
   return (
     <div className="space-y-0" onClickCapture={onClickCapture}>
-      {layout.map(({ message, ...row }, index) => (
-        <Fragment key={message.renderKey ?? message.id}>
-          {onOpenThread &&
-            stubPositions.byIndex
-              .get(index)
-              ?.map((stub) => (
-                <RoomThreadContextStub
-                  key={stub.root_message_id}
-                  stub={stub}
-                  onOpen={onOpenThread}
-                />
-              ))}
-          {/* Never inside a turn: a run that crossed midnight is still one answer. */}
-          {!row.continuesTurn && startsADay(timestamps, index, now) && (
-            <DaySeparator at={message.timestamp} now={now} />
-          )}
-          <MessageItem
-            message={message}
-            delegations={index === lastAssistantIndex ? delegations : undefined}
-            agent={message.agentId ? byId.get(message.agentId) : undefined}
-            groupPosition={row.groupPosition}
-            continuesTurn={row.continuesTurn}
-            endsTurn={row.endsTurn}
-            turnUsage={row.turnUsage}
-            openLastStep={index === openStepsAt}
-            pins={pins}
-            agents={agents}
-            asked={askedBefore(messages, index)}
-            request={pins ? undefined : row.request}
-            sideThreadActions={sideThreadActions}
-            onTogglePin={messagePinActions?.togglePin}
-            pinPending={messagePinActions?.pendingMessageId === (message.persistedId ?? message.id)}
-            onFork={onFork}
-            onOpenThread={onOpenThread}
-            canStartThread={canStartThread}
-            onReply={onReply}
-            allowReply={allowReply}
-            roomReactionsEnabled={roomReactionsEnabled}
-            canReactToRoomMessages={canReactToRoomMessages}
-            forkingMessageId={forkingMessageId}
-            onRegenerate={
-              onRegenerate && index === lastAssistantIndex && !message.isStreaming
-                ? regenerateLast
-                : undefined
-            }
-          />
-        </Fragment>
-      ))}
+      {layout.map(({ message, ...row }, index) => {
+        const persistedMessageId =
+          message.persistedId ?? (message.isTemporaryId ? undefined : message.id);
+        const receipt =
+          message.role === "user" && persistedMessageId !== undefined
+            ? automaticRouting.receiptsByMessageId.get(persistedMessageId)
+            : undefined;
+        return (
+          <Fragment key={message.renderKey ?? message.id}>
+            {onOpenThread &&
+              stubPositions.byIndex
+                .get(index)
+                ?.map((stub) => (
+                  <RoomThreadContextStub
+                    key={stub.root_message_id}
+                    stub={stub}
+                    onOpen={onOpenThread}
+                  />
+                ))}
+            {/* Never inside a turn: a run that crossed midnight is still one answer. */}
+            {!row.continuesTurn && startsADay(timestamps, index, now) && (
+              <DaySeparator at={message.timestamp} now={now} />
+            )}
+            <MessageItem
+              message={message}
+              delegations={index === lastAssistantIndex ? delegations : undefined}
+              agent={message.agentId ? byId.get(message.agentId) : undefined}
+              groupPosition={row.groupPosition}
+              continuesTurn={row.continuesTurn}
+              endsTurn={row.endsTurn}
+              turnUsage={row.turnUsage}
+              openLastStep={index === openStepsAt}
+              pins={pins}
+              agents={agents}
+              asked={askedBefore(messages, index)}
+              request={pins ? undefined : row.request}
+              sideThreadActions={sideThreadActions}
+              onTogglePin={messagePinActions?.togglePin}
+              pinPending={
+                messagePinActions?.pendingMessageId === (message.persistedId ?? message.id)
+              }
+              onFork={onFork}
+              onOpenThread={onOpenThread}
+              canStartThread={canStartThread}
+              onReply={onReply}
+              allowReply={allowReply}
+              roomReactionsEnabled={roomReactionsEnabled}
+              canReactToRoomMessages={canReactToRoomMessages}
+              forkingMessageId={forkingMessageId}
+              onRegenerate={
+                onRegenerate && index === lastAssistantIndex && !message.isStreaming
+                  ? regenerateLast
+                  : undefined
+              }
+            />
+            {receipt && <RoomAutoRoutingReceipt receipt={receipt} />}
+          </Fragment>
+        );
+      })}
       {onOpenThread &&
         stubPositions.after.map((stub) => (
           <RoomThreadContextStub key={stub.root_message_id} stub={stub} onOpen={onOpenThread} />
         ))}
+      {automaticRouting.error && (
+        <div
+          role="alert"
+          className="text-destructive flex items-center justify-center gap-2 p-3 text-xs"
+        >
+          <span>{tAutomaticRouting("loadFailed")}</span>
+          <button
+            type="button"
+            className="hover:underline"
+            onClick={() => void automaticRouting.retry()}
+          >
+            {tAutomaticRouting("retry")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

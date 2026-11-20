@@ -31,6 +31,7 @@ export function RoomParticipantsButton({
         className="h-7 shrink-0 gap-1.5 px-2 text-xs"
         aria-label={t("button")}
         title={t("button")}
+        data-tour="chat-room-participants"
         onClick={() => setOpen(true)}
       >
         <UsersRound className="h-3.5 w-3.5" aria-hidden />

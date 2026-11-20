@@ -2412,6 +2412,8 @@ function ChatUI({
                     )}
                     <MessageList
                       messages={messages}
+                      conversationId={currentConversationId}
+                      isRoom={isRoom}
                       roomReactionsEnabled={isRoom}
                       canReactToRoomMessages={
                         isRoom &&

@@ -76,6 +76,7 @@ def production() -> Handlers:
         proactive_tasks,
         rag_tasks,
         report_tasks,
+        room_auto_routing_tasks,
         room_tasks,
         run_tasks,
         skill_check_tasks,
@@ -124,6 +125,11 @@ def production() -> Handlers:
             Handler(jobs.RETURN_CONVERSATION_TASK, conversation_tasks.return_task),
             Handler(jobs.RUN_ROOM_REQUEST, room_tasks.run_request),
             Handler(jobs.RECONCILE_ROOM_REQUESTS, _each_tick(room_tasks.reconcile_requests)),
+            Handler(jobs.RUN_ROOM_AUTO_ROUTING, room_auto_routing_tasks.run_auto_routing),
+            Handler(
+                jobs.RECONCILE_ROOM_AUTO_ROUTING,
+                _each_tick(room_auto_routing_tasks.reconcile_auto_routing),
+            ),
             Handler(
                 jobs.RECONCILE_CONVERSATION_TASKS, _each_tick(conversation_tasks.reconcile_tasks)
             ),
@@ -216,11 +222,15 @@ def _settlers() -> dict[str, Settler]:
         eval_tasks,
         project_tasks,
         rag_tasks,
+        room_auto_routing_tasks,
         room_tasks,
     )
 
     return {
         jobs.RUN_ROOM_REQUEST.kind: _settler(jobs.RUN_ROOM_REQUEST, room_tasks.settle_lost_request),
+        jobs.RUN_ROOM_AUTO_ROUTING.kind: _settler(
+            jobs.RUN_ROOM_AUTO_ROUTING, room_auto_routing_tasks.settle_lost_auto_routing
+        ),
         jobs.RUN_CONVERSATION_TASK.kind: _settler(
             jobs.RUN_CONVERSATION_TASK, conversation_tasks.settle_lost_task
         ),

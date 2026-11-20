@@ -2,7 +2,7 @@
 title: Projekty
 seo_title: Projekty - wspólne pliki i instrukcje czatów
 description: Projekt daje bieżącej pracy jeden kontener plików i jeden zestaw instrukcji, wspólne dla każdego czatu w nim, niezależnie od tego, który agent odpowiada.
-source_sha: "24e2df11cc74"
+source_sha: "101225160e4d"
 ---
 
 # Projekty { #projects }
@@ -306,6 +306,28 @@ przepływu czatu.
 Użyj kontrolki reakcji przy zapisanej wiadomości człowieka lub agenta, aby dodać
 albo usunąć swoją emoji. Liczniki sumują reakcje wszystkich osób, a twoje własne
 wybory pozostają oznaczone. Jedna wiadomość może mieć do dwudziestu różnych emoji.
+
+### Wybór odpowiadających przez AI { #ai-responder-selection }
+
+Otwórz listę uczestników i wybierz **AI responder selection → Configure**.
+Zarządzający pokojem może pozwolić agentowi wybierać, którzy agenci z włączonymi
+automatycznymi odpowiedziami mają odpowiadać na wiadomości bez wzmianek, używając
+profilu modelu organizacji. Jeśli odpowiedź nie jest potrzebna, może nie wybrać
+nikogo. Bezpośrednie wzmianki i **Ask lead** zachowują pierwszeństwo. Wyłączenie
+wyboru przez AI zachowuje dotychczasowe ustawienia automatycznych odpowiedzi
+poszczególnych agentów.
+
+Wybierz czas oczekiwania i limit od jednego do czterech odpowiadających. Domyślnie
+są to 2,5 sekundy i jeden agent. Do ośmiu kolejnych wiadomości tej samej osoby w
+tej samej dyskusji może korzystać z jednej decyzji. Routing wykonuje płatne
+wywołania wybranego modelu organizacji, z budgetem 0,05 USD na run i limitem ośmiu
+sekund. Zwykła historia runów zapisuje zużycie.
+
+Informacja pod przyjętą wiadomością wskazuje router i wybranych agentów albo
+wyjaśnia, że odpowiedź nie była potrzebna. Oczekujące decyzje aktualizują się po
+zakończeniu. Nieznany wynik nie powoduje automatycznego ponowienia. Możesz
+wyłączyć regułę także wtedy, gdy poprzedni router lub profil modelu stał się
+niedostępny; ponowne włączenie wymaga poprawnego bieżącego wyboru.
 
 ### Wątki boczne { #side-threads }
 

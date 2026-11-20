@@ -1,5 +1,5 @@
 ---
-source_sha: "35c74bcfea87"
+source_sha: "d960ed9487a9"
 ---
 
 # Konsola { #the-console }
@@ -684,6 +684,13 @@ powiadomić, albo agenta, aby poprosić o jego odpowiedź. Załączniki do wiado
 pokoju, reakcje emoji, obserwowanie wątków i wskaźniki nieprzeczytanych wiadomości
 korzystają z tej samej zapisanej transkrypcji. Zobacz [pokoje zespołu](projects.md#team-rooms),
 aby poznać członkostwo, odpowiadających i działanie wątków.
+
+Lista uczestników udostępnia też **AI responder selection**. Zarządzający pokojem
+może wybrać router i profil modelu organizacji, ustawić czas oczekiwania oraz
+limit odpowiadających. Informacje pod wiadomością pokazują, kto wybrał agentów.
+Po wyłączeniu tej opcji nadal obowiązują dotychczasowe ustawienia automatycznych
+odpowiedzi agentów. Zobacz [wybór odpowiadających przez AI](projects.md#ai-responder-selection),
+aby poznać działanie i koszty.
 
 **Select context** tworzy wątek z wybranego zakresu wiadomości. Kontekst jest
 oddzielony od odpowiedzi; zakres można przenieść, przywrócić lub edytować.

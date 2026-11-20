@@ -19,6 +19,7 @@ from app.db.models.room_participant import RoomParticipant
 from app.db.models.room_message_reaction import RoomMessageReaction
 from app.db.models.room_thread import RoomThread, RoomThreadFollow, RoomThreadRead
 from app.db.models.room_routing import RoomLeadPolicy, RoomRoutingProposal, RoomTaskLink
+from app.db.models.room_auto_routing import RoomAutoRoutingDecision, RoomAutoRoutingPolicy
 from app.db.models.coding_task_change import CodingTaskChange
 from app.db.models.chat_file import ChatFile
 from app.db.models.message_rating import MessageRating
@@ -325,6 +326,8 @@ __all__ = [
     "RoomLeadPolicy",
     "RoomRoutingProposal",
     "RoomTaskLink",
+    "RoomAutoRoutingDecision",
+    "RoomAutoRoutingPolicy",
     "Message",
     "ToolCall",
     "ChatFile",

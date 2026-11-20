@@ -29,6 +29,7 @@ import {
   type RoomParticipantAction,
 } from "./room-participant-confirmation";
 import { RoomParticipantsDialogBody } from "./room-participants-dialog-body";
+import { RoomAutoRoutingSettings } from "./room-auto-routing-settings";
 
 interface RoomParticipantsDialogProps {
   conversationId: string;
@@ -153,6 +154,9 @@ export function RoomParticipantsDialog({
             setAction({ kind: "add", participant });
           }}
         />
+        {conversation !== null && !isLegacyDirect && (
+          <RoomAutoRoutingSettings conversationId={conversationId} />
+        )}
         <RoomParticipantConfirmation
           action={action}
           isLegacyDirect={isLegacyDirect}

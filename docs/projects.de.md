@@ -2,7 +2,7 @@
 title: Projekte
 seo_title: Projekte - gemeinsame Dateien und Anweisungen
 description: Ein Projekt gibt laufender Arbeit einen Container mit Dateien und eine Reihe von Anweisungen, die jeder Chat darin teilt, egal welcher Agent antwortet.
-source_sha: "24e2df11cc74"
+source_sha: "101225160e4d"
 ---
 
 # Projekte { #projects }
@@ -325,6 +325,30 @@ Mit der Reaktionssteuerung an einer gespeicherten Nachricht einer Person oder ei
 Agents kannst du dein Emoji hinzufügen oder entfernen. Die Zähler fassen die
 Reaktionen aller zusammen; deine eigene Auswahl bleibt markiert. Pro Nachricht
 sind bis zu zwanzig verschiedene Emoji möglich.
+
+### Antwortende Agents mit AI auswählen { #ai-responder-selection }
+
+Öffne die Teilnehmerliste und wähle **AI responder selection → Configure**. Ein
+Raum-Manager kann einen Agent mit einem Modellprofil der Organisation auswählen
+lassen, welche für automatische Antworten freigeschalteten Agents auf Nachrichten
+ohne Erwähnung antworten. Wenn keine Antwort nötig ist, kann die Auswahl leer
+bleiben. Direkte Erwähnungen und **Ask lead** behalten Vorrang. Beim Abschalten
+der AI-Auswahl bleiben die bisherigen Einstellungen für automatische Antworten
+der einzelnen Agents erhalten.
+
+Wähle eine Wartezeit und höchstens einen bis vier antwortende Agents. Die
+Standardwerte sind 2,5 Sekunden und ein Agent. Bis zu acht aufeinanderfolgende
+Nachrichten derselben Person in derselben Diskussion können eine Entscheidung
+teilen. Das Routing nutzt das gewählte Organisationsmodell für kostenpflichtige
+Aufrufe, mit einem Budget von 0,05 USD pro Run und einer Frist von acht Sekunden.
+Der normale Run-Verlauf erfasst den Verbrauch.
+
+Ein Hinweis unter der angenommenen Nachricht nennt den Router und die ausgewählten
+Agents oder zeigt, dass keine Antwort nötig war. Wartende Entscheidungen werden
+nach Abschluss aktualisiert. Ein unbekanntes Ergebnis wird nicht automatisch
+wiederholt. Du kannst die Regel auch abschalten, wenn der bisherige Router oder
+das Modellprofil nicht mehr verfügbar ist. Zum erneuten Einschalten sind aktuell
+gültige Optionen erforderlich.
 
 ### Seitenthreads { #side-threads }
 

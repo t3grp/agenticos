@@ -1,5 +1,5 @@
 ---
-source_sha: "35c74bcfea87"
+source_sha: "d960ed9487a9"
 ---
 
 # La consola { #the-console }
@@ -706,6 +706,13 @@ notificarla o a un agent para pedirle una respuesta. Los archivos adjuntos, las
 reacciones con emoji, el seguimiento de hilos y los indicadores de mensajes sin
 leer usan la misma transcripción guardada. Consulta [salas de equipo](projects.md#team-rooms)
 para conocer la pertenencia, las respuestas y el comportamiento de los hilos.
+
+La lista de participantes también ofrece **AI responder selection**. Un responsable
+de la sala puede elegir un router y un perfil de modelo de la organización,
+configurar la espera y limitar los agents que responden. Los avisos muestran quién
+eligió a los agents. Si esta opción está desactivada, siguen vigentes los ajustes
+anteriores de respuestas automáticas. Consulta [selección con AI](projects.md#ai-responder-selection)
+para conocer su funcionamiento y coste.
 
 **Select context** crea un hilo a partir de un rango de mensajes. El contexto
 aparece separado de las respuestas y puedes trasladar, devolver o editar el rango.

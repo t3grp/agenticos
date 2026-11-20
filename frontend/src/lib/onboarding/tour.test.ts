@@ -364,7 +364,18 @@ describe("stepsForPage", () => {
       "chat-approval-mode",
       "chat-your-connections",
       "chat-subscription-model",
+      "chat-room-auto-routing",
     ]);
+  });
+
+  it("makes room responder selection an optional stop opened from the room roster", () => {
+    expect(
+      stepsForPage(ROUTES.CHAT, () => true).find((step) => step.id === "chat-room-auto-routing"),
+    ).toMatchObject({
+      target: "room-auto-routing-settings",
+      activate: "chat-room-participants",
+      optional: true,
+    });
   });
 
   it("only offers the model selector stop to someone who can choose a model", () => {
