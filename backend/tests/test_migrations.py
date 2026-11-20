@@ -67,6 +67,11 @@ MIGRATION_DATABASE = f"agenticos_migrations_test_p{os.getpid()}"
 # uses ships it.
 _MAINTENANCE_DATABASE = "postgres"
 
+# Historical schemas must not receive columns introduced by today's User mapping.
+_HISTORICAL_USER_INSERT = text(
+    "INSERT INTO users (id, email, is_active, is_app_admin) VALUES (:id, :email, true, false)"
+)
+
 
 def _url(database: str) -> str:
     """The DSN alembic builds, pointed at a different database on that server.
@@ -368,16 +373,18 @@ def test_coding_task_revert_columns_round_trip_without_changing_existing_diffs()
     files = [{"path": "old.py", "status": "modified", "patch": "-before\n+after\n"}]
     try:
         with DatabaseSession(engine) as db:
-            owner = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            db.add(owner)
-            db.flush()
+            owner_id = uuid4()
+            db.execute(
+                _HISTORICAL_USER_INSERT,
+                {"id": owner_id, "email": f"{owner_id}@example.com"},
+            )
             organization = Organization(
-                name="Legacy diff", slug=f"legacy-{uuid4()}", created_by_user_id=owner.id
+                name="Legacy diff", slug=f"legacy-{uuid4()}", created_by_user_id=owner_id
             )
             db.add(organization)
             db.flush()
             conversation = Conversation(
-                organization_id=organization.id, user_id=owner.id, title="Old task"
+                organization_id=organization.id, user_id=owner_id, title="Old task"
             )
             db.add(conversation)
             db.flush()
@@ -452,10 +459,14 @@ def test_delete_crosslink_migration_preserves_rows_and_defers_only_checks() -> N
     engine = create_engine(_url(MIGRATION_DATABASE))
     try:
         with DatabaseSession(engine, expire_on_commit=False) as db:
-            creator = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            owner = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            db.add_all([creator, owner])
-            db.flush()
+            creator_id, owner_id = uuid4(), uuid4()
+            db.execute(
+                _HISTORICAL_USER_INSERT,
+                [
+                    {"id": identity, "email": f"{identity}@example.com"}
+                    for identity in (creator_id, owner_id)
+                ],
+            )
             # This is the 0304 schema, before columns added by later migrations.
             org_id = uuid4()
             db.execute(
@@ -463,10 +474,10 @@ def test_delete_crosslink_migration_preserves_rows_and_defers_only_checks() -> N
                     "INSERT INTO organizations (id, name, slug, is_personal, created_by_user_id) "
                     "VALUES (:id, 'Crosslinks', :slug, false, :creator)"
                 ),
-                {"id": org_id, "slug": f"crosslinks-{org_id}", "creator": creator.id},
+                {"id": org_id, "slug": f"crosslinks-{org_id}", "creator": creator_id},
             )
             agent = Agent(organization_id=org_id, name="Reporter", slug=f"reporter-{uuid4()}")
-            chat = Conversation(organization_id=org_id, user_id=owner.id, title="Private")
+            chat = Conversation(organization_id=org_id, user_id=owner_id, title="Private")
             db.add_all([agent, chat])
             db.flush()
             version = AgentVersion(organization_id=org_id, agent_id=agent.id, version=1, spec={})
@@ -487,7 +498,7 @@ def test_delete_crosslink_migration_preserves_rows_and_defers_only_checks() -> N
             routine = AgentTrigger(
                 organization_id=org_id,
                 agent_id=agent.id,
-                created_by_user_id=owner.id,
+                created_by_user_id=owner_id,
                 prompt="Report",
                 interval_seconds=300,
                 next_fire_at=datetime.now(UTC),
@@ -496,7 +507,7 @@ def test_delete_crosslink_migration_preserves_rows_and_defers_only_checks() -> N
             )
             db.add_all([page, routine])
             db.commit()
-            owner_id, agent_id = owner.id, agent.id
+            agent_id = agent.id
             page_id, routine_id = page.id, routine.id
             environment_id, chat_id = environment.id, chat.id
 
@@ -680,20 +691,24 @@ def test_run_conversation_check_waits_for_every_account_delete_cascade() -> None
     engine = create_engine(_url(MIGRATION_DATABASE))
     try:
         with DatabaseSession(engine, expire_on_commit=False) as db:
-            creator = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            owner = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            db.add_all([creator, owner])
-            db.flush()
+            creator_id, owner_id = uuid4(), uuid4()
+            db.execute(
+                _HISTORICAL_USER_INSERT,
+                [
+                    {"id": identity, "email": f"{identity}@example.com"}
+                    for identity in (creator_id, owner_id)
+                ],
+            )
             org_id = uuid4()
             db.execute(
                 text(
                     "INSERT INTO organizations (id, name, slug, is_personal, created_by_user_id) "
                     "VALUES (:id, 'Erasure', :slug, false, :creator)"
                 ),
-                {"id": org_id, "slug": f"erasure-{org_id}", "creator": creator.id},
+                {"id": org_id, "slug": f"erasure-{org_id}", "creator": creator_id},
             )
             agent = Agent(organization_id=org_id, name="Helper", slug=f"helper-{uuid4()}")
-            chat = Conversation(organization_id=org_id, user_id=owner.id, title="Private")
+            chat = Conversation(organization_id=org_id, user_id=owner_id, title="Private")
             db.add_all([agent, chat])
             db.flush()
             # A Core insert names only these columns: the model is at head and the
@@ -705,13 +720,12 @@ def test_run_conversation_check_waits_for_every_account_delete_cascade() -> None
                     organization_id=org_id,
                     agent_id=agent.id,
                     started_at=datetime.now(UTC),
-                    user_id=owner.id,
+                    user_id=owner_id,
                     conversation_id=chat.id,
                     routine_policy={"approved_sources": []},
                 )
             )
             db.commit()
-            owner_id = owner.id
 
         # Re-creating a constraint gives its RI triggers a newer OID, so its action
         # fires after the other one. Each statement forces one of the two orders.
@@ -1393,16 +1407,11 @@ class TestLegacyCookieSessionRevocation:
         try:
             async with factory() as db:
                 user_id, admin_id = uuid4(), uuid4()
-                # Today's User model includes columns that do not exist at 0172.
                 await db.execute(
-                    text(
-                        "INSERT INTO users (id, email, is_active, is_app_admin, credential_version) "
-                        "VALUES (:id, :email, TRUE, FALSE, 0)"
-                    ),
+                    _HISTORICAL_USER_INSERT,
                     [
-                        {"id": user_id, "email": f"cookie-migration-{uuid4()}@example.com"},
-                        {"id": admin_id, "email": f"cookie-admin-{uuid4()}@example.com"},
-                    ],
+                        {"id": user_id, "email": f"cookie-migration-{user_id}@example.com"},
+                        {"id": admin_id, "email": f"cookie-admin-{admin_id}@example.com"},                    ],
                 )
                 now = datetime.now(UTC)
                 old_id, impersonation_id, ended_id = uuid4(), uuid4(), uuid4()
@@ -2276,7 +2285,19 @@ class TestRoomThreadMigration:
         continuation = script.get_revision("0345_credential_continuations")
         assert continuation is not None
         assert continuation.down_revision == "0344_browser_procedure_teaching"
-        assert script.get_heads() == ["0346_merge_t3_v1850"]
+        solution = script.get_revision("0343_solution_installations")
+        assert solution is not None
+        assert solution.down_revision == "0342_criterion_verdicts"
+        appearance = script.get_revision("0344_user_appearance")
+        assert appearance is not None
+        assert appearance.down_revision == "0343_solution_installations"
+        network = script.get_revision("0347_network_connections")
+        assert network is not None
+        assert network.down_revision == "0346_merge_t3_v1850"
+        merged = script.get_revision("0348_merge_t3_v1861")
+        assert merged is not None
+        assert merged.down_revision == ("0347_network_connections", "0344_user_appearance")
+        assert script.get_heads() == ["0348_merge_t3_v1861"]
 
     def test_existing_quotes_survive_roundtrip_and_models_match_head(self) -> None:
         reset = _alembic("downgrade", "base")
@@ -3201,11 +3222,13 @@ def test_routine_activation_index_round_trip_preserves_legacy_policy() -> None:
     run_id = uuid4()
     try:
         with DatabaseSession(engine) as db:
-            owner = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            db.add(owner)
-            db.flush()
+            owner_id = uuid4()
+            db.execute(
+                _HISTORICAL_USER_INSERT,
+                {"id": owner_id, "email": f"{owner_id}@example.com"},
+            )
             org = Organization(
-                name="Legacy activation", slug=f"activation-{uuid4()}", created_by_user_id=owner.id
+                name="Legacy activation", slug=f"activation-{uuid4()}", created_by_user_id=owner_id
             )
             db.add(org)
             db.flush()
@@ -3387,11 +3410,13 @@ def test_github_filter_diagnostic_preserves_existing_routine_policy() -> None:
     trigger_id = uuid4()
     try:
         with DatabaseSession(engine) as db:
-            owner = User(email=f"{uuid4()}@example.com", hashed_password="x")
-            db.add(owner)
-            db.flush()
+            owner_id = uuid4()
+            db.execute(
+                _HISTORICAL_USER_INSERT,
+                {"id": owner_id, "email": f"{owner_id}@example.com"},
+            )
             org = Organization(
-                name="Legacy routine", slug=f"routine-{uuid4()}", created_by_user_id=owner.id
+                name="Legacy routine", slug=f"routine-{uuid4()}", created_by_user_id=owner_id
             )
             db.add(org)
             db.flush()
@@ -3405,7 +3430,7 @@ def test_github_filter_diagnostic_preserves_existing_routine_policy() -> None:
                     id=trigger_id,
                     organization_id=org.id,
                     agent_id=agent.id,
-                    created_by_user_id=owner.id,
+                    created_by_user_id=owner_id,
                     trigger_type="event",
                     event_source="github",
                     event_config={"actions": ["opened"]},
@@ -3502,6 +3527,47 @@ def test_organization_speech_defaults_preserve_old_agents_and_run_destinations()
         assert result.returncode == 0, result.stderr
         result = _alembic("downgrade", "0338_personal_model_keys")
         assert result.returncode == 0, result.stderr
+        result = _alembic("upgrade", "head")
+        assert result.returncode == 0, result.stderr
+    finally:
+        engine.dispose()
+
+
+def test_account_appearance_migration_preserves_existing_users_and_defaults() -> None:
+    result = _alembic("upgrade", "head")
+    assert result.returncode == 0, result.stderr
+    result = _alembic("downgrade", "0343_solution_installations")
+    assert result.returncode == 0, result.stderr
+    engine = create_engine(_url(MIGRATION_DATABASE))
+    user_id = uuid4()
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO users (id, email, is_active, is_app_admin) VALUES (:id, :email, true, false)"
+                ),
+                {"id": user_id, "email": f"{user_id}@example.com"},
+            )
+        result = _alembic("upgrade", "head")
+        assert result.returncode == 0, result.stderr
+        with engine.begin() as connection:
+            assert connection.execute(
+                text("SELECT theme, look FROM users WHERE id=:id"), {"id": user_id}
+            ).one() == (None, None)
+            connection.execute(
+                text("UPDATE users SET theme='system', look='glass' WHERE id=:id"), {"id": user_id}
+            )
+        result = _alembic("check")
+        assert result.returncode == 0, result.stderr + result.stdout
+        result = _alembic("downgrade", "0343_solution_installations")
+        assert result.returncode == 0, result.stderr
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT email FROM users WHERE id=:id"), {"id": user_id}
+                ).scalar_one()
+                == f"{user_id}@example.com"
+            )
         result = _alembic("upgrade", "head")
         assert result.returncode == 0, result.stderr
     finally:

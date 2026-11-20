@@ -2,12 +2,14 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { adoptAccountAppearance } from "@/lib/account-appearance";
+import { useAccountAppearance } from "@/hooks/use-account-appearance";
 import { useUserAppearance } from "@/hooks/use-user-appearance";
+import { adoptAccountAppearance } from "@/lib/account-appearance";
 import { qk } from "@/lib/query-keys";
 
 /** Apply account reads, including edits made by an agent or another device. */
 export function AccountAppearance() {
+  useAccountAppearance();
   const { owner, epoch, preferences } = useUserAppearance();
   const client = useQueryClient();
   useEffect(() => {

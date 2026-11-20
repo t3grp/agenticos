@@ -1,3 +1,4 @@
+import { useThemeStore } from "@/stores/theme-store";
 import { useChatControlsStore } from "@/stores/chat-controls-store";
 import { projectFolderKey, useProjectFoldersStore } from "@/stores/project-folders-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -763,6 +764,26 @@ describe("useChat - the streamed answer", () => {
     });
     receive("tool_result", { tool_call_id: "tc-1", content: '{"locale": "en"}' });
 
+    expect(useAuthStore.getState().user?.locale).toBe("en");
+  });
+
+  it("applies the platform's saved appearance and language as the tool result arrives", () => {
+    // T3 fork: English only, so the tool result carries "en" here. Upstream's
+    // version of this test starts from a Polish-speaking user and switches to
+    // "de", which `localeChosenBy` refuses on this fork (see `locales.ts`).
+    useAuthStore.setState({ user: NEVER_CHOSE });
+    renderHook(() => useChat(), { wrapper });
+    receive("model_request_start", {});
+    receive("tool_call", {
+      tool_call_id: "tc-preferences",
+      tool_name: "agenticos_set_my_preferences",
+      args: { theme: "dark", look: "glass", locale: "en" },
+    });
+    receive("tool_result", {
+      tool_call_id: "tc-preferences",
+      content: '{"theme":"dark","look":"glass","locale":"en"}',
+    });
+    expect(useThemeStore.getState()).toMatchObject({ theme: "dark", look: "glass" });
     expect(useAuthStore.getState().user?.locale).toBe("en");
   });
 
