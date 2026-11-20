@@ -1586,6 +1586,34 @@ export const TOUR_STEPS: readonly TourStep[] = [
     page: ROUTES.CONNECTORS,
     target: "connectors-more",
   },
+  {
+    id: "connectors-devices",
+    page: ROUTES.CONNECTORS,
+    activate: "connectors-more",
+    target: "connectors-devices",
+    permission: Perm.networksView,
+  },
+  {
+    id: "network-connections",
+    page: ROUTES.CONNECTOR_DEVICES,
+    target: "network-connections",
+    permission: Perm.networksView,
+    inTour: true,
+  },
+  {
+    id: "network-connect-action",
+    page: ROUTES.CONNECTOR_DEVICES,
+    target: "network-connect-actions",
+    permission: Perm.networksManage,
+    optional: true,
+  },
+  {
+    id: "network-add",
+    page: ROUTES.CONNECTOR_DEVICES,
+    target: "tailscale-add",
+    permission: Perm.networksManage,
+    optional: true,
+  },
 
   // The chat platforms the organization is reachable on — beside MCP because it
   // is the same kind of thing, a connection the organization owns. The add button

@@ -23,9 +23,13 @@ import { AppsTab } from "./apps-tab";
 import { ManualConnections } from "./manual-connections";
 
 type MoreEntry = {
-  labelKey: "channels" | "remoteAgents" | "vault" | "sandboxes";
+  labelKey: "channels" | "remoteAgents" | "vault" | "sandboxes" | "devicesNetworks";
   descriptionKey:
-    "channelsDescription" | "remoteAgentsDescription" | "vaultDescription" | "sandboxesDescription";
+    | "channelsDescription"
+    | "remoteAgentsDescription"
+    | "vaultDescription"
+    | "sandboxesDescription"
+    | "devicesNetworksDescription";
   href: string;
   icon: LucideIcon;
   /** Gated on what the target page's backend gates reading on, as the nav was. */
@@ -64,6 +68,13 @@ const MORE: readonly MoreEntry[] = [
     href: ROUTES.SANDBOXES,
     icon: Boxes,
     permission: Perm.connectionsView,
+  },
+  {
+    labelKey: "devicesNetworks",
+    descriptionKey: "devicesNetworksDescription",
+    href: ROUTES.CONNECTOR_DEVICES,
+    icon: Network,
+    permission: Perm.networksView,
   },
 ];
 
@@ -127,6 +138,7 @@ export default function ConnectorsPage() {
               <li key={href}>
                 <Link
                   href={href}
+                  data-tour={href === ROUTES.CONNECTOR_DEVICES ? "connectors-devices" : undefined}
                   className="border-border hover:bg-muted/50 focus-visible:ring-ring flex items-start gap-3 rounded-xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <Icon className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" aria-hidden />
