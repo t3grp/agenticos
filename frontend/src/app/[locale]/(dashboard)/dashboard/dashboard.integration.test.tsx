@@ -791,9 +791,11 @@ describe("the arrangeable dashboard", () => {
     render(<DashboardPage />, { wrapper });
 
     // The failure is said, with a retry. The default's cards never mount, so the
-    // default's requests never go out, and the customize control is not offered.
+    // default's requests never go out, and neither the customize control nor the
+    // preset menu is offered.
     expect(await screen.findByText("dashboard.layoutError.title")).toBeInTheDocument();
     expect(screen.queryByText("dashboard.edit.customize")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard.presets.menu")).not.toBeInTheDocument();
     expect(callsTo("/stats/usage")).toHaveLength(0);
     expect(callsTo("/me/dashboard-layout")).toHaveLength(1);
 
@@ -804,6 +806,7 @@ describe("the arrangeable dashboard", () => {
     expect(screen.getByText("dashboard.widgets.runs.title")).toBeInTheDocument();
     expect(screen.queryByText("dashboard.layoutError.title")).not.toBeInTheDocument();
     expect(screen.getByText("dashboard.edit.customize")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.presets.menu")).toBeInTheDocument();
     expect(callsTo("/me/dashboard-layout")).toHaveLength(2);
     expect(
       vi.mocked(apiClient.put).mock.calls.some(([path]) => path === "/me/dashboard-layout"),
