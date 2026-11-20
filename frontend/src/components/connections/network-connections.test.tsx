@@ -269,6 +269,7 @@ describe("Devices & networks boundary", () => {
     const { unmount } = mount();
     expect(await screen.findByText(/Tailscale runtime is not configured/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Connect device" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Add Tailscale" })).toBeNull();
     expect(apiClient.post).not.toHaveBeenCalled();
 
     unmount();

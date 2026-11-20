@@ -11,6 +11,7 @@ import pytest
 from app.core.exceptions import (
     AuthorizationError,
     BadRequestError,
+    ConcurrentChangeError,
     ConfigurationError,
     ConflictError,
     NotFoundError,
@@ -18,7 +19,12 @@ from app.core.exceptions import (
 from app.core.vault import VaultScope, seal, unseal
 from app.repositories import resource_grant_repo
 from app.schemas.network_connection import NetworkConnectionCreate
-from app.services.network_connections import NetworkConnectionService, connection_scope, facade
+from app.services.network_connections import (
+    NetworkConnectionService,
+    admission,
+    connection_scope,
+    facade,
+)
 from tests.network_connection_fixtures import network_row, owner_context
 
 pytestmark = pytest.mark.anyio
@@ -230,6 +236,17 @@ async def test_a_member_cannot_create_a_shared_network(env):
         await env.service.create(
             replace(env.ctx, role="member"),
             NetworkConnectionCreate(name="Shared", scope="org"),
+            session_id=env.session_id,
+        )
+    env.create.assert_not_awaited()
+
+
+async def test_creation_is_refused_while_the_feature_is_off(env, monkeypatch):
+    monkeypatch.setattr(NetworkConnectionService, "available", staticmethod(lambda: False))
+    with pytest.raises(ConfigurationError):
+        await env.service.create(
+            env.ctx,
+            NetworkConnectionCreate(name="My devices", scope="user"),
             session_id=env.session_id,
         )
     env.create.assert_not_awaited()
@@ -447,6 +464,7 @@ async def test_leaving_an_org_revokes_each_personal_connection_in_that_org(env, 
     env.row.state_payload = "encrypted-state"
     rows = AsyncMock(return_value=[env.row])
     monkeypatch.setattr(env.repo, "list_personal_for_member", rows)
+    monkeypatch.setattr(env.repo, "has_personal_for_member", AsyncMock(return_value=True))
     assert (
         await env.service.revoke_member(
             organization_id=env.ctx.organization_id, user_id=env.ctx.user_id
@@ -457,6 +475,28 @@ async def test_leaving_an_org_revokes_each_personal_connection_in_that_org(env, 
     assert env.queued.call_args.args[2].mode == "logout"
     assert rows.call_args.kwargs["organization_id"] == env.ctx.organization_id
     assert rows.call_args.kwargs["user_id"] == env.ctx.user_id
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("has_rows", [False, True])
+async def test_member_removal_only_takes_the_per_user_lock_when_network_rows_exist(
+    env, monkeypatch, has_rows
+):
+    """A routine job holding the per-user lock must not block removing a member with no rows."""
+    monkeypatch.setattr(facade, "guard_member", admission.guard_member)
+    monkeypatch.setattr(admission, "try_hold_subject", AsyncMock(return_value=False))
+    monkeypatch.setattr(env.repo, "has_personal_for_member", AsyncMock(return_value=has_rows))
+    rows = AsyncMock(return_value=[])
+    monkeypatch.setattr(env.repo, "list_personal_for_member", rows)
+    call = env.service.revoke_member(
+        organization_id=env.ctx.organization_id, user_id=env.ctx.user_id
+    )
+    if has_rows:
+        with pytest.raises(ConcurrentChangeError):
+            await call
+    else:
+        assert await call == 0
+        rows.assert_not_awaited()
 
 
 @pytest.mark.security

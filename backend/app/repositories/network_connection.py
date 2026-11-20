@@ -445,6 +445,22 @@ async def lock_parent(db: AsyncSession, *, organization_id: UUID) -> bool:
     return result.scalar_one_or_none() is not None
 
 
+async def has_personal_for_member(
+    db: AsyncSession, *, organization_id: UUID, user_id: UUID
+) -> bool:
+    """Cheap, lock-free check for any personal row of one member in one organization."""
+    result = await db.execute(
+        select(NetworkConnection.id)
+        .where(
+            NetworkConnection.organization_id == organization_id,
+            NetworkConnection.scope == "user",
+            NetworkConnection.owner_user_id == user_id,
+        )
+        .limit(1)
+    )
+    return result.first() is not None
+
+
 async def list_personal_for_member(
     db: AsyncSession,
     *,

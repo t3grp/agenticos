@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { useMcpOAuthOutcome, usePermissions, useUrlState } from "@/hooks";
+import { useNetworkConnections } from "@/hooks/use-network-connections";
 import { ROUTES } from "@/lib/constants";
 import type { Permission } from "@/types/permissions";
 import { Perm } from "@/types/permissions";
@@ -101,7 +102,12 @@ export default function ConnectorsPage() {
     : manualRequest
       ? "mcp"
       : "apps";
-  const more = MORE.filter((entry) => can(entry.permission));
+  const networks = useNetworkConnections({ enabled: can(Perm.networksView), limit: 1 });
+  const more = MORE.filter(
+    (entry) =>
+      can(entry.permission) &&
+      (entry.href !== ROUTES.CONNECTOR_DEVICES || networks.available === true),
+  );
 
   return (
     <div className="flex flex-1 flex-col space-y-4">

@@ -194,10 +194,13 @@ def upgrade() -> None:
         postgresql_where=sa.text("lease_expires_at IS NOT NULL"),
     )
 
+    op.execute("SET LOCAL lock_timeout = '5s'")
     op.drop_constraint(op.f("background_jobs_pool_check"), "background_jobs", type_="check")
-    op.create_check_constraint(
-        op.f("background_jobs_pool_check"), "background_jobs", f"pool IN ({_POOL_AFTER})"
+    op.execute(
+        "ALTER TABLE background_jobs ADD CONSTRAINT background_jobs_pool_check "
+        f"CHECK (pool IN ({_POOL_AFTER})) NOT VALID"
     )
+    op.execute("ALTER TABLE background_jobs VALIDATE CONSTRAINT background_jobs_pool_check")
 
 
 def downgrade() -> None:

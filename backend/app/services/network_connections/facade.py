@@ -178,6 +178,7 @@ class NetworkConnectionService:
     ) -> NetworkConnectionRead:
         """Save a connection record. Only connect starts a node or enrolls a device."""
         await self._interactive(ctx, session_id)
+        self._runtime_required()
         await self._write_guard(ctx, admission=True)
         scope = ctx.scope_for(Perm.NETWORKS_MANAGE)
         if scope < Scope.OWN or (data.scope == "org" and scope < Scope.SHARED):
@@ -382,6 +383,12 @@ class NetworkConnectionService:
 
     async def revoke_member(self, *, organization_id: UUID, user_id: UUID) -> int:
         """Membership removal permanently withdraws each personal connector's authority."""
+        # Routine jobs hold the per-user lock; take the NOWAIT guard only when
+        # there is something to revoke, so a member with no rows is always removable.
+        if not await network_connection_repo.has_personal_for_member(
+            self.db, organization_id=organization_id, user_id=user_id
+        ):
+            return 0
         await guard_member(self.db, organization_id=organization_id, user_id=user_id)
         rows = await network_connection_repo.list_personal_for_member(
             self.db,

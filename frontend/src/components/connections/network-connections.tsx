@@ -448,7 +448,7 @@ function NetworkConnectionsForScope() {
         contentClassName="space-y-3 p-4"
         data-tour="network-connections"
         controls={
-          canCreate ? (
+          canCreate && api.available !== false ? (
             <Button data-tour="tailscale-add" onClick={() => setCreateOpen(true)}>
               <Plus aria-hidden />
               {t("addTailscale")}
