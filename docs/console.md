@@ -691,6 +691,13 @@ choose **Save draft**.
 confirmation. Changing the default here does not clear a model override in Chat
 controls, and a running turn keeps its frozen configuration.
 
+**Identity.** Upload, replace or remove an agent picture, or choose the fallback
+color shown when there is no picture. These changes apply immediately and require
+edit access to the agent. A **Short title** of up to 80 characters can be edited
+here or in the full Builder. Save the draft and publish to show the title in the
+agent picker and empty chat; an unpublished title is not shown to other readers.
+Removing a picture leaves the generated fallback available.
+
 Editing and publishing follow the server's access decision for this agent,
 including explicit resource grants. Read-only chats show settings without edit
 controls; workflow-owned agents remain configured in their workflow. Collapsing

@@ -252,6 +252,7 @@ function toolChoice(
 
 export default function AgentBuilderPage({ params }: PageProps) {
   const t = useTranslations("pages.agents");
+  const tIdentity = useTranslations("chat.agentSettings");
   const tMenu = useTranslations("agents");
   // The reader's own MCP accounts: the tools of a server bound only through each
   // person's account are listed from theirs.
@@ -1881,6 +1882,17 @@ export default function AgentBuilderPage({ params }: PageProps) {
                     disabled={!canEdit}
                     onChange={(event) => update({ description: event.target.value || null })}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agent-short-title">{tIdentity("agentTitle")}</Label>
+                  <Input
+                    id="agent-short-title"
+                    value={spec.title ?? ""}
+                    maxLength={80}
+                    disabled={!canEdit}
+                    onChange={(event) => update({ title: event.target.value })}
+                  />
+                  <p className="text-muted-foreground text-xs">{tIdentity("agentTitleHint")}</p>
                 </div>
               </CardContent>
             </Card>

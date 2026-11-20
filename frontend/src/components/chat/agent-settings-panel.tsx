@@ -10,6 +10,7 @@ import { RemoteChangeBanner } from "@/components/live-updates/remote-change-bann
 import { useChatAgentSettings } from "@/hooks/use-chat-agent-settings";
 import { BrowserPanelFrame } from "./browser-panel-frame";
 import { ChatAgentSettingsFields } from "./agent-settings-fields";
+import { ChatAgentIdentityAppearance } from "./chat-agent-identity-appearance";
 import { ChatAgentSettingsPublish } from "./agent-settings-publish";
 
 interface SettingsPanelProps {
@@ -113,6 +114,20 @@ function SettingsEditor({ panelId, agentId, open, readOnly, onClose }: SettingsP
             {editor.agent && editor.spec && (
               <>
                 <p className="text-muted-foreground text-xs leading-relaxed">{t("draftHint")}</p>
+                {editor.editable && (
+                  <ChatAgentIdentityAppearance
+                    agent={editor.agent}
+                    disabled={editor.saveDraft.isPending}
+                    busy={
+                      editor.setAvatar.isPending ||
+                      editor.removeAvatar.isPending ||
+                      editor.setColor.isPending
+                    }
+                    onUpload={(file) => editor.setAvatar.mutateAsync(file)}
+                    onRemove={() => editor.removeAvatar.mutateAsync()}
+                    onColorChange={(slot) => editor.setColor.mutateAsync(slot)}
+                  />
+                )}
                 {editor.remote.conflict && (
                   <RemoteChangeBanner
                     change={editor.remote.conflict}
@@ -132,6 +147,9 @@ function SettingsEditor({ panelId, agentId, open, readOnly, onClose }: SettingsP
                       {t(editor.agent.workflow_id ? "workflowOwned" : "readOnly")}
                     </p>
                     <h3 className="font-medium">{editor.spec.name}</h3>
+                    {editor.spec.title && (
+                      <p className="text-muted-foreground">{editor.spec.title}</p>
+                    )}
                     <p className="text-muted-foreground whitespace-pre-wrap">
                       {editor.spec.description}
                     </p>

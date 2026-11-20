@@ -51,7 +51,7 @@ from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.field_errors import refused_field
 from app.core.permissions import Perm
-from app.db.models.agent import AgentKind
+from app.db.models.agent import Agent, AgentKind
 from app.db.models.agent_run import RunSurface
 from app.schemas.agent import (
     AgentA2ARequest,
@@ -680,6 +680,15 @@ async def upload_agent_avatar(
         file_data=await file.read(),
         content_type=file.content_type,
     )
+
+
+@router.delete(
+    "/{agent_id}/avatar",
+    response_model=AgentRead,
+)
+async def delete_agent_avatar(agent_id: UUID, service: AgentRegistrySvc, ctx: Auth) -> Agent:
+    """Remove the custom picture; repeating the request is safe."""
+    return await service.remove_avatar(ctx, agent_id)
 
 
 @router.patch(

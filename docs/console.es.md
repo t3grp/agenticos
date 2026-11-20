@@ -1,5 +1,5 @@
 ---
-source_sha: "5f969c5c2b2a"
+source_sha: "08d452e3dc57"
 ---
 
 # La consola { #the-console }
@@ -739,6 +739,13 @@ instrucciones, modelo predeterminado y los interruptores de las capabilities exi
 **Save draft**. **Review and publish** valida el borrador guardado y abre la
 confirmación de publicación existente. Cambiar el modelo predeterminado no elimina
 la selección de modelo de Chat controls; un turno activo conserva su configuración congelada.
+
+**Identidad.** Sube, sustituye o elimina la imagen del agente, o elige el color
+que aparece cuando no tiene imagen. Los cambios se aplican al instante y requieren
+permiso de edición. Puedes editar un **Título breve (Short title)** de hasta
+80 caracteres aquí o en el Builder completo. Guarda y publica el borrador para
+mostrarlo en el selector de agentes y el chat vacío; los títulos sin publicar no
+se muestran a otras personas. Al eliminar una imagen se conserva el avatar generado.
 
 La edición y la publicación siguen la decisión del servidor para ese agente,
 incluidos los grants explícitos. Los chats de solo lectura muestran los ajustes

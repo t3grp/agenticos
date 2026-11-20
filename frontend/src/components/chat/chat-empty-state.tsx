@@ -165,6 +165,7 @@ function Welcome({ agent, starters, loading, onPick, suggestionsSlot }: WelcomeP
         ) : agent ? (
           <>
             <span className="text-foreground font-medium">{agent.name}</span>
+            {agent.published_title ? <> · {agent.published_title}</> : null}
             {description ? ` · ${description}` : ""}
           </>
         ) : (

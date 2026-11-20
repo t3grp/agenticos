@@ -438,6 +438,8 @@ export interface AgentSpec {
    */
   spec_version?: number;
   name: string;
+  /** A short display title, distinct from the name and description. */
+  title?: string;
   description?: string | null;
   /** The system prompt; `{{name}}` is filled in when each run starts (#2065). */
   instructions: string;
@@ -523,6 +525,8 @@ export interface Agent {
   slug: string;
   name: string;
   description: string | null;
+  /** From the current published version; absent or null on older servers and drafts. */
+  published_title?: string | null;
   status: AgentStatus;
   visibility: Visibility;
   /** The groups it is shared with, by name (#2072). Only the listing carries it. */

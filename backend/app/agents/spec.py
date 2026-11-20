@@ -93,7 +93,9 @@ logger = logging.getLogger(__name__)
 # read its main line's newest version, which main version to stay on or which
 # fork to follow. Nothing migrates: a spec without the field reads main, latest,
 # which is what every agent did before skills had versions.
-SPEC_VERSION = 15
+# 16 adds a short display title to the versioned identity. Existing documents
+# load it as blank, so this JSONB field needs no database migration.
+SPEC_VERSION = 16
 
 
 MAX_STARTERS = 4
@@ -120,6 +122,7 @@ StarterIcon = Literal[
 ]
 StarterIcons = Annotated[dict[Starter, StarterIcon], Field(max_length=MAX_STARTERS)]
 StarterTitle = Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)]
+AgentTitle = Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)]
 StarterTitles = Annotated[dict[Starter, StarterTitle], Field(max_length=MAX_STARTERS)]
 
 ApprovalMode = Literal["default", "required", "never"]
@@ -1590,6 +1593,7 @@ class AgentSpec(BaseModel):
     )
 
     name: str = Field(min_length=1, max_length=128)
+    title: AgentTitle = Field(default="", description="A short display title, up to 80 characters")
     description: str | None = Field(default=None, max_length=1000)
     instructions: str = Field(
         default="",

@@ -504,6 +504,19 @@ async def published_starter_titles(
     return {row[0]: _STARTER_TITLES.validate_python(row[1]) for row in result.all()}
 
 
+async def published_agent_titles(
+    db: AsyncSession, *, version_ids: Sequence[UUID]
+) -> dict[UUID, str]:
+    """Display titles from frozen versions, independently of each current draft."""
+    if not version_ids:
+        return {}
+    titles = AgentVersion.spec["title"].astext
+    result = await db.execute(
+        select(AgentVersion.id, titles).where(AgentVersion.id.in_(list(version_ids)))
+    )
+    return {version_id: title for version_id, title in result.all() if title}
+
+
 _CAPABILITY_BINDINGS = TypeAdapter(list[CapabilityBindingSpec])
 
 
