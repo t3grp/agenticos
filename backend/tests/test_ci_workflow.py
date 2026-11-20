@@ -65,10 +65,17 @@ class TestPullRequestsAndMergeQueue:
 
     def test_pull_requests_and_the_merge_queue_trigger_ci(self, triggers: dict[str, Any]) -> None:
         assert set(triggers) == {"pull_request", "merge_group", "push", "workflow_dispatch"}
-        assert triggers["push"] == {"tags": ["v*"]}, "Pushes to `t3` arrive through the merge queue."
+        assert triggers["push"] == {"tags": ["v*"]}, (
+            "Pushes to `t3` arrive through the merge queue."
+        )
 
-    def test_only_a_pull_request_run_is_cancelled_by_a_newer_commit(self, workflow: dict[str, Any]) -> None:
-        assert workflow["concurrency"]["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
+    def test_only_a_pull_request_run_is_cancelled_by_a_newer_commit(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        assert (
+            workflow["concurrency"]["cancel-in-progress"]
+            == "${{ github.event_name == 'pull_request' }}"
+        )
 
     def test_no_trigger_is_filtered_by_path(self, triggers: dict[str, Any]) -> None:
         """No trigger may carry a path filter.
