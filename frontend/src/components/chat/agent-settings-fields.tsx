@@ -41,6 +41,17 @@ export function ChatAgentSettingsFields({
         {!spec.name.trim() && <p className="text-destructive text-xs">{t("nameRequired")}</p>}
       </div>
       <div className="space-y-2">
+        <Label htmlFor={id + "-agent-title"}>{t("agentTitle")}</Label>
+        <Input
+          id={id + "-agent-title"}
+          maxLength={80}
+          value={spec.title ?? ""}
+          disabled={disabled}
+          onChange={(event) => update({ title: event.target.value })}
+        />
+        <p className="text-muted-foreground text-xs">{t("agentTitleHint")}</p>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor={`${id}-description`}>{t("description")}</Label>
         <Textarea
           id={`${id}-description`}

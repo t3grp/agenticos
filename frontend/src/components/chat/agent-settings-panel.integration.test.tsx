@@ -22,7 +22,14 @@ import type { AgentDetail, AgentSpec, CapabilityCatalogEntry } from "@/types/age
 
 vi.mock("@/lib/api-client", async () => ({
   ...(await vi.importActual<typeof import("@/lib/api-client")>("@/lib/api-client")),
-  apiClient: { get: vi.fn(), put: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+  apiClient: {
+    get: vi.fn(),
+    put: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+    upload: vi.fn(),
+  },
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -537,5 +544,36 @@ describe("agent settings beside the chat", () => {
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Name" }), { key: "Escape" });
     expect(view.props.onClose).toHaveBeenCalledOnce();
     expect(composer).toHaveFocus();
+  });
+
+  it("saves the short display title with the versioned draft", async () => {
+    mount();
+    await userEvent.type(await screen.findByRole("textbox", { name: "Short title" }), "Support");
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() =>
+      expect(apiClient.put).toHaveBeenCalledWith(
+        "/agents/agent-a/draft",
+        expect.objectContaining({
+          spec: expect.objectContaining({ title: "Support" }),
+        }),
+      ),
+    );
+  });
+
+  it("removes the custom avatar through the edit-gated endpoint without sending an empty upload", async () => {
+    records["agent-a"] = agent("agent-a", { has_avatar: true });
+    mount();
+    await userEvent.click(await screen.findByRole("button", { name: "Remove picture" }));
+    await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/agents/agent-a/avatar"));
+    expect(apiClient.upload).not.toHaveBeenCalled();
+  });
+
+  it("discards an unsaved sidebar title without writing a draft", async () => {
+    mount();
+    const title = await screen.findByRole("textbox", { name: "Short title" });
+    await userEvent.type(title, "Temporary title");
+    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(title).toHaveValue("");
+    expect(apiClient.put).not.toHaveBeenCalled();
   });
 });

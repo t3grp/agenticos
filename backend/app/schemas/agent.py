@@ -157,6 +157,9 @@ class AgentRead(BaseSchema):
         description="Listing marker for a never-published starter draft eligible for setup guidance, not execution.",
     )
     description: str | None = None
+    published_title: str | None = Field(
+        default=None, description="Display title from the current published version"
+    )
     status: str
     visibility: str
     owner_user_id: UUID | None = None

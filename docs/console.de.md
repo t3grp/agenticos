@@ -1,5 +1,5 @@
 ---
-source_sha: "5f969c5c2b2a"
+source_sha: "08d452e3dc57"
 ---
 
 # Die Konsole { #the-console }
@@ -775,6 +775,14 @@ Anweisungen, Standardmodell und vorhandene Capability-Schalter und wählen Sie
 die bestehende Bestätigung zur Veröffentlichung. Eine Änderung des Standardmodells
 entfernt keine Modellauswahl in Chat controls; ein laufender Turn behält seine
 eingefrorene Konfiguration.
+
+**Identität.** Laden Sie ein Agentenbild hoch, ersetzen oder entfernen Sie es,
+oder wählen Sie die Ersatzfarbe für die Darstellung ohne Bild. Diese Änderungen
+gelten sofort und erfordern Bearbeitungsrechte für den Agenten. Einen **Kurztitel
+(Short title)** mit bis zu 80 Zeichen bearbeiten Sie hier oder im vollständigen
+Builder. Speichern und veröffentlichen Sie den Entwurf, damit der Titel in der
+Agentenauswahl und im leeren Chat erscheint. Unveröffentlichte Titel bleiben für
+andere unsichtbar; nach dem Entfernen eines Bildes bleibt der generierte Avatar.
 
 Bearbeitung und Veröffentlichung folgen der Zugriffsentscheidung des Servers für
 diesen Agent, einschließlich ausdrücklicher Grants. Schreibgeschützte Chats zeigen

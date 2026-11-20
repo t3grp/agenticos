@@ -1,5 +1,5 @@
 ---
-source_sha: "5f969c5c2b2a"
+source_sha: "08d452e3dc57"
 ---
 
 # Konsola { #the-console }
@@ -717,6 +717,13 @@ capabilities, a następnie wybierz **Save draft**. **Review and publish** sprawd
 zapisaną wersję roboczą i otwiera istniejące potwierdzenie publikacji. Zmiana modelu
 domyślnego nie usuwa wyboru modelu w Chat controls; trwająca tura zachowuje swoją
 zamrożoną konfigurację.
+
+**Tożsamość.** Wgraj, zastąp lub usuń obraz agenta albo wybierz kolor zastępczy
+widoczny bez obrazu. Te zmiany działają od razu i wymagają prawa edycji agenta.
+**Krótki tytuł (Short title)** do 80 znaków można edytować tutaj lub w pełnym
+Builderze. Zapisz wersję roboczą i opublikuj ją, aby tytuł pojawił się w wyborze
+agenta i pustym czacie; nieopublikowany tytuł nie jest pokazywany innym osobom.
+Po usunięciu obrazu pozostaje dostępny generowany avatar zastępczy.
 
 Edycja i publikowanie zależą od decyzji serwera dla tego agenta, w tym jawnych
 grantów. Chat tylko do odczytu pokazuje ustawienia bez przycisków edycji; agent

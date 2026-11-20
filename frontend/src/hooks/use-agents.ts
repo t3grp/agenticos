@@ -459,6 +459,15 @@ export function useAgent(agentId: string | null) {
     onError: (error) => toast.error(getErrorMessage(error, tErrors)),
   });
 
+  const removeAvatar = useMutation({
+    mutationFn: () => apiClient.delete<Agent>("/agents/" + agentId + "/avatar"),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success(t("avatarRemoved"));
+    },
+    onError: (error) => toast.error(getErrorMessage(error, tErrors)),
+  });
+
   /**
    * Choose the colour of the agent's fallback avatar, or null for auto. A
    * column like the picture, not the spec, for the same reason `setAvatar` is.
@@ -511,6 +520,7 @@ export function useAgent(agentId: string | null) {
     publish,
     rollback,
     setAvatar,
+    removeAvatar,
     setColor,
     setMetadata,
     setA2a,

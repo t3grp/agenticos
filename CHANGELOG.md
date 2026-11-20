@@ -8,7 +8,7 @@ in a MINOR release. Read a minor release's notes before upgrading.
 
 Two things are versioned separately from this file and worth knowing about:
 
-- **`SPEC_VERSION`** — the agent spec format, currently **15**. A published agent
+- **`SPEC_VERSION`** — the agent spec format, currently **16**. A published agent
   and a client's exported YAML both carry it, so it only ever moves forward with a
   migration that keeps old documents loading. See
   [the spec reference](docs/reference/spec.md).
@@ -20,6 +20,8 @@ Two things are versioned separately from this file and worth knowing about:
 ## [Unreleased]
 
 ### Upgrading
+
+- Agent spec version 16 adds an optional short title with an empty default. Existing published JSONB documents remain readable without a data migration; titles become visible in chat only after publication.
 
 - Agent-attributed room reactions add migration `0352_room_agent_reactions.py` after `0351_room_auto_routing.py`. The separate action ledger preserves existing human reaction rows and records agent versions, run provenance and retry identities. Downgrade refuses retained actions; deploy the matching API and worker code with the schema.
 - Optional AI room routing adds migration `0351_room_auto_routing.py` after `0350_room_thread_context.py`. It creates separate room policy and durable decision tables. Existing deterministic reply settings remain active until a manager opts into model selection. Downgrade refuses retained routing state; deploy matching API and worker code with the schema.
@@ -53,6 +55,8 @@ Two things are versioned separately from this file and worth knowing about:
 - Separate MCP connection use from administration on existing paths. Use grants continue to authorize agent/workflow binding, while editing, deleting, probing, reading call logs and changing sharing require management authority or an edit grant within the existing route gates. Existing role scopes and published-agent delegation remain in place; no grants are promoted and no new discovery endpoint is added.
 
 ### Added
+
+- Agent settings beside chat can upload, replace or remove a picture and choose its fallback color immediately. The chat sidebar and full Builder can edit a short title of up to 80 characters through the existing Save and Publish flow. Chat pickers and empty states read the published title; unpublished edits stay private to the draft. Removing a picture schedules storage cleanup only after the database update commits.
 
 - Room agents can add attributed emoji reactions through a native tool, including a reaction-only acknowledgement without an empty reply. Optional AI responder selection can acknowledge an eligible social message when no answer is selected. Reactions count each agent once alongside people, and the run details show a bounded action audit under current room and source access checks.
 - Shared rooms can opt into **AI responder selection**: a current room agent uses an organization model profile to choose zero to four eligible responders, with a quiet window for bursts, a bounded run budget and normal usage records. Explicit mentions retain priority. Durable claims, current source-access checks and no replay of uncertain calls protect dispatch; visible receipts show who chose the responders. See [AI responder selection](docs/projects.md#ai-responder-selection).

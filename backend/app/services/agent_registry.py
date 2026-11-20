@@ -80,6 +80,7 @@ from app.agents.system_agents import (
 )
 from app.agents.tool_names import PLATFORM_TOOL_NAMES, taken_tool_names
 from app.core.audit import current_impersonator, record_audit
+from app.core.background import spawn_after_commit
 from app.core.claude_subscription import CLAUDE_SUBSCRIPTION_PROVIDER
 from app.core.config import settings
 from app.core.exceptions import (
@@ -171,6 +172,7 @@ from app.services.file_storage import (
     IMAGE_MIME_TYPES,
     MAX_AVATAR_SIZE,
     avatar_filename,
+    delete_files_best_effort,
     get_file_storage,
 )
 from app.services.mcp_connection import presented_tool_names
@@ -1585,6 +1587,9 @@ class AgentRegistryService:
         starters = await agent_repo.published_starters(self.db, version_ids=version_ids)
         starter_icons = await agent_repo.published_starter_icons(self.db, version_ids=version_ids)
         starter_titles = await agent_repo.published_starter_titles(self.db, version_ids=version_ids)
+        published_agent_titles = await agent_repo.published_agent_titles(
+            self.db, version_ids=version_ids
+        )
         published_bindings = await agent_repo.published_capability_bindings(
             self.db, version_ids=version_ids
         )
@@ -1630,6 +1635,11 @@ class AgentRegistryService:
                 slug=agent.slug,
                 name=agent.name,
                 description=agent.description,
+                published_title=(
+                    published_agent_titles.get(agent.current_version_id)
+                    if agent.current_version_id
+                    else None
+                ),
                 status=agent.status,
                 visibility=agent.visibility,
                 owner_user_id=agent.owner_user_id,
@@ -4140,6 +4150,19 @@ class AgentRegistryService:
             f"avatars/agents/{agent.id}", avatar_filename(content_type), file_data
         )
         return await agent_repo.update(self.db, agent=agent, update_data={"avatar_url": path})
+
+    async def remove_avatar(self, ctx: AuthContext, agent_id: UUID) -> Agent:
+        """Remove the custom picture without manufacturing an empty upload."""
+        agent = await self.get(ctx, agent_id, perm=Perm.AGENTS_EDIT, for_update=True)
+        previous_path = agent.avatar_url
+        updated = await agent_repo.update(self.db, agent=agent, update_data={"avatar_url": None})
+        if previous_path:
+            spawn_after_commit(
+                self.db,
+                delete_files_best_effort([previous_path]),
+                name="remove-agent-avatar",
+            )
+        return updated
 
     async def set_avatar_color(
         self, ctx: AuthContext, agent_id: UUID, *, color: int | None

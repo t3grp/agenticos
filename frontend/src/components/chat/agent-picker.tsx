@@ -339,9 +339,9 @@ function AgentOption({
           </span>
           {/* One line, truncated. Wrapped to two, a description made every row a
               different height and the list stopped scanning as a list. */}
-          {agent.description && (
+          {(agent.published_title || agent.description) && (
             <span className="text-muted-foreground block truncate text-xs">
-              {agent.description}
+              {[agent.published_title, agent.description].filter(Boolean).join(" · ")}
             </span>
           )}
         </span>
