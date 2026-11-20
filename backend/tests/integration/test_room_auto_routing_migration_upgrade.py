@@ -22,7 +22,7 @@ from tests.integration.test_room_submissions import seed
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 _TABLES = ("room_auto_routing_policies", "room_auto_routing_decisions")
-_PATH = Path(__file__).parents[2] / "alembic" / "versions" / "0352_room_auto_routing.py"
+_PATH = Path(__file__).parents[2] / "alembic" / "versions" / "0353_room_auto_routing.py"
 _SPEC = importlib.util.spec_from_file_location("room_auto_routing_migration", _PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 _MIGRATION = importlib.util.module_from_spec(_SPEC)

@@ -152,11 +152,11 @@ fetch the authorized durable rows. Membership invalidation first clears the
 socket's cached access decision; a removed private member stops following before
 another room event is relayed. Polling remains a recovery path.
 
-The migration chain continues from `0346_merge_t3_v1850` through
-`0347_room_participants`, `0348_room_mention_requests`,
-`0349_room_message_reactions`, `0350_room_thread_state` and the follow-ups
-`0351_room_thread_context`, `0352_room_auto_routing` and
-`0353_room_agent_reactions`. Legacy room requests
+The migration chain continues from `0347_network_connections` through
+`0348_room_participants`, `0349_room_mention_requests`,
+`0350_room_message_reactions`, `0351_room_thread_state` and the follow-ups
+`0352_room_thread_context`, `0353_room_auto_routing` and
+`0354_room_agent_reactions`. Legacy room requests
 remain primary requests with explicit dispatch. Downgrades refuse to erase used
 feature evidence. Schema changes are exercised against disposable PostgreSQL;
 production migration and deployment are separate operations.

@@ -15,7 +15,7 @@ submission queue and reaction events to provide that behavior.
 
 This follow-up builds on the multiplayer foundation, selected thread context and
 [AI responder selection](agentes-automatic-routing.md). Migration
-`0353_room_agent_reactions` follows `0352_room_auto_routing`. Publishing a draft
+`0354_room_agent_reactions` follows `0353_room_auto_routing`. Publishing a draft
 PR does not apply either migration or deploy the feature.
 
 ## Trusted room tool

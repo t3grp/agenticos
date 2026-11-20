@@ -117,8 +117,8 @@ invented responder.
 | Durable execution and recovery | `app/worker/tasks/room_auto_routing_tasks.py` and the room reconciler |
 | Settings and visible receipts | `room-auto-routing-*` frontend components and scoped hooks |
 
-Migration `0352_room_auto_routing` adds the policy and decision tables after
-`0351_room_thread_context`. Database constraints bind each decision to its room,
+Migration `0353_room_auto_routing` adds the policy and decision tables after
+`0352_room_thread_context`. Database constraints bind each decision to its room,
 submission and accepted message and bound the saved snapshots. Downgrade refuses
 to erase used routing state. The schema is released with matching API and worker
 code; production migration is a separate operation.
