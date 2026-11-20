@@ -22,6 +22,7 @@ Two things are versioned separately from this file and worth knowing about:
 ### Upgrading
 
 - Tailscale enrollment adds migration `0347_network_connections` after `0346_merge_t3_v1850`, a connection vault table and the `network` background-worker pool. The feature remains disabled unless `TAILSCALE_ENABLED=true`; custom worker pool lists must include `network` and retain a `system` worker for cleanup. Downgrade refuses retained network connections or jobs. See the [deployment and cleanup contract](docs/design/tailscale-enrollment-implementation.md).
+- Sync upstream to v1.86.1 while preserving the T3 overlay. Merge revision `0348_merge_t3_v1861` joins `0347_network_connections` and `0344_user_appearance` without schema changes; `alembic upgrade head` applies whichever side a deployment lacks. Upstream 1.86.0 is a breaking release for MCP clients: lists return bounded metadata pages, so use the named detail readers and continuations; apply `0343_solution_installations` and `0344_user_appearance` when upgrading.
 - Sync upstream to v1.85.0 while preserving the T3 overlay. Merge revision `0346_merge_t3_v1850` joins `0342_criterion_verdicts` and `0345_credential_continuations` without schema changes; `alembic upgrade head` applies whichever side a deployment lacks.
 - The remaining OpenBot features use one forward migration chain after `0340_browser_teaching_review`: `0341_room_task_handoffs`, `0342_browser_credential_plans`, `0343_workflow_media_operations`, `0344_browser_procedure_teaching`, and `0345_credential_continuations`. The existing capture/review migrations remain unchanged. These revisions supersede the undeployed branch checkpoints from the reverted feature bundle; an installation that applied those old checkpoints needs a reviewed compatibility plan before upgrading.
 - Browser procedure teaching stores advanced authoring sessions in `browser_procedure_teaching_sessions`, with bounded captures, generation claims, organization policy and member opt-ins, and nullable reviewed provenance on skill proposals/versions. Existing quick capture continues to use `browser_teaching_sessions`. Concurrent parent-key indexes use exact-object retry guards; unexpected or active builds refuse. Downgrade refuses retained teaching evidence. Feature admission and deployed synthetic acceptance remain required before enablement.
@@ -172,6 +173,59 @@ Two things are versioned separately from this file and worth knowing about:
 - Table links expose only readable destination IDs and labels, including exports and projected reads. Link filters and counts use the same visible destinations, and legacy array replacements retain hidden existing links. Invalid stored row policies block record access with a repairable `ROW_POLICY_INVALID` error instead of disabling restrictions.
 - Chat followers recover saved-answer acknowledgements and final outcomes when a turn finishes during replay or a quiet interval. Sequence checks keep recovered frames in order without duplicating earlier output.
 - Room workers carry the persisted assistant message ID through their completion callback so connected participants receive a save acknowledgement before the turn ends. The acknowledgement still requires a separately committed message from the same run.
+
+## [1.86.1] - 2026-11-20
+
+### Fixed
+
+- Require a fresh decision for every platform MCP call marked as always asking,
+  including organization administration. Session-wide and remembered approvals
+  cannot release these calls. Routine source reviews reveal resource names only
+  when the reviewer has view access, including explicit resource grants.
+
+## [1.86.0] - 2026-11-20
+
+### Added
+
+- MCP administration with searchable actions and on-demand schemas for organization settings, AI Architect, system agents, retention, members and groups, plus installation settings and updates. Global access requires explicit external OAuth `deployment:admin` consent and live application-admin authority; internal agents and routines never inherit it. Configuration reads do not install resources; secret entry and binary branding use secure console handoffs.
+
+- Ship the AgenticOS Claude plugin with deployment, fork, organization-operation, release and custom-solution skills; a checked tool map and MCP contract discovery; secure dependency setup, datasets, evals and environment promotion tools; atomic draft-only solution bundles with retry receipts; three example solutions and a disposable published-image smoke check. Compose, image publishing and deployment support a fork's own application image prefix.
+
+- MCP contract 2: bounded metadata discovery, paged detail readers, on-demand
+  authoring schemas and credential-bound continuations for large reads. Prepared
+  solution reviews avoid resending large manifests during installation. Large run
+  receipts preserve pending approvals or provide a bounded console review handoff.
+- Self-only MCP console preferences: light/dark/system theme, all existing
+  console styles and supported application languages, synchronized with Settings.
+
+- Group the AgenticOS server's tools in the agent Builder by what they work on - tables, tasks, workflows, agents, knowledge bases, skills, projects, automations, apps, runs, connections and the account - with an icon on each tool that changes something. Each group and each tool runs freely or asks first, as on other MCP servers; the spec keeps a tool's own setting in the platform binding's new `tool_approval`, and publishing refuses a name the platform does not offer. The binding's default stays at `writes`, or becomes `all` once every read asks, so a read added later asks too. `invite_member` and `update_proactivity_settings` always ask: they run with the authority of whoever the agent runs for, so publishing refuses `never` on them and a run ignores one already stored.
+- Choose in an MCP server's settings in the Builder whether the agent takes tools the server gains later. **Add tools the server gains later** stores `allowed_tools: null`; switched off, the binding lists today's tools. Ticking every tool back after narrowing now keeps today's list instead of returning to null.
+- Let a routine's creator consent in **Action consent** to AgenticOS's own tools, grouped as the Builder groups them. Only changes the agent already runs without asking appear. Before this, every platform change a routine made asked each time, even when the agent let it run freely. Tool search no longer asks in a routine either.
+- Read a routine's **Action consent** in sections - capabilities, AgenticOS and each MCP account - with only the actions that can be consented to, and **Use the agent's settings** to select exactly what the agent runs without asking. **Reviewed sources** now names each skill, knowledge base, table and account, grouped by kind, instead of listing their ids.
+
+### Upgrading
+
+- Apply `0344_user_appearance.py` for account appearance choices. Nullable fields
+  preserve existing device defaults. MCP clients must follow page continuations
+  and read detail tools instead of assuming list entries contain complete bodies.
+
+- Apply `0343_solution_installations.py` for atomic solution-installation receipts. Existing organization API keys retain their public API boundary; new assistant-only lifecycle tools require an OAuth connection with the corresponding scopes.
+
+## [1.85.1] - 2026-11-20
+
+### Fixed
+
+- The Nginx deployment template now forwards WebSocket upgrades on every API
+  path and accepts uploads up to the default 50 MiB file limit on both hosts.
+  Console authentication and ordinary JSON keep the 1 MiB limit. The deployment
+  guide states the Nginx 1.25.1 minimum and how to adapt 1.24.
+- The bundled Traefik now reads all static settings from Compose command arguments,
+  so the configured ACME email is used. A custom `TRAEFIK_NETWORK` also applies
+  to the proxy itself. Docker smoke tests cover both proxies and Compose variants.
+- Scripted deployments wait for the background worker to be healthy before
+  recording the release as healthy or advancing its rollback image pins.
+- Frontend image builds exclude every `.env.*` file except `.env.example`,
+  including `.env.production`, `.env.development` and `.env.test`.
 
 ## [1.85.0] - 2026-11-19
 
