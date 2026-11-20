@@ -53,7 +53,7 @@ export default function OrgsPage() {
   const tc = useTranslations("common");
   const ui = useTranslations("ui");
   const [query, setQuery] = useState("");
-  const { orgs, activeOrgId, fetchOrgs, switchOrg } = useOrganizations();
+  const { orgs, listFailed, activeOrgId, fetchOrgs, switchOrg } = useOrganizations();
   const [createOpen, setCreateOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -95,7 +95,7 @@ export default function OrgsPage() {
       />
 
       <WorkspacesCard
-        count={isLoading ? null : filteredOrgs.length}
+        count={isLoading || listFailed ? null : filteredOrgs.length}
         controls={
           <SearchInput value={query} onChange={setQuery} placeholder={t("searchOrganizations")} />
         }
@@ -116,6 +116,14 @@ export default function OrgsPage() {
                 <Skeleton className="h-8 w-full" />
               </div>
             ))}
+          </div>
+        ) : listFailed ? (
+          // A failed request is not an empty account: say so, and offer the retry.
+          <div role="alert" className="px-6 py-12 text-center">
+            <p className="text-foreground text-sm font-medium">{t("loadFailed")}</p>
+            <Button variant="outline" size="sm" className="mt-5" onClick={() => void fetchOrgs()}>
+              {tc("retry")}
+            </Button>
           </div>
         ) : orgs.length === 0 ? (
           // Inline rather than an `EmptyState`: that component draws its own

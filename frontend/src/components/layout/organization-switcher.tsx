@@ -23,10 +23,12 @@ export function OrganizationSwitcher({
   onNavigate?: () => void;
 }) {
   const t = useTranslations("teams");
-  const { activeOrg } = useOrganizations();
+  const { activeOrg, listFailed } = useOrganizations();
   const label = activeOrg
     ? t("organizationSwitcher", { name: activeOrg.name })
-    : t("selectOrganization");
+    : listFailed
+      ? t("organizationsNotLoaded")
+      : t("selectOrganization");
 
   return (
     <DropdownMenu>
