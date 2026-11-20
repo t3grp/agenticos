@@ -1,4 +1,4 @@
-"""Execute the 0352 reaction migration directly against PostgreSQL."""
+"""Execute the 0353 reaction migration directly against PostgreSQL."""
 
 import importlib.util
 from pathlib import Path
@@ -20,7 +20,7 @@ from tests.integration.test_room_submissions import post, seed
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
 
 _TABLES = ("room_agent_message_reactions",)
-_PATH = Path(__file__).parents[2] / "alembic" / "versions" / "0352_room_agent_reactions.py"
+_PATH = Path(__file__).parents[2] / "alembic" / "versions" / "0353_room_agent_reactions.py"
 _SPEC = importlib.util.spec_from_file_location("room_agent_message_reaction_migration", _PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 _MIGRATION = importlib.util.module_from_spec(_SPEC)
