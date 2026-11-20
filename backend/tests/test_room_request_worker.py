@@ -420,6 +420,7 @@ async def test_live_stream_uses_the_same_saved_prompt_and_sender(
         sender=ChatPerson(user_id=row.requester_id, name="Sender"),
         thread_root_message_id=uuid4() if in_thread else None,
     )
+    row.thread_root_message_id = message.thread_root_message_id
     trace = object() if trace_available else None
     begin, publish, end, begun = (
         AsyncMock(return_value=trace),

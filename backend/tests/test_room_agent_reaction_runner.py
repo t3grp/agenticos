@@ -59,7 +59,18 @@ def _setup():
         profile_id=profile_id,
         provider="openai",
         model="responder-model",
-        credential=SimpleNamespace(base_url=None),
+        credential=SimpleNamespace(
+            provider="openai",
+            base_url=None,
+            api=None,
+            region=None,
+            routing={},
+            credential_id=None,
+            authorization_generation=None,
+        ),
+        fallbacks=[],
+        secret_id=None,
+        params={},
     )
     service = AgentRunnerService(_db())
     run_id = uuid4()
