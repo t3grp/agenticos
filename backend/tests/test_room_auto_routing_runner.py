@@ -69,7 +69,18 @@ async def test_router_prepare_keeps_audit_person_but_builds_without_personal_ide
         profile_id=profile_id,
         provider="openai",
         model="router-model",
-        credential=SimpleNamespace(base_url=None),
+        credential=SimpleNamespace(
+            provider="openai",
+            base_url=None,
+            api=None,
+            region=None,
+            routing={},
+            credential_id=None,
+            authorization_generation=None,
+        ),
+        fallbacks=[],
+        secret_id=None,
+        params={},
     )
     resolve = AsyncMock(return_value=model_spec)
     create_run = AsyncMock(return_value=MagicMock(id=uuid4()))
