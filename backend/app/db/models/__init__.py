@@ -46,6 +46,7 @@ from app.db.models.browser_credential import (
     BrowserCredentialPolicy,
 )
 from app.db.models.coding_account import CodingAccount
+from app.db.models.personal_model_key import PersonalModelKey
 from app.db.models.conversation_share import ConversationShare
 from app.db.models.channel_bot import ChannelBot
 from app.db.models.channel_identity import ChannelIdentity
@@ -282,6 +283,7 @@ __all__ = [
     "BrowserCredentialContinuation",
     "BrowserCredentialPolicy",
     "CodingAccount",
+    "PersonalModelKey",
     "OrganizationAssistant",
     "ChannelPrompt",
     "ExternalAgent",
