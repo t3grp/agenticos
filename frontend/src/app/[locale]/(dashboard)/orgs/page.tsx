@@ -28,7 +28,7 @@ function WorkspacesCard({
   controls,
   children,
 }: {
-  count: number | null;
+  count: number | null | undefined;
   controls: ReactNode;
   children: ReactNode;
 }) {
@@ -39,7 +39,7 @@ function WorkspacesCard({
       namedByPage
       layout="grid"
       title={t("workspaces")}
-      counted={count === null ? null : t("storedCount", { count })}
+      counted={count == null ? count : t("storedCount", { count })}
       controls={controls}
       contentClassName="p-0 pt-2"
     >
@@ -95,7 +95,7 @@ export default function OrgsPage() {
       />
 
       <WorkspacesCard
-        count={isLoading || listFailed ? null : filteredOrgs.length}
+        count={isLoading ? null : listFailed ? undefined : filteredOrgs.length}
         controls={
           <SearchInput value={query} onChange={setQuery} placeholder={t("searchOrganizations")} />
         }

@@ -77,10 +77,7 @@ describe("useOrganizations list state", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns both organizations of an owner without flagging a failure", async () => {
-    const owned = [
-      org({ id: "org-a", name: "Alpha", role: "owner" }),
-      org({ id: "org-b", name: "Beta", role: "owner" }),
-    ];
+    const owned = [org({ id: "org-a", name: "Alpha" }), org({ id: "org-b", name: "Beta" })];
     vi.mocked(apiClient.get).mockResolvedValue({ items: owned, total: 2 });
     const { result } = renderHook(() => useOrganizations(), { wrapper });
     await waitFor(() => expect(result.current.orgs).toHaveLength(2));

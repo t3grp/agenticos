@@ -54,7 +54,6 @@ describe("OrganizationSwitcher", () => {
     expect(screen.getByRole("button", { name: "Organizations could not be loaded" })).toBeVisible();
   });
 
-
   it("refreshes organizations each time its menu opens", async () => {
     const user = userEvent.setup();
     render(<OrganizationSwitcher />);
