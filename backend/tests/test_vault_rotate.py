@@ -419,7 +419,9 @@ class TestRun:
             hint="abcd",
             key_version=1,
         )
-        db = _db_returning([secret], *[[] for _ in SEALED_TABLES[1:]], [])
+        # Network connections were added before organization secrets; keep each
+        # fake result aligned with the table sweep order.
+        db = _db_returning([], [secret], *[[] for _ in SEALED_TABLES[2:]], [])
 
         with patch.object(sweep, "get_db_context", self._db_context(db)):
             report = await _run(dry_run=False)
