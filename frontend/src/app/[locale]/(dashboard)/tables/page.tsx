@@ -105,7 +105,7 @@ export default function TablesPage() {
           <>
             <TaskBoardButton scope="private" />
             {canCreate && (
-              <Button data-tour="tables-new" onClick={() => setCreateOpen(true)}>
+              <Button data-tour="tables-new" size="lg" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" /> {t("newTable")}
               </Button>
             )}

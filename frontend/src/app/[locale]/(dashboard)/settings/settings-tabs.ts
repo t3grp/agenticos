@@ -63,3 +63,41 @@ export const SETTINGS_TABS: readonly PageTab[] = [
   { labelKey: "desktopApp", href: ROUTES.SETTINGS_DESKTOP, icon: AppWindow, shellOnly: true },
   { labelKey: "shortcuts", href: ROUTES.SETTINGS_SHORTCUTS, icon: Keyboard, shellOnly: true },
 ];
+
+/**
+ * The same tabs, grouped for the row: three short rows under their own kicker
+ * instead of one long strip. `SETTINGS_TABS` stays flat - it is the guard's
+ * index - and the groups are built from it, so a tab added to one and not the
+ * other fails loudly here rather than silently in the row.
+ *
+ * The order inside "You" is the spec's, not the flat list's: Notifications
+ * moves before Memory and Sign-ins, because what reaches you comes before
+ * what the agent remembers about you.
+ */
+export type SettingsGroup = {
+  /** A key in `pages.settings`, not the word itself. */
+  headingKey: string;
+  tabs: readonly PageTab[];
+};
+
+const tabByKey = (labelKey: string): PageTab => {
+  const tab = SETTINGS_TABS.find((candidate) => candidate.labelKey === labelKey);
+  // i18n-exempt: developer error, never rendered to a reader.
+  if (!tab) throw new Error(`Settings tab "${labelKey}" is not in SETTINGS_TABS`);
+  return tab;
+};
+
+export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
+  {
+    headingKey: "groupYou",
+    tabs: ["profile", "account", "notifications", "memory", "signIns"].map(tabByKey),
+  },
+  {
+    headingKey: "groupYourTools",
+    tabs: ["slashCommands", "aiConnections", "developerAccess"].map(tabByKey),
+  },
+  {
+    headingKey: "groupThisDevice",
+    tabs: ["blobby", "desktopApp", "shortcuts"].map(tabByKey),
+  },
+];
