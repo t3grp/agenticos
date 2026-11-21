@@ -11,6 +11,7 @@ another one.
 """
 
 import uuid
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -21,6 +22,22 @@ from app.core.permissions import AuthContext, OrgRoleName
 from app.services.audit import AuditService
 
 pytestmark = [pytest.mark.anyio, pytest.mark.security]
+
+
+@pytest.fixture(autouse=True)
+def _names_resolve_to_nothing() -> Iterator[None]:
+    """Name resolution reads real tables; these tests own the list, not the
+    names. A page of entries with nobody resolved still renders - "Someone",
+    "an agent" - which is what the sentence tests in
+    `test_audit_sentences.py` hold shut."""
+    with (
+        patch("app.services.audit.user_repo.get_by_ids", new=AsyncMock(return_value=[])),
+        patch(
+            "app.services.audit.agent_repo.list_by_ids",
+            new=AsyncMock(return_value=([], 0)),
+        ),
+    ):
+        yield
 
 
 def _ctx(org_id: uuid.UUID | None = None) -> AuthContext:

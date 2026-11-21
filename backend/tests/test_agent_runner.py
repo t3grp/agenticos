@@ -3776,6 +3776,128 @@ class TestWhatANonStreamingRunRecords:
         assert written["parked"] == frozenset()
 
     @pytest.mark.anyio
+    async def test_the_tool_calls_a_turn_made_are_audited_as_executions(self):
+        """The feed's rows come from the audit trail, not the transcript: a call
+        the turn executed writes one `agent.tool_executed` entry, carrying
+        names and ids only - never the arguments or the result, which may hold
+        a secret."""
+        conversation_id = uuid.uuid4()
+        service = AgentRunnerService(_db())
+        prepared = _prepared(conversation_id=conversation_id)
+        # The fixture run carries a mock user id; the audit entry names the
+        # person behind the run, so give it a real one to assert on.
+        prepared.run.user_id = uuid.uuid4()
+        prepared.built.agent.run = AsyncMock(
+            return_value=self._answered(
+                "sent",
+                [
+                    ModelResponse(
+                        parts=[
+                            ToolCallPart(
+                                tool_name="send_email",
+                                args={"to": "ada@example.com"},
+                                tool_call_id="c1",
+                            )
+                        ]
+                    ),
+                    ModelRequest(
+                        parts=[
+                            ToolReturnPart(tool_name="send_email", content="ok", tool_call_id="c1")
+                        ]
+                    ),
+                ],
+            )
+        )
+
+        with (
+            patch.object(service, "prepare", new=AsyncMock(return_value=prepared)),
+            patch("app.services.agent_runner.agent_run_repo.finish_run", new=AsyncMock()),
+            patch.object(service.transcript, "record", new=AsyncMock()),
+            patch("app.services.agent_runner.record_audit", new=AsyncMock()) as audit,
+        ):
+            await service.execute(_ctx(), uuid.uuid4(), "email ada")
+
+        (entry,) = [
+            call.kwargs for call in audit.await_args_list if call.kwargs["action"] == "agent.tool_executed"
+        ]
+        assert entry["target_type"] == "agent_run"
+        assert entry["target_id"] == str(prepared.run.id)
+        assert entry["actor_user_id"] == prepared.run.user_id
+        details = entry["details"]
+        assert details["tool_name"] == "send_email"
+        assert details["tool_call_id"] == "c1"
+        assert details["approved"] is False
+        assert details["run_id"] == str(prepared.run.id)
+        assert "args" not in details and "result" not in details
+
+    @pytest.mark.anyio
+    async def test_a_call_that_never_returned_writes_no_execution_entry(self):
+        """A parked call has not executed yet: recording it as executed would
+        put an action in the trail that never happened. The decision on it is
+        audited by `approval.*` when it lands."""
+        service = AgentRunnerService(_db())
+        prepared = _prepared()
+        parked = RecordedToolCall(
+            tool_call_id="c1", tool_name="send_email", args={"to": "ada@example.com"}, result=None
+        )
+
+        with patch("app.services.agent_runner.record_audit", new=AsyncMock()) as audit:
+            await service._audit_tool_calls(prepared, [parked], {})
+
+        audit.assert_not_awaited()
+
+    @pytest.mark.anyio
+    async def test_a_resumed_approved_call_is_audited_from_its_parked_approval(self):
+        """On a resume the approved call's return is new but its call part is
+        not - `tool_calls_in` drops it - so the settled call is audited from
+        the parked approval it was resumed from, with the approver's link."""
+        service = AgentRunnerService(_db())
+        prepared = _prepared()
+        approval_id = uuid.uuid4()
+        prepared.approvals.requested = [
+            ParkedApproval(
+                approval_id=approval_id,
+                tool_call_id="c9",
+                tool_name="send_email",
+                tool_args={"to": "ada@example.com"},
+            )
+        ]
+
+        with patch("app.services.agent_runner.record_audit", new=AsyncMock()) as audit:
+            await service._audit_tool_calls(prepared, [], {"c9": "ok"})
+
+        (entry,) = [
+            call.kwargs for call in audit.await_args_list if call.kwargs["action"] == "agent.tool_executed"
+        ]
+        assert entry["details"]["tool_name"] == "send_email"
+        assert entry["details"]["tool_call_id"] == "c9"
+        assert entry["details"]["approved"] is True
+        assert entry["details"]["approval_id"] == str(approval_id)
+
+    @pytest.mark.anyio
+    async def test_a_failed_tool_call_audit_never_fails_the_run(self):
+        """The transcript is the record; the audit entry is its index. A
+        failure to index must not fail a turn that already executed - it is
+        logged with the run and the call, and the turn carries on."""
+        service = AgentRunnerService(_db())
+        prepared = _prepared()
+        called = [
+            RecordedToolCall(tool_call_id="c1", tool_name="send_email", args={}, result="ok")
+        ]
+
+        with (
+            patch(
+                "app.services.agent_runner.record_audit",
+                new=AsyncMock(side_effect=RuntimeError("chain locked")),
+            ),
+            patch("app.services.agent_runner.logger") as logger,
+        ):
+            await service._audit_tool_calls(prepared, called, {})
+
+        logger.exception.assert_called_once()
+        assert logger.exception.call_args.args[0] == "tool_call_audit_not_written"
+
+    @pytest.mark.anyio
     async def test_a_run_that_broke_still_records_what_was_asked(self):
         """The run that failed is the one somebody opens. Without the question
         there is nothing on the page to interpret the failure against."""

@@ -152,6 +152,7 @@ export {
   useSpend,
 } from "./use-runs";
 export { useStopParkedRun } from "./use-stop-parked-run";
+export { useAuditFeed } from "./use-audit-feed";
 export {
   useAgentAttention,
   usePeopleUsage,

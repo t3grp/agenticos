@@ -5031,6 +5031,7 @@
     "memory": "Memory",
     "account": "Account",
     "activity": "Activity",
+    "activityFeed": "Activity feed",
     "admin": "Admin",
     "adminOverview": "Admin",
     "agents": "Agents",
@@ -5238,6 +5239,10 @@
       "activity-approvals": {
         "title": "What's waiting on you",
         "body": "Runs that paused for a human decision queue here. Approve or reject each one and the run picks up from where it stopped - this tab only appears if you're allowed to decide them."
+      },
+      "activity-feed": {
+        "title": "What the agents did, in plain language",
+        "body": "Every agent action is one sentence here - what it did, who approved it, and what its run cost - read from the audit trail rather than the run table."
       },
       "activity-overview": {
         "title": "Watch activity",
@@ -6769,6 +6774,23 @@
     "you": "(you)"
   },
   "pages": {
+    "activityFeed": {
+      "title": "Activity feed",
+      "description": "What the agents did, in plain sentences - who approved it, and what it cost.",
+      "searchLabel": "Search the feed",
+      "searchPlaceholder": "Search what the agents did…",
+      "agentLabel": "Agent",
+      "anyAgent": "Any agent",
+      "dayLabel": "Day",
+      "approvedBy": "Approved by {name}",
+      "runCost": "Run cost ${cost}",
+      "empty": "Nothing here yet - the feed fills as agents act.",
+      "couldNotBeRead": "The feed could not be read.",
+      "noPermission": "Only owners and admins can read the activity feed.",
+      "previousPage": "Previous",
+      "nextPage": "Next",
+      "showing": "{from}–{to} of {total}"
+    },
     "workflows": {
       "title": "Workflows",
       "description": "Automate multi-step work your agents carry out.",

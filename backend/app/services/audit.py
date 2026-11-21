@@ -13,12 +13,16 @@ pass the same thing.
 """
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol
+from uuid import UUID
 
 from app.core.audit import chain_hash, record_audit
+from app.repositories import agent as agent_repo
 from app.repositories import audit_log_repo
+from app.repositories import user as user_repo
 from app.schemas.audit import AuditEntryList, AuditEntryRead
 from app.services.exporting import (
     MAX_EXPORT_ROWS,
@@ -53,6 +57,278 @@ _AUDIT_HEADER = [
     "target_id",
     "details",
 ]
+
+
+class _SentenceEntry(Protocol):
+    """The fields a sentence is rendered from - the stored entry, nothing more.
+
+    A protocol rather than the ORM row so the renderer is testable without a
+    database: any object naming an actor, an action and a target renders.
+    """
+
+    actor_user_id: UUID | None
+    impersonator_user_id: UUID | None
+    action: str
+    target_type: str | None
+    target_id: str | None
+    details: dict[str, Any] | None
+
+
+def _humanize(code: str) -> str:
+    """A machine code as words: `send_email` reads "send email"."""
+    return code.replace("_", " ").replace("-", " ").strip()
+
+
+def _as_uuid(value: object) -> UUID | None:
+    """The UUID a value names, or `None` where it names none.
+
+    Details carry ids as strings, and a name, a level or a count is not one -
+    so a value that is not a UUID-shaped string is skipped, not crashed on.
+    """
+    if isinstance(value, UUID):
+        return value
+    if isinstance(value, str):
+        try:
+            return UUID(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _actor_label(entry: _SentenceEntry, names: Mapping[str, str]) -> str:
+    """Who the sentence says did it.
+
+    A resolved name where one is known, "Someone" where the actor is a UUID
+    with no user behind it any more, and "The platform" where there was no
+    actor at all - an expiry, a sweep, a workflow's end.
+    """
+    if entry.actor_user_id is None:
+        return "The platform"
+    return names.get(str(entry.actor_user_id)) or "Someone"
+
+
+def _agent_label(entry: _SentenceEntry, details: dict[str, Any], names: Mapping[str, str]) -> str | None:
+    """The agent a sentence names, from the details first.
+
+    `agent.tool_executed` and `agent.created` carry the name where the action
+    was recorded, so the common rows need no lookup; anything else resolves
+    through the `agent_id` in details, or the target when it is an agent.
+    """
+    for key in ("agent_name", "name"):
+        value = details.get(key)
+        if isinstance(value, str) and value:
+            return value
+    agent_id = _as_uuid(details.get("agent_id"))
+    if agent_id is not None and str(agent_id) in names:
+        return names[str(agent_id)]
+    if entry.target_type == "agent" and entry.target_id is not None:
+        return names.get(entry.target_id)
+    return None
+
+
+def _target_label(entry: _SentenceEntry, details: dict[str, Any], names: Mapping[str, str]) -> str:
+    """The thing a sentence says the action happened to.
+
+    A name from the details, a resolved agent, or the target id where one is
+    known - and the humanized target type where nothing names it, so the
+    fallback never shows a UUID.
+    """
+    for key in ("name", "title"):
+        value = details.get(key)
+        if isinstance(value, str) and value:
+            return value
+    agent = _agent_label(entry, details, names)
+    if agent is not None:
+        return agent
+    if entry.target_id is not None and entry.target_id in names:
+        return names[entry.target_id]
+    if entry.target_type is not None:
+        return f"the {_humanize(entry.target_type)}"
+    return "something"
+
+
+# Past-tense verbs the generic fallback may use, keyed on the action's last
+# segment: `agent.updated` reads "updated the agent", `table.archived` reads
+# "archived the table". An action whose verb is not here gets no invented
+# wording - the fallback names the action code instead.
+_VERBS = {
+    "added": "added",
+    "applied": "applied",
+    "archived": "archived",
+    "changed": "changed",
+    "claimed": "claimed",
+    "cloned": "cloned",
+    "completed": "completed",
+    "connected": "connected",
+    "corrected": "corrected",
+    "created": "created",
+    "deleted": "deleted",
+    "disabled": "disabled",
+    "dismissed": "dismissed",
+    "disconnected": "disconnected",
+    "ended": "ended",
+    "exported": "exported",
+    "granted": "granted",
+    "promoted": "promoted",
+    "proposed": "proposed",
+    "published": "published",
+    "refreshed": "refreshed",
+    "removed": "removed",
+    "requested": "requested",
+    "resolved": "resolved",
+    "restored": "restored",
+    "revoked": "revoked",
+    "rotated": "rotated",
+    "shared": "shared",
+    "skipped": "skipped",
+    "started": "started",
+    "swept": "swept",
+    "unarchived": "unarchived",
+    "updated": "updated",
+}
+
+
+def render_audit_sentence(entry: _SentenceEntry, names: Mapping[str, str]) -> str:
+    """The entry as one plain sentence.
+
+    The top actions a feed reads get an exact template - tool executions,
+    approval decisions, shares, runs, agent lifecycle - because a generic
+    verb cannot say who approved what or what a tool call cost. Everything
+    else falls back to the action's verb and the target it names, and an
+    action with no known verb is named as its code rather than paraphrased
+    into something it did not say. No UUIDs, no JSON, no tool names in code
+    format: a target the log never named renders as its type, and a tool
+    renders humanized (`send_email` reads "send email").
+
+    `names` maps `str(UUID)` to a display name, as
+    :meth:`AuditService._resolve_names` builds it. A missing name is not an
+    error - the sentence says "Someone" or "An agent" and stays readable.
+    """
+    details = entry.details or {}
+    actor = _actor_label(entry, names)
+    agent = _agent_label(entry, details, names)
+    target = _target_label(entry, details, names)
+    action = entry.action
+
+    if action == "agent.tool_executed":
+        tool = details.get("tool_name") or details.get("tool_id")
+        tool_label = _humanize(str(tool)) if isinstance(tool, str) and tool else "a tool"
+        sentence = f"{agent or 'An agent'} used {tool_label}"
+        if details.get("approved"):
+            sentence += " after approval"
+        cost = details.get("cost_usd")
+        if cost is not None:
+            sentence += f" (run cost ${cost})"
+        return sentence + "."
+
+    if action in ("approval.approved", "approval.rejected", "approval.expired"):
+        tool = details.get("tool_id")
+        tool_label = _humanize(str(tool)) if isinstance(tool, str) and tool else "a tool"
+        if action == "approval.expired":
+            return f"A {tool_label} approval expired with no decision."
+        verb = "approved" if action == "approval.approved" else "rejected"
+        return f"{actor} {verb} a {tool_label} call."
+
+    if action in (
+        "workflow_approval.approved",
+        "workflow_approval.rejected",
+        "workflow_approval.expired",
+    ):
+        if action.endswith("expired"):
+            return "A workflow proposal expired with no decision."
+        verb = "approved" if action.endswith("approved") else "rejected"
+        return f"{actor} {verb} a workflow proposal."
+
+    if action == "run.cancelled":
+        if details.get("by") == "workflow_run":
+            return "A run was cancelled because its workflow run ended."
+        return f"{actor} cancelled a run."
+    if action == "run.retried":
+        return f"{actor} retried a run."
+
+    if action == "audit.export":
+        fmt = details.get("format")
+        rows = details.get("row_count")
+        if isinstance(fmt, str) and isinstance(rows, int):
+            return f"{actor} exported the audit trail ({fmt}, {rows} rows)."
+        return f"{actor} exported the audit trail."
+
+    if action == "resource.share":
+        subject_id = _as_uuid(details.get("subject_user_id"))
+        if subject_id is not None:
+            subject = names.get(str(subject_id)) or "someone"
+        elif details.get("subject_group_id") is not None:
+            subject = "a group"
+        else:
+            subject = "someone"
+        sentence = f"{actor} shared {target} with {subject}"
+        level = details.get("level")
+        if isinstance(level, str) and level:
+            sentence += f" with {level} access"
+        expires_at = details.get("expires_at")
+        if isinstance(expires_at, str) and expires_at:
+            sentence += f", until {expires_at[:10]}"
+        return sentence + "."
+    if action == "resource.unshare":
+        return f"{actor} removed access to {target}."
+    if action == "resource.visibility_changed":
+        return f"{actor} changed who can see {target}."
+    if action == "resource.owner_claimed":
+        return f"{actor} claimed ownership of {target}."
+
+    if action == "member.role_changed":
+        role = details.get("new_role") or details.get("role")
+        if isinstance(role, str) and role:
+            return f"{actor} changed a member's role to {role}."
+        return f"{actor} changed a member's role."
+
+    if action in ("agent.created", "agent.published", "agent.rolled_back", "agent.deleted", "agent.cloned"):
+        verb = {
+            "agent.created": "created",
+            "agent.published": "published",
+            "agent.rolled_back": "rolled back",
+            "agent.deleted": "deleted",
+            "agent.cloned": "cloned",
+        }[action]
+        if agent is not None:
+            return f"{actor} {verb} agent {agent}."
+        return f"{actor} {verb} an agent."
+
+    if action in ("artifact.version_restored", "workflow.version_restored", "skill.restored"):
+        return f"{actor} restored a previous version of {target}."
+
+    if action == "oauth.grant_created":
+        return f"{actor} connected {target}."
+    if action == "oauth.grant_revoked":
+        return f"{actor} disconnected {target}."
+
+    if action == "api_key.created":
+        return f"{actor} created an API key."
+    if action == "api_key.revoked":
+        return f"{actor} revoked an API key."
+    if action == "api_key.rotated":
+        return f"{actor} rotated an API key."
+
+    if action == "deployment.settings_updated":
+        return f"{actor} changed deployment settings."
+    if action == "retention.swept":
+        return "The platform removed expired data under the retention policy."
+    if action == "user.email_changed":
+        return f"{actor} changed their email address."
+
+    if action in ("skill.learned", "skill.updated", "skill.refreshed"):
+        verb = {"skill.learned": "learned", "skill.updated": "updated", "skill.refreshed": "refreshed"}[
+            action
+        ]
+        return f"{actor} {verb} a skill."
+
+    if action.endswith(".export"):
+        return f"{actor} exported {_humanize(action.split('.')[0])}."
+
+    verb = _VERBS.get(action.split(".")[-1])
+    if verb is not None:
+        return f"{actor} {verb} {target}."
+    return f"{actor} performed {action}."
 
 
 def _audit_row(entry: AppAdminAuditLog) -> list[object]:
@@ -153,6 +429,7 @@ class AuditService:
             self.db, organization_id=ctx.organization_id, skip=skip, limit=limit
         )
         total = await audit_log_repo.count_for_org(self.db, organization_id=ctx.organization_id)
+        names = await self._resolve_names(ctx, entries)
         return AuditEntryList(
             items=[
                 AuditEntryRead(
@@ -164,11 +441,61 @@ class AuditService:
                     target_id=entry.target_id,
                     details=entry.details,
                     created_at=entry.created_at,
+                    actor_name=(
+                        names.get(str(entry.actor_user_id))
+                        if entry.actor_user_id is not None
+                        else None
+                    ),
+                    sentence=render_audit_sentence(entry, names),
                 )
                 for entry in entries
             ],
             total=total,
         )
+
+    async def _resolve_names(
+        self, ctx: AuthContext, entries: list[AppAdminAuditLog]
+    ) -> dict[str, str]:
+        """Display names for the ids a page of entries names, in two queries.
+
+        Actors and share subjects come from the users table, agents from the
+        agents table - a name is a full name where one is set, else the email.
+        An id with no row behind it is left out rather than invented: the
+        sentence says "Someone" or "An agent" and stays readable. Group
+        subjects are deliberately not resolved here - `group_repo` has no batch
+        read, and one query per shared group would be N+1 on a page of shares -
+        so a group share renders as "shared with a group" until that read
+        exists.
+        """
+        user_ids: set[UUID] = set()
+        agent_ids: set[UUID] = set()
+        for entry in entries:
+            if entry.actor_user_id is not None:
+                user_ids.add(entry.actor_user_id)
+            if entry.impersonator_user_id is not None:
+                user_ids.add(entry.impersonator_user_id)
+            details = entry.details or {}
+            for key in ("subject_user_id", "decided_by_user_id"):
+                subject = _as_uuid(details.get(key))
+                if subject is not None:
+                    user_ids.add(subject)
+            agent_id = _as_uuid(details.get("agent_id"))
+            if agent_id is not None:
+                agent_ids.add(agent_id)
+            if entry.target_type == "agent":
+                target = _as_uuid(entry.target_id)
+                if target is not None:
+                    agent_ids.add(target)
+        names: dict[str, str] = {}
+        for user in await user_repo.get_by_ids(self.db, sorted(user_ids)):
+            names[str(user.id)] = user.full_name or user.email
+        if agent_ids:
+            agents, _ = await agent_repo.list_by_ids(
+                self.db, organization_id=ctx.organization_id, agent_ids=agent_ids
+            )
+            for agent in agents:
+                names[str(agent.id)] = agent.name
+        return names
 
     async def export(
         self,
