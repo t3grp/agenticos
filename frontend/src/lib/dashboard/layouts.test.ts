@@ -48,17 +48,18 @@ describe("resolveAudience", () => {
 describe("the layouts", () => {
   it("keeps Me focused on the reader's daily work for every audience", () => {
     for (const audience of AUDIENCES) {
-      expect(
-        viewLayout("me", audience).flatMap((section) =>
-          section.entries.map((entry) => entry.widget),
-        ),
-      ).toEqual([
+      const sections = viewLayout("me", audience);
+      expect(sections.map((section) => section.id)).toEqual(["ask", "do", "track"]);
+      expect(sections.flatMap((section) => section.entries.map((entry) => entry.widget))).toEqual([
         "my-summary",
         "conversations",
-        "projects",
         "my-top-agents",
         "my-agents",
+        "projects",
         "recent-visuals",
+        "suggestions",
+        "needs-attention",
+        "waiting-on-me",
       ]);
     }
   });
@@ -136,7 +137,7 @@ describe("visibleSections", () => {
       false,
     );
 
-    expect(sections.map((section) => section.id)).toEqual(["workspace"]);
+    expect(sections.map((section) => section.id)).toEqual(["ask"]);
     expect(sections[0]?.entries.map((entry) => entry.widget)).toEqual(["my-agents"]);
   });
 

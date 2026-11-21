@@ -311,22 +311,42 @@ const DEFAULT_SECTIONS: SectionDef[] = [
 ];
 
 /**
- * A person's own page: their agents, their threads, their runs, and what is
- * waiting on them. The view a member without `runs:view` opens on, and one
- * click away for everybody else.
+ * A person's own page, recomposed into three verbs: ask, do, track.
+ *
+ * Ask is where a question starts and where work left off - the recent threads
+ * to continue, the agents to ask, the projects and drawings behind them. Do is
+ * what needs doing now - the briefing and what the org's attention card
+ * flags; the start checklist, for a person still setting up, opens the Do band
+ * on the page itself. Track is everything waiting on the reader, fanned into
+ * one card; the plain-language activity feed slots in beside it as a second
+ * card in the section when it lands. The usage hero still opens the page,
+ * above the bands, as the greeting's own summary.
  */
 const ME_SECTIONS: SectionDef[] = [
   {
-    id: "workspace",
-    titleKey: null,
+    id: "ask",
+    titleKey: "ask",
     entries: [
       { widget: "my-summary", span: "s12", rows: "r3" },
       { widget: "conversations", span: "s12", rows: "r3" },
-      { widget: "projects", span: "s6", rows: "r3" },
       { widget: "my-top-agents", span: "s6", rows: "r3" },
-      { widget: "my-agents", span: "s12", rows: "r3" },
+      { widget: "my-agents", span: "s6", rows: "r3" },
+      { widget: "projects", span: "s12", rows: "r2" },
       { widget: "recent-visuals", span: "s12", rows: "r6" },
     ],
+  },
+  {
+    id: "do",
+    titleKey: "do",
+    entries: [
+      { widget: "suggestions", span: "s12", rows: "r3" },
+      { widget: "needs-attention", span: "s12", rows: "r2" },
+    ],
+  },
+  {
+    id: "track",
+    titleKey: "track",
+    entries: [{ widget: "waiting-on-me", span: "s12", rows: "r4" }],
   },
 ];
 
