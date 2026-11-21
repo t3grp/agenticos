@@ -345,6 +345,15 @@ describe("manual conversation compaction", () => {
       messages_after: null,
     });
     expect(result.current.compactionProgress).toBeNull();
+    receive("compaction_impossible", {
+      kind: "compaction_impossible",
+      request_id: "stale-request",
+      messages_before: null,
+      messages_after: null,
+      overhead_tokens: 3_843,
+      window_tokens: 5_000,
+    });
+    expect(result.current.compactionProgress).toBeNull();
     receive("compaction_started", {
       kind: "compaction_started",
       request_id: requestId,
