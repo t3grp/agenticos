@@ -107,7 +107,9 @@ def _actor_label(entry: _SentenceEntry, names: Mapping[str, str]) -> str:
     return names.get(str(entry.actor_user_id)) or "Someone"
 
 
-def _agent_label(entry: _SentenceEntry, details: dict[str, Any], names: Mapping[str, str]) -> str | None:
+def _agent_label(
+    entry: _SentenceEntry, details: dict[str, Any], names: Mapping[str, str]
+) -> str | None:
     """The agent a sentence names, from the details first.
 
     `agent.tool_executed` and `agent.created` carry the name where the action
@@ -282,7 +284,13 @@ def render_audit_sentence(entry: _SentenceEntry, names: Mapping[str, str]) -> st
             return f"{actor} changed a member's role to {role}."
         return f"{actor} changed a member's role."
 
-    if action in ("agent.created", "agent.published", "agent.rolled_back", "agent.deleted", "agent.cloned"):
+    if action in (
+        "agent.created",
+        "agent.published",
+        "agent.rolled_back",
+        "agent.deleted",
+        "agent.cloned",
+    ):
         verb = {
             "agent.created": "created",
             "agent.published": "published",
@@ -317,9 +325,11 @@ def render_audit_sentence(entry: _SentenceEntry, names: Mapping[str, str]) -> st
         return f"{actor} changed their email address."
 
     if action in ("skill.learned", "skill.updated", "skill.refreshed"):
-        verb = {"skill.learned": "learned", "skill.updated": "updated", "skill.refreshed": "refreshed"}[
-            action
-        ]
+        verb = {
+            "skill.learned": "learned",
+            "skill.updated": "updated",
+            "skill.refreshed": "refreshed",
+        }[action]
         return f"{actor} {verb} a skill."
 
     if action.endswith(".export"):

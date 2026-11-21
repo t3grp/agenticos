@@ -3818,7 +3818,9 @@ class TestWhatANonStreamingRunRecords:
             await service.execute(_ctx(), uuid.uuid4(), "email ada")
 
         (entry,) = [
-            call.kwargs for call in audit.await_args_list if call.kwargs["action"] == "agent.tool_executed"
+            call.kwargs
+            for call in audit.await_args_list
+            if call.kwargs["action"] == "agent.tool_executed"
         ]
         assert entry["target_type"] == "agent_run"
         assert entry["target_id"] == str(prepared.run.id)
@@ -3867,7 +3869,9 @@ class TestWhatANonStreamingRunRecords:
             await service._audit_tool_calls(prepared, [], {"c9": "ok"})
 
         (entry,) = [
-            call.kwargs for call in audit.await_args_list if call.kwargs["action"] == "agent.tool_executed"
+            call.kwargs
+            for call in audit.await_args_list
+            if call.kwargs["action"] == "agent.tool_executed"
         ]
         assert entry["details"]["tool_name"] == "send_email"
         assert entry["details"]["tool_call_id"] == "c9"
@@ -3881,9 +3885,7 @@ class TestWhatANonStreamingRunRecords:
         logged with the run and the call, and the turn carries on."""
         service = AgentRunnerService(_db())
         prepared = _prepared()
-        called = [
-            RecordedToolCall(tool_call_id="c1", tool_name="send_email", args={}, result="ok")
-        ]
+        called = [RecordedToolCall(tool_call_id="c1", tool_name="send_email", args={}, result="ok")]
 
         with (
             patch(

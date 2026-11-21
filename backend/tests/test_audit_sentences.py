@@ -123,10 +123,7 @@ def test_an_expired_approval_says_nobody_decided() -> None:
         details={"tool_id": "send_email", "run_id": str(_RUN)},
     )
 
-    assert (
-        render_audit_sentence(entry, _NAMES)
-        == "A send email approval expired with no decision."
-    )
+    assert render_audit_sentence(entry, _NAMES) == "A send email approval expired with no decision."
 
 
 def test_a_workflow_decision_reads_as_a_proposal_not_a_tool_call() -> None:
