@@ -345,8 +345,9 @@ test.describe("multiplayer project rooms", () => {
     cleanupPaths.push(`/api/agents/${agent.id}`);
     const draft = await request.put(`/api/agents/${agent.id}/draft`, {
       data: {
-        expected_revision: (await json<{ draft_revision: string }>(request, `/api/agents/${agent.id}`))
-          .draft_revision,
+        expected_revision: (
+          await json<{ draft_revision: string }>(request, `/api/agents/${agent.id}`)
+        ).draft_revision,
         spec: {
           name: agentName,
           instructions: `Reply with exactly ${echo}. Follow a CALL-TOOL directive when one is present.`,
