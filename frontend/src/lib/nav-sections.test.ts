@@ -37,6 +37,17 @@ describe("navSectionFor", () => {
     expect(navSectionFor("/en/skills")).toMatchObject({ domain: "knowledge", isRoot: true });
   });
 
+  it("places the guided first run on the onboarding route, query and all", () => {
+    // The entry's href carries `?flow=first-run`, but the section it names is
+    // the route underneath: the sidebar lights on `/onboarding` itself, and
+    // the palette finds it by the same row.
+    expect(navSectionFor("/onboarding?flow=first-run")).toMatchObject({
+      domain: "use",
+      isRoot: true,
+    });
+    expect(navSectionFor("/onboarding")).toMatchObject({ domain: "use", isRoot: true });
+  });
+
   it("answers null outside every section", () => {
     expect(navSectionFor("/settings/profile")).toBeNull();
   });
@@ -58,7 +69,7 @@ describe("the Connectors nav entry", () => {
       expect.objectContaining({
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
-        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView],
+        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView, Perm.networksView],
       }),
     ]);
   });

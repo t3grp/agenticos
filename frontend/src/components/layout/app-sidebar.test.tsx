@@ -416,6 +416,7 @@ describe("the navigation definition", () => {
     const open = new Set([
       "dashboard",
       "chat",
+      "firstRunSetup",
       "inbox",
       "backgroundWork",
       "organizations",
@@ -470,8 +471,9 @@ describe("daily-work navigation", () => {
     sidebar.openGroups = [];
     renderNav();
     const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-    expect(hrefs.slice(0, 8)).toEqual([
+    expect(hrefs.slice(0, 9)).toEqual([
       "/dashboard",
+      "/onboarding?flow=first-run",
       "/chat",
       "/inbox",
       "/agent-messages",

@@ -60,7 +60,7 @@ it("offers a shared start and saves only the decision to dismiss it", async () =
   render(<StartOffer />);
   expect(screen.getByRole("link", { name: "Try an example" })).toHaveAttribute(
     "href",
-    "/onboarding",
+    "/onboarding?flow=first-run",
   );
   await userEvent.click(screen.getByRole("button", { name: "Hide for 24 hours" }));
   expect(env.save).toHaveBeenCalledWith({ dismissed: true });

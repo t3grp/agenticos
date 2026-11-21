@@ -24,6 +24,11 @@ export async function generateMetadata({
   });
 }
 
-export default function OnboardingPage() {
-  return <OnboardingSetup />;
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ flow?: string; step?: string }>;
+}) {
+  const query = await searchParams;
+  return <OnboardingSetup flow={query.flow} step={query.step} />;
 }

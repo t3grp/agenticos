@@ -54,7 +54,7 @@ export function StartChecklist({ orgId, className }: { orgId: string; className?
       <p className="text-muted-foreground text-sm">{t("offerHint")}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Link
-          href="/onboarding"
+          href="/onboarding?flow=first-run"
           className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm"
         >
           {t("openStart")}
