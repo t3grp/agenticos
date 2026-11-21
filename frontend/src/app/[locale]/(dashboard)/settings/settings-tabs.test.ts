@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { SETTINGS_TABS } from "./settings-tabs";
+import { SETTINGS_GROUPS, SETTINGS_TABS } from "./settings-tabs";
 
 /**
  * The settings tab row is the section's index, and this suite is what keeps it
@@ -79,5 +79,39 @@ describe("the settings tab row", () => {
     const hrefs = SETTINGS_TABS.flatMap((tab) => [tab.href, ...(tab.matchHrefs ?? [])]);
 
     expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+});
+
+describe("the settings tab groups", () => {
+  it("puts every tab in exactly one group", () => {
+    const grouped = SETTINGS_GROUPS.flatMap((group) => group.tabs.map((tab) => tab.labelKey));
+
+    expect([...grouped].sort()).toEqual(SETTINGS_TABS.map((tab) => tab.labelKey).sort());
+    expect(new Set(grouped).size).toBe(grouped.length);
+  });
+
+  it("orders the groups You, Your tools, This device", () => {
+    expect(SETTINGS_GROUPS.map((group) => group.headingKey)).toEqual([
+      "groupYou",
+      "groupYourTools",
+      "groupThisDevice",
+    ]);
+    expect(SETTINGS_GROUPS[0]!.tabs.map((tab) => tab.labelKey)).toEqual([
+      "profile",
+      "account",
+      "notifications",
+      "memory",
+      "signIns",
+    ]);
+    expect(SETTINGS_GROUPS[1]!.tabs.map((tab) => tab.labelKey)).toEqual([
+      "slashCommands",
+      "aiConnections",
+      "developerAccess",
+    ]);
+    expect(SETTINGS_GROUPS[2]!.tabs.map((tab) => tab.labelKey)).toEqual([
+      "blobby",
+      "desktopApp",
+      "shortcuts",
+    ]);
   });
 });

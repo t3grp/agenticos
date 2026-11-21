@@ -39,3 +39,14 @@ it("returns to the settings heading when the section changes, preserving the mem
     pathname = "/settings/account";
   }
 });
+
+it("groups the tabs under You and Your tools, with no This device in a browser", () => {
+  render(
+    <SettingsLayout>
+      <p>Account panel</p>
+    </SettingsLayout>,
+  );
+  expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Your tools" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "This device" })).not.toBeInTheDocument();
+});

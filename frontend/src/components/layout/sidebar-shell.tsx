@@ -4,8 +4,9 @@
  * stay above the scrollable destinations; notifications and account stay below. */
 
 import Link from "next/link";
-import { SquarePen } from "lucide-react";
+import { Settings, SquarePen } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { DesktopInstallPrompt } from "@/components/layout/desktop-install-prompt";
@@ -15,6 +16,8 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 import { SidebarUser } from "@/components/layout/sidebar-user";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { buttonVariants } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants";
+import { stripLocale } from "@/lib/active-route";
 import { cn } from "@/lib/utils";
 
 export function SidebarShell({
@@ -27,6 +30,14 @@ export function SidebarShell({
   onNavigate?: () => void;
 }) {
   const t = useTranslations("workspaceHome");
+  const tNav = useTranslations("nav");
+  const pathname = stripLocale(usePathname() ?? "/");
+  // Settings is a place, not an account action: it sits in the column's
+  // footer, above the account block, lit the same green as a nav row when
+  // the page you are on is inside it. The account menu keeps its own
+  // "Profile & settings" row - the two lead to the same place, and the
+  // footer one is the one somebody finds without opening a menu.
+  const settingsActive = pathname === ROUTES.SETTINGS || pathname.startsWith(`${ROUTES.SETTINGS}/`);
   return (
     <>
       <div className={cn("shrink-0 pt-1", collapsed ? "flex justify-center px-1 pb-2" : "px-3")}>
@@ -67,6 +78,23 @@ export function SidebarShell({
           <NotificationBell variant="icon" />
           <ConsoleVersion collapsed={collapsed} />
         </div>
+        <Link
+          href={ROUTES.SETTINGS}
+          onClick={onNavigate}
+          aria-current={settingsActive ? "page" : undefined}
+          title={collapsed ? tNav("settings") : undefined}
+          aria-label={collapsed ? tNav("settings") : undefined}
+          className={cn(
+            "focus-visible:ring-ring flex h-9 items-center rounded-lg text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset",
+            collapsed ? "w-9 justify-center" : "gap-2.5 px-2.5",
+            settingsActive
+              ? "bg-brand-subtle text-brand font-semibold"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          )}
+        >
+          <Settings className="size-4 shrink-0" aria-hidden />
+          {collapsed ? null : <span className="truncate">{tNav("settings")}</span>}
+        </Link>
         <SidebarUser compact={collapsed} />
       </div>
     </>

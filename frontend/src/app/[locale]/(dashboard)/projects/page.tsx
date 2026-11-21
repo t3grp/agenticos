@@ -56,7 +56,7 @@ export default function ProjectsPage() {
       description={t("pageDescription")}
       actions={
         canCreate ? (
-          <Button data-tour="projects-new" onClick={() => setCreateOpen(true)}>
+          <Button data-tour="projects-new" size="lg" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
             {t("newProject")}
           </Button>
