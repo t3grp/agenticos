@@ -85,8 +85,8 @@ describe("buildFeedRows", () => {
     ]);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].sentence).toBe("Ada Lovelace rejected a delete row call.");
-    expect(rows[0].approvedBy).toBeNull();
+    expect(rows[0]!.sentence).toBe("Ada Lovelace rejected a delete row call.");
+    expect(rows[0]!.approvedBy).toBeNull();
   });
 
   it("does not invent an approver for a decision on another page", () => {
@@ -98,13 +98,13 @@ describe("buildFeedRows", () => {
     ]);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].approvedBy).toBeNull();
+    expect(rows[0]!.approvedBy).toBeNull();
   });
 
   it("falls back to the action code where the read path rendered no sentence", () => {
     const rows = buildFeedRows([entry({ id: "e1", sentence: null })]);
 
-    expect(rows[0].sentence).toBe("agent.tool_executed");
+    expect(rows[0]!.sentence).toBe("agent.tool_executed");
   });
 });
 
