@@ -56,7 +56,10 @@ export function StartOffer() {
         <p className={styles.title}>{t(administrator ? "adminTitle" : "memberTitle")}</p>
         <p className={styles.hint}>{t(administrator ? "adminHint" : "memberHint")}</p>
       </div>
-      <Link className={styles.action} href="/onboarding">
+      <Link
+        className={styles.action}
+        href={administrator ? "/onboarding" : "/onboarding?flow=first-run"}
+      >
         {t(administrator ? "adminAction" : "memberAction")}
         <ArrowRight size={15} aria-hidden />
       </Link>

@@ -416,6 +416,7 @@ describe("the navigation definition", () => {
     const open = new Set([
       "dashboard",
       "chat",
+      "firstRunSetup",
       "inbox",
       "backgroundWork",
       "organizations",

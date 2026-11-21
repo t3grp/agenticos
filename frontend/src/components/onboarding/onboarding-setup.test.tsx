@@ -12,6 +12,9 @@ vi.mock("@/components/layout/auth-guard", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+vi.mock("@/lib/locale-navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 import enMessages from "../../../messages/en.json";
 
 vi.mock("next-intl", () => ({

@@ -32,7 +32,10 @@ beforeEach(() => {
 });
 it("links to the shared start and saves a dismissal without claiming success", async () => {
   render(<StartChecklist orgId="org" />);
-  expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute("href", "/onboarding");
+  expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute(
+    "href",
+    "/onboarding?flow=first-run",
+  );
   await userEvent.click(screen.getByRole("button", { name: "Hide for 24 hours" }));
   expect(state.save.mutate).toHaveBeenCalledWith({ dismissed: true });
 });
