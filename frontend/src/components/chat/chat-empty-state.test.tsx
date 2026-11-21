@@ -171,6 +171,15 @@ describe("ChatEmptyState", () => {
     expect(screen.queryByText("Plan a trip on a map")).toBeNull();
   });
 
+  it("groups the default openers under Ask, Do and Track, with Track linking to Activity", () => {
+    render(<ChatEmptyState onPick={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "Ask" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Do" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Track" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /See what ran/ })).toHaveAttribute("href", "/runs");
+  });
+
   it("opens on one starter per kind of interactive answer for an agent that draws", async () => {
     env.agents = env.agents.map((agent) => ({ ...agent, published_capabilities: ["visuals"] }));
     const onPick = vi.fn();

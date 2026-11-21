@@ -27,7 +27,7 @@ it("starts a new session when none is open, after storing the page's draft", asy
   const persist = vi.fn().mockResolvedValue(true);
   render(<ImproveButton agentId="a1" persist={persist} />);
   const button = screen.getByRole("button", { name: "Improve" });
-  expect(button).not.toHaveClass("bg-action");
+  expect(button).not.toHaveClass("bg-brand");
   expect(screen.queryByTestId("improve-attention")).not.toBeInTheDocument();
   const icon = button.querySelector("svg.lucide-trending-up")!;
   expect(icon).toBeInTheDocument();
@@ -47,7 +47,7 @@ it("reopens the session still open, marking an agent that needs it without leadi
   const button = screen.getByRole("button", {
     name: "Needs attention: 1 failed run. Improve this agent",
   });
-  expect(button).not.toHaveClass("bg-action");
+  expect(button).not.toHaveClass("bg-brand");
   expect(button).toHaveClass("border-2", "border-input");
   expect(screen.getByTestId("improve-attention")).toBeInTheDocument();
   expect(button.querySelector("svg.lucide-trending-up")).toBeInTheDocument();

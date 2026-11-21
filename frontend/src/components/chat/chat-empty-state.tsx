@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 import {
+  Activity,
   CalendarClock,
   Calculator,
   Compass,
@@ -17,6 +18,7 @@ import { TableIcon as Table2 } from "@/components/icons/product-icons";
 import { useTranslations } from "next-intl";
 
 import { STARTER_ICONS } from "@/lib/starter-icons";
+import { ROUTES } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentAvatar } from "@/components/agents/agent-avatar";
 import { useAgents, useAuth } from "@/hooks";
@@ -46,12 +48,14 @@ export function greetingKey(
  * The four openers for an agent that names none of its own, in order. Their
  * words live in the catalog under `empty.<id>*`. Two of them show what an agent
  * here does beyond answering - say what it can, and run on a schedule (#2301).
+ * Grouped under the same three verbs as home - Ask, Do, Track - so the empty
+ * chat reads as the same product as the dashboard.
  */
 const PROMPTS = [
-  { icon: Compass, id: "capabilities" },
-  { icon: FileSearch, id: "docs" },
-  { icon: CalendarClock, id: "routine" },
-  { icon: Mail, id: "email" },
+  { icon: Compass, id: "capabilities", group: "ask" },
+  { icon: FileSearch, id: "docs", group: "ask" },
+  { icon: CalendarClock, id: "routine", group: "do" },
+  { icon: Mail, id: "email", group: "do" },
 ] as const;
 
 /**
@@ -130,7 +134,23 @@ function Welcome({ agent, starters, loading, onPick, suggestionsSlot }: WelcomeP
         icon: p.icon,
         title: t(`${p.id}Title`),
         prompt: t(`${p.id}Prompt`),
+        // The visual prompts are one ungrouped set; the four openers carry
+        // their Ask / Do group, resolved here where the translator lives.
+        group: "group" in p ? t(`groups.${p.group}`) : undefined,
       }));
+  // Track is not a prompt - it is a door to `/runs`, where what ran already
+  // lives. It closes the same three verbs home opens with.
+  if (!starters.length && !draws) {
+    suggestions.push({
+      key: "track",
+      icon: Activity,
+      title: t("trackTitle"),
+      prompt: "",
+      description: "",
+      href: ROUTES.RUNS,
+      group: t("groups.track"),
+    });
+  }
 
   return (
     <ChatWelcome

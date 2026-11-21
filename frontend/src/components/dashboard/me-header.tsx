@@ -77,7 +77,9 @@ export function MeHeader({
               month: "long",
             }).format(now)}
           </span>
-          <span suppressHydrationWarning>
+          {/* The page's one big heading: home is the only page with a display
+              heading - every other page's title is PageHeader's size. */}
+          <span className="text-2xl sm:text-3xl" suppressHydrationWarning>
             {name === null
               ? t(partOfDay(now.getHours()))
               : t(`${partOfDay(now.getHours())}Named`, { name })}

@@ -63,6 +63,15 @@
 /** Between two cards in a band's grid, and between a band's rows. */
 export const CARD_GAP = "gap-4";
 
+/**
+ * The "me" view's measure: a centred narrow column, so home reads like a
+ * messaging app instead of a dashboard. Org / Group / Deployment views keep
+ * the wide arrangeable grid - reports need width - and a saved arrangement
+ * keeps whatever its owner chose. Applied in `dashboard/page.tsx`, not here,
+ * because the page decides which view is showing.
+ */
+export const ME_VIEW_WIDTH = "mx-auto w-full max-w-3xl";
+
 /** Between two bands. Four times the card gap, so a band reads as a band. */
 export const BAND_GAP = "space-y-10";
 
