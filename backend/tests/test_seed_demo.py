@@ -128,8 +128,8 @@ class TestTheContent:
         conversation must agree word for word, or the demo contradicts itself."""
         en = json.loads((REPO_ROOT / "frontend" / "messages" / "en.json").read_text())
         example = en["start"]["examples"]["meeting"]
-        assert DEMO_USER_PROMPT == example["prompt"]
-        assert DEMO_ASSISTANT_REPLY == example["result"]
+        assert example["prompt"] == DEMO_USER_PROMPT
+        assert example["result"] == DEMO_ASSISTANT_REPLY
 
     def test_the_demo_content_names_itself_as_demo(self):
         assert "Demo" in DEMO_PROJECT_NAME
@@ -174,9 +174,7 @@ class TestTheCommand:
     async def test_creating_writes_the_project_and_the_two_messages(
         self, db, org, project, conversation, capsys
     ):
-        with _patched(
-            db, org, created_project=project, created_conversation=conversation
-        ) as mocks:
+        with _patched(db, org, created_project=project, created_conversation=conversation) as mocks:
             await _run(str(ORG_ID), False, False)
         create_project = mocks[3]
         create_project.assert_awaited_once()

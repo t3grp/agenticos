@@ -56,7 +56,7 @@ vi.mock("@/lib/locale-navigation", () => ({ useRouter: () => ({ push: env.push }
 vi.mock("@/lib/app-connections-api", () => ({
   getAppConnectionCatalog: async () => ({ apps: env.catalogApps }),
   listAppConnections: async () => env.connections,
-  connectApp: (...args: unknown[]) => env.connectApp(...args),
+  connectApp: (input: { toolkit: string; label?: string }) => env.connectApp(input),
 }));
 // The model-setup dialog is covered where it lives; here the only question is
 // whether the wizard opens it when no runnable agent exists.
@@ -245,9 +245,7 @@ describe("FirstRunWizard", () => {
       "href",
       "/chat?id=conv-1",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Finish — my first result is in" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Finish — my first result is in" }));
     expect(env.saveMutateAsync).toHaveBeenCalledWith({ completed: true });
     expect(env.push).toHaveBeenCalledWith("/chat?id=conv-1");
   });

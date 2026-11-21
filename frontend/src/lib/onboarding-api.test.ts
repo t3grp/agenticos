@@ -86,15 +86,14 @@ it("still offers the start when only starter agents or earlier activity exist", 
   // new organization, so "no runnable agent yet" could never pass there — and
   // a failed or abandoned run is not a finished task either. Only a real
   // completed run, completion, or an active snooze hides the offer.
-  expect(
-    shouldOfferStart({
-      dismissed: false,
-      completed: false,
-      has_result: false,
-      has_activity: true,
-      agents: [{ id, name: "AgenticOS" }],
-    }),
-  ).toBe(true);
+  const data = {
+    dismissed: false,
+    completed: false,
+    has_result: false,
+    has_activity: true,
+    agents: [{ id, name: "AgenticOS" }],
+  };
+  expect(shouldOfferStart(data)).toBe(true);
 });
 
 it("accepts a setup-only starter without adding it to runnable agents", async () => {

@@ -103,9 +103,7 @@ async def _find_demo_conversation(
 @command("seed-demo", help="Seed a curated demo workspace for the guided first run")
 @click.argument("organization_id")
 @click.option("--clear", is_flag=True, help="Remove the demo workspace instead of creating it")
-@click.option(
-    "--dry-run", is_flag=True, help="Show what would be created without making changes"
-)
+@click.option("--dry-run", is_flag=True, help="Show what would be created without making changes")
 def seed_demo(organization_id: str, clear: bool, dry_run: bool) -> None:
     asyncio.run(_run(organization_id, clear, dry_run))
 

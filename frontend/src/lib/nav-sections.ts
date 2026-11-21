@@ -264,11 +264,16 @@ const NAV_HREFS: readonly string[] = NAV_GROUPS.flatMap((group) =>
   group.items.map((item) => item.href),
 );
 
+/** The route under a query string: `/onboarding?flow=first-run` names `/onboarding`. */
+function stripQuery(value: string): string {
+  return value.split("?", 1)[0] ?? value;
+}
+
 /** Whether `path` is `href` or something below it: `/agents/abc`, never `/agents-archive`. */
 function isInside(path: string, href: string): boolean {
   // An entry may carry a query (`/onboarding?flow=first-run`): the section it
   // names is the route underneath, so the query is not part of the match.
-  const base = href.split("?", 1)[0];
+  const base = stripQuery(href);
   return path === base || path.startsWith(`${base}/`);
 }
 
@@ -297,7 +302,7 @@ export function isActive(
   hrefs: readonly string[] = NAV_HREFS,
 ): boolean {
   // A caller may pass a full URL with a query; the section match is on the path.
-  const path = stripLocale(pathname).split("?", 1)[0];
+  const path = stripQuery(stripLocale(pathname));
   if (!isInside(path, href)) return false;
   return !hrefs.some((other) => other.length > href.length && isInside(path, other));
 }
@@ -313,8 +318,8 @@ export function navSectionFor(
   for (const group of NAV_GROUPS) {
     for (const item of group.items) {
       if (isActive(pathname, item.href)) {
-        const path = stripLocale(pathname).split("?", 1)[0];
-        const base = item.href.split("?", 1)[0];
+        const path = stripQuery(stripLocale(pathname));
+        const base = stripQuery(item.href);
         const tab = item.tabbed && /^\/[^/]+$/.test(path.slice(base.length));
         return { item, domain: group.domain, isRoot: path === base || Boolean(tab) };
       }

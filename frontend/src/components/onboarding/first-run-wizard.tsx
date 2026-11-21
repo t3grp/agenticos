@@ -10,11 +10,7 @@ import { Button } from "@/components/ui";
 import { ErrorState, LoadingState } from "@/components/states";
 import { useStart } from "@/hooks/use-start";
 import { useRouter } from "@/lib/locale-navigation";
-import {
-  connectApp,
-  getAppConnectionCatalog,
-  listAppConnections,
-} from "@/lib/app-connections-api";
+import { connectApp, getAppConnectionCatalog, listAppConnections } from "@/lib/app-connections-api";
 import { exampleChat, START_GOALS, type StartGoal } from "@/lib/onboarding-api";
 import { qk } from "@/lib/query-keys";
 import { useAuthStore, useOrgStore } from "@/stores";
@@ -88,8 +84,7 @@ export function FirstRunWizard({ initialStep }: { initialStep?: string }) {
     return () => window.clearInterval(timer);
   }, [current, data?.has_result, state.refetch]);
 
-  if (state.isLoading || state.waitingForScope)
-    return <LoadingState variant="pending" />;
+  if (state.isLoading || state.waitingForScope) return <LoadingState variant="pending" />;
   if (state.error || !data)
     return (
       <ErrorState
@@ -140,9 +135,7 @@ export function FirstRunWizard({ initialStep }: { initialStep?: string }) {
     } catch {
       // Completion is server truth; a failed save must not trap the user.
     }
-    router.push(
-      data.latest_conversation_id ? `/chat?id=${data.latest_conversation_id}` : "/chat",
-    );
+    router.push(data.latest_conversation_id ? `/chat?id=${data.latest_conversation_id}` : "/chat");
   };
 
   return (
@@ -150,7 +143,10 @@ export function FirstRunWizard({ initialStep }: { initialStep?: string }) {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <p className="text-muted-foreground text-sm">{t("intro")}</p>
-        <ol className="flex flex-wrap gap-2 text-sm" aria-label={t("stepLabel", { current: index + 1, total: STEPS.length })}>
+        <ol
+          className="flex flex-wrap gap-2 text-sm"
+          aria-label={t("stepLabel", { current: index + 1, total: STEPS.length })}
+        >
           {STEPS.map((item, position) => (
             <li
               key={item}
@@ -231,9 +227,7 @@ export function FirstRunWizard({ initialStep }: { initialStep?: string }) {
             <>
               <p className="text-muted-foreground text-sm">{t("runHint", { agent: agent.name })}</p>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={() => router.push(exampleChat(agent.id, chosenGoal))}
-                >
+                <Button onClick={() => router.push(exampleChat(agent.id, chosenGoal))}>
                   {t("runCta")}
                   <ArrowRight size={14} aria-hidden />
                 </Button>
@@ -273,10 +267,7 @@ export function FirstRunWizard({ initialStep }: { initialStep?: string }) {
                 <CheckCircle2 size={16} aria-hidden className="mr-1 inline" />
                 {t("resultDone")}
               </p>
-              <Link
-                href={`/chat?id=${data.latest_conversation_id}`}
-                className="text-sm underline"
-              >
+              <Link href={`/chat?id=${data.latest_conversation_id}`} className="text-sm underline">
                 {t("resultLink")}
               </Link>
               <div>
