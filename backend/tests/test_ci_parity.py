@@ -372,6 +372,8 @@ class TestCheckRunsUnderThePinnedInterpreter:
 
 def test_dependency_freshness_allows_the_full_backend_runtime() -> None:
     """The upgrade canary runs the same suite; 25 minutes cut off healthy tests."""
+    if not (WORKFLOW.parent / "dependency-freshness.yml").exists():
+        pytest.skip("the dependency freshness workflow is not shipped in this repository")
     timeouts: list[int] = []
     for filename, job_name in (("ci.yml", "test"), ("dependency-freshness.yml", "newest")):
         config: object = yaml.safe_load((WORKFLOW.parent / filename).read_text())

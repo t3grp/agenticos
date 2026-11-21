@@ -908,7 +908,7 @@ jobs:
           WORKER_HEALTH_FILE: ${{ runner.temp }}/worker-alive
         run: |
           rm -f "$WORKER_HEALTH_FILE"
-          .venv/bin/python -m app.worker --pools agent,eval,system,ingest,workflow \
+          .venv/bin/python -m app.worker --pools agent,eval,system,ingest,network,workflow \
             > "$RUNNER_TEMP/worker.log" 2>&1 &
           worker_pid=$!
           echo "$worker_pid" > "$RUNNER_TEMP/worker.pid"

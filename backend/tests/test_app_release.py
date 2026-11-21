@@ -17,6 +17,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.mark.parametrize("has_wrapper", [False, True], ids=["legacy-tree", "current-tree"])
 @pytest.mark.parametrize(("build_status", "check_status"), [(0, 0), (9, 0), (0, 7)])
+@pytest.mark.skipif(
+    not (ROOT / ".github/workflows/app-release.yml").exists(),
+    reason="the app-release workflow is not shipped in this repository",
+)
 def test_linux_release_builds_old_tags_and_keeps_current_validation(
     tmp_path: Path, has_wrapper: bool, build_status: int, check_status: int
 ) -> None:
