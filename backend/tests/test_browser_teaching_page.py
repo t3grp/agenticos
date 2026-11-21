@@ -56,6 +56,12 @@ async def test_a_native_command_is_sent_on_this_pages_own_session(method: str) -
     send.assert_awaited_once_with(params={"a": 1}, session_id=SESSION)
 
 
+async def test_a_command_outside_the_fixed_native_set_sends_nothing() -> None:
+    page, client = _page()
+    assert await page._credential_command(cast(Any, "Runtime.enable"), {}) is None
+    assert client.send.mock_calls == []
+
+
 async def test_the_frame_tree_is_read_without_parameters() -> None:
     page, client = _page()
     client.send.Page.getFrameTree = AsyncMock(return_value="tree")

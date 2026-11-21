@@ -68,3 +68,15 @@ async def test_losing_control_ends_the_hold_and_the_capture() -> None:
     await _hold(_session(teaching), _Control(lost), emit)
     assert teaching.calls == ["begin", "end"]
     assert [event.kind for event in events][-1] == "browser_released"
+
+
+async def test_a_hold_without_teaching_whose_announcement_fails_still_raises() -> None:
+    async def emit(_event: BrowserEvent) -> bool:
+        raise ConnectionError("socket closed")
+
+    session = BrowseSession(page=_FakePage())
+    assert session.teaching is None
+    with pytest.raises(ConnectionError):
+        await _loop.held(
+            session, _Control(), emit, call_id="c-1", by="Ada", by_user_id="u-1", remember=None
+        )
