@@ -158,6 +158,7 @@ WIDGET_IDS: frozenset[str] = frozenset(
         "phone-calls",
         "projects",
         "agent-messages",
+        "waiting-on-me",
         "recent-visuals",
         "suggestions",
     }

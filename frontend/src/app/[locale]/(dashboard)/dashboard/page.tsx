@@ -9,7 +9,6 @@ import { toast } from "sonner";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useStart } from "@/hooks/use-start";
-import { useSuggestions } from "@/hooks/use-suggestions";
 import { DashboardEditor } from "@/components/dashboard/dashboard-editor";
 import { DashboardPresetMenu } from "@/components/dashboard/dashboard-preset-menu";
 import { FilterRow } from "@/components/dashboard/filter-row";
@@ -121,10 +120,7 @@ export default function DashboardPage() {
   const groupParam = searchParams.get("group");
   const personal = viewParam === null || viewParam === "me";
   const start = useStart(personal);
-  const briefing = useSuggestions(personal && can(Perm.agentsRun));
-  const openingLoading =
-    personal &&
-    ((activeOrgId !== null && start.isLoading) || (can(Perm.agentsRun) && briefing.isLoading));
+  const openingLoading = personal && activeOrgId !== null && start.isLoading;
 
   // can() answers false while permissions load; resolving the audience from
   // that would flash a viewer-shaped page at a steward. Wait for the saved
@@ -345,109 +341,112 @@ export default function DashboardPage() {
       }))
     : sections;
 
-  const bands = (
-    <div className={cn(BAND_GAP, "mt-6")}>
-      {bandSections.map((section) => {
-        // A custom divider carries the person's own caption (`title`) and an
-        // accent; the curated defaults carry a translated `titleKey` and no
-        // colour. Neutral is the absence of an accent — rendered plain, like a
-        // default section — so only a real colour (a preset or a custom hex)
-        // tints the band, carried on `--dash-solid` by the decoration.
-        const heading = sectionLabel(section, t) || null;
-        const coloured = isAccentColour(section.accent);
-        const decoration = coloured ? accentDecoration(section.accent as string) : null;
-        const collapsed =
-          section.id in collapseOverrides ? collapseOverrides[section.id] : !!section.collapsed;
-        const toggleCollapsed = () =>
-          setCollapseOverrides((current) => ({ ...current, [section.id]: !collapsed }));
-        return (
-          <section
-            key={section.id}
-            className={cn(coloured && "dash-section-accent p-4", decoration?.className)}
-            style={decoration?.style as CSSProperties | undefined}
-          >
-            {/* A band label, not a title. A section heading set at the same
+  const renderSection = (section: SectionDef) => {
+    // A custom divider carries the person's own caption (`title`) and an
+    // accent; the curated defaults carry a translated `titleKey` and no
+    // colour. Neutral is the absence of an accent — rendered plain, like a
+    // default section — so only a real colour (a preset or a custom hex)
+    // tints the band, carried on `--dash-solid` by the decoration.
+    const heading = sectionLabel(section, t) || null;
+    const coloured = isAccentColour(section.accent);
+    const decoration = coloured ? accentDecoration(section.accent as string) : null;
+    const collapsed =
+      section.id in collapseOverrides ? collapseOverrides[section.id] : !!section.collapsed;
+    const toggleCollapsed = () =>
+      setCollapseOverrides((current) => ({ ...current, [section.id]: !collapsed }));
+    return (
+      <section
+        key={section.id}
+        className={cn(coloured && "dash-section-accent p-4", decoration?.className)}
+        style={decoration?.style as CSSProperties | undefined}
+      >
+        {/* A band label, not a title. A section heading set at the same
                   size and weight as the card titles under it gave the page two
                   levels where it has three, so nothing marked where one band
                   ended and the next began - a mono kicker is the level
                   between. */}
-            {heading ? (
-              <h2 className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleCollapsed}
-                  aria-expanded={!collapsed}
-                  aria-label={
-                    collapsed
-                      ? t("edit.expand", { title: heading })
-                      : t("edit.collapse", { title: heading })
-                  }
-                  className="text-muted-foreground hover:text-foreground -ml-1 flex size-5 shrink-0 items-center justify-center"
-                >
-                  {collapsed ? (
-                    <ChevronRight className="size-4" aria-hidden />
-                  ) : (
-                    <ChevronDown className="size-4" aria-hidden />
-                  )}
-                </button>
-                {coloured ? (
-                  <span className="dash-swatch size-2.5 shrink-0 rounded-full" aria-hidden />
-                ) : null}
-                <span className="text-muted-foreground truncate font-mono text-xs font-medium tracking-[0.1em] uppercase">
-                  {heading}
-                </span>
-                <span className="bg-border h-px min-w-6 flex-1" aria-hidden />
-              </h2>
+        {heading ? (
+          <h2 className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-expanded={!collapsed}
+              aria-label={
+                collapsed
+                  ? t("edit.expand", { title: heading })
+                  : t("edit.collapse", { title: heading })
+              }
+              className="text-muted-foreground hover:text-foreground -ml-1 flex size-5 shrink-0 items-center justify-center"
+            >
+              {collapsed ? (
+                <ChevronRight className="size-4" aria-hidden />
+              ) : (
+                <ChevronDown className="size-4" aria-hidden />
+              )}
+            </button>
+            {coloured ? (
+              <span className="dash-swatch size-2.5 shrink-0 rounded-full" aria-hidden />
             ) : null}
-            {collapsed ? null : (
-              <div className={cn("rise-in", ARRANGED_GRID_CLASS, heading && HEADING_GAP)}>
-                {section.entries.map((entry, index) => {
-                  const Widget = WIDGET_COMPONENTS[entry.widget];
-                  // Width and height, both from the placement. The shipped
-                  // default carries a height on every card now - it is a page
-                  // somebody arranged - so this is the same grid an arranged
-                  // layout renders in and the editor previews. A placement
-                  // predating heights falls back to the widget's own.
-                  const cell = `${SPAN_CLASS[entry.span]} ${ROW_CLASS[entry.rows ?? WIDGETS[entry.widget].defaultRows]}`;
-                  return (
-                    <div
-                      key={`${entry.widget}-${index}`}
-                      className={cn(
-                        cell,
-                        !isCustom && "lg:has-[[data-widget-empty]:not([open])]:row-span-1",
-                        coloured && "dash-tile-accent",
-                      )}
-                    >
-                      <Widget
-                        title={t(entry.titleKey ?? `widgets.${entry.widget}.title`)}
-                        hint={t(`widgets.${entry.widget}.description`)}
-                        // A card pinning its own window gets that one; every
-                        // other card follows the page's filter. Resolved here
-                        // rather than inside the widget, so a widget never has
-                        // to know which of the two it was handed - and so the
-                        // preset is resolved once against one "today".
-                        period={
-                          entry.options?.period ? resolvePreset(entry.options.period) : period
-                        }
-                        seeAll={WIDGETS[entry.widget].seeAll}
-                        // The group view narrows every card to its group; the
-                        // saved options never carry one.
-                        options={
-                          view === "group" && group !== null
-                            ? { ...entry.options, groupId: group.id }
-                            : entry.options
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        );
-      })}
-    </div>
-  );
+            <span className="text-muted-foreground truncate font-mono text-xs font-medium tracking-[0.1em] uppercase">
+              {heading}
+            </span>
+            <span className="bg-border h-px min-w-6 flex-1" aria-hidden />
+          </h2>
+        ) : null}
+        {collapsed ? null : (
+          <div className={cn("rise-in", ARRANGED_GRID_CLASS, heading && HEADING_GAP)}>
+            {section.entries.map((entry, index) => {
+              const Widget = WIDGET_COMPONENTS[entry.widget];
+              // Width and height, both from the placement. The shipped
+              // default carries a height on every card now - it is a page
+              // somebody arranged - so this is the same grid an arranged
+              // layout renders in and the editor previews. A placement
+              // predating heights falls back to the widget's own.
+              const cell = `${SPAN_CLASS[entry.span]} ${ROW_CLASS[entry.rows ?? WIDGETS[entry.widget].defaultRows]}`;
+              return (
+                <div
+                  key={`${entry.widget}-${index}`}
+                  className={cn(
+                    cell,
+                    !isCustom && "lg:has-[[data-widget-empty]:not([open])]:row-span-1",
+                    coloured && "dash-tile-accent",
+                  )}
+                >
+                  <Widget
+                    title={t(entry.titleKey ?? `widgets.${entry.widget}.title`)}
+                    hint={t(`widgets.${entry.widget}.description`)}
+                    // A card pinning its own window gets that one; every
+                    // other card follows the page's filter. Resolved here
+                    // rather than inside the widget, so a widget never has
+                    // to know which of the two it was handed - and so the
+                    // preset is resolved once against one "today".
+                    period={entry.options?.period ? resolvePreset(entry.options.period) : period}
+                    seeAll={WIDGETS[entry.widget].seeAll}
+                    // The group view narrows every card to its group; the
+                    // saved options never carry one.
+                    options={
+                      view === "group" && group !== null
+                        ? { ...entry.options, groupId: group.id }
+                        : entry.options
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  const bands = <div className={cn(BAND_GAP, "mt-6")}>{bandSections.map(renderSection)}</div>;
+
+  // The person's own bands, by id: Ask, then the start checklist opening Do,
+  // then Do and Track. A section a filter hid, or a gate emptied, is simply
+  // absent - the order is the layout's, not a second list to keep in step.
+  const askSection = bandSections.find((section) => section.id === "ask");
+  const doSection = bandSections.find((section) => section.id === "do");
+  const trackSection = bandSections.find((section) => section.id === "track");
 
   return (
     <div>
@@ -497,12 +496,18 @@ export default function DashboardPage() {
           />
         </div>
       )}
-      {view === "me" && <MeOpening orgId={activeOrgId} period={period} pending={openingLoading} />}
-      {view === "me" && <DiscoverTips />}
       {/* The bands own a rhythm of their own, four times the gap between two
           cards, which is what makes a band read as a band. The header and the
           control strip above keep the 24px every other page uses. */}
-      {view === "group" && group !== null ? (
+      {view === "me" ? (
+        <div className={cn(BAND_GAP, "mt-6")}>
+          {askSection ? renderSection(askSection) : null}
+          {activeOrgId && <MeOpening orgId={activeOrgId} pending={openingLoading} />}
+          {doSection ? renderSection(doSection) : null}
+          {trackSection ? renderSection(trackSection) : null}
+          <DiscoverTips />
+        </div>
+      ) : view === "group" && group !== null ? (
         <QuietGroup
           group={group}
           period={period}

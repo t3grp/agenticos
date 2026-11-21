@@ -3144,9 +3144,12 @@
     "revokeSession2": "Revoke session",
     "sections": {
       "attention": "Needs attention",
+      "ask": "Ask",
       "deployment": "Deployment",
+      "do": "Do",
       "people": "People & quality",
       "sandboxes": "Where agents run code",
+      "track": "Track",
       "usage": "Usage & cost",
       "workspace": "Your workspace"
     },
@@ -3959,6 +3962,26 @@
         "title": "Background topics",
         "description": "Your delegated work and its results"
       },
+      "waiting-on-me": {
+        "title": "Waiting on you",
+        "description": "Everything waiting on you: approvals, agent messages, notifications and background tasks.",
+        "empty": {
+          "title": "Nothing waiting on you",
+          "description": "Approvals, agent messages, notifications and background tasks will show up here when they need you."
+        },
+        "groups": {
+          "approvals": "Approvals",
+          "agentMessages": "Agent messages",
+          "notifications": "Notifications",
+          "backgroundTasks": "Background tasks"
+        },
+        "more": "{count} more waiting",
+        "groupLoadFailed": "Couldn't load these right now.",
+        "retry": "Try again",
+        "review": "Review",
+        "someAgent": "An agent",
+        "waiting": "waiting {ago}"
+      },
       "agent-messages": {
         "description": "Threads waiting on you.",
         "empty": {
@@ -4152,11 +4175,6 @@
       "summary": "Your agents ran <b>{runs, plural, =0 {nothing} =1 {once} other {# times}}</b> in this period. {waiting, plural, =0 {Nothing is waiting on you.} =1 {<b>One call</b> is waiting on you.} other {<b># calls</b> are waiting on you.}}"
     },
     "discover": {
-      "title": "Discover AgenticOS",
-      "subtitle": "What your agents can do that is easy to miss.",
-      "previous": "Previous tips",
-      "next": "More tips",
-      "dismissAll": "Hide tips",
       "dismiss": "Hide the tip {title}",
       "tips": {
         "mentions": {

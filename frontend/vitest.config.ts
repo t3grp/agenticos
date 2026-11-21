@@ -87,6 +87,8 @@ export default defineConfig({
         "src/components/dashboard/widgets/background-tasks.tsx",
         // The agent messages card.
         "src/components/dashboard/widgets/agent-messages.tsx",
+        // Everything waiting on the reader, fanned into one card.
+        "src/components/dashboard/widgets/waiting-on-me.tsx",
         // What the nightly look proposed (#2301).
         "src/components/dashboard/widgets/authoring-suggestions.tsx",
         "src/components/dashboard/widgets/recent-visuals.tsx",

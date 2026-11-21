@@ -60,6 +60,7 @@ import { ActivityRhythmWidget } from "./activity-rhythm";
 import { ChannelsWidget } from "./channels";
 import { RoutinesWidget } from "./routines";
 import { SuggestionsWidget } from "./suggestions";
+import { WaitingOnMeWidget } from "./waiting-on-me";
 import { KnowledgeWidget } from "./knowledge";
 import { TablesWidget } from "./tables-widget";
 import { WorkflowsWidget } from "./workflows-widget";
@@ -124,6 +125,7 @@ export const WIDGET_COMPONENTS: Record<WidgetId, ComponentType<DashboardWidgetPr
   "eval-runs": EvalRunsWidget,
   "eval-suites": EvalSuitesWidget,
   suggestions: SuggestionsWidget,
+  "waiting-on-me": WaitingOnMeWidget,
   "voice-minutes": VoiceMinutesWidget,
   "phone-calls": PhoneCallsWidget,
   projects: ProjectsWidget,

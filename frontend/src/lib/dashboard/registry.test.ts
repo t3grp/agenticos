@@ -86,11 +86,12 @@ const GATE_TABLE: Record<WidgetId, Permission | "app_admin" | "everyone"> = {
   "sandbox-policy": Perm.connectionsView,
   notifications: "everyone",
   suggestions: Perm.agentsRun,
+  "waiting-on-me": Perm.agentsRun,
 };
 
 describe("the widget catalog", () => {
-  it("holds all sixty widgets", () => {
-    expect(WIDGET_IDS).toHaveLength(60);
+  it("holds all sixty-one widgets", () => {
+    expect(WIDGET_IDS).toHaveLength(61);
   });
 
   it.each(WIDGET_IDS)("%s has a title and a description under its own id", (id) => {
