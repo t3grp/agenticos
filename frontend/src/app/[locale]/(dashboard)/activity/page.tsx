@@ -60,7 +60,7 @@ export default function ActivityPage() {
   }, [day]);
 
   if (permissionsLoading) return <LoadingState variant="pending" />;
-  if (!canRead) return <p className="text-sm text-muted-foreground">{t("noPermission")}</p>;
+  if (!canRead) return <p className="text-muted-foreground text-sm">{t("noPermission")}</p>;
 
   const pageStart = total === 0 ? 0 : skip + 1;
   const pageEnd = Math.min(skip + AUDIT_PAGE_SIZE, total);
@@ -84,7 +84,7 @@ export default function ActivityPage() {
             id="activity-agent"
             value={agent}
             onChange={(event) => setAgent(event.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm"
           >
             <option value="">{t("anyAgent")}</option>
             {agents.map((name) => (
@@ -122,7 +122,7 @@ export default function ActivityPage() {
           >
             {t("previousPage")}
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {t("showing", { from: pageStart, to: pageEnd, total })}
           </span>
           <Button

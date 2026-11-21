@@ -44,9 +44,7 @@ describe("ActivityFeed", () => {
     expect(screen.getByText("Architect used send email.")).toBeInTheDocument();
     expect(screen.getByText(/Approved by Ada Lovelace/)).toBeInTheDocument();
     expect(screen.getByText(/Run cost \$0\.42/)).toBeInTheDocument();
-    expect(
-      screen.getByText("Sherman Tan shared the table with Ada Lovelace."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Sherman Tan shared the table with Ada Lovelace.")).toBeInTheDocument();
   });
 
   it("says the feed is empty rather than failing silently", () => {

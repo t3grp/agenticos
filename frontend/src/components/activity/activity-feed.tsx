@@ -24,15 +24,15 @@ export function ActivityFeed({ rows, isLoading, error }: ActivityFeedProps) {
   const locale = useLocale();
 
   if (isLoading) return <LoadingState variant="pending" />;
-  if (error !== null) return <p className="text-sm text-destructive">{t("couldNotBeRead")}</p>;
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("empty")}</p>;
+  if (error !== null) return <p className="text-destructive text-sm">{t("couldNotBeRead")}</p>;
+  if (rows.length === 0) return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
 
   return (
     <ul className="space-y-3" data-tour="activity-feed">
       {rows.map((row) => (
         <li key={row.id} className="rounded-lg border p-3">
           <p className="text-sm">{row.sentence}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-xs">
             {row.createdAt !== null && (
               <span>
                 {new Date(row.createdAt).toLocaleString(locale, {

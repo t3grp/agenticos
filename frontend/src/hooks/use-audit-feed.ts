@@ -30,8 +30,6 @@ export function useAuditFeed(skip: number, options?: { enabled?: boolean }) {
     total: query.data?.total ?? 0,
     isLoading: permissions.isLoading || query.isLoading,
     error: permissions.error ?? query.error,
-    refetch: !permissions.isLoaded
-      ? () => permissions.refetch()
-      : () => query.refetch(),
+    refetch: !permissions.isLoaded ? () => permissions.refetch() : () => query.refetch(),
   };
 }

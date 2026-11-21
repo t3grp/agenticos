@@ -51,14 +51,17 @@ export function buildFeedRows(entries: readonly AuditEntry[]): FeedRow[] {
 
   const rows: FeedRow[] = [];
   for (const entry of entries) {
-    if (entry.action.startsWith("approval.") && entry.target_id !== null && consumed.has(entry.target_id)) {
+    if (
+      entry.action.startsWith("approval.") &&
+      entry.target_id !== null &&
+      consumed.has(entry.target_id)
+    ) {
       continue;
     }
     let approvedBy: string | null = null;
     if (entry.action === "agent.tool_executed") {
       const approvalId = detailString(entry.details, "approval_id");
-      const decision =
-        approvalId !== null ? decisions.get(approvalId) : undefined;
+      const decision = approvalId !== null ? decisions.get(approvalId) : undefined;
       if (decision?.action === "approval.approved") {
         approvedBy = decision.actor_name ?? null;
       }
