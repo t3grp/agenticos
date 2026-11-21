@@ -12,6 +12,7 @@ from app.db.models.agent_run import AgentRun, RunSurface
 from app.db.models.room_submission import RoomSubmission
 from app.db.session import get_worker_db_context
 from app.repositories import conversation as conversation_repo
+from app.repositories import room_auto_routing as auto_repo
 from app.repositories import room_submission as room_repo
 from app.repositories import room_thread as room_thread_repo
 from app.schemas.conversation import MessageRead
@@ -144,6 +145,10 @@ async def run_request(job: RoomRequestJob) -> None:
                 db, job.request_id, organization_id=job.organization_id, lock=True
             )
             if submission is None or submission.status != "queued":
+                return
+            if await auto_repo.has_pending_or_running_before_submission(db, submission):
+                # A targetless earlier post is not a RoomSubmission head until
+                # its one-shot router has published selected responders.
                 return
             first = await room_repo.head(db, conversation_id)
             if first is None or first.id != submission.id:
@@ -327,6 +332,10 @@ async def reconcile_requests() -> int:
             await _settle(db, submission.id, run)
         ready = await room_repo.ready(db)
         service = RoomSubmissionService(db)
+        queued = 0
         for submission in ready:
+            if await auto_repo.has_pending_or_running_before_submission(db, submission):
+                continue
             await service.queue(submission)
-        return len(unsettled) + len(ready)
+            queued += 1
+        return len(unsettled) + queued

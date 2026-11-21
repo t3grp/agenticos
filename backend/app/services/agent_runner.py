@@ -4121,6 +4121,7 @@ class AgentRunnerService:
         compaction_only: bool = False,
         organization_mcp_only: bool = False,
         decision_model: bool = False,
+        automatic_router: bool = False,
         source_run: AgentRun | None = None,
         watch_receipt: WatchReadReceipt | None = None,
         room_lead: RoomLeadPlanning | None = None,
@@ -4234,6 +4235,62 @@ class AgentRunnerService:
                 no longer validates - surfaced before any tokens are spent.
         """
         require_admission()
+        if automatic_router:
+            if (
+                surface is not RunSurface.WEB
+                or conversation_id is not None
+                or version_id is None
+                or model_profile_id is None
+                or output_schema is None
+                or not decision_model
+                or instructions_override is not None
+                or exposure is not None
+                or environment_id is not None
+                or local is not None
+                or candidate is not None
+                or isolation is not None
+                or public_origin
+                or voice is not None
+                or draft
+                or test
+                or not aside
+                or compaction_only
+                or organization_mcp_only
+                or room_lead is not None
+                or source_run is not None
+                or watch_receipt is not None
+                or skill_content_overrides
+                or ctx.routine_id is not None
+                or ctx.routine_source_policy_id is not None
+                or ctx.routine_activation_id is not None
+                or ctx.fired_as_creator is not None
+                or ctx.is_workflow
+            ):
+                raise BadRequestError(
+                    message="Automatic routing requires a pinned web classifier run"
+                )
+            if (
+                ctx.user_id is None
+                or ctx.api_key_id is not None
+                or ctx.is_impersonated
+                or ctx.subject_is_publisher_fallback
+            ):
+                raise AuthorizationError(
+                    message="Automatic routing requires an admitted room member"
+                )
+            run_limit_usd = (
+                Decimal("0.05") if run_limit_usd is None else min(run_limit_usd, Decimal("0.05"))
+            )
+            memory_room_key = None
+            thread_root_message_id = None
+            channel_key = None
+            channel_directory = None
+            user_name = None
+            acts_for_sender = False
+            person_time_zone = None
+            extra_toolsets = None
+            request_connection = None
+            request_computer_access = None
         if source_run is not None and (
             source_run.organization_id != ctx.organization_id or source_run.agent_id != agent_id
         ):
@@ -4285,6 +4342,11 @@ class AgentRunnerService:
             spec = spec.model_copy(update={"instructions": instructions_override})
             version_id = None
             test_spec = spec.model_dump(mode="json")
+        if automatic_router:
+            from app.agents.room_auto_routing import automatic_routing_spec
+            from app.services.room_auto_routing import ROUTING_INSTRUCTIONS
+
+            spec = automatic_routing_spec(spec, instructions=ROUTING_INSTRUCTIONS)
         if skill_content_overrides and not (test or draft):
             raise BadRequestError("Skill content overrides are only allowed on test runs")
         if voice is not None:
@@ -4346,6 +4408,7 @@ class AgentRunnerService:
             answer_only=aside or room_lead is not None,
             organization_mcp_only=organization_mcp_only,
             decision_model=decision_model,
+            automatic_router=automatic_router,
             room_lead=room_lead,
             # Passed in rather than set on the built deps like `on_compaction`:
             # whether a gap is briefed or offered as a tool decides what is built.
@@ -4532,6 +4595,7 @@ class AgentRunnerService:
         answer_only: bool = False,
         organization_mcp_only: bool = False,
         decision_model: bool = False,
+        automatic_router: bool = False,
         specialists: Mapping[str | None, Sequence[RegisteredSpecialist]] | None = None,
         discovered_delegates: dict[str, list[SubagentRef]] | None = None,
         mirage_authorities: dict[str, str] | None = None,
@@ -4605,6 +4669,8 @@ class AgentRunnerService:
         routine = await RoutineAuthority.capture(
             self.db, ctx, agent_id=agent.id, run=existing_run, version_id=version_id
         )
+        if automatic_router and routine is not None:
+            raise AuthorizationError(message="Automatic routing cannot use a routine agent")
         routine_check = None if routine is None else routine.check
         if routine is not None:
             routine.require_local_target(local)
@@ -4643,7 +4709,7 @@ class AgentRunnerService:
         )
         personal_mcp_user_id = (
             (owner_user_id or ctx.user_id)
-            if acts_for_sender and not subject_is_publisher_fallback
+            if acts_for_sender and not subject_is_publisher_fallback and not automatic_router
             else None
         )
         assistant_sender_user_id = personal_mcp_user_id
@@ -4664,7 +4730,7 @@ class AgentRunnerService:
                 allow_personal_apps=(
                     restored_audience.room_key is None
                     if restored_audience is not None
-                    else memory_room_key is None
+                    else memory_room_key is None and not automatic_router
                 ),
             ),
             local,
@@ -4708,7 +4774,9 @@ class AgentRunnerService:
         # owner's. The restored audience already names nobody for a visitor or a
         # key's holder.
         models_ctx = (
-            ctx
+            replace(ctx, user_id=None)
+            if automatic_router
+            else ctx
             if restored_audience is None
             else replace(
                 ctx,
@@ -4797,7 +4865,9 @@ class AgentRunnerService:
             # Who the run is about: on a resume `ctx` is the approver's, and the
             # agent was told the person who started it - their name and address,
             # or "a visitor" - before it parked.
-            ctx
+            models_ctx
+            if automatic_router
+            else ctx
             if existing_run is None
             else replace(
                 ctx,
@@ -5298,7 +5368,8 @@ class AgentRunnerService:
                 # And a key, which is not the person it was issued by.
                 user_id=(
                     None
-                    if workspace_ctx.user_id is None
+                    if automatic_router
+                    or workspace_ctx.user_id is None
                     or subject_is_publisher_fallback
                     or workspace_ctx.api_key_id is not None
                     else str(workspace_ctx.user_id)
@@ -5520,6 +5591,7 @@ class AgentRunnerService:
             routine is None
             and surface in (RunSurface.WEB, RunSurface.API)
             and not subject_is_publisher_fallback
+            and not automatic_router
             and ctx.user_id is not None
             and ctx.api_key_id is None
             and ctx.key_scopes is None
@@ -5619,7 +5691,7 @@ class AgentRunnerService:
             personal_apps_allowed=(
                 restored_audience.room_key is None
                 if restored_audience is not None
-                else memory_room_key is None
+                else memory_room_key is None and not automatic_router
             ),
             sender_present=sender_present,
             resources=resources,
@@ -5652,7 +5724,7 @@ class AgentRunnerService:
         # whether the subject was a publisher stand-in, whether the chat account was
         # linked, whether the chat was a room - are all gone with the request that
         # carried them.
-        audience_user_id = owner_user_id or ctx.user_id
+        audience_user_id = None if automatic_router else owner_user_id or ctx.user_id
         audience = restored_audience or derive_audience(
             user_id=audience_user_id,
             subject_is_publisher_fallback=ctx.subject_is_publisher_fallback,
@@ -5856,7 +5928,7 @@ class AgentRunnerService:
             org_monthly_budget_usd=organization.monthly_budget_usd,
             run_limit_usd=run_limit_usd,
             group_limits=group_limits,
-            request_approval=None if organization_mcp_only else channel,
+            request_approval=None if organization_mcp_only or automatic_router else channel,
             routine_action_check=None if routine is None else routine.action_policy,
             gate_every_tool=approval_mode is ApprovalMode.ASK_ALL,
             # Both from one read of the conversation (see
@@ -5869,7 +5941,7 @@ class AgentRunnerService:
             isolation=isolation,
             test_bindings=test_bindings,
             voice=None if voice is None else voice.options,
-            offer_setup_tools=not (answer_only or organization_mcp_only),
+            offer_setup_tools=not (answer_only or organization_mcp_only or automatic_router),
         )
 
         # Both only assignable now, and both before the run starts. The guard and
@@ -8243,6 +8315,7 @@ class AgentRunnerService:
         result_only: bool = False,
         organization_mcp_only: bool = False,
         decision_model: bool = False,
+        automatic_router: bool = False,
         on_run_open: Callable[[AgentRun], Awaitable[None]] | None = None,
         check_model_request: Callable[[AsyncSession], Awaitable[None]] | None = None,
         result_authority_check: Callable[[AsyncSession], Awaitable[None]] | None = None,
@@ -8348,7 +8421,18 @@ class AgentRunnerService:
         caller learns which run to read (#2121). The other surfaces answer a
         failure their own way and keep the original exception.
         """
-        if aside:
+        if automatic_router and (
+            attachments
+            or message_history
+            or content
+            or saved_prompt_id is not None
+            or said is not None
+            or not (aside or result_only)
+        ):
+            raise BadRequestError(
+                message="Automatic routing accepts only its bounded routing prompt"
+            )
+        if aside and not automatic_router:
             # Said as the person asked it; told to the model as a side question.
             said = prompt if said is None else said
             prompt = f"{ASIDE_PREFIX}\n\n{prompt}"
@@ -8380,6 +8464,7 @@ class AgentRunnerService:
             aside=aside or result_only,
             organization_mcp_only=organization_mcp_only,
             decision_model=decision_model,
+            automatic_router=automatic_router,
             room_lead=room_lead,
             draft=draft,
             test=test,

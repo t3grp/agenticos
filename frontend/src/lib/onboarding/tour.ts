@@ -1830,6 +1830,13 @@ export const TOUR_STEPS: readonly TourStep[] = [
     optional: true,
   },
   {
+    id: "chat-room-auto-routing",
+    page: ROUTES.CHAT,
+    target: "room-auto-routing-settings",
+    activate: "chat-room-participants",
+    optional: true,
+  },
+  {
     id: "personal-coding-accounts",
     page: SETTINGS_DETAIL,
     target: "personal-coding-accounts",

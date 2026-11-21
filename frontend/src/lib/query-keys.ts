@@ -39,6 +39,30 @@ export const qk = {
   roomRouting: {
     all: (account: string | undefined, tenant: string | null, conversation: string | null) =>
       ["room-routing", account, tenant, conversation] as const,
+    decisionPrefix: (
+      account: string | undefined,
+      tenant: string | null,
+      conversation: string | null,
+      organization: string | null,
+    ) => ["room-routing", account, tenant, conversation, organization, "decisions"] as const,
+    decisions: (
+      account: string | undefined,
+      tenant: string | null,
+      conversation: string | null,
+      organization: string | null,
+      selectionVersion: number,
+      messageIds: readonly string[],
+    ) =>
+      [
+        "room-routing",
+        account,
+        tenant,
+        conversation,
+        organization,
+        "decisions",
+        selectionVersion,
+        [...new Set(messageIds)].sort(),
+      ] as const,
     policy: (account: string | undefined, tenant: string | null, conversation: string | null) =>
       ["room-routing", account, tenant, conversation, "policy"] as const,
     proposals: (

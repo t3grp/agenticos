@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -23,9 +23,36 @@ const state = vi.hoisted(() => ({
     openLastStep: boolean;
     request?: string;
   }[],
+  routing: {
+    conversationId: null as string | null,
+    isRoom: false,
+    receipts: new Map<string, { accepted_message_id: string }>(),
+    error: null as unknown,
+    retry: vi.fn(),
+  },
 }));
 
 vi.mock("@/hooks", () => ({ useAgents: () => ({ agents: state.agents }) }));
+vi.mock("@/hooks/use-room-auto-routing-decisions", () => ({
+  useRoomAutoRoutingDecisions: (conversationId: string | null, isRoom: boolean) => {
+    state.routing.conversationId = conversationId;
+    state.routing.isRoom = isRoom;
+    return {
+      receiptsByMessageId: state.routing.receipts,
+      error: state.routing.error,
+      isLoading: false,
+      retry: state.routing.retry,
+    };
+  },
+}));
+vi.mock("next-intl", () => ({
+  useLocale: () => "en",
+  useTranslations: (namespace?: string) => (key: string) => {
+    if (namespace === "chat.days" && key === "today") return "Today";
+    if (namespace === "chat.days" && key === "yesterday") return "Yesterday";
+    return key;
+  },
+}));
 const navigation = vi.hoisted(() => ({ push: vi.fn(), pointAt: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: navigation.push }) }));
 vi.mock("@/lib/assistant-highlight", async (importOriginal) => ({
@@ -72,6 +99,11 @@ vi.mock("./message-item", () => ({
       </div>
     );
   },
+}));
+vi.mock("./room-auto-routing-receipt", () => ({
+  RoomAutoRoutingReceipt: ({ receipt }: { receipt: { accepted_message_id: string } }) => (
+    <div data-testid={`routing-receipt-${receipt.accepted_message_id}`} />
+  ),
 }));
 
 function message(overrides: Partial<ChatMessage> = {}): ChatMessage {
@@ -141,6 +173,13 @@ const TOOL = {
 beforeEach(() => {
   state.agents = [];
   state.rendered = [];
+  state.routing = {
+    conversationId: null,
+    isRoom: false,
+    receipts: new Map(),
+    error: null,
+    retry: vi.fn(),
+  };
 });
 
 /**
@@ -164,6 +203,39 @@ describe("the transcript", () => {
     );
 
     expect(state.rendered.map((entry) => entry.id)).toEqual(["m-1", "m-2"]);
+  });
+
+  it("wires room receipts to saved human posts and skips temporary ones", () => {
+    state.routing.receipts = new Map([
+      ["saved-user", { accepted_message_id: "saved-user" }],
+      ["local-user", { accepted_message_id: "local-user" }],
+    ]);
+
+    render(
+      <MessageList
+        conversationId="room-a"
+        isRoom
+        messages={[
+          message({ id: "saved-user", role: "user" }),
+          message({ id: "local-user", role: "user", isTemporaryId: true }),
+        ]}
+      />,
+    );
+
+    expect(state.routing).toMatchObject({ conversationId: "room-a", isRoom: true });
+    expect(screen.getByTestId("routing-receipt-saved-user")).toBeInTheDocument();
+    expect(screen.queryByTestId("routing-receipt-local-user")).toBeNull();
+  });
+
+  it("shows one retry action when the receipt read fails", () => {
+    state.routing.error = new Error("private network detail");
+
+    render(<MessageList conversationId="room-a" isRoom messages={[message({ role: "user" })]} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("loadFailed");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("private network detail");
+    fireEvent.click(screen.getByRole("button", { name: "retry" }));
+    expect(state.routing.retry).toHaveBeenCalledExactlyOnceWith();
   });
 
   it("keeps a streamed turn's bubble when the database id replaces its temporary one", () => {

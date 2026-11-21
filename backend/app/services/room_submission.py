@@ -256,7 +256,9 @@ class RoomSubmissionService:
             if request.mentions
             else []
         )
-        dispatch, targets = await self._targets(ctx, conversation, request, mentions)
+        dispatch, targets, route_with_model = await self._targets(
+            ctx, conversation, request, mentions
+        )
         if request.file_ids:
             await self.conversations.list_attached_files(
                 [str(file_id) for file_id in request.file_ids], user_id=ctx.subject_id
@@ -316,6 +318,15 @@ class RoomSubmissionService:
                 status="queued" if agent_id is not None else "posted",
             ),
         )
+        if route_with_model:
+            from app.services.room_auto_routing import RoomAutoRoutingService
+
+            await RoomAutoRoutingService(self.db).accept(
+                ctx,
+                conversation=conversation,
+                submission=submission,
+                message=message,
+            )
         if agent_id is not None:
             await self.queue(submission)
             announce_request(self.db, submission)
@@ -411,7 +422,7 @@ class RoomSubmissionService:
         conversation: Conversation,
         request: RoomMessageCreate,
         mentions: Sequence[RoomParticipantRead],
-    ) -> tuple[Literal["explicit", "mention", "automatic"], list[tuple[UUID, UUID]]]:
+    ) -> tuple[Literal["explicit", "mention", "automatic"], list[tuple[UUID, UUID]], bool]:
         from app.services.room_participant import RoomParticipantService
 
         participants = RoomParticipantService(self.db)
@@ -422,7 +433,7 @@ class RoomSubmissionService:
             target = await RoomRoutingService(self.db).admit(
                 ctx, conversation.id, request.expected_policy_revision
             )
-            return "explicit", [target]
+            return "explicit", [target], False
         selected = [mention.id for mention in mentions if mention.kind == "agent"]
         dispatch: Literal["explicit", "mention", "automatic"] = (
             "mention" if selected else "explicit"
@@ -436,6 +447,15 @@ class RoomSubmissionService:
                 )
             selected = [request.agent_id]
         elif not mentions:
+            from app.repositories import room_auto_routing as auto_repo
+
+            policy = await auto_repo.policy(self.db, ctx.organization_id, conversation.id)
+            if policy is not None and policy.enabled:
+                # The enabled model router owns targetless, unmentioned posts.
+                # Explicit mentions and direct requests returned above and never
+                # enter this branch. Disabled or absent policy retains the
+                # established deterministic `auto_reply` selection below.
+                return "automatic", [], True
             candidates = await participants.automatic_agents(ctx, conversation.id)
             selected = [item.id for item in automatic_targets(request.content, candidates)]
             if selected:
@@ -446,7 +466,7 @@ class RoomSubmissionService:
             _, spec, version_id = await registry.get_runnable_spec(ctx, agent_id)
             cloud_agent(spec)
             targets.append((agent_id, version_id))
-        return dispatch, targets
+        return dispatch, targets, False
 
     async def queue(self, submission: RoomSubmission) -> None:
         job_id = await enqueue(

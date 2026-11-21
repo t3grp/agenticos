@@ -307,6 +307,27 @@ Use the reaction control on a saved human or agent message to add or remove your
 emoji. Counts combine everyone's reactions, while your own selections stay marked.
 Up to twenty different emoji can appear on one message.
 
+### AI responder selection
+
+Open the participant list and choose **AI responder selection → Configure**. A
+room manager can enable a room agent to choose which opted-in agents should
+answer unmentioned messages, using an organization model profile. It can choose
+no responder when an answer is unnecessary. Direct mentions and **Ask lead** keep
+priority. Turning AI selection off preserves the existing automatic reply
+settings for each agent.
+
+Choose a quiet window and a maximum of one to four responders. The defaults are
+2.5 seconds and one responder. Up to eight consecutive messages from the same
+person in the same discussion can share one decision. Routing uses the selected
+organization model for paid calls, with a US$0.05 run budget and an eight-second
+deadline. The normal run history records its usage.
+
+A receipt below the accepted post identifies the router and the selected agents,
+or shows that no response was needed. Pending decisions update as they finish.
+An unknown outcome is not automatically retried. You can turn the policy off
+even if its previous router or model profile has become unavailable; enabling it
+again requires valid current choices.
+
 ### Side threads
 
 Choose **Reply in thread** on a saved room message to open its thread. The panel

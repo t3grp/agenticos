@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import case, exists, func, or_, select
+from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -142,35 +142,58 @@ async def active_count(db: AsyncSession, *, conversation_id: UUID) -> int:
 
 async def head(db: AsyncSession, conversation_id: UUID) -> RoomSubmission | None:
     """The first unresolved request, including one parked on a human decision."""
+    parent = aliased(RoomSubmission)
     return await db.scalar(
         select(RoomSubmission)
+        .outerjoin(parent, parent.id == RoomSubmission.parent_submission_id)
         .where(
             RoomSubmission.conversation_id == conversation_id,
             RoomSubmission.status.in_(ACTIVE),
         )
-        .order_by(RoomSubmission.ordinal)
+        .order_by(func.coalesce(parent.ordinal, RoomSubmission.ordinal), RoomSubmission.ordinal)
         .limit(1)
     )
 
 
 async def ready(db: AsyncSession) -> list[RoomSubmission]:
     """Only queued heads, so parked rooms do not consume dispatch slots."""
+    candidate_parent = aliased(RoomSubmission)
     earlier = aliased(RoomSubmission)
+    earlier_parent = aliased(RoomSubmission)
+    candidate_order = func.coalesce(candidate_parent.ordinal, RoomSubmission.ordinal)
+    earlier_order = func.coalesce(earlier_parent.ordinal, earlier.ordinal)
     return list(
         (
             await db.scalars(
                 select(RoomSubmission)
+                .outerjoin(
+                    candidate_parent,
+                    candidate_parent.id == RoomSubmission.parent_submission_id,
+                )
                 .where(
                     RoomSubmission.status == "queued",
                     ~exists(
-                        select(earlier.id).where(
+                        select(earlier.id)
+                        .where(
                             earlier.conversation_id == RoomSubmission.conversation_id,
+                            earlier.organization_id == RoomSubmission.organization_id,
                             earlier.status.in_(ACTIVE),
-                            earlier.ordinal < RoomSubmission.ordinal,
+                            or_(
+                                earlier_order < candidate_order,
+                                and_(
+                                    earlier_order == candidate_order,
+                                    earlier.ordinal < RoomSubmission.ordinal,
+                                ),
+                            ),
+                        )
+                        .select_from(earlier)
+                        .outerjoin(
+                            earlier_parent,
+                            earlier_parent.id == earlier.parent_submission_id,
                         )
                     ),
                 )
-                .order_by(RoomSubmission.ordinal)
+                .order_by(candidate_order, RoomSubmission.ordinal)
                 .limit(100)
             )
         ).all()

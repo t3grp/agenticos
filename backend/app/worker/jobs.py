@@ -272,6 +272,11 @@ class RoomRequestJob(Payload):
     organization_id: UUID
 
 
+class RoomAutoRoutingJob(Payload):
+    organization_id: UUID
+    decision_id: UUID
+
+
 class RunAgent(Payload):
     """An asynchronous `POST /agents/{id}/run`: who asked, and what they sent."""
 
@@ -643,6 +648,15 @@ RUN_ROOM_REQUEST = Task(
     timeout=timedelta(hours=3),
     priority=Priority.INTERACTIVE,
 )
+RUN_ROOM_AUTO_ROUTING = Task(
+    kind="run-room-auto-routing",
+    payload_type=RoomAutoRoutingJob,
+    pool=Pool.AGENT,
+    max_attempts=1,
+    timeout=timedelta(seconds=60),
+    priority=Priority.INTERACTIVE,
+    retry_refusal="Create a new room routing decision; an uncertain model call is never replayed",
+)
 RETURN_CONVERSATION_TASK = Task(
     kind="return-conversation-task",
     payload_type=ConversationTaskJob,
@@ -901,6 +915,7 @@ WORKFLOW_RUN_RETENTION = _sweep("workflow-run-retention", timeout=timedelta(hour
 WORKFLOW_LOG_ALERTS = _sweep("workflow-log-alerts", timeout=timedelta(minutes=5))
 RECONCILE_CONVERSATION_TASKS = _sweep("reconcile-conversation-tasks", timeout=timedelta(seconds=30))
 RECONCILE_ROOM_REQUESTS = _sweep("reconcile-room-requests", timeout=timedelta(seconds=30))
+RECONCILE_ROOM_AUTO_ROUTING = _sweep("reconcile-room-auto-routing", timeout=timedelta(seconds=30))
 SWEEP_GENERATED_MEDIA = _sweep("sweep-generated-media")
 SEND_DIAGNOSTICS = _sweep("send-diagnostics", timeout=timedelta(seconds=60))
 PROACTIVE_SWEEP = _sweep("proactive-sweep")
@@ -1078,7 +1093,9 @@ TASKS: dict[str, TaskKind] = {
         RETURN_CONVERSATION_TASK,
         RECONCILE_CONVERSATION_TASKS,
         RUN_ROOM_REQUEST,
+        RUN_ROOM_AUTO_ROUTING,
         RECONCILE_ROOM_REQUESTS,
+        RECONCILE_ROOM_AUTO_ROUTING,
         WORKFLOW_DISPATCH_NODE,
         THINK_FOR_PERSON,
         EXTRACT_MEMORY,

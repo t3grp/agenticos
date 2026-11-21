@@ -3241,6 +3241,51 @@
       "creating": "Creating…",
       "createFailed": "Room could not be created.",
       "back": "Back to public rooms"
+    },
+    "roomAutoRouting": {
+      "title": "AI responder selection",
+      "description": "Optional and off by default. When on, the selected router agent uses the organization model profile to choose opted-in responders. The organization pays for each routing call, up to $0.05 per decision. Existing per-agent automatic replies continue while this is off; direct mentions always take priority.",
+      "statusEnabled": "AI responder selection is on",
+      "statusDisabled": "AI responder selection is off. Existing per-agent automatic replies still apply.",
+      "configure": "Configure",
+      "configureTitle": "AI responder selection",
+      "policyUnavailable": "AI responder selection settings could not be loaded",
+      "policyChanged": "The AI responder selection policy changed. Reload it before saving.",
+      "saveFailed": "AI responder selection settings could not be saved",
+      "enabled": "Enable AI responder selection",
+      "optionalOffByDefault": "AI responder selection is optional and off by default. Existing per-agent automatic replies still apply.",
+      "routerAgent": "Router agent",
+      "chooseRouterAgent": "Choose a router agent",
+      "routerAgentUnavailable": "This router is no longer available",
+      "eligibleAgentsHint": "Choose any current room agent as the router. Only agents opted in to automatic replies can be selected.",
+      "mentionsPriorityHint": "Direct mentions always take priority over AI responder selection.",
+      "rosterUnavailable": "Room agents could not be loaded",
+      "noEligibleAgents": "No current room agents are available.",
+      "modelProfile": "Organization model profile",
+      "organizationProfileHint": "Uses the selected organization model for paid routing calls, capped at $0.05 per decision.",
+      "profilesUnavailable": "Organization model profiles could not be loaded",
+      "noOrganizationProfiles": "No organization model profiles are available.",
+      "modelUnavailable": "Choose an available organization chat model profile.",
+      "selectionPairRequired": "A router agent and organization model profile must be selected together.",
+      "quietWindow": "Quiet window (milliseconds)",
+      "quietWindowHint": "Wait this long to let a message burst settle before automatic routing starts.",
+      "maxResponders": "Maximum responders",
+      "saving": "Saving AI responder selection…",
+      "cancel": "Cancel",
+      "reloadPolicy": "Reload policy",
+      "save": "Save",
+      "receipt": {
+        "pending": "Waiting for {router} to choose responders…",
+        "running": "{router} is choosing responders…",
+        "selectedBy": "Chosen by {router}:",
+        "selectedNamesUnavailable": "Responder names unavailable",
+        "abstained": "{router} chose no responders.",
+        "failed": "AI responder selection by {router} failed before dispatch.",
+        "unknown": "The result from {router} could not be confirmed.",
+        "router": "The room router",
+        "loadFailed": "AI responder decisions could not be loaded.",
+        "retry": "Try again"
+      }
     }
   },
   "common": {
@@ -6925,6 +6970,10 @@
       "chat-compact-now": {
         "title": "Summarize earlier context",
         "body": "Compact an idle conversation's context while keeping its saved messages and your current draft."
+      },
+      "chat-room-auto-routing": {
+        "title": "Choose AI responders",
+        "body": "Room managers can let the selected organization model choose opted-in agents for a message burst. These paid routing calls use the organization model, up to $0.05 per decision. Direct mentions still take priority, and existing per-agent automatic replies continue when routing is off."
       }
     },
     "chooseLanguage": "Language",

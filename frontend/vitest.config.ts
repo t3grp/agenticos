@@ -201,6 +201,8 @@ export default defineConfig({
         "src/components/chat/room-lead-policy-dialog.tsx",
         "src/components/chat/room-routing-cards.tsx",
         "src/components/chat/room-routing-panel.tsx",
+        // Model-selected room responders and the receipt of each safe decision.
+        "src/components/chat/room-auto-routing-*.tsx",
         "src/components/chat/typing-indicator.tsx",
         "src/components/chat/reply-quote.tsx",
         // A thread's picture from the copy on the device, offline (#2097).

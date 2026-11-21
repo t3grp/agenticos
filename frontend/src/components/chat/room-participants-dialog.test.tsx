@@ -40,6 +40,9 @@ vi.mock("@/hooks", () => ({
   useUpdateRoomAgentAutoReply: () => ({ update: hooks.updateAutoReply, isUpdating: false }),
   useJoinPublicRoom: () => ({ join: hooks.join, isJoining: false }),
 }));
+vi.mock("./room-auto-routing-settings", () => ({
+  RoomAutoRoutingSettings: () => <div data-testid="room-auto-routing-settings" />,
+}));
 
 function participant(
   kind: "user" | "agent",
@@ -108,6 +111,15 @@ beforeEach(() => {
 });
 
 describe("RoomParticipantsDialog", () => {
+  it("offers AI responder settings for a shared room and omits them from a legacy direct chat", () => {
+    const room = drawRoom();
+    expect(screen.getByTestId("room-auto-routing-settings")).toBeInTheDocument();
+    room.unmount();
+
+    drawRoom(conversation({ room_visibility: null }));
+    expect(screen.queryByTestId("room-auto-routing-settings")).not.toBeInTheDocument();
+  });
+
   it("lets a room manager add a person after showing the saved-history notice", async () => {
     const user = userEvent.setup();
     hooks.participants.participants = [
