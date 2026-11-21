@@ -2,7 +2,7 @@ import { useChatControlsStore } from "@/stores/chat-controls-store";
 import { projectFolderKey, useProjectFoldersStore } from "@/stores/project-folders-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { StrictMode, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toast } from "sonner";
@@ -113,14 +113,6 @@ function makeWrapper(
 const wrapper = makeWrapper();
 /** The same wrapper for a caller who may decide approvals. */
 const decider = makeWrapper(["approvals:decide"]);
-function strictModeWrapper({ children }: { children: ReactNode }) {
-  const QueryWrapper = wrapper;
-  return (
-    <StrictMode>
-      <QueryWrapper>{children}</QueryWrapper>
-    </StrictMode>
-  );
-}
 
 vi.mock("./use-websocket", () => ({
   useWebSocket: (options: {
@@ -311,7 +303,8 @@ describe("manual conversation compaction", () => {
     prepareCompactionChat();
     get.mockResolvedValue({ available: true });
     const { result } = renderHook(() => useChat({ conversationId: "c-1" }), {
-      wrapper: strictModeWrapper,
+      wrapper,
+      reactStrictMode: true,
     });
 
     await waitFor(() => expect(result.current.compactionAvailable).toBe(true));
