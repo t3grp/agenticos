@@ -2133,7 +2133,9 @@
       "sendAgentMessage": "Message sent to an agent",
       "sendingAgentMessage": "Sending a message to an agent",
       "solLoopReview": "Sol-loop Review",
-      "stoppingBabysitPr": "Stopping the PR watch"
+      "stoppingBabysitPr": "Stopping the PR watch",
+      "reactingToRoomMessage": "Reacting in the room",
+      "roomReaction": "Room reaction"
     },
     "turnWasStopped": "stopped",
     "unfavourite": "Remove from favourites",
@@ -3211,6 +3213,7 @@
     "roomReactions": {
       "add": "Add reaction",
       "customPlaceholder": "Type or paste an emoji",
+      "reactedByAgents": "Agents: {names}",
       "submit": "Add",
       "retry": "Try again",
       "error": "Reactions could not be loaded."
@@ -8961,7 +8964,22 @@
       "solLoopRound": "Round {round} · {scope} · {verdict}",
       "solLoopRounds": "{count, plural, =1 {1 sol-loop round} other {# sol-loop rounds}}",
       "solLoopStopReason": "Stopped: {reason}",
-      "whyItStopped": "Why it stopped"
+      "whyItStopped": "Why it stopped",
+      "roomReactionAgentId": "Agent ID",
+      "roomReactionAgentVersionId": "Agent version ID",
+      "roomReactionAudit": "Room reaction actions",
+      "roomReactionAuditTruncated": "This audit is capped at 100 actions.",
+      "roomReactionByAgent": "Agent {name} reacted",
+      "roomReactionCreatedAt": "Recorded",
+      "roomReactionDecisionId": "Decision ID",
+      "roomReactionEmojiLabel": "Reaction: {emoji}",
+      "roomReactionOnly": "Reaction-only run",
+      "roomReactionSource": "Source",
+      "roomReactionSourceAutomatic": "Automatic selection",
+      "roomReactionSourceTool": "Tool call",
+      "roomReactionTarget": "Target message",
+      "roomReactionTargetUnavailable": "Target text is not in this transcript",
+      "roomReactionToolCallId": "Tool call ID"
     },
     "sandboxes": {
       "addConnection": "Add connection",
@@ -14584,6 +14602,14 @@
       "name": "Planning",
       "needs": "Nothing extra.",
       "never": "Never gives the agent permission to do anything; a plan is only a list."
+    },
+    "room_reactions": {
+      "does": "Lets the agent react to a visible message in the current room thread.",
+      "example1": "Add 👀 to a message the agent has read",
+      "example2": "Add ✅ to a message that confirms a task is complete",
+      "name": "Room reactions",
+      "needs": "The agent must be responding in a shared room conversation, and the message must be visible in that thread.",
+      "never": "Never reacts outside the current room thread or changes a human reaction."
     },
     "background_tools": {
       "does": "Lets the agent start a slow tool - a long browse - and carry on with the rest of the request, using the result when it arrives.",

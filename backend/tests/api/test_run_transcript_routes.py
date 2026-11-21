@@ -17,7 +17,7 @@ service rather than through the permission table.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -40,15 +40,28 @@ _NO_RATING = {"user_rating": None, "rating_count": None, "rating_comment": None}
 
 
 @asynccontextmanager
-async def _client(service: MagicMock) -> AsyncIterator[AsyncClient]:
+async def _client(
+    service: MagicMock,
+    *,
+    room_reactions: tuple[list[dict[str, object]], bool] = ([], False),
+) -> AsyncIterator[AsyncClient]:
     context = AuthContext(
         user_id=uuid4(), organization_id=_ORGANIZATION_ID, role=OrgRoleName.OPERATOR.value
     )
     app.dependency_overrides[deps.get_auth_context] = lambda: context
     app.dependency_overrides[deps.get_agent_runner_service] = lambda: service
+    reaction_service = MagicMock(list_for_run=AsyncMock(return_value=room_reactions))
+    service.room_reaction_service_mock = reaction_service
+    service.room_reaction_context = context
     try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client
+        with patch(
+            "app.api.routes.v1.runs.RoomAgentReactionService",
+            return_value=reaction_service,
+        ):
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                yield client
     finally:
         app.dependency_overrides.clear()
 
@@ -65,6 +78,7 @@ def _message(*, run_id, content: str) -> Message:
         created_at=datetime(2026, 8, 6, 9, 0, tzinfo=UTC),
         # Set explicitly: a column default is applied on flush, and this row never is.
         interrupted=False,
+        room_mentions=[],
     )
     message.tool_calls = []
     message.files = []
@@ -94,6 +108,54 @@ async def test_the_transcript_is_served_with_its_run_and_turns() -> None:
     assert service.get_run_transcript.await_args.args[1] == run.id
     # The default scope is the run's own turns, not the thread.
     assert service.get_run_transcript.await_args.kwargs["whole_conversation"] is False
+
+
+async def test_room_action_audit_is_separate_bounded_and_only_read_after_authorization() -> None:
+    run = MagicMock(id=uuid4(), organization_id=_ORGANIZATION_ID, conversation_id=None)
+    row = {
+        "message_id": uuid4(),
+        "agent_id": uuid4(),
+        "agent_name": "Research",
+        "agent_version_id": uuid4(),
+        "emoji": "👍",
+        "reaction_only": True,
+        "source": "tool",
+        "tool_call_id": "call-1",
+        "decision_id": None,
+        "created_at": datetime(2026, 8, 6, 9, 0, tzinfo=UTC),
+    }
+    service = MagicMock(
+        get_run_transcript=AsyncMock(return_value=(run, [], 0)),
+        transcript_ratings=AsyncMock(return_value={}),
+    )
+
+    async with _client(service, room_reactions=([row], True)) as client:
+        response = await client.get(f"/api/v1/runs/{run.id}/transcript")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["conversation_id"] is None
+    assert body["items"] == []
+    assert body["room_reactions"] == [
+        {
+            "message_id": str(row["message_id"]),
+            "agent_id": str(row["agent_id"]),
+            "agent_version_id": str(row["agent_version_id"]),
+            "agent_name": "Research",
+            "emoji": "👍",
+            "reaction_only": True,
+            "source": "tool",
+            "tool_call_id": "call-1",
+            "decision_id": None,
+            "created_at": "2026-08-06T09:00:00+00:00",
+        }
+    ]
+    assert body["room_reactions_truncated"] is True
+    service.room_reaction_service_mock.list_for_run.assert_awaited_once_with(
+        ctx=service.room_reaction_context,
+        organization_id=_ORGANIZATION_ID,
+        run_id=run.id,
+    )
 
 
 async def test_the_conversation_scope_reaches_the_service_as_the_whole_thread() -> None:
@@ -170,6 +232,7 @@ async def test_a_missing_or_cross_tenant_run_is_a_404_naming_only_the_id() -> No
     assert error["code"] == "NOT_FOUND"
     assert error["message"] == "Run not found"
     assert error["details"] == {"run_id": str(run_id)}
+    service.room_reaction_service_mock.list_for_run.assert_not_awaited()
 
 
 async def test_a_caller_without_runs_view_is_refused() -> None:
@@ -188,6 +251,7 @@ async def test_a_caller_without_runs_view_is_refused() -> None:
 
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "AUTHORIZATION_ERROR"
+    service.room_reaction_service_mock.list_for_run.assert_not_awaited()
 
 
 async def test_a_run_with_no_conversation_says_so_rather_than_an_empty_list() -> None:

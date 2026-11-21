@@ -31,8 +31,8 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-const initial = [{ emoji: "🎉", count: 1, reacted_by_me: false }];
-const changed = [{ emoji: "👍", count: 2, reacted_by_me: true }];
+const initial = [{ emoji: "🎉", count: 1, reacted_by_me: false, agents: [] }];
+const changed = [{ emoji: "👍", count: 2, reacted_by_me: true, agents: [] }];
 
 beforeEach(() => {
   mocks.identity.accountId = "user-1";

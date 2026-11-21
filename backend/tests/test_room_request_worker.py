@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.agents.capabilities.room_reactions._contract import RoomReactionRunContext
 from app.core.exceptions import AlreadyExistsError, AuthorizationError
 from app.core.permissions import AuthContext
 from app.db.models.room_submission import RoomSubmission
@@ -74,6 +75,12 @@ def work(monkeypatch: pytest.MonkeyPatch):
         module.conversation_repo, "users_by_id", AsyncMock(return_value={row.requester_id: sender})
     )
     monkeypatch.setattr(module.conversation_repo, "link_message_to_run", AsyncMock())
+    thread_lookup = AsyncMock(return_value=SimpleNamespace(context_source_conversation_id=None))
+    imported_context_lookup = AsyncMock(return_value=False)
+    monkeypatch.setattr(module.room_thread_repo, "get_thread", thread_lookup)
+    monkeypatch.setattr(
+        module.conversation_repo, "has_imported_thread_context", imported_context_lookup
+    )
     service = MagicMock(
         authority=AsyncMock(return_value=(ctx, topic, message)),
         read_message=AsyncMock(return_value=read),
@@ -89,6 +96,10 @@ def work(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(module, "_emit_saved", AsyncMock())
     monkeypatch.setattr(module, "announce_request", MagicMock())
     monkeypatch.setattr(module, "start_deferred", MagicMock())
+    router_order_guard = AsyncMock(return_value=False)
+    monkeypatch.setattr(
+        module.auto_repo, "has_pending_or_running_before_submission", router_order_guard
+    )
     execute = AsyncMock()
     monkeypatch.setattr(module.AgentRunnerService, "execute", execute)
     run = SimpleNamespace(id=uuid4(), organization_id=row.organization_id, status="completed")
@@ -103,8 +114,11 @@ def work(monkeypatch: pytest.MonkeyPatch):
         history=history,
         history_service=history_service,
         run=run,
+        router_order_guard=router_order_guard,
         message=message,
         topic=topic,
+        thread_lookup=thread_lookup,
+        imported_context_lookup=imported_context_lookup,
         read=read,
         job=RoomRequestJob(request_id=row.id, organization_id=row.organization_id),
     )
@@ -209,10 +223,14 @@ async def test_missing_sender_after_revalidation_still_refuses_execution(work, m
 
 
 @pytest.mark.parametrize("in_thread", [False, True])
+@pytest.mark.parametrize("additional_responder", [False, True])
 async def test_pinned_requester_runs_once_with_bounded_history_and_shared_audience(
-    work, in_thread
+    work, in_thread, additional_responder
 ) -> None:
+    if additional_responder:
+        work.row.parent_submission_id = uuid4()
     work.message.thread_root_message_id = uuid4() if in_thread else None
+    work.row.thread_root_message_id = work.message.thread_root_message_id
 
     async def execute(ctx, agent_id, prompt, **options):
         assert ctx is work.ctx and ctx.user_id == work.row.requester_id
@@ -226,6 +244,16 @@ async def test_pinned_requester_runs_once_with_bounded_history_and_shared_audien
         assert options["message_history"] is work.history
         assert options["acts_for_sender"] is True and options["parks_questions"] is True
         assert "local" not in options and "model_profile_id" not in options
+        reaction_context = options["room_reaction_context"]
+        assert isinstance(reaction_context, RoomReactionRunContext)
+        assert reaction_context.organization_id == work.row.organization_id
+        assert reaction_context.conversation_id == work.row.conversation_id
+        assert reaction_context.submission_id == work.row.id
+        assert reaction_context.requester_id == work.row.requester_id
+        assert reaction_context.accepted_message_id == work.row.message_id
+        assert reaction_context.agent_id == work.row.agent_id
+        assert reaction_context.agent_version_id == work.row.version_id
+        assert reaction_context.thread_root_message_id == work.message.thread_root_message_id
         assert work.row.status == "running"
         work.db.commit.assert_awaited_once()
         await options["on_run_open"](work.run)
@@ -243,13 +271,28 @@ async def test_pinned_requester_runs_once_with_bounded_history_and_shared_audien
         room_request_message_id=work.row.message_id,
         room_request_id=work.row.id,
     )
-    module.conversation_repo.link_message_to_run.assert_awaited_once_with(
-        work.db,
-        message_id=work.row.message_id,
-        run_id=work.run.id,
-        conversation_id=work.row.conversation_id,
-    )
+    if additional_responder:
+        # The accepted human post keeps its primary run attribution. Sibling
+        # responders are attributed by their own durable submission and action.
+        module.conversation_repo.link_message_to_run.assert_not_awaited()
+    else:
+        module.conversation_repo.link_message_to_run.assert_awaited_once_with(
+            work.db,
+            message_id=work.row.message_id,
+            run_id=work.run.id,
+            conversation_id=work.row.conversation_id,
+        )
     assert work.service.authority.await_count == 2
+    work.router_order_guard.assert_awaited_once_with(work.db, work.row)
+    work.imported_context_lookup.assert_awaited_once_with(work.db, work.row.conversation_id)
+    assert work.thread_lookup.await_count == int(in_thread)
+    if in_thread:
+        work.thread_lookup.assert_awaited_once_with(
+            work.db,
+            organization_id=work.row.organization_id,
+            conversation_id=work.row.conversation_id,
+            root_message_id=work.row.thread_root_message_id,
+        )
     await module.run_request(work.job)
     work.execute.assert_awaited_once()
 
@@ -377,6 +420,7 @@ async def test_live_stream_uses_the_same_saved_prompt_and_sender(
         sender=ChatPerson(user_id=row.requester_id, name="Sender"),
         thread_root_message_id=uuid4() if in_thread else None,
     )
+    row.thread_root_message_id = message.thread_root_message_id
     trace = object() if trace_available else None
     begin, publish, end, begun = (
         AsyncMock(return_value=trace),

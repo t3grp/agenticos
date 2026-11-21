@@ -24,6 +24,7 @@ import { glideOrJump } from "@/lib/motion";
 import { cn, formatDateTime } from "@/lib/utils";
 import type { ChatMessage, ChatMessageFile, ToolCall } from "@/types";
 import type { RunTranscriptMessage } from "@/types/runs";
+import { RunRoomReactionAudit } from "./run-room-reaction-audit";
 import { StandaloneRunTimeline } from "./standalone-run-timeline";
 
 /**
@@ -74,8 +75,20 @@ export function RunTimeline({ runId }: { runId: string }) {
   if (error || transcript === undefined) {
     return <ErrorState title={t("transcriptCouldNotBeRead")} />;
   }
+  const roomReactionAudit = (
+    <RunRoomReactionAudit
+      messages={transcript.items}
+      reactions={transcript.room_reactions ?? []}
+      truncated={transcript.room_reactions_truncated === true}
+    />
+  );
   if (transcript.conversation_id === null) {
-    return <StandaloneRunTimeline runId={transcript.run_id} />;
+    return (
+      <>
+        {roomReactionAudit}
+        <StandaloneRunTimeline runId={transcript.run_id} />
+      </>
+    );
   }
 
   // The anchor is the answer's own, not the id asked for. Stepping through a
@@ -88,19 +101,22 @@ export function RunTimeline({ runId }: { runId: string }) {
   const groups = groupByRun(transcript.items);
 
   return (
-    <ol className="space-y-2">
-      {groups.map((group, index) => (
-        <TimelineGroup
-          key={group.key}
-          group={group}
-          transcriptItems={transcript.items}
-          runId={runId}
-          anchored={group.runId === anchorRunId}
-          position={index + 1}
-          locale={locale}
-        />
-      ))}
-    </ol>
+    <>
+      {roomReactionAudit}
+      <ol className="space-y-2">
+        {groups.map((group, index) => (
+          <TimelineGroup
+            key={group.key}
+            group={group}
+            transcriptItems={transcript.items}
+            runId={runId}
+            anchored={group.runId === anchorRunId}
+            position={index + 1}
+            locale={locale}
+          />
+        ))}
+      </ol>
+    </>
   );
 }
 

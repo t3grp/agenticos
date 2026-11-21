@@ -122,6 +122,7 @@ in [Capabilities](capabilities.md).
 | Ask the user | `ask_user` |
 | Request a secret | `secret_request` |
 | Drafts | `drafts` |
+| Room reactions | `room_reactions` |
 | Web browser | `browser_use` |
 | Chat channel lookup | `channel_tools` |
 | Connected chat apps | `channel_actions` |

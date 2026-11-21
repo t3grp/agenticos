@@ -55,7 +55,7 @@ import hashlib
 import json
 import logging
 from collections import Counter
-from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Collection, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
@@ -194,6 +194,7 @@ from app.agents.capabilities.planning import (
     put_down,
     still_open,
 )
+from app.agents.capabilities.room_reactions._contract import RoomReactionRunContext
 from app.agents.capabilities.sandbox import (
     SHARED_SCOPES,
     WORKSPACE_RESOURCE,
@@ -487,6 +488,7 @@ from app.services.watch_sources import constrain_sources, source_identity
 if TYPE_CHECKING:
     from pydantic_ai_harness.planning import PlanStore
 
+    from app.services.room_agent_message_reaction import RoomAgentReactionPort
     from app.services.run_stream import RunFrames
 
 logger = logging.getLogger(__name__)
@@ -1853,6 +1855,7 @@ class PreparedRun:
     spec: AgentSpec
     built: BuiltAgent
     approvals: ApprovalChannel
+    room_reaction_port: RoomAgentReactionPort | None = None
     workspace: OpenWorkspace | None = None
     """The sandbox this run writes to, when its spec asks for one.
 
@@ -3704,6 +3707,39 @@ def _observability_of(stored: dict[str, Any]) -> ObservabilitySpec | None:
         return None
 
 
+async def _room_reaction_suppression_allowed(
+    db: AsyncSession,
+    *,
+    run_id: UUID,
+    run_status: str,
+    output: str,
+    called_tool_call_ids: Sequence[str],
+    successful_reaction_only_tool_call_ids: Collection[str],
+) -> bool:
+    """Suppress only a first-segment, silent, solo successful room reaction."""
+    from app.services.room_agent_message_reaction import should_suppress_empty_reaction_reply
+
+    if not should_suppress_empty_reaction_reply(
+        run_status=run_status,
+        output=output,
+        called_tool_call_ids=called_tool_call_ids,
+        successful_reaction_only_tool_call_ids=successful_reaction_only_tool_call_ids,
+    ):
+        return False
+
+    # RunSegment.tool_calls contains this execution's calls only. A resumed run
+    # can have earlier assistant text or calls in its persisted transcript, so
+    # consult the same run's saved assistant rows before suppressing its final one.
+    from sqlalchemy import select
+
+    from app.db.models.conversation import Message
+
+    earlier_assistant = await db.scalar(
+        select(Message.id).where(Message.run_id == run_id, Message.role == "assistant").limit(1)
+    )
+    return earlier_assistant is None
+
+
 @dataclass(frozen=True)
 class RunSegment:
     """One execution of a run, and what it did while it lasted.
@@ -4122,6 +4158,7 @@ class AgentRunnerService:
         organization_mcp_only: bool = False,
         decision_model: bool = False,
         automatic_router: bool = False,
+        room_reaction_context: RoomReactionRunContext | None = None,
         source_run: AgentRun | None = None,
         watch_receipt: WatchReadReceipt | None = None,
         room_lead: RoomLeadPlanning | None = None,
@@ -4409,6 +4446,10 @@ class AgentRunnerService:
             organization_mcp_only=organization_mcp_only,
             decision_model=decision_model,
             automatic_router=automatic_router,
+            aside=aside,
+            evaluation_run=candidate is not None or instructions_override is not None,
+            compaction_only=compaction_only,
+            room_reaction_context=room_reaction_context,
             room_lead=room_lead,
             # Passed in rather than set on the built deps like `on_compaction`:
             # whether a gap is briefed or offered as a tool decides what is built.
@@ -4596,6 +4637,10 @@ class AgentRunnerService:
         organization_mcp_only: bool = False,
         decision_model: bool = False,
         automatic_router: bool = False,
+        aside: bool = False,
+        evaluation_run: bool = False,
+        compaction_only: bool = False,
+        room_reaction_context: RoomReactionRunContext | None = None,
         specialists: Mapping[str | None, Sequence[RegisteredSpecialist]] | None = None,
         discovered_delegates: dict[str, list[SubagentRef]] | None = None,
         mirage_authorities: dict[str, str] | None = None,
@@ -4661,6 +4706,62 @@ class AgentRunnerService:
         system = agent.kind != AgentKind.AGENT.value
         if system:
             spec = for_the_platform(spec)
+        room_reaction_port: RoomAgentReactionPort | None = None
+        if room_reaction_context is not None:
+            expected_version_id = (
+                existing_run.agent_version_id if existing_run is not None else version_id
+            )
+            if (
+                surface is not RunSurface.WEB
+                or conversation_id is None
+                or conversation_id != room_reaction_context.conversation_id
+                or thread_root_message_id != room_reaction_context.thread_root_message_id
+                or parent_run_id is not None
+                or not acts_for_sender
+                or ctx.organization_id != room_reaction_context.organization_id
+                or ctx.user_id != room_reaction_context.requester_id
+                or ctx.api_key_id is not None
+                or ctx.is_impersonated
+                or agent.id != room_reaction_context.agent_id
+                or expected_version_id != room_reaction_context.agent_version_id
+                or owner_user_id not in {None, room_reaction_context.requester_id}
+                or automatic_router
+                or decision_model
+                or aside
+                or answer_only
+                or evaluation_run
+                or compaction_only
+                or room_lead is not None
+                or public_origin
+                or impersonated
+                or is_workflow
+                or is_test
+                or test_spec is not None
+                or organization_mcp_only
+                or channel_directory is not None
+                or channel_key is not None
+                or exposure is not None
+                or local is not None
+                or isolation is not None
+                or voice is not None
+                or (
+                    existing_run is not None
+                    and (
+                        existing_run.parent_run_id is not None
+                        or existing_run.surface != RunSurface.WEB.value
+                        or existing_run.organization_id != room_reaction_context.organization_id
+                        or existing_run.conversation_id != room_reaction_context.conversation_id
+                        or existing_run.user_id != room_reaction_context.requester_id
+                        or existing_run.agent_id != room_reaction_context.agent_id
+                        or existing_run.agent_version_id != room_reaction_context.agent_version_id
+                        or existing_run.is_test
+                        or existing_run.test_spec is not None
+                    )
+                )
+            ):
+                raise AuthorizationError(
+                    message="Room reactions require an authorized top-level room responder"
+                )
         spec = await self._with_current_budget(
             agent,
             spec,
@@ -5888,6 +5989,14 @@ class AgentRunnerService:
             on_use = None
             computer_on_use = None
 
+        room_reaction_capability = None
+        if room_reaction_context is not None:
+            from app.agents.capabilities.room_reactions._capability import RoomReactions
+            from app.services.room_agent_message_reaction import RoomAgentReactionPort
+
+            room_reaction_port = RoomAgentReactionPort(context=room_reaction_context, run_id=run.id)
+            room_reaction_capability = RoomReactions(room_reaction_port)
+
         built = build_agent(
             spoken_spec if voice is not None else spec,
             model_spec,
@@ -5921,6 +6030,7 @@ class AgentRunnerService:
                 ),
                 *(() if computer_on_use is None else (computer_on_use,)),
                 *(() if room_lead is None else (room_lead,)),
+                *(() if room_reaction_capability is None else (room_reaction_capability,)),
                 *guard_for(routine_check, agent_id=agent.id),
             ),
             agent_period_spend=agent_period_spend,
@@ -5956,6 +6066,7 @@ class AgentRunnerService:
 
         prepared = PreparedRun(
             run=run,
+            room_reaction_port=room_reaction_port,
             agent=agent,
             spec=spec,
             built=built,
@@ -8316,6 +8427,7 @@ class AgentRunnerService:
         organization_mcp_only: bool = False,
         decision_model: bool = False,
         automatic_router: bool = False,
+        room_reaction_context: RoomReactionRunContext | None = None,
         on_run_open: Callable[[AgentRun], Awaitable[None]] | None = None,
         check_model_request: Callable[[AsyncSession], Awaitable[None]] | None = None,
         result_authority_check: Callable[[AsyncSession], Awaitable[None]] | None = None,
@@ -8465,6 +8577,7 @@ class AgentRunnerService:
             organization_mcp_only=organization_mcp_only,
             decision_model=decision_model,
             automatic_router=automatic_router,
+            room_reaction_context=room_reaction_context,
             room_lead=room_lead,
             draft=draft,
             test=test,
@@ -8763,6 +8876,7 @@ class AgentRunnerService:
         result_authority_check: Callable[[AsyncSession], Awaitable[None]] | None = None
         result_context_conversation_ids: tuple[UUID, ...] = ()
         bound_room_context = False
+        room_reaction_context: RoomReactionRunContext | None = None
         if state.admitted_as.audience_room_key in {
             f"room:project:{run.conversation_id}",
             f"room:conversation:{run.conversation_id}",
@@ -8785,6 +8899,40 @@ class AgentRunnerService:
             )
             if current_root != state.admitted_as.thread_root_message_id:
                 raise BadRequestError(message="This room request changed its subthread")
+            from app.repositories import room_submission as room_submission_repo
+
+            submission = await room_submission_repo.for_run(
+                self.db,
+                run.id,
+                organization_id=run.organization_id,
+            )
+            if (
+                run.surface == RunSurface.WEB.value
+                and run.parent_run_id is None
+                and run.agent_version_id is not None
+                and room_ctx.user_id is not None
+                and submission is not None
+                and submission.intent == "message"
+                and submission.run_id == run.id
+                and submission.organization_id == run.organization_id
+                and submission.conversation_id == run.conversation_id
+                and submission.requester_id == room_ctx.user_id
+                and run.user_id == room_ctx.user_id
+                and submission.agent_id == run.agent_id
+                and submission.version_id == run.agent_version_id
+                and submission.message_id is not None
+                and submission.thread_root_message_id == current_root
+            ):
+                room_reaction_context = RoomReactionRunContext(
+                    organization_id=run.organization_id,
+                    conversation_id=run.conversation_id,
+                    submission_id=submission.id,
+                    requester_id=room_ctx.user_id,
+                    accepted_message_id=submission.message_id,
+                    agent_id=run.agent_id,
+                    agent_version_id=run.agent_version_id,
+                    thread_root_message_id=submission.thread_root_message_id,
+                )
             source_conversation_id: UUID | None = None
             if current_root is not None:
                 thread = await room_thread_repo.get_thread(
@@ -8963,6 +9111,7 @@ class AgentRunnerService:
             impersonated=state.admitted_as.impersonated,
             is_workflow=state.admitted_as.is_workflow,
             extra_toolsets=None,
+            room_reaction_context=room_reaction_context,
             exposure=exposure,
             channel_file_attempts=state.channel_file_attempts,
             restored_channel_context=state.channel_context,
@@ -9051,6 +9200,13 @@ class AgentRunnerService:
         async def opened(child: AgentRun) -> None:
             if refusal is not None:
                 raise refusal
+            if room_reaction_context is not None:
+                # _run owns cleanup here and commits the resumed submission
+                # with the already-flushed running run before tool replay.
+                await RoomSubmissionService(self.db).mark_resumed_running(
+                    run_id,
+                    ctx.organization_id,
+                )
             if on_run_open is not None:
                 await on_run_open(child)
 
@@ -10178,11 +10334,26 @@ class AgentRunnerService:
                         paused = None
                     # So a run that failed, parked or was stopped still says what was
                     # asked and what it managed to do.
+                    transcript_answer = output
+                    transcript_tool_calls: Sequence[RecordedToolCall] = called
+                    reaction_port = prepared.room_reaction_port
+                    if reaction_port is not None and await _room_reaction_suppression_allowed(
+                        self.db,
+                        run_id=prepared.run.id,
+                        run_status=status.value,
+                        output=output,
+                        called_tool_call_ids=[call.tool_call_id for call in called],
+                        successful_reaction_only_tool_call_ids=(
+                            reaction_port.reaction_only_tool_call_ids
+                        ),
+                    ):
+                        transcript_answer = ""
+                        transcript_tool_calls = ()
                     message_id = await self.transcript.record(
                         prepared.run,
                         prompt=said if saved_prompt_id is None else None,
                         model_content=model_content,
-                        answer=output,
+                        answer=transcript_answer,
                         thread_root_message_id=prepared.admitted_as.thread_root_message_id,
                         attachments=attachments if saved_prompt_id is None else (),
                         # Replayed after the prompt on every later turn, where the input
@@ -10190,7 +10361,7 @@ class AgentRunnerService:
                         attachment_context=(
                             None if status is RunStatus.GUARDRAIL_BLOCKED else attachment_context
                         ),
-                        tool_calls=called,
+                        tool_calls=transcript_tool_calls,
                         settled=settled,
                         # So the step the run stopped on reads "awaiting approval" when
                         # the conversation is read back, not as a call that ran (#601).

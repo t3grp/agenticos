@@ -17,6 +17,7 @@ from app.db.models.conversation_task import ConversationTask, ConversationTurnCl
 from app.db.models.room_submission import RoomSubmission
 from app.db.models.room_participant import RoomParticipant
 from app.db.models.room_message_reaction import RoomMessageReaction
+from app.db.models.room_agent_message_reaction import RoomAgentMessageReaction
 from app.db.models.room_thread import RoomThread, RoomThreadFollow, RoomThreadRead
 from app.db.models.room_routing import RoomLeadPolicy, RoomRoutingProposal, RoomTaskLink
 from app.db.models.room_auto_routing import RoomAutoRoutingDecision, RoomAutoRoutingPolicy
@@ -323,6 +324,7 @@ __all__ = [
     "RoomSubmission",
     "RoomParticipant",
     "RoomMessageReaction",
+    "RoomAgentMessageReaction",
     "RoomThread",
     "RoomThreadFollow",
     "RoomThreadRead",

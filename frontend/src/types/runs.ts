@@ -279,6 +279,25 @@ export interface RunTranscriptMessage {
 }
 
 /**
+ * One successful room reaction recorded by the run's immutable action ledger.
+ *
+ * This is deliberately not a transcript message or a tool call: a
+ * reaction-only run may have no assistant message to replay.
+ */
+export interface RunTranscriptRoomReaction {
+  message_id: string;
+  agent_id: string;
+  agent_name: string;
+  agent_version_id: string;
+  emoji: string;
+  reaction_only: boolean;
+  source: "tool" | "automatic";
+  tool_call_id: string | null;
+  decision_id: string | null;
+  created_at: string;
+}
+
+/**
  * A run's recorded turns, newest question first.
  *
  * `conversation_id` is null for a run with no conversation behind it - an HTTP
@@ -290,6 +309,8 @@ export interface RunTranscript {
   conversation_id: string | null;
   items: RunTranscriptMessage[];
   total: number;
+  room_reactions?: RunTranscriptRoomReaction[];
+  room_reactions_truncated?: boolean;
 }
 
 /**

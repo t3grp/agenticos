@@ -4,6 +4,7 @@
 
 export const DRAWN_HUE: Readonly<Record<string, number>> = {
   channel_actions: 220,
+  room_reactions: 345,
   visuals: 140,
   background_tools: 222,
   background_tasks: 222,
@@ -497,8 +498,23 @@ const CHANNEL_ACTIONS =
   '<rect class="int" x="68" y="22" width="46" height="34" rx="6"/>' +
   '<path class="ln w2" d="M78 34H103M78 42H94M103 56V64L92 56"/></g></svg>';
 
+/** A visible room message with the agent's reaction attached. */
+const ROOM_REACTIONS =
+  '<svg viewBox="0 0 240 135" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+  '<polygon class="ishb" points="120,46.5 195.7,90.2 120,133.8 44.3,90.2"/>' +
+  '<polygon class="ict" points="120,33.1 195.7,76.8 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icl" points="44.3,82 120,125.7 120,120.5 44.3,76.8"/>' +
+  '<polygon class="icr" points="195.7,82 120,125.7 120,120.5 195.7,76.8"/>' +
+  '<g class="breathe"><rect class="inl" x="52" y="36" width="69" height="37" rx="5"/>' +
+  '<path class="igrid2" d="M60 47H110M60 56H101M61 70L54 77V70"/></g>' +
+  '<g class="bob"><rect class="pp" x="127" y="55" width="62" height="25" rx="12"/>' +
+  '<circle class="ac" cx="144" cy="67.5" r="7"/>' +
+  '<path class="igrid2" d="M141 67l2 2 4-5M157 67H179"/></g>' +
+  "</svg>";
+
 export const DRAWN_ART: Readonly<Record<string, string>> = {
   channel_actions: CHANNEL_ACTIONS,
+  room_reactions: ROOM_REACTIONS,
   visuals: VISUALS,
   background_tools: BACKGROUND_TOOLS,
   background_tasks: BACKGROUND_TASKS,

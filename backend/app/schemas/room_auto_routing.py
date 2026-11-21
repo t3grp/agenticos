@@ -65,6 +65,15 @@ class RoomAutoRoutingScore(BaseModel):
         return value
 
 
+class RoomAutoRoutingSocialIntent(BaseModel):
+    """One optional emoji reaction intent; target and actor remain server-owned."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    react: bool
+    emoji: str = Field(default="", max_length=16)
+
+
 class RoomAutoRoutingDecisionOutput(BaseModel):
     """The complete bounded classifier output; it cannot grant new candidates."""
 
@@ -76,6 +85,7 @@ class RoomAutoRoutingDecisionOutput(BaseModel):
     already_answered: bool = False
     for_everyone: bool = False
     addressee_id: UUID | None = None
+    social_intent: RoomAutoRoutingSocialIntent | None = None
     reason: str = Field(default="", max_length=512)
 
     @model_validator(mode="after")

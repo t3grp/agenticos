@@ -671,6 +671,11 @@ responders. Receipts show who chose the agents. When this option is off, existin
 per-agent automatic reply settings still apply. See
 [AI responder selection](projects.md#ai-responder-selection) for behavior and costs.
 
+Agents can also add [reactions under their own names](projects.md#agent-reactions).
+Hover over or focus a reaction to see the agent attribution. Your selection
+changes only your own reaction. A reaction can acknowledge a message without an
+empty chat reply; open the run details to inspect its saved action and target.
+
 **Select context** creates a thread from a chosen message range. The thread keeps
 context separate from replies and supports moving, returning or editing the range.
 You can also reference a compatible source conversation. See

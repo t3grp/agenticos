@@ -1013,6 +1013,14 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     captionKey: "readingToolResult",
     displayNameKey: "toolResult",
   },
+
+  // room_reactions - native room responders can react to a room message.
+  react_to_room_message: {
+    kind: "write",
+    render: "generic",
+    captionKey: "reactingToRoomMessage",
+    displayNameKey: "roomReaction",
+  },
 };
 
 /**

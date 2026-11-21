@@ -10,6 +10,7 @@ from pydantic import AliasPath, Field, model_validator
 from app.schemas.base import BaseSchema
 from app.schemas.conversation import MessageRead
 from app.schemas.eval_run import EvalCaseLinkRead
+from app.schemas.room_reaction import RoomAgentMessageReactionRead
 
 
 class ChatAskerRead(BaseSchema):
@@ -415,6 +416,11 @@ class RunTranscript(BaseSchema):
         items: The run's messages, oldest first.
         total: How many turns the run produced, so a paged read still knows the
             size of what it is paging through.
+        room_reactions: Up to 100 room actions the run persisted in its separate
+            immutable audit ledger. These are not transcript messages or generic
+            tool calls; an empty list is the answer when the run made none.
+        room_reactions_truncated: Whether more than 100 ledger rows exist for this
+            run. Rows are ordered by creation time and id, oldest first.
     """
 
     run_id: UUID
@@ -428,6 +434,14 @@ class RunTranscript(BaseSchema):
     )
     items: list[RunTranscriptMessage]
     total: int
+    room_reactions: list[RoomAgentMessageReactionRead] = Field(
+        default_factory=list,
+        description="Safe room-action audit rows, oldest first, capped at 100",
+    )
+    room_reactions_truncated: bool = Field(
+        default=False,
+        description="True when this run has more than 100 room-action audit rows",
+    )
 
 
 class ApprovalRead(BaseSchema):

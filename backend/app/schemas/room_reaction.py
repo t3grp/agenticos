@@ -1,6 +1,9 @@
 """Shared-room reactions: one emoji, per-person storage, aggregate transcript reads."""
 
 import unicodedata
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
 
 import regex
 from pydantic import Field, field_validator
@@ -40,12 +43,35 @@ class RoomMessageReactionCreate(BaseSchema):
         return normalized
 
 
+class RoomMessageReactionAgentRead(BaseSchema):
+    """A stable agent identity contributing to one emoji aggregate."""
+
+    agent_id: UUID
+    name: str = Field(min_length=1, max_length=120)
+
+
 class RoomMessageReactionRead(BaseSchema):
     """An emoji and its aggregate count on a message."""
 
     emoji: str
     count: int = Field(ge=1)
     reacted_by_me: bool
+    agents: list[RoomMessageReactionAgentRead] = Field(default_factory=list)
+
+
+class RoomAgentMessageReactionRead(BaseSchema):
+    """Safe audit projection for a bounded run's persisted reaction actions."""
+
+    message_id: UUID
+    agent_id: UUID
+    agent_name: str = Field(min_length=1, max_length=120)
+    agent_version_id: UUID
+    emoji: str = Field(min_length=1, max_length=MAX_EMOJI_CHARS)
+    reaction_only: bool
+    source: Literal["tool", "automatic"]
+    tool_call_id: str | None = None
+    decision_id: UUID | None = None
+    created_at: datetime
 
 
 class RoomMessageReactionsRead(BaseSchema):

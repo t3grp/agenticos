@@ -1350,6 +1350,14 @@ include = [
     "app/agents/room_auto_routing.py",
     "app/api/routes/v1/room_auto_routing.py",
     "app/worker/tasks/room_auto_routing_tasks.py",
+    "app/db/models/room_agent_message_reaction.py",
+    "app/repositories/room_agent_message_reaction.py",
+    "app/services/room_agent_message_reaction.py",
+    "app/services/room_auto_reaction.py",
+    "app/agents/capabilities/room_reactions/__init__.py",
+    "app/agents/capabilities/room_reactions/_contract.py",
+    "app/agents/capabilities/room_reactions/_capability.py",
+    "app/agents/capabilities/room_reactions/_toolset.py",
     # What a coding-agent task changed, read under the conversation's own reader
     # check (#2480).
     "app/db/models/coding_task_change.py",
@@ -2401,6 +2409,14 @@ include = [
     "app/agents/room_auto_routing.py",
     "app/api/routes/v1/room_auto_routing.py",
     "app/worker/tasks/room_auto_routing_tasks.py",
+    "app/db/models/room_agent_message_reaction.py",
+    "app/repositories/room_agent_message_reaction.py",
+    "app/services/room_agent_message_reaction.py",
+    "app/services/room_auto_reaction.py",
+    "app/agents/capabilities/room_reactions/__init__.py",
+    "app/agents/capabilities/room_reactions/_contract.py",
+    "app/agents/capabilities/room_reactions/_capability.py",
+    "app/agents/capabilities/room_reactions/_toolset.py",
     # What a coding-agent task changed, read under the conversation's own reader
     # check (#2480).
     "app/db/models/coding_task_change.py",

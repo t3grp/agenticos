@@ -74,6 +74,15 @@ describe("the tool catalog", () => {
     expect(toolEntry("web_search")).toMatchObject({ kind: "web", render: "web-search" });
     expect(toolEntry("create_chart")).toMatchObject({ kind: "chart", render: "chart" });
   });
+
+  it("catalogs the native room reaction tool as a visible write", () => {
+    expect(toolEntry("react_to_room_message")).toMatchObject({
+      kind: "write",
+      render: "generic",
+      captionKey: "reactingToRoomMessage",
+      displayNameKey: "roomReaction",
+    });
+  });
 });
 
 describe("toolLabel", () => {

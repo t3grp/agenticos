@@ -64,6 +64,7 @@ from app.schemas.run_manifest import RunManifestRead
 from app.services.approvals import withhold
 from app.services.channels.handback import continues_in_chat
 from app.services.parked_runs import waiting_update
+from app.services.room_agent_message_reaction import RoomAgentReactionService
 
 router = APIRouter(dependencies=[PUBLIC])
 
@@ -387,6 +388,18 @@ async def get_run_transcript(
         whole_conversation=scope == "conversation",
         for_model=for_model,
     )
+    # Only project the action ledger after the existing transcript read has
+    # authorized this organization-scoped run and its run-detail context.
+    # Router runs can have no conversation/transcript but still own a social
+    # action row, so the lookup is by the authorized run id rather than messages.
+    # The ledger service also checks the viewer's current room and source access.
+    room_reactions, room_reactions_truncated = await RoomAgentReactionService(
+        service.db
+    ).list_for_run(
+        ctx=ctx,
+        organization_id=run.organization_id,
+        run_id=run.id,
+    )
     ratings = await service.transcript_ratings(ctx, [m.id for m in messages])
     return RunTranscript(
         run_id=run.id,
@@ -398,6 +411,8 @@ async def get_run_transcript(
             for m in messages
         ],
         total=total,
+        room_reactions=room_reactions,
+        room_reactions_truncated=room_reactions_truncated,
     )
 
 
