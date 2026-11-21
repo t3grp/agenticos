@@ -7215,6 +7215,100 @@ class AgentRunnerService:
             ],
         )
 
+    async def _audit_tool_calls(
+        self,
+        prepared: PreparedRun,
+        called: list[RecordedToolCall],
+        settled: Mapping[str, str],
+    ) -> None:
+        """One audit entry per tool call this segment executed.
+
+        The transcript already keeps the call and its result; this is the
+        plain-language index over it, so the activity feed can say "Agent X
+        used send email, approved by W" without joining three tables at read
+        time. One entry per executed call, in the order they were made - a
+        call that never returned (parked on an approval, stopped, or broke
+        before it completed) is not recorded as executed; the decision on it
+        is audited by `approval.*` when it lands, and a resumed approved call
+        arrives through `settled`, with its name from the parked approval it
+        was resumed from.
+
+        Written with the run's terminal write, after the transcript rows and
+        before the commit, so the entries share the run's transaction and the
+        audit chain lock comes last. Best-effort, unlike the gated mutations
+        `record_audit` usually records: a failure here must not fail a run
+        that already executed - the transcript remains the record, and the
+        miss is logged with the run and the call so it is visible. Details
+        carry names and ids only, never arguments or results: a tool argument
+        may hold a secret, and secrets are excluded from audit entries.
+
+        The streaming chat path does not come through here - it keeps writing
+        its own transcript, as `_run` documents - so its tool calls are not
+        audited by this yet. That is a known gap, not a silent one.
+        """
+        run = prepared.run
+        agent_name = prepared.agent.name if isinstance(prepared.agent.name, str) else None
+        actor = run.user_id if isinstance(run.user_id, UUID) else None
+        cost = run.cost_usd if isinstance(run.cost_usd, (int, float, Decimal)) else None
+        parked = {entry.tool_call_id: entry for entry in prepared.approvals.requested}
+        executed: list[tuple[str | None, str, bool, UUID | None]] = []
+        called_ids: set[str] = set()
+        for call in called:
+            if call.result is None:
+                continue
+            called_ids.add(call.tool_call_id)
+            approval = parked.get(call.tool_call_id)
+            executed.append(
+                (
+                    call.tool_name,
+                    call.tool_call_id,
+                    approval is not None,
+                    approval.approval_id if approval is not None else None,
+                )
+            )
+        for tool_call_id in settled:
+            if tool_call_id in called_ids:
+                continue
+            approval = parked.get(tool_call_id)
+            executed.append(
+                (
+                    approval.tool_name if approval is not None else None,
+                    tool_call_id,
+                    True,
+                    approval.approval_id if approval is not None else None,
+                )
+            )
+        for tool_name, tool_call_id, approved, approval_id in executed:
+            details: dict[str, Any] = {
+                "run_id": str(run.id),
+                "agent_id": str(run.agent_id),
+                "tool_call_id": tool_call_id,
+                "approved": approved,
+            }
+            if agent_name is not None:
+                details["agent_name"] = agent_name
+            if tool_name is not None:
+                details["tool_name"] = tool_name
+            if approval_id is not None:
+                details["approval_id"] = str(approval_id)
+            if cost is not None:
+                details["cost_usd"] = str(cost)
+            try:
+                await record_audit(
+                    self.db,
+                    actor_user_id=actor,
+                    organization_id=run.organization_id,
+                    action="agent.tool_executed",
+                    target_type="agent_run",
+                    target_id=str(run.id),
+                    details=details,
+                )
+            except Exception:
+                logger.exception(
+                    "tool_call_audit_not_written",
+                    extra={"run_id": str(run.id), "tool_call_id": tool_call_id},
+                )
+
     async def tool_recording(self, ctx: AuthContext, run_id: UUID) -> ToolRecording:
         """The calls a past run made, ready to answer an isolated run's calls.
 
@@ -10034,6 +10128,10 @@ class AgentRunnerService:
                                 outbound=tuple(prepared.outbound),
                             )
                         )
+                    # After the transcript rows, before the commit, so the audit
+                    # entries share the run's transaction and the chain lock
+                    # comes last - see `_audit_tool_calls`.
+                    await self._audit_tool_calls(prepared, called, settled)
                     await self.db.commit()
                     await change_feed.publish_run(prepared.run, "updated")
                 except Exception:

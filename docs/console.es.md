@@ -1,5 +1,5 @@
 ---
-source_sha: "248db60fab7b"
+source_sha: "a782aacdbacf"
 ---
 
 # La consola { #the-console }
@@ -1043,6 +1043,16 @@ El filtro **Source** reduce la lista a **Conversations**, **Improve and evals**
 o **System agents**. Empieza en todas las fuentes, así que un enlace desde un
 borrador o una sesión a su run llega a una fila que la lista muestra.
 
+### Activity feed { #activity-feed }
+
+**Activity feed** lee el mismo rastro en frases sencillas, para quien tenga
+`audit:read`: qué hizo cada agent, quién lo aprobó y cuánto costó su run. La
+búsqueda acota las frases, el filtro de agent acota a un agent y el filtro de
+día a un día; la lista muestra cincuenta filas por página, y la exportación
+toma el día seleccionado, o los últimos siete días. Una decisión de aprobación
+que autorizó una llamada a una herramienta se muestra en la fila de esa
+llamada, no como una fila propia.
+
 ## Para qué sirve cada área { #what-each-area-is-for }
 
 **Overview** (Dashboard), **Chat** e **Inbox** encabezan la barra lateral.
@@ -1051,7 +1061,7 @@ después aparecen los Projects.
 
 **Knowledge** está abierto por defecto e incluye Knowledge bases, Tables, Skills,
 Context y Documents. Se recuerda la elección manual de abrirlo o cerrarlo.
-**Monitoring** reúne Activity y Background work y comienza plegado.
+**Monitoring** reúne Activity, Activity feed y Background work y comienza plegado.
 
 **Connections** (MCP servers, Channels, Remote agents, Vault, Sandboxes) y
 **Organization** (Organizations, Groups) siguen siendo plegables y recuerdan la

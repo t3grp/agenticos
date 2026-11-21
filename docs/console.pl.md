@@ -1,5 +1,5 @@
 ---
-source_sha: "248db60fab7b"
+source_sha: "a782aacdbacf"
 ---
 
 # Konsola { #the-console }
@@ -1016,6 +1016,16 @@ Filtr **Pochodzenie** zawęża listę do **Rozmów**, **Improve i ewaluacji** al
 **Agentów systemowych**. Domyślnie obejmuje każde pochodzenie, więc link ze
 szkicu albo z sesji do jej runa trafia na wiersz, który lista pokazuje.
 
+### Activity feed { #activity-feed }
+
+**Activity feed** czyta ten sam ślad prostymi zdaniami, dla posiadacza
+`audit:read`: co zrobił każdy agent, kto to zatwierdził i ile kosztował jego
+run. Wyszukiwanie zawęża zdania, filtr agenta zawęża do jednego agenta, a
+filtr dnia do jednego dnia; lista pokazuje po pięćdziesiąt wierszy na stronie,
+a eksport bierze wybrany dzień albo ostatnie siedem dni. Decyzja o
+zatwierdzeniu, która autoryzowała wywołanie narzędzia, pokazana jest w
+wierszu tego wywołania, a nie jako osobny wiersz.
+
 ## Do czego służy każdy obszar { #what-each-area-is-for }
 
 **Overview** (Dashboard), **Chat** i **Inbox** są na początku sidebara.
@@ -1024,7 +1034,7 @@ następne są Projects.
 
 **Knowledge** jest domyślnie rozwinięte i zawiera Knowledge bases, Tables, Skills,
 Context i Documents. Ręczny wybór rozwinięcia lub zwinięcia jest zapamiętywany.
-**Monitoring** grupuje Activity i Background work i jest domyślnie zwinięte.
+**Monitoring** grupuje Activity, Activity feed i Background work i jest domyślnie zwinięte.
 
 **Connections** (MCP servers, Channels, Remote agents, Vault, Sandboxes) i
 **Organization** (Organizations, Groups) pozostają zwijane i zapamiętują wybór.

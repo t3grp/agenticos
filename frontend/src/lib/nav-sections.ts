@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MessagesSquare,
   Plug,
+  ScrollText,
   ShieldCheck,
   UsersRound,
   type LucideIcon,
@@ -199,6 +200,12 @@ export const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     items: [
       { labelKey: "activity", href: ROUTES.RUNS, icon: Activity, permission: Perm.runsView },
+      {
+        labelKey: "activityFeed",
+        href: ROUTES.ACTIVITY,
+        icon: ScrollText,
+        permission: Perm.auditRead,
+      },
       {
         labelKey: "failureLearning",
         href: ROUTES.FAILURE_LEARNING,

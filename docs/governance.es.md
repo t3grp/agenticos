@@ -1,5 +1,5 @@
 ---
-source_sha: "6bf91cb53877"
+source_sha: "bc4c3e37fe29"
 ---
 
 # Governance { #governance }
@@ -2251,6 +2251,15 @@ Una **lectura masiva** privilegiada también se registra. Cada exportación a CS
 escribe una entrada `runs.export`, `approvals.export` o `spend.export` nombrando la
 ventana y el número de filas — quién se llevó la tabla entera de la pantalla es una
 pregunta barata de responder ahora e imposible de reconstruir después.
+
+Cada llamada a una herramienta que ejecuta un run escribe una entrada
+`agent.tool_executed` — el agent, la herramienta y la aprobación en la que se
+apoya, con el coste de su run — para que el Activity feed pueda decir en
+lenguaje sencillo qué hizo cada agent. Los argumentos y los resultados no se
+registran ahí: un argumento de herramienta puede contener un secreto, y la
+transcripción sigue siendo el registro de qué se llamó con qué. La consola
+muestra cada entrada como una frase, con los nombres del actor y del agent
+resueltos al leerla.
 
 La escritura comparte la transacción de la petición que actúa, así que falla cerrando:
 una entrada que no se puede registrar revierte la acción que describe en vez de dejar

@@ -1,5 +1,5 @@
 ---
-source_sha: "6bf91cb53877"
+source_sha: "bc4c3e37fe29"
 ---
 
 # Governance { #governance }
@@ -2244,6 +2244,14 @@ Uprzywilejowany **odczyt masowy** też jest zapisywany. Każdy eksport do CSV
 zapisuje wpis `runs.export`, `approvals.export` albo `spend.export` nazywający
 okno i liczbę wierszy — to, kto zabrał całą tabelę z ekranu, jest pytaniem tanim
 do odpowiedzenia teraz i niemożliwym do odtworzenia później.
+
+Każde wywołanie narzędzia, które wykonuje run, zapisuje wpis
+`agent.tool_executed` — agenta, narzędzie i zgodę, na której się oparło, wraz
+z kosztem jego runa — żeby Activity feed mógł prostym językiem powiedzieć, co
+zrobił każdy agent. Argumenty i wyniki nie są tam zapisywane: argument
+narzędzia może zawierać sekret, a transkrypt pozostaje zapisem tego, co
+wywołano z czym. Konsola przedstawia każdy wpis jako zdanie, z nazwami
+podmiotu i agenta rozwiązanymi przy odczycie.
 
 Ten zapis dzieli transakcję działającego żądania, więc zawodzi na zamknięcie:
 wpis, którego nie da się zapisać, wycofuje działanie, które opisuje, zamiast
