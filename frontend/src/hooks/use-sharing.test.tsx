@@ -34,6 +34,7 @@ const SHARING: ResourceSharing = {
       resource_type: "agent",
       resource_id: "a1",
       level: "read",
+      expires_at: null,
     },
   ],
 };

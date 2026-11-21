@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { GroupIcon } from "@/components/groups/group-icon";
 import {
@@ -58,10 +58,18 @@ export function GrantRow({
 }: GrantRowProps) {
   const t = useTranslations("sharing");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const [asking, setAsking] = useState(false);
   const subject = subjectOf(grant);
   const name = subjectLabel(grant);
   const id = `level-${grant.id}`;
+  const expiry = grant.expires_at
+    ? t("expiresUntil", {
+        date: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
+          new Date(grant.expires_at),
+        ),
+      })
+    : t("noExpiry");
 
   return (
     <li className="flex items-center gap-3 px-3 py-2.5">
@@ -79,7 +87,10 @@ export function GrantRow({
           ariaHidden
         />
       )}
-      <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm">{name}</span>
+        <span className="text-muted-foreground block truncate text-xs">{expiry}</span>
+      </span>
       <Label htmlFor={id} className="sr-only">
         {t("accessFor", { name })}
       </Label>

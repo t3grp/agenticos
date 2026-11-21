@@ -1,5 +1,5 @@
 ---
-source_sha: "b50c2e4de07b"
+source_sha: "b929a4f650a2"
 ---
 
 # Uprawnienia { #permissions }
@@ -333,7 +333,12 @@ do nikogo, nawet gdyby jakiś wiersz ją wskazywał.
 
 Udostępnienie może mieć datę wygaśnięcia: po niej grant nie daje nic, bez
 usuwania wiersza przez kogokolwiek - panel udostępniania nadal go pokazuje, więc
-właściciel może go odnowić albo unieważnić. Usunięcie członka unieważnia jego
+właściciel może go odnowić albo unieważnić. Nowe udostępnienie trwa 90 dni,
+chyba że wybrano datę wygaśnięcia, a zmiana poziomu udostępnienia zachowuje
+datę wygaśnięcia, którą już ma; udostępnienie członkowi można natomiast
+przyznać w ogóle bez daty wygaśnięcia. Udostępnienie grupie zawsze ma datę
+wygaśnięcia - grupa jest dynamiczna, a udostępnienie bez końca przetrwałoby
+każdy przegląd tego, kto w niej jest. Usunięcie członka unieważnia jego
 bezpośrednie granty razem z członkostwem, więc ponowne zaproszenie go nie budzi
 żadnego z nich.
 

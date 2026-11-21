@@ -1,5 +1,5 @@
 ---
-source_sha: "b50c2e4de07b"
+source_sha: "b929a4f650a2"
 ---
 
 # Berechtigungen { #permissions }
@@ -354,7 +354,12 @@ selbst wenn eine Zeile eine benennen würde.
 
 Eine Freigabe kann ein Ablaufdatum tragen: Nach ihm gibt der Grant nichts mehr,
 ohne dass jemand die Zeile löscht - der Teilen-Dialog listet ihn weiterhin,
-sodass der Besitzer ihn erneuern oder widerrufen kann. Das Entfernen eines
+sodass der Besitzer ihn erneuern oder widerrufen kann. Eine neue Freigabe gilt
+90 Tage, sofern kein Ablaufdatum gewählt wird, und eine Änderung der Stufe
+behält das Ablaufdatum, das sie bereits hat; eine Freigabe an ein Mitglied kann
+stattdessen ganz ohne Ablaufdatum erteilt werden. Eine Freigabe an eine Gruppe
+hat immer eines - die Gruppe ist dynamisch, und eine Freigabe ohne Ende würde
+jede Prüfung überleben, wer in ihr ist. Das Entfernen eines
 Mitglieds widerruft seine direkten Grants mit der Mitgliedschaft, sodass eine
 erneute Einladung keinen von ihnen wiederbelebt.
 

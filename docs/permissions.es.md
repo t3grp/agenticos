@@ -1,5 +1,5 @@
 ---
-source_sha: "b50c2e4de07b"
+source_sha: "b929a4f650a2"
 ---
 
 # Permisos { #permissions }
@@ -345,7 +345,12 @@ organización no alcanza a nadie aquí aunque una fila lo nombrara.
 
 Una concesión puede llevar una caducidad: pasada esta, la concesión no da nada,
 sin que nadie borre la fila - el panel de uso compartido sigue listándola, así
-que el propietario puede renovarla o revocarla. Eliminar a un miembro revoca
+que el propietario puede renovarla o revocarla. Una concesión nueva dura 90 días
+salvo que se elija una caducidad, y cambiar el nivel de una concesión conserva la
+caducidad que ya tiene; a un miembro se le puede conceder, en cambio, sin
+caducidad alguna. Una concesión a un grupo siempre tiene una - el grupo es
+dinámico, y una concesión sin fin sobreviviría a cada revisión de quién está en
+él. Eliminar a un miembro revoca
 sus concesiones directas con la membresía, así que volver a invitarlo no
 despierta ninguna de ellas.
 

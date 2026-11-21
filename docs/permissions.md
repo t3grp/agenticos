@@ -315,7 +315,10 @@ row named one.
 
 A share can carry an expiry: past it, the grant gives nothing, without anyone
 deleting the row - the Sharing panel still lists it, so the owner can renew or
-revoke it. Removing a member revokes their direct grants with the membership,
+revoke it. A new share lasts 90 days unless an expiry is chosen, and changing
+a share's level keeps the expiry it already has; a member share can instead be
+given no expiry at all. A group share always has one - the group is dynamic,
+and a share with no end would outlive every review of who is in it. Removing a member revokes their direct grants with the membership,
 so inviting them back wakes none of them.
 
 The table is deliberately generic - `resource_type` + `resource_id`, with no

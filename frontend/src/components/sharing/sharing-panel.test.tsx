@@ -61,6 +61,7 @@ const GRANT: ResourceGrant = {
   resource_type: "agent",
   resource_id: "a1",
   level: "read",
+  expires_at: null,
 };
 
 const GROUP_GRANT: ResourceGrant = {
@@ -72,6 +73,7 @@ const GROUP_GRANT: ResourceGrant = {
   resource_type: "agent",
   resource_id: "a1",
   level: "use",
+  expires_at: null,
 };
 
 const SHARING: ResourceSharing = {
@@ -261,6 +263,51 @@ describe("SharingPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Share" }));
 
     expect(share.mutate).toHaveBeenCalledWith({ subject_user_id: "u-nina", level: "use" });
+  });
+
+  it("shows when a share ends, and when it does not", () => {
+    renderPanel(true, {
+      grants: [
+        { ...GRANT, expires_at: "2027-03-12T12:00:00Z" },
+        { ...GROUP_GRANT, expires_at: null },
+      ],
+    });
+
+    expect(screen.getByText("Until Mar 12, 2027")).toBeInTheDocument();
+    expect(screen.getByText("No expiry")).toBeInTheDocument();
+  });
+
+  it("shares with no expiry when Never is chosen", async () => {
+    renderPanel();
+    await choose(screen.getByLabelText(ADD), "nina@example.com");
+    await choose(screen.getByLabelText("Expires"), "Never");
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    expect(share.mutate).toHaveBeenCalledWith({
+      subject_user_id: "u-nina",
+      level: "read",
+      expires_at: null,
+    });
+  });
+
+  it("sends a date thirty days out when that is chosen", async () => {
+    renderPanel();
+    await choose(screen.getByLabelText(ADD), "nina@example.com");
+    await choose(screen.getByLabelText("Expires"), "30 days");
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    const sent = share.mutate.mock.calls[0]![0] as { expires_at?: string | null };
+    const at = new Date(sent.expires_at ?? "");
+    expect(at.getTime() - Date.now()).toBeGreaterThan(29 * 24 * 60 * 60 * 1000);
+    expect(at.getTime() - Date.now()).toBeLessThan(31 * 24 * 60 * 60 * 1000);
+  });
+
+  it("leaves the expiry out when the default is chosen", async () => {
+    renderPanel();
+    await choose(screen.getByLabelText(ADD), "nina@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    expect(share.mutate).toHaveBeenCalledWith({ subject_user_id: "u-nina", level: "read" });
   });
 
   it("offers a dataset no use level, which gives no built-in role anything", async () => {
