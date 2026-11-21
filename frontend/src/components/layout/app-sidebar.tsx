@@ -21,7 +21,7 @@
  * reveals entries rather than briefly offering ones about to disappear.
  */
 
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { scrollWithin } from "@/lib/scroll-within";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
@@ -81,11 +81,11 @@ function NavLink({
         // One row height in both states, so collapsing the column moves no icon
         // up or down - the rail is the same list with its words taken away.
         collapsed ? "touch:min-w-11 h-9 w-9 justify-center" : "h-9 gap-2.5 px-2.5",
-        // Selected is a neutral raised pill with a dark label. Section hues live
-        // on the page's own tile, not here: a column of coloured pills competed
-        // with the content it points at.
+        // Selected is the green tint with a green label and a heavier weight:
+        // one accent says where you are, and it is the same accent the page's
+        // primary action wears.
         active
-          ? "bg-accent text-foreground"
+          ? "bg-brand-subtle text-brand font-semibold"
           : "text-foreground/80 hover:bg-foreground/5 hover:text-foreground",
       )}
     >
@@ -156,10 +156,13 @@ export function SidebarNav({
 
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => navItemVisible(item, can, hiddenNavigationItems, isLoaded)),
-  })).filter(
-    (group) => !group.switcherOnly && group.items.length > 0 && (!group.adminOnly || admin),
-  );
+    // Admin is an entry inside More now, not a group of its own: hide it from
+    // non-admins here, where the other visibility rules already run.
+    items: group.items.filter(
+      (item) =>
+        (!item.adminOnly || admin) && navItemVisible(item, can, hiddenNavigationItems, isLoaded),
+    ),
+  })).filter((group) => !group.switcherOnly && group.items.length > 0);
 
   return (
     <nav
@@ -196,7 +199,6 @@ function NavGroupBlock({
   const pathname = usePathname();
   const mounted = useMounted();
   const openGroups = useSidebarStore((state) => state.openGroups);
-  const closedGroups = useSidebarStore((state) => state.closedGroups);
   const toggleGroup = useSidebarStore((state) => state.toggleGroup);
   const key = group.labelKey ?? "main";
   // The page you are on is never hidden behind a folded heading. The stored
@@ -205,10 +207,7 @@ function NavGroupBlock({
   // The rail folds too: a group closed in the column is closed on the rail, so
   // the two show the same destinations rather than the rail every one of them.
   const folds = !!group.collapsible;
-  const open =
-    !folds ||
-    holdsActive ||
-    (mounted && (openGroups.includes(key) || (key === "knowledge" && !closedGroups.includes(key))));
+  const open = !folds || holdsActive || (mounted && openGroups.includes(key));
 
   return (
     <div className={cn("flex flex-col gap-0.5", collapsed && "w-full items-center")}>
@@ -279,7 +278,15 @@ function NavGroupBlock({
           )}
         >
           {group.items.map((item) => (
-            <NavLink key={item.href} item={item} onNavigate={onNavigate} collapsed={collapsed} />
+            <Fragment key={item.href}>
+              {item.adminOnly && (
+                <span
+                  aria-hidden
+                  className={cn("bg-border my-1 h-px", collapsed ? "w-5" : "mx-2")}
+                />
+              )}
+              <NavLink item={item} onNavigate={onNavigate} collapsed={collapsed} />
+            </Fragment>
           ))}
         </div>
       </div>

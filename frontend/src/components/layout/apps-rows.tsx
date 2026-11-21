@@ -13,8 +13,8 @@ import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Perm } from "@/types/permissions";
 
-/** How many starred apps the column lists before "All apps" takes over. */
-const SHOWN = 8;
+/** How many starred apps the column lists before "All apps" takes over. Three, like the recent projects beside it. */
+const SHOWN = 3;
 
 /**
  * The apps the caller starred, in the sidebar: a star pins an app here, and a
@@ -96,7 +96,7 @@ export function AppsRows({
                 linkClass,
                 !collapsed && "pr-8",
                 active
-                  ? "bg-accent text-foreground"
+                  ? "bg-brand-subtle text-brand font-semibold"
                   : "text-foreground/80 hover:bg-foreground/5 hover:text-foreground",
               )}
             >
@@ -131,7 +131,7 @@ export function AppsRows({
         className={cn(
           linkClass,
           allActive
-            ? "bg-accent text-foreground"
+            ? "bg-brand-subtle text-brand font-semibold"
             : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
         )}
       >

@@ -130,7 +130,7 @@ describe("SidebarNav", () => {
       apps.mockReturnValue([{ id: "app-hidden", title: "Hidden app", name: "hidden-app" }]);
       recentProjects.mockReturnValue([{ id: "project-hidden", name: "Hidden project" }]);
       appsQuery.mockClear();
-      sidebar.openGroups = ["knowledge", "organization"];
+      sidebar.openGroups = ["more", "organization"];
 
       render(<SidebarNav collapsed={collapsed} onNavigate={vi.fn()} />);
 
@@ -169,7 +169,7 @@ describe("SidebarNav", () => {
 
   it("shows every destination the caller is entitled to", () => {
     can.mockReturnValue(true);
-    sidebar.openGroups = ["knowledge", "monitoring"];
+    sidebar.openGroups = ["more"];
 
     renderNav();
 
@@ -194,7 +194,7 @@ describe("SidebarNav", () => {
     // anyone who can reach one of its areas. A Member holds secrets:view at OWN
     // scope but never connections:manage, and must still see the entry.
     can.mockImplementation((permission) => permission === "secrets:view");
-    sidebar.openGroups = ["connections"];
+    sidebar.openGroups = ["more"];
 
     renderNav();
 
@@ -203,7 +203,7 @@ describe("SidebarNav", () => {
 
   it("hides Connectors when the caller holds none of the areas it opens to", () => {
     can.mockImplementation((permission) => permission === "connections:manage");
-    sidebar.openGroups = ["connections"];
+    sidebar.openGroups = ["more"];
 
     renderNav();
 
@@ -236,6 +236,8 @@ describe("SidebarNav", () => {
     // accounts whose every request behind it was refused.
     can.mockReturnValue(true);
     currentUser.mockReturnValue({ is_app_admin: false });
+    // Admin sits at the end of More, so More is open for both renders here.
+    sidebar.openGroups = ["more"];
 
     const { unmount } = renderNav();
     expect(screen.queryByRole("link", { name: "adminOverview" })).not.toBeInTheDocument();
@@ -263,9 +265,9 @@ describe("SidebarNav", () => {
 
     renderNav();
 
-    expect(screen.queryByRole("link", { name: "mcpServers" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "connections" }));
-    expect(sidebar.toggleGroup).toHaveBeenCalledWith("connections");
+    expect(screen.queryByRole("link", { name: "connectors" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(sidebar.toggleGroup).toHaveBeenCalledWith("more");
   });
 
   it("never folds the group holding the page you are on", () => {
@@ -279,7 +281,7 @@ describe("SidebarNav", () => {
       "aria-current",
       "page",
     );
-    expect(screen.getByRole("button", { name: "connections" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "more" })).toBeDisabled();
   });
 
   it("leaves organizations and groups to the organization switcher even after an old rail preference", () => {
@@ -343,9 +345,9 @@ describe("SidebarNav", () => {
 
     render(<SidebarNav collapsed />);
 
-    expect(screen.queryByRole("link", { name: "mcpServers" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "connections" }));
-    expect(sidebar.toggleGroup).toHaveBeenCalledWith("connections");
+    expect(screen.queryByRole("link", { name: "connectors" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(sidebar.toggleGroup).toHaveBeenCalledWith("more");
     expect(screen.getByRole("link", { name: "Q3 launch" })).toHaveAttribute("title", "Q3 launch");
     expect(screen.getByRole("link", { name: "allProjects" })).toHaveAttribute(
       "aria-current",
@@ -354,14 +356,16 @@ describe("SidebarNav", () => {
     recentProjects.mockReturnValue([]);
   });
 
-  it("draws a group that never folds as a rule on the rail", () => {
+  it("draws a group that never folds as links on the rail", () => {
     can.mockReturnValue(true);
     currentPath.mockReturnValue("/dashboard");
 
     render(<SidebarNav collapsed />);
 
     expect(screen.queryByText("build")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "agents" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "dashboard" })).toBeInTheDocument();
+    // More stays folded on the rail until somebody opens it.
+    expect(screen.queryByRole("link", { name: "agents" })).not.toBeInTheDocument();
   });
 
   it("runs the caller's callback on navigation, so the drawer can close", () => {
@@ -422,9 +426,10 @@ describe("the navigation definition", () => {
       "groups",
       "documents",
     ]);
-    const unguarded = NAV_GROUPS.filter((group) => !group.adminOnly)
-      .flatMap((group) => group.items)
-      .filter((item) => !item.permission && !item.permissions && !open.has(item.labelKey));
+    const unguarded = NAV_GROUPS.flatMap((group) => group.items).filter(
+      (item) =>
+        !item.adminOnly && !item.permission && !item.permissions && !open.has(item.labelKey),
+    );
 
     expect(unguarded).toEqual([]);
   });
@@ -464,52 +469,37 @@ describe("the inbox count (#2301)", () => {
 });
 
 describe("daily-work navigation", () => {
-  it("keeps the overview first and automation directly below agents", () => {
+  it("keeps the daily five first, then More in one flat order", () => {
     can.mockReturnValue(true);
     currentPath.mockReturnValue("/chat");
-    sidebar.openGroups = [];
+    sidebar.openGroups = ["more"];
     renderNav();
     const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
     expect(hrefs.slice(0, 8)).toEqual([
       "/dashboard",
       "/chat",
       "/inbox",
-      "/agent-messages",
       "/apps",
+      "/projects",
+      "/agent-messages",
       "/agents",
       "/workflows",
-      "/routines",
     ]);
-    expect(screen.queryByRole("link", { name: "backgroundWork" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "monitoring" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
     expect(hrefs.indexOf("/documents")).toBeGreaterThan(hrefs.indexOf("/rag"));
     expect(screen.queryByRole("button", { name: "build" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "monitoring" })).not.toBeInTheDocument();
   });
 
-  it("opens knowledge by default but respects an explicit saved closure", () => {
+  it("keeps More folded until somebody opens it", () => {
     can.mockReturnValue(true);
     currentPath.mockReturnValue("/chat");
     sidebar.openGroups = [];
     const { rerender } = renderNav();
-    expect(screen.getByRole("button", { name: "knowledge" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    expect(screen.getByRole("link", { name: "skills" })).toBeInTheDocument();
-    sidebar.closedGroups = ["knowledge"];
-    rerender(<SidebarNav />);
-    expect(screen.getByRole("button", { name: "knowledge" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(screen.getByRole("button", { name: "more" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("link", { name: "skills" })).not.toBeInTheDocument();
     const hiddenLink = screen.getByRole("link", { name: "skills", hidden: true });
     expect(hiddenLink.closest("[inert]")).toHaveAttribute("aria-hidden", "true");
-    sidebar.openGroups = ["knowledge"];
-    sidebar.closedGroups = [];
+    sidebar.openGroups = ["more"];
     rerender(<SidebarNav />);
     expect(screen.getByRole("link", { name: "skills" })).toBe(hiddenLink);
     expect(hiddenLink.closest("[inert]")).toBeNull();
@@ -570,25 +560,25 @@ describe("the Apps section", () => {
     expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
   });
 
-  it("lists at most eight apps, then links to all of them", () => {
+  it("lists at most three apps, then links to all of them", () => {
     can.mockReturnValue(true);
     apps.mockReturnValue(Array.from({ length: 10 }, (_, i) => app(i + 1)));
 
     renderNav();
 
     const listed = screen.getAllByRole("link", { name: /^App \d+$/ });
-    expect(listed).toHaveLength(8);
+    expect(listed).toHaveLength(3);
     expect(listed[0]).toHaveAttribute("href", "/apps/app-1");
     expect(screen.getByRole("link", { name: "allApps" })).toHaveAttribute("href", "/apps");
     expect(appsQuery).toHaveBeenLastCalledWith(
-      expect.objectContaining({ limit: 8, mineOrShared: true, enabled: true }),
+      expect.objectContaining({ limit: 3, mineOrShared: true, enabled: true }),
     );
   });
 
-  it("sits right after the main group and before Build", () => {
+  it("sits right after the main group and before More's first entry", () => {
     can.mockReturnValue(true);
     apps.mockReturnValue([app(1)]);
-    sidebar.openGroups = ["monitoring"];
+    sidebar.openGroups = ["more"];
 
     const { container } = renderNav();
     const links = Array.from(container.querySelectorAll("a")).map((a) => a.textContent);

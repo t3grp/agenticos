@@ -65,7 +65,7 @@ beforeEach(() => {
 });
 
 describe("sidebar starred apps", () => {
-  it("asks only for favourites and lists what comes back, with All apps below", async () => {
+  it("asks only for favourites and lists what comes back, with Apps below", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       items: [app(), app({ id: "a2", title: "Budget" })],
       total: 2,
@@ -78,13 +78,13 @@ describe("sidebar starred apps", () => {
     );
     expect(screen.getByRole("link", { name: "Budget" })).toBeInTheDocument();
     expect(container.querySelector('[data-tour="nav-pinned"]')).toBeTruthy();
-    expect(screen.getByRole("link", { name: "All apps" })).toHaveAttribute("href", "/apps");
+    expect(screen.getByRole("link", { name: "Apps" })).toHaveAttribute("href", "/apps");
     const [request] = listRequests();
     expect(request).toContain("favourites=true");
     expect(request).toContain("mine_or_shared=true");
   });
 
-  it("says how to pin an app and links to All apps when nothing is starred", async () => {
+  it("says how to pin an app and links to Apps when nothing is starred", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ items: [], total: 0 });
     const { container } = render(<AppsRows collapsed={false} />, { wrapper });
 
@@ -92,7 +92,7 @@ describe("sidebar starred apps", () => {
       await screen.findByText("Star an app to pin it here.", { exact: false }),
     ).toBeInTheDocument();
     expect(container.querySelector('[data-tour="nav-pinned"]')).toBeNull();
-    const links = screen.getAllByRole("link", { name: "All apps" });
+    const links = screen.getAllByRole("link", { name: "Apps" });
     expect(links.length).toBeGreaterThan(0);
     expect(links[0]).toHaveAttribute("href", "/apps");
   });

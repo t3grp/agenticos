@@ -54,7 +54,7 @@ export function ProjectRows({
           "touch:min-h-11 flex h-8 items-center rounded-xl text-sm font-medium transition-colors",
           collapsed ? "touch:min-w-11 w-8 justify-center" : "gap-2.5 px-2.5",
           active
-            ? "bg-foreground/8 text-foreground"
+            ? "bg-brand-subtle text-brand font-semibold"
             : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
         )}
       >

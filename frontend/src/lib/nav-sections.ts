@@ -32,12 +32,16 @@ import { Perm } from "@/types/permissions";
 import type { Permission } from "@/types/permissions";
 
 /**
- * The primary navigation's table - its groups, their entries and the section
- * hue each group carries - and the rules that place a URL in it.
+ * The primary navigation's table - five daily entries, then one flat More
+ * list - and the rules that place a URL in it.
  *
  * Data rather than a component, so the sidebar, the command palette and the
- * page chrome that colours itself by section all read one table without the
- * page chrome pulling in the sidebar's stores and shell.
+ * page chrome all read one table without the page chrome pulling in the
+ * sidebar's stores and shell. Each entry carries its own `domain` (the old
+ * group hue), because More holds entries from every section; the group is
+ * only a fallback. Nothing paints with a domain any more - the green accent
+ * is the only colour that says where you are - but `navSectionFor` still
+ * answers it for the console title and the link brands.
  */
 
 export type NavItem = {
@@ -59,6 +63,14 @@ export type NavItem = {
   exact?: boolean;
   /** A count beside the label: how much waits there. Only the inbox has one. */
   count?: "inbox";
+  /**
+   * The section hue this entry belonged to, before the sidebar flattened
+   * into five entries plus More. Kept on the entry (not the group) because
+   * More holds entries from every section.
+   */
+  domain?: NavDomain;
+  /** Admin-only entry, shown only to platform admins, separated at the end. */
+  adminOnly?: boolean;
 };
 
 /** The section hue a group carries - see "Section hues" in `globals.css`. */
@@ -69,9 +81,9 @@ export type NavGroup = {
   switcherOnly?: boolean;
   /** `null` for the first group, which needs no label above the top item. */
   labelKey: string | null;
+  /** Fallback domain for entries that carry none of their own. */
   domain: NavDomain;
   items: NavItem[];
-  adminOnly?: boolean;
   /**
    * Folded to its heading until somebody opens it, or until the page they are
    * on is inside it. For the groups set up once and visited rarely - the
@@ -82,6 +94,9 @@ export type NavGroup = {
 };
 
 export const NAV_GROUPS: NavGroup[] = [
+  // The five daily entries, in order. No heading above them: they are the
+  // column. Agent messages lives in More - the inbox is where a person
+  // looks for what waits, and the messages are one click further in.
   {
     labelKey: null,
     domain: "use",
@@ -95,19 +110,12 @@ export const NAV_GROUPS: NavGroup[] = [
         dataTour: "nav-inbox",
         count: "inbox",
       },
-      {
-        labelKey: "agentMessages",
-        href: ROUTES.AGENT_MESSAGES,
-        icon: MessagesSquare,
-        permission: Perm.agentsRun,
-        dataTour: "nav-agent-messages",
-      },
     ],
   },
   {
     // The apps an agent published, listed by `AppsRows`, which lists only what the
     // caller may open and hides the whole section when there is none. This entry
-    // is the route table's record of `/apps`; "All apps" is its one static row.
+    // is the route table's record of `/apps`; "Apps" is its one static row.
     labelKey: "apps",
     domain: "use",
     items: [
@@ -116,38 +124,6 @@ export const NAV_GROUPS: NavGroup[] = [
         href: ROUTES.ARTIFACTS,
         icon: PanelsTopLeft,
         permission: Perm.artifactsView,
-      },
-    ],
-  },
-  {
-    labelKey: "build",
-    domain: "build",
-    items: [
-      {
-        labelKey: "agents",
-        href: ROUTES.AGENTS,
-        icon: BotMessageSquare,
-        permission: Perm.agentsView,
-        dataTour: "nav-agents",
-      },
-      {
-        labelKey: "workflows",
-        href: ROUTES.WORKFLOWS,
-        icon: Workflow,
-        permission: Perm.workflowsView,
-        dataTour: "nav-workflows",
-      },
-      {
-        labelKey: "routines",
-        href: ROUTES.ROUTINES,
-        icon: TimerReset,
-        permission: Perm.agentsView,
-      },
-      {
-        labelKey: "datasets",
-        href: ROUTES.DATASETS,
-        icon: FlaskConical,
-        permission: Perm.datasetsView,
       },
     ],
   },
@@ -166,15 +142,59 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    labelKey: "knowledge",
-    domain: "knowledge",
+    // Everything else, one flat list in plain words, folded until opened or
+    // until the page you are on is inside it. No sub-headings: the old
+    // Build / Knowledge / Monitoring / Connections groups are gone, and each
+    // entry keeps its own domain so the title and link brands still know
+    // which section a URL belongs to. Admin sits last, separated, admin-only.
+    labelKey: "more",
+    domain: "use",
     collapsible: true,
     items: [
+      {
+        labelKey: "agentMessages",
+        href: ROUTES.AGENT_MESSAGES,
+        icon: MessagesSquare,
+        permission: Perm.agentsRun,
+        dataTour: "nav-agent-messages",
+        domain: "use",
+      },
+      {
+        labelKey: "agents",
+        href: ROUTES.AGENTS,
+        icon: BotMessageSquare,
+        permission: Perm.agentsView,
+        dataTour: "nav-agents",
+        domain: "build",
+      },
+      {
+        labelKey: "workflows",
+        href: ROUTES.WORKFLOWS,
+        icon: Workflow,
+        permission: Perm.workflowsView,
+        dataTour: "nav-workflows",
+        domain: "build",
+      },
+      {
+        labelKey: "routines",
+        href: ROUTES.ROUTINES,
+        icon: TimerReset,
+        permission: Perm.agentsView,
+        domain: "build",
+      },
+      {
+        labelKey: "datasets",
+        href: ROUTES.DATASETS,
+        icon: FlaskConical,
+        permission: Perm.datasetsView,
+        domain: "build",
+      },
       {
         labelKey: "knowledgeBases",
         href: ROUTES.RAG,
         icon: LibraryBig,
         permission: Perm.collectionsView,
+        domain: "knowledge",
       },
       {
         labelKey: "tables",
@@ -182,41 +202,48 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Table2,
         permission: Perm.tablesView,
         dataTour: "nav-tables",
+        domain: "knowledge",
       },
-      { labelKey: "skills", href: ROUTES.SKILLS, icon: Waypoints, permission: Perm.skillsView },
+      {
+        labelKey: "skills",
+        href: ROUTES.SKILLS,
+        icon: Waypoints,
+        permission: Perm.skillsView,
+        domain: "knowledge",
+      },
       {
         labelKey: "context",
         href: ROUTES.CONTEXT,
         icon: NotebookTabs,
         permission: Perm.contextView,
+        domain: "knowledge",
       },
-      { labelKey: "documents", href: ROUTES.DOCUMENTS, icon: Files },
-    ],
-  },
-  {
-    labelKey: "monitoring",
-    domain: "build",
-    collapsible: true,
-    items: [
-      { labelKey: "activity", href: ROUTES.RUNS, icon: Activity, permission: Perm.runsView },
+      {
+        labelKey: "documents",
+        href: ROUTES.DOCUMENTS,
+        icon: Files,
+        domain: "knowledge",
+      },
+      {
+        labelKey: "activity",
+        href: ROUTES.RUNS,
+        icon: Activity,
+        permission: Perm.runsView,
+        domain: "build",
+      },
       {
         labelKey: "failureLearning",
         href: ROUTES.FAILURE_LEARNING,
         icon: Bug,
         permission: Perm.runsView,
+        domain: "build",
       },
-      { labelKey: "backgroundWork", href: ROUTES.WORK, icon: BackgroundIcon },
-    ],
-  },
-  // What the organization is connected to, in one place: the apps agents use,
-  // with the lower-level channels, remote agents, vault and sandboxes behind an
-  // Advanced tab (#connectors). Set up once, revisited rarely, so folded until
-  // opened.
-  {
-    labelKey: "connections",
-    domain: "workspace",
-    collapsible: true,
-    items: [
+      {
+        labelKey: "backgroundWork",
+        href: ROUTES.WORK,
+        icon: BackgroundIcon,
+        domain: "build",
+      },
       {
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
@@ -224,6 +251,15 @@ export const NAV_GROUPS: NavGroup[] = [
         // Each area of the page keeps its own gate; the entry shows to anyone
         // who can reach one of them.
         permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView, Perm.networksView],
+        domain: "workspace",
+      },
+      {
+        labelKey: "adminOverview",
+        href: ROUTES.ADMIN,
+        icon: ShieldCheck,
+        tabbed: true,
+        domain: "admin",
+        adminOnly: true,
       },
     ],
   },
@@ -238,12 +274,6 @@ export const NAV_GROUPS: NavGroup[] = [
       // (#2072). Ungated: any member may read the groups, as sharing needs.
       { labelKey: "groups", href: ROUTES.GROUPS, icon: UsersRound },
     ],
-  },
-  {
-    labelKey: "admin",
-    domain: "admin",
-    adminOnly: true,
-    items: [{ labelKey: "adminOverview", href: ROUTES.ADMIN, icon: ShieldCheck, tabbed: true }],
   },
 ];
 
@@ -290,9 +320,10 @@ export function isActive(
 }
 
 /**
- * The nav entry a path belongs to, with its group's hue, and whether the path is
+ * The nav entry a path belongs to, with its section hue, and whether the path is
  * the section's own page rather than something below it. `null` outside every
- * section - settings, a profile page.
+ * section - settings, a profile page. The hue is the entry's own where it has
+ * one (every entry in More does), falling back to its group's.
  */
 export function navSectionFor(
   pathname: string,
@@ -302,7 +333,11 @@ export function navSectionFor(
       if (isActive(pathname, item.href)) {
         const path = stripLocale(pathname);
         const tab = item.tabbed && /^\/[^/]+$/.test(path.slice(item.href.length));
-        return { item, domain: group.domain, isRoot: path === item.href || Boolean(tab) };
+        return {
+          item,
+          domain: item.domain ?? group.domain,
+          isRoot: path === item.href || Boolean(tab),
+        };
       }
     }
   }
