@@ -300,14 +300,14 @@ describe("the detail page's way into Improve", () => {
     await screen.findByRole("tab", { name: "Build" });
     expect(screen.queryByRole("button", { name: "Improve" })).toBeNull();
     expect(screen.queryByTestId("suggestions")).toBeNull();
-    expect(screen.getByRole("button", { name: "Publish" })).toHaveClass("bg-action");
+    expect(screen.getByRole("button", { name: "Publish" })).toHaveClass("bg-brand");
   });
 
   it("offers one Improve entry in Evals", async () => {
     allowed = new Set([Perm.runsView]);
     page.params = "tab=evals";
     await mount();
-    expect(await screen.findByRole("button", { name: "Improve" })).not.toHaveClass("bg-action");
+    expect(await screen.findByRole("button", { name: "Improve" })).not.toHaveClass("bg-brand");
     expect(screen.getAllByRole("button", { name: "Improve" })).toHaveLength(1);
     expect(screen.getByTestId("suggestions")).toBeVisible();
   });
@@ -320,8 +320,8 @@ describe("the detail page's way into Improve", () => {
     const improve = await screen.findByRole("button", {
       name: "Needs attention: 7 answers rated down, 1 failed run. Improve this agent",
     });
-    expect(improve).not.toHaveClass("bg-action");
-    expect(screen.getByRole("button", { name: "Publish" })).toHaveClass("bg-action");
+    expect(improve).not.toHaveClass("bg-brand");
+    expect(screen.getByRole("button", { name: "Publish" })).toHaveClass("bg-brand");
   });
 
   it("is linked from the agent's knowledge gaps", async () => {

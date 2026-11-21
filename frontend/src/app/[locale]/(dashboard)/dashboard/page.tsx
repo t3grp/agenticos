@@ -53,7 +53,7 @@ import {
   resolvePreset,
   type Period,
 } from "@/lib/dashboard/period";
-import { BAND_GAP, HEADING_GAP } from "@/lib/dashboard/system";
+import { BAND_GAP, HEADING_GAP, ME_VIEW_WIDTH } from "@/lib/dashboard/system";
 import {
   applySectionsFilter,
   formatSectionsParam,
@@ -135,7 +135,7 @@ export default function DashboardPage() {
   // questions unnarrowed before the group arrived.
   if (isLoading || layoutLoading || (viewParam === "group" && groupsLoading)) {
     return (
-      <div className="space-y-4">
+      <div className={cn(personal && ME_VIEW_WIDTH, "space-y-4")}>
         {personal ? <MeHeader period={period} canRun={false} /> : <PageHeader title={t("title")} />}
         <div className="flex min-h-56 items-center justify-center">
           <div role="status" aria-busy="true" aria-label={t("states.loading")}>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
   // confirms there is nothing saved (a 404 is not an error).
   if (layoutLoadError) {
     return (
-      <div className="space-y-4">
+      <div className={cn(personal && ME_VIEW_WIDTH, "space-y-4")}>
         {personal ? <MeHeader period={period} canRun={false} /> : <PageHeader title={t("title")} />}
         <ErrorState
           title={t("layoutError.title")}
@@ -301,7 +301,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
       {can(Perm.agentsRun) ? (
-        <Button asChild className="gap-1.5">
+        <Button asChild size="lg" className="gap-1.5">
           <Link href={ROUTES.CHAT}>
             <MessageSquarePlus className="size-4" aria-hidden />
             {t("actions.newChat")}
@@ -315,7 +315,7 @@ export default function DashboardPage() {
   // to keep arranging, never a blank page that reads as broken.
   if (visible.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className={cn(view === "me" && ME_VIEW_WIDTH, "space-y-4")}>
         <PageHeader title={t("title")} description={t(`views.${view}.description`)} />
         <EmptyState
           icon={LayoutGrid}
@@ -449,8 +449,10 @@ export default function DashboardPage() {
     </div>
   );
 
+  // The "me" view reads in a centred narrow column; every other view keeps
+  // the wide grid, and a saved arrangement keeps its owner's widths.
   return (
-    <div>
+    <div className={view === "me" ? ME_VIEW_WIDTH : undefined}>
       {view === "me" ? (
         <MeHeader period={period} canRun={can(Perm.agentsRun)} actions={headerActions} />
       ) : (

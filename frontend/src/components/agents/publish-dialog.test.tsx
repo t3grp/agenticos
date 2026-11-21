@@ -164,8 +164,8 @@ it("offers testing as the primary action when the last draft test broke cases", 
       onConfirm={onConfirm}
     />,
   );
-  expect(screen.getByRole("button", { name: "Publish anyway" })).not.toHaveClass("bg-action");
-  expect(screen.getByRole("button", { name: "Test draft" })).toHaveClass("bg-action");
+  expect(screen.getByRole("button", { name: "Publish anyway" })).not.toHaveClass("bg-brand");
+  expect(screen.getByRole("button", { name: "Test draft" })).toHaveClass("bg-brand");
   await userEvent.click(screen.getByRole("button", { name: "Test draft" }));
   expect(onTest).toHaveBeenCalledOnce();
   expect(onConfirm).not.toHaveBeenCalled();

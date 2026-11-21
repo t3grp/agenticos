@@ -2035,7 +2035,7 @@ function ChatUI({
   const renderActions = (root: string | null, scopeReadOnly = false) => (
     <>
       {pendingApproval && onResumeDecisions && matchesAction(actionThreadRoots.approval, root) && (
-        <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
+        <div className="pointer-events-auto mx-auto w-full max-w-3xl min-w-0 px-4 pb-2 sm:px-6">
           <ToolApprovalDialog
             actionRequests={pendingApproval.actionRequests}
             reviewConfigs={pendingApproval.reviewConfigs}
@@ -2048,7 +2048,7 @@ function ChatUI({
       {pendingConnection &&
         onConnectionResponse &&
         matchesAction(actionThreadRoots.connection, root) && (
-          <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-3xl min-w-0 px-4 pb-2 sm:px-6">
             <ConnectAccountPrompt
               request={pendingConnection}
               disabled={
@@ -2062,7 +2062,7 @@ function ChatUI({
         pendingQuestions.length > 0 &&
         onAnswerQuestions &&
         matchesAction(actionThreadRoots.questions, root) && (
-          <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-3xl min-w-0 px-4 pb-2 sm:px-6">
             <QuestionPrompt
               questions={pendingQuestions}
               disabled={
@@ -2077,7 +2077,7 @@ function ChatUI({
         pendingSecretRequests.length > 0 &&
         onSubmitSecretRequest &&
         onDeclineSecretRequest && (
-          <div className="pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-3xl min-w-0 px-4 pb-2 sm:px-6">
             <SecretRequestCard
               requests={pendingSecretRequests}
               disabled={
@@ -2092,7 +2092,7 @@ function ChatUI({
   );
   const threadNotices =
     roomProjectId !== null && otherActions.length > 0 ? (
-      <div className="pointer-events-auto mx-auto max-w-4xl space-y-2 px-4 pb-2 text-xs sm:px-6">
+      <div className="pointer-events-auto mx-auto max-w-3xl space-y-2 px-4 pb-2 text-xs sm:px-6">
         {otherActions.map((root) => (
           <button
             key={root ?? "main"}
@@ -2194,7 +2194,7 @@ function ChatUI({
               data-transcript
               className={cn(
                 "w-full min-w-0",
-                compact ? "px-3 py-3 text-sm" : "mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-6",
+                compact ? "px-3 py-3 text-sm" : "mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6",
               )}
             >
               {/* Who else has this chat open, held at the top while the transcript scrolls:
@@ -2385,11 +2385,11 @@ function ChatUI({
                   continuingApproval ||
                   messages.some((message) => message.isStreaming)
                 }
-                className="pointer-events-auto mx-auto max-h-40 w-full max-w-4xl min-w-0 overflow-y-auto overscroll-contain px-4 pb-2 sm:px-6"
+                className="pointer-events-auto mx-auto max-h-40 w-full max-w-3xl min-w-0 overflow-y-auto overscroll-contain px-4 pb-2 sm:px-6"
               />
             )}
             {personalGaps.length > 0 && (roomProjectId === null || activeThreadRootId === null) && (
-              <div className="chat-composer-suggestions pointer-events-auto mx-auto w-full max-w-4xl min-w-0 px-4 pb-2 sm:px-6">
+              <div className="chat-composer-suggestions pointer-events-auto mx-auto w-full max-w-3xl min-w-0 px-4 pb-2 sm:px-6">
                 <ConnectServicesCard gaps={personalGaps} />
               </div>
             )}
@@ -2403,7 +2403,7 @@ function ChatUI({
                 // so no line of text is ever cut in half behind the words.
                 compact
                   ? "px-3 pt-1 pb-1.5"
-                  : "max-w-4xl bg-[linear-gradient(to_bottom,transparent_30%,var(--color-background)_62%)] px-4 pb-4 sm:px-6",
+                  : "max-w-3xl bg-[linear-gradient(to_bottom,transparent_30%,var(--color-background)_62%)] px-4 pb-4 sm:px-6",
               )}
             >
               <InterruptedNotice
@@ -2762,7 +2762,7 @@ function ChatUI({
           {showWorkspaceHome && !emptyState && (
             <div
               ref={setHomeHintsSlot}
-              className="chat-home-hints mx-auto min-h-40 w-full max-w-4xl min-w-0 shrink-0 px-4 pb-4 sm:px-6"
+              className="chat-home-hints mx-auto min-h-40 w-full max-w-3xl min-w-0 shrink-0 px-4 pb-4 sm:px-6"
             />
           )}
         </div>

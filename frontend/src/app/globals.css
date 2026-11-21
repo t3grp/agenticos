@@ -61,10 +61,12 @@
 
 /* --- Layer 1: the accent ramp. This is the retheme knob. ----------------- */
 :root {
-  /* Standard emphasis is neutral. Statuses, avatars and provider marks keep
-     meaningful color; custom looks may override the accent ramp. */
-  --brand-h: 265;
-  --brand-c: 0;
+  /* The accent is green (hue 155): the one vivid colour in the product, and
+     it means "do the thing" - the primary action, the active nav row, links
+     and the focus ring. Statuses, avatars and provider marks keep meaningful
+     color; custom looks may override the accent ramp. */
+  --brand-h: 155;
+  --brand-c: 0.13;
 
   --brand-50: oklch(97% calc(var(--brand-c) * 0.06) var(--brand-h));
   --brand-100: oklch(94% calc(var(--brand-c) * 0.12) var(--brand-h));
@@ -193,7 +195,10 @@
   --color-peek-well: oklch(95.5% 0.002 265);
   --color-peek-sheet: oklch(88.5% 0.004 265);
   --color-peek-paper: oklch(100% 0 0);
-  /* The main action carries full ink contrast; secondary actions stay quiet. */
+  /* The primary action is the green brand fill (`Button` default); `action`
+     stays as the token for the one dark neutral button where a view needs a
+     second strong action (the chat send face), and secondary actions stay
+     quiet. */
   --color-primary: oklch(21% 0.01 250);
   --color-primary-foreground: oklch(98.5% 0 0);
   --color-primary-hover: oklch(30% 0.01 250);
@@ -219,7 +224,12 @@
   --color-destructive: oklch(56% 0.17 25);
   --color-destructive-foreground: oklch(98.5% 0 0);
   /* Status tones. Off the accent hue on purpose - an accent that also means
-     "warning" means neither.
+     "warning" means neither. Success sits at hue 178 (teal), 23 degrees from
+     the green brand at 155, so "go" (brand) and "done" (success) are not the
+     same colour; the dataset and table greens moved with it, for the same
+     reason. Measured against white, the brand-700 fill clears 4.5:1 at 6.1:1
+     and the success fill at 4.1:1 - see `src/lib/brand-contrast.test.ts`,
+     which pins both.
 
      Themed, unlike the single values these replace: a dot and a pill are read
      as text here, and one tone cannot be 4:1 on white and 8:1 on graphite.
@@ -228,11 +238,11 @@
      point - a healthy row is the commonest row on the page and should not be
      the loudest. */
   --color-warning: oklch(64% 0.1 72);
-  --color-success: oklch(58% 0.1 155);
+  --color-success: oklch(58% 0.1 178);
   --color-border: #e1e1dc;
   --color-destructive-ink: #a52a34;
   --color-warning-ink: #795000;
-  --color-success-ink: #236846;
+  --color-success-ink: #1d6a58;
   /* The bright step, not the text step: a focused field ringed in the deep
      rust of `brand` read as a field in error. */
   --color-ring: var(--brand-500);
@@ -282,7 +292,7 @@
     var(--color-dataset-blue-foreground)
   );
   --color-dataset-green-foreground: oklch(
-    from var(--color-foreground) calc(l * 0.4 + 0.38) 0.15 155
+    from var(--color-foreground) calc(l * 0.4 + 0.38) 0.15 178
   );
   --color-dataset-green: color-mix(
     in oklab,
@@ -319,11 +329,11 @@
     var(--color-foreground) 70%,
     oklch(60% 0.11 230)
   );
-  --color-table-green: color-mix(in oklab, var(--color-card) 90%, oklch(60% 0.1 155));
+  --color-table-green: color-mix(in oklab, var(--color-card) 90%, oklch(60% 0.1 178));
   --color-table-green-foreground: color-mix(
     in oklab,
     var(--color-foreground) 70%,
-    oklch(60% 0.1 155)
+    oklch(60% 0.1 178)
   );
   --color-table-yellow: color-mix(in oklab, var(--color-card) 90%, oklch(68% 0.12 75));
   --color-table-yellow-foreground: color-mix(
@@ -359,8 +369,8 @@
     --color-peek-paper: oklch(29.5% 0.003 265);
     /* Accent roles, dark mapping. The fill lightens - a bright accent reads as
        forward on near-black - and its foreground flips to near-black ink,
-       which buys more contrast than white-on-blue reaches at any lightness.
-       Primary actions keep a neutral surface with light text. */
+       which buys more contrast than white-on-green reaches at any lightness.
+       The dark neutral `action` surface keeps light text. */
     --color-primary: oklch(96% 0.003 250);
     --color-primary-foreground: oklch(16% 0.01 250);
     --color-primary-hover: oklch(88% 0.004 250);
@@ -385,11 +395,11 @@
     --color-border: #3c3c40;
     --color-destructive-ink: #ffb4b4;
     --color-warning-ink: #f0cc84;
-    --color-success-ink: #99d5b1;
+    --color-success-ink: #9fd8c3;
     --color-chart: oklch(74% 0.14 277);
     --color-chart-fill: oklch(60% 0.16 277);
     --color-track: oklch(31% 0.035 277);
-    --color-success: oklch(74% 0.11 155);
+    --color-success: oklch(74% 0.11 178);
     --color-warning: oklch(78% 0.1 78);
     --series-1: oklch(66% 0.16 277);
     --series-2: oklch(70% 0.12 178);
@@ -436,11 +446,11 @@
   --color-border: #3c3c40;
   --color-destructive-ink: #ffb4b4;
   --color-warning-ink: #f0cc84;
-  --color-success-ink: #99d5b1;
+  --color-success-ink: #9fd8c3;
   --color-chart: oklch(74% 0.14 277);
   --color-chart-fill: oklch(60% 0.16 277);
   --color-track: oklch(31% 0.035 277);
-  --color-success: oklch(74% 0.11 155);
+  --color-success: oklch(74% 0.11 178);
   --color-warning: oklch(78% 0.1 78);
   --series-1: oklch(66% 0.16 277);
   --series-2: oklch(70% 0.12 178);
@@ -457,7 +467,7 @@
 .theme-light {
   --color-destructive-ink: #a52a34;
   --color-warning-ink: #795000;
-  --color-success-ink: #236846;
+  --color-success-ink: #1d6a58;
   --color-popover: #ffffff;
   --color-popover-foreground: #242428;
   --color-background: #fafaf8;
@@ -487,7 +497,7 @@
   --color-chart: oklch(55% 0.19 277);
   --color-chart-fill: oklch(66% 0.16 277);
   --color-track: oklch(95% 0.022 277);
-  --color-success: oklch(58% 0.1 155);
+  --color-success: oklch(58% 0.1 178);
   --color-warning: oklch(64% 0.1 72);
   --series-1: oklch(62% 0.18 277);
   --series-2: oklch(72% 0.13 178);
@@ -504,7 +514,7 @@
 .theme-dark {
   --color-destructive-ink: #ffb4b4;
   --color-warning-ink: #f0cc84;
-  --color-success-ink: #99d5b1;
+  --color-success-ink: #9fd8c3;
   --color-popover: #323236;
   --color-popover-foreground: #eeeef1;
   --color-sidebar: #27272a;
@@ -533,7 +543,7 @@
   --color-chart: oklch(74% 0.14 277);
   --color-chart-fill: oklch(60% 0.16 277);
   --color-track: oklch(31% 0.035 277);
-  --color-success: oklch(74% 0.11 155);
+  --color-success: oklch(74% 0.11 178);
   --color-warning: oklch(78% 0.1 78);
   --series-1: oklch(66% 0.16 277);
   --series-2: oklch(70% 0.12 178);
@@ -2168,15 +2178,15 @@ body .tour-spotlight {
    is `--color-background`, one value, everywhere. */
 
 /* =========================================================================
-   Section hues. The sidebar's five groups - Use (blue),
-   Build (violet), Knowledge (teal), Workspace (blue), Admin (rose) - each
-   carry a hue, and it appears in four places only:
-   the module tile beside a section page's title and an empty state's glyph,
-   and - through the `--family-*` aliases below - a workflow step's tile, label
-   and picker swatch, where the hue says which family a step belongs to. Small,
-   and nowhere a colour would compete with the content. So colour says where
-   you are or what sort of thing this is, consistently, and never decorates
-   for its own sake. Buttons stay ink and links stay brand.
+   Section hues. The workflow step families borrow these - a step's tile,
+   label and picker swatch, where the hue says which family a step belongs
+   to - and the domain classes bind them for that canvas. They no longer
+   paint page chrome: no page, band or nav element colours itself by
+   section (the `useDomainClass` hook that fed the old page tile is gone),
+   so the sidebar's five groups and the page headers stay neutral and the
+   green accent is the only colour that says where you are. The tokens stay
+   defined because the workflow canvas still reads them; removing them
+   would be a bigger diff for no visual change.
 
    Each hue is three steps: `ink` for a glyph (3:1 against its own subtle
    fill and the card in both themes), `subtle` for a fill, `line` for an

@@ -9,10 +9,13 @@ const buttonVariants = cva(
   `${CONTROL_FOCUS} ${CONTROL_DISABLED} pressable-control inline-flex touch:min-h-11 touch:min-w-11 touch-manipulation items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors duration-[var(--duration-fast)] disabled:pointer-events-none aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[loading=true]:opacity-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0`,
   {
     variants: {
-      // Primary actions carry full contrast; repeated row actions use softer fills.
+      // The one primary action per view: the green brand fill, a pill.
+      // Secondary, outline and ghost actions stay neutral; destructive keeps
+      // its own tone so "delete" can never read as "confirm". The chat send
+      // face keeps the dark neutral `action` surface (see globals.css).
       variant: {
         default:
-          "border border-foreground/10 bg-action text-action-foreground hover:border-foreground/15 hover:bg-action-hover active:bg-action-active",
+          "bg-brand text-brand-foreground hover:bg-brand-hover active:bg-brand-active rounded-full",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80",
         outline: ["border-2", SECONDARY_CONTROL],

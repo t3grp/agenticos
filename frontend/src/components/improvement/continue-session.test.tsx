@@ -247,7 +247,7 @@ it("makes improving again the primary action for a mixed result", () => {
       onStarted={vi.fn()}
     />,
   );
-  expect(screen.getByRole("button", { name: "Improve again" })).toHaveClass("bg-action");
+  expect(screen.getByRole("button", { name: "Improve again" })).toHaveClass("bg-brand");
 });
 it("still tries again after two rounds with no change, while attempts are left", () => {
   const first = { ...SESSION.iterations[0]!, verdict: "no_change" as const };
