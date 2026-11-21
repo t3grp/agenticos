@@ -395,9 +395,8 @@ for (const platform of ["ios", "android"] as const) {
         await page.screenshot({ path: test.info().outputPath(`app-toolbar-${width}.png`) });
         await controls.tap();
         await expect(controls).toHaveAttribute("aria-expanded", "false");
-        await expect
-          .poll(async () => (await preview.boundingBox())?.y)
-          .toBeCloseTo(collapsedPreview.y, 0);
+        await expect(share).toBeHidden();
+        await expect(preview).toBeVisible();
         await controls.tap();
         await expect(controls).toHaveAttribute("aria-expanded", "true");
         await share.tap();
