@@ -5116,7 +5116,7 @@
     "whatsNewTitle": "What’s new in {version}",
     "whatsNewDescription": "Recent changes in the version you are using.",
     "whatsNewDone": "Got it",
-    "monitoring": "Monitoring",
+    "more": "More",
     "backgroundWork": "Background work",
     "developerAccess": "API & MCP",
     "agentMessages": "Agent messages",
