@@ -2107,6 +2107,14 @@ A privileged **bulk read** is recorded too. Each CSV export writes a `runs.expor
 who took the whole table off the screen is a question that is cheap to answer now
 and impossible to reconstruct later.
 
+Each tool call a run executes writes an `agent.tool_executed` entry — the
+agent, the tool, and the approval it rode on, with its run's cost — so the
+activity feed can say in plain language what each agent did. Arguments and
+results are not recorded there: a tool argument may hold a secret, and the
+transcript remains the record of what was called with what. The console
+renders each entry as a sentence, with the actor's and the agent's names
+resolved on read.
+
 The write shares the acting request's transaction, so it fails closed: an entry
 that cannot be recorded rolls back the action it describes rather than letting a
 privileged mutation land unaudited.

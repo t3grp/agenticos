@@ -1,5 +1,5 @@
 ---
-source_sha: "6bf91cb53877"
+source_sha: "bc4c3e37fe29"
 ---
 
 # Governance { #governance }
@@ -2383,6 +2383,15 @@ CSV-Export schreibt einen Eintrag `runs.export`, `approvals.export` oder
 `spend.export`, der das Fenster und die Zeilenzahl nennt — wer die ganze Tabelle
 vom Bildschirm genommen hat, ist eine Frage, die jetzt billig zu beantworten und
 später unmöglich zu rekonstruieren ist.
+
+Jeder Tool-Aufruf, den ein Run ausführt, schreibt einen Eintrag
+`agent.tool_executed` — den Agent, das Tool und die Genehmigung, auf der er
+beruht, samt den Kosten des Runs — damit der Activity feed in einfacher
+Sprache sagen kann, was jeder Agent getan hat. Argumente und Ergebnisse
+werden dort nicht festgehalten: Ein Tool-Argument kann ein Geheimnis
+enthalten, und das Transkript bleibt der Nachweis dafür, was womit
+aufgerufen wurde. Die Konsole stellt jeden Eintrag als einen Satz dar, wobei
+die Namen des Handelnden und des Agents beim Lesen aufgelöst werden.
 
 Der Schreibvorgang teilt sich die Transaktion der handelnden Anfrage, also
 scheitert er geschlossen: Ein Eintrag, der sich nicht festhalten lässt, rollt die

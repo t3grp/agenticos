@@ -1,5 +1,5 @@
 ---
-source_sha: "248db60fab7b"
+source_sha: "a782aacdbacf"
 ---
 
 # Die Konsole { #the-console }
@@ -1094,6 +1094,16 @@ Evals** oder **System-Agents** ein. Er beginnt bei jeder Herkunft, damit ein
 Link aus einem Entwurf oder einer Sitzung zu ihrem Run auf einer Zeile landet,
 die die Liste zeigt.
 
+### Activity feed { #activity-feed }
+
+**Activity feed** liest dieselbe Spur in einfachen Sätzen, für Inhaber von
+`audit:read`: was jeder Agent getan hat, wer es genehmigt hat und was sein
+Run gekostet hat. Die Suche schränkt die Sätze ein, der Agent-Filter schränkt
+auf einen Agent ein und der Tages-Filter auf einen Tag; die Liste zeigt
+fünfzig Zeilen pro Seite, und der Export nimmt den gewählten Tag oder die
+letzten sieben Tage. Eine Genehmigungsentscheidung, die einen Tool-Aufruf
+autorisiert hat, erscheint in der Zeile dieses Aufrufs statt als eigene Zeile.
+
 ## Wofür jeder Bereich da ist { #what-each-area-is-for }
 
 **Overview** (Dashboard), **Chat** und **Inbox** stehen oben in der Seitenleiste.
@@ -1102,7 +1112,7 @@ danach folgen Projects.
 
 **Knowledge** ist standardmäßig geöffnet und enthält Knowledge bases, Tables,
 Skills, Context und Documents. Die manuelle Wahl zwischen geöffnet und geschlossen
-wird gespeichert. **Monitoring** enthält Activity und Background work und ist
+wird gespeichert. **Monitoring** enthält Activity, Activity feed und Background work und ist
 standardmäßig eingeklappt.
 
 **Connections** (MCP servers, Channels, Remote agents, Vault, Sandboxes) und

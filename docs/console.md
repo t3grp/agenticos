@@ -987,6 +987,16 @@ The **Source** filter narrows the list to **Conversations**, **Improve and
 evals** or **System agents**. It starts on every source, so a link from a draft
 or a session to its run lands on a row the list shows.
 
+### Activity feed { #activity-feed }
+
+**Activity feed** reads the same trail in plain sentences, to a holder of
+`audit:read`: what each agent did, who approved it, and what its run cost.
+Search narrows the sentences, the agent filter narrows to one agent, and the
+day filter to one day; the list pages fifty rows at a time, and export takes
+the selected day, or the last seven days. An approval decision that
+authorised a tool call is shown on that call's row rather than as a row of
+its own.
+
 ## What each area is for
 
 **Overview** (Dashboard), **Chat** and **Inbox** lead the sidebar. **Build & manage**
@@ -994,7 +1004,7 @@ keeps Agents, Workflows, Routines and Apps visible; Projects follow.
 
 **Knowledge** opens by default and holds Knowledge bases, Tables, Skills, Context
 and Documents. Its manually chosen open or closed state is remembered.
-**Monitoring** groups Activity and Background work and starts collapsed.
+**Monitoring** groups Activity, Activity feed, and Background work and starts collapsed.
 
 **Connections** (MCP servers, Channels, Remote agents, Vault, Sandboxes) and
 **Organization** (Organizations, Groups) remain collapsible and remember your
