@@ -65,9 +65,14 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const admin = isAppAdmin(user);
-  const visibleGroups = NAV_GROUPS.filter((group) => !group.adminOnly || admin).map((group) => ({
+  const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => navItemVisible(item, can, hiddenNavigationItems, isLoaded)),
+    // Admin is an entry inside More now, not a group of its own: hide it from
+    // non-admins here, where the other visibility rules already run.
+    items: group.items.filter(
+      (item) =>
+        (!item.adminOnly || admin) && navItemVisible(item, can, hiddenNavigationItems, isLoaded),
+    ),
   }));
   const visibleHrefs = new Set(
     visibleGroups.flatMap((group) => group.items.map((item) => item.href)),

@@ -20,11 +20,17 @@ export function RoleNavigationChoices({
 }) {
   const t = useTranslations("pages.orgs.navigation");
   const nav = useTranslations("nav");
+  // Admin is an entry inside More now, not a group of its own: a role cannot
+  // configure it, because it shows by the app-admin flag, not by role.
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.adminOnly),
+  }));
 
   return (
     <div className="min-w-0 space-y-4" aria-label={t("controlsTitle")}>
       <div className="grid gap-4 sm:grid-cols-2">
-        {NAV_GROUPS.filter((group) => !group.adminOnly).map((group) => (
+        {groups.map((group) => (
           <fieldset
             key={group.labelKey ?? "main"}
             className="min-w-0 space-y-3 rounded-xl border p-4"

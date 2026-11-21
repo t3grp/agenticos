@@ -6,7 +6,7 @@ import { Perm } from "@/types/permissions";
 import type { Permission } from "@/types/permissions";
 
 describe("navSectionFor", () => {
-  it("names the entry and its group's hue, and says when the path is the section's own page", () => {
+  it("names the entry and its own hue, and says when the path is the section's own page", () => {
     expect(navSectionFor("/agents")).toMatchObject({ domain: "build", isRoot: true });
     expect(navSectionFor("/agents")?.item.href).toBe("/agents");
     expect(navSectionFor("/rag")).toMatchObject({ domain: "knowledge", isRoot: true });
@@ -14,6 +14,10 @@ describe("navSectionFor", () => {
     expect(navSectionFor("/dashboard")).toMatchObject({ domain: "use", isRoot: true });
     expect(navSectionFor("/agent-messages")).toMatchObject({ domain: "use", isRoot: true });
     expect(navSectionFor("/agent-messages")?.item.href).toBe("/agent-messages");
+    // The hue travels with the entry, not the group, now that More holds
+    // entries from every section.
+    expect(navSectionFor("/workflows")).toMatchObject({ domain: "build", isRoot: true });
+    expect(navSectionFor("/tables")).toMatchObject({ domain: "knowledge", isRoot: true });
   });
 
   it("places a sub-page in its section without calling it the section's page", () => {
@@ -42,9 +46,77 @@ describe("navSectionFor", () => {
   });
 });
 
+describe("the sidebar's shape", () => {
+  it("is five daily entries, Apps, Projects, then one flat More list", () => {
+    expect(NAV_GROUPS.map((group) => group.labelKey)).toEqual([
+      null,
+      "apps",
+      "projects",
+      "more",
+      "organization",
+    ]);
+    expect(NAV_GROUPS[0]!.items.map((item) => item.labelKey)).toEqual([
+      "dashboard",
+      "chat",
+      "inbox",
+    ]);
+  });
+
+  it("lists More in one flat order, with no sub-headings to add", () => {
+    const more = NAV_GROUPS.find((group) => group.labelKey === "more");
+    expect(more?.items.map((item) => item.labelKey)).toEqual([
+      "agentMessages",
+      "agents",
+      "workflows",
+      "routines",
+      "datasets",
+      "knowledgeBases",
+      "tables",
+      "skills",
+      "context",
+      "documents",
+      "activity",
+      "failureLearning",
+      "backgroundWork",
+      "connectors",
+      "adminOverview",
+    ]);
+  });
+
+  it("keeps each More entry's own hue, so the title still knows its section", () => {
+    const more = NAV_GROUPS.find((group) => group.labelKey === "more")!;
+    const domains = Object.fromEntries(more.items.map((item) => [item.labelKey, item.domain]));
+    expect(domains).toEqual({
+      agentMessages: "use",
+      agents: "build",
+      workflows: "build",
+      routines: "build",
+      datasets: "build",
+      knowledgeBases: "knowledge",
+      tables: "knowledge",
+      skills: "knowledge",
+      context: "knowledge",
+      documents: "knowledge",
+      activity: "build",
+      failureLearning: "build",
+      backgroundWork: "build",
+      connectors: "workspace",
+      adminOverview: "admin",
+    });
+  });
+
+  it("keeps Admin last in More, separated and admin-only", () => {
+    const more = NAV_GROUPS.find((group) => group.labelKey === "more")!;
+    const admin = more.items.at(-1)!;
+    expect(admin.labelKey).toBe("adminOverview");
+    expect(admin.adminOnly).toBe(true);
+    expect(more.items.slice(0, -1).some((item) => item.adminOnly)).toBe(false);
+  });
+});
+
 describe("the Connectors nav entry", () => {
   const connectors = () => {
-    const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
+    const group = NAV_GROUPS.find((g) => g.labelKey === "more");
     return group?.items.find((item) => item.labelKey === "connectors");
   };
   const holding =
@@ -52,15 +124,15 @@ describe("the Connectors nav entry", () => {
     (permission: Permission) =>
       granted.includes(permission);
 
-  it("is the one entry in the connections group, opening to any of the three areas", () => {
-    const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
-    expect(group?.items).toEqual([
+  it("is the one entry in More opening to any of the four areas", () => {
+    const group = NAV_GROUPS.find((g) => g.labelKey === "more");
+    expect(group?.items).toContainEqual(
       expect.objectContaining({
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
-        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView],
+        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView, Perm.networksView],
       }),
-    ]);
+    );
   });
 
   it("shows to a role that can see only the vault", () => {
@@ -75,7 +147,11 @@ describe("the Connectors nav entry", () => {
     expect(navItemVisible(connectors()!, holding(Perm.agentsView))).toBe(true);
   });
 
-  it("stays hidden from a role with none of the three", () => {
+  it("shows to a role that can see only networks", () => {
+    expect(navItemVisible(connectors()!, holding(Perm.networksView))).toBe(true);
+  });
+
+  it("stays hidden from a role with none of the four", () => {
     expect(navItemVisible(connectors()!, holding(Perm.workflowsView))).toBe(false);
   });
 });

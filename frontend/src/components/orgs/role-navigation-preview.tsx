@@ -13,12 +13,12 @@ export function RoleNavigationPreview({
 }) {
   const t = useTranslations("pages.orgs.navigation");
   const nav = useTranslations("nav");
-  const groups = NAV_GROUPS.filter((group) => !group.adminOnly)
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => navItemVisible(item, can, hiddenItems)),
-    }))
-    .filter((group) => group.items.length > 0);
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    // Admin is an entry inside More now, not a group of its own: a role cannot
+    // configure it, because it shows by the app-admin flag, not by role.
+    items: group.items.filter((item) => !item.adminOnly && navItemVisible(item, can, hiddenItems)),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <aside aria-label={t("previewTitle")} className="bg-sidebar h-fit rounded-xl border p-4">
