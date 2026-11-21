@@ -114,11 +114,18 @@ export function parseSubject(value: string): GrantSubject {
  * The body that shares with `subject` at `level` - one subject key, never both.
  *
  * "Data included" carries the id of the text for this kind of subject: it is only
- * ever sent from the confirmation that shows that text.
+ * ever sent from the confirmation that shows that text. `expiresAt` is left
+ * out when it is `undefined`, so the server applies its default; `null` asks
+ * for a share with no expiry.
  */
-export function shareInput(subject: GrantSubject, level: GrantLevel): ShareInput {
+export function shareInput(
+  subject: GrantSubject,
+  level: GrantLevel,
+  expiresAt?: string | null,
+): ShareInput {
   const confirmed = level === "edit_data" ? { confirmed: EDIT_DATA_WORDING[subject.kind] } : {};
+  const expiry = expiresAt === undefined ? {} : { expires_at: expiresAt };
   return subject.kind === "group"
-    ? { subject_group_id: subject.id, level, ...confirmed }
-    : { subject_user_id: subject.id, level, ...confirmed };
+    ? { subject_group_id: subject.id, level, ...confirmed, ...expiry }
+    : { subject_user_id: subject.id, level, ...confirmed, ...expiry };
 }

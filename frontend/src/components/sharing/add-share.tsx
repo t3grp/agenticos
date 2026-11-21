@@ -52,12 +52,22 @@ export function AddShare({
   const t = useTranslations("sharing");
   const [subject, setSubject] = useState("");
   const [level, setLevel] = useState<GrantLevel>("read");
+  const [expiry, setExpiry] = useState<"default" | "30" | "365" | "never">("default");
   const [asking, setAsking] = useState(false);
   const empty = members.length === 0 && groups.length === 0;
 
+  /** The expiry the share is sent with: nothing for the server's default. */
+  function expiryValue(): string | null | undefined {
+    if (expiry === "never") return null;
+    if (expiry === "default") return undefined;
+    const days = expiry === "30" ? 30 : 365;
+    return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  }
+
   function send() {
-    onShare(shareInput(parseSubject(subject), level));
+    onShare(shareInput(parseSubject(subject), level, expiryValue()));
     setSubject("");
+    setExpiry("default");
   }
 
   // The names the confirmation says, as the picker shows them, by the picker's own values.
@@ -98,6 +108,20 @@ export function AddShare({
                 {t(option.words)}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="w-40 space-y-2">
+        <Label htmlFor="share-expiry">{t("expires")}</Label>
+        <Select value={expiry} onValueChange={(value) => setExpiry(value as typeof expiry)}>
+          <SelectTrigger id="share-expiry">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">{t("expiryDefault")}</SelectItem>
+            <SelectItem value="30">{t("expiry30Days")}</SelectItem>
+            <SelectItem value="365">{t("expiry1Year")}</SelectItem>
+            <SelectItem value="never">{t("expiryNever")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
