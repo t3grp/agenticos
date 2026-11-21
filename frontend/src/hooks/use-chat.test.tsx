@@ -524,7 +524,7 @@ describe("manual conversation compaction", () => {
 
     await waitFor(() => expect(result.current.compactionAvailable).toBe(true));
     sent.mockReturnValueOnce(false);
-    expect(result.current.compactConversation()).toBe(false);
+    act(() => expect(result.current.compactConversation()).toBe(false));
     expect(result.current.compactionStatus).toBe("failed");
     expect(result.current.compactionReady).toBe(true);
   });
