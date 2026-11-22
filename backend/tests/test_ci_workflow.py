@@ -95,16 +95,12 @@ class TestPullRequestsAndMergeQueue:
         """A merge-queue, tag or dispatch run emits no scope outputs, so it runs every suite."""
         assert workflow["jobs"]["changes"]["outputs"]["full"] == "true"
 
-    def test_a_push_classifies_against_the_last_successful_t3_run(
-        self, workflow: dict[str, Any]
-    ) -> None:
-        """With cancel-in-progress, `github.event.before` may be a commit never tested."""
-        step = next(
-            step for step in workflow["jobs"]["changes"]["steps"] if step.get("id") == "pushed"
-        )
-        assert "status=success" in step["run"]
-        assert "github.event.before" not in step["run"]
-        assert "merge-base --is-ancestor" in step["run"]
+    def test_no_step_classifies_a_push_to_t3(self, workflow: dict[str, Any]) -> None:
+        """Only the merge queue lands on `t3`, and it runs every suite."""
+        steps = workflow["jobs"]["changes"]["steps"]
+        assert "pushed" not in {step.get("id") for step in steps}
+        outputs = workflow["jobs"]["changes"]["outputs"]
+        assert not any("steps.pushed" in str(value) for value in outputs.values())
 
 
 class TestWorkerBackedJourneys:
