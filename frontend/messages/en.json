@@ -3105,26 +3105,57 @@
     "actions": {
       "newChat": "New chat"
     },
-    "bands": {
-      "label": "What would you like to do?",
-      "ask": {
-        "description": "Your conversations, ready to continue.",
-        "go": "Open chat"
+    "commandCenter": {
+      "title": "Command center",
+      "strip": {
+        "approvalsLabel": "approvals pending",
+        "loading": "Loading status",
+        "runsLabel": "runs",
+        "spentLabel": "spent",
+        "waitingLabel": "waiting on you"
       },
-      "do": {
-        "description": "What needs doing now, in one place.",
-        "go": "See what's next"
+      "actions": {
+        "buildApp": "Build an app",
+        "connectService": "Connect a service",
+        "startWorkflow": "Start a workflow"
       },
-      "track": {
-        "description": "What your agents did, and what it cost.",
-        "go": "See activity",
-        "approvals": "{count, plural, =1 {1 approval} other {# approvals}}",
-        "messages": "{count, plural, =1 {1 message} other {# messages}}",
-        "notifications": "{count, plural, =1 {1 notification} other {# notifications}}",
-        "tasks": "{count, plural, =1 {1 background task} other {# background tasks}}",
-        "runs": "{count, plural, =1 {1 run} other {# runs}}",
+      "needs": {
+        "title": "Needs you",
+        "description": "Decisions only you can make.",
+        "go": "Open inbox",
+        "approvalsTitle": "Approvals",
+        "approvals": "{count, plural, =0 {Nothing waiting for a yes or no} =1 {1 pending} other {# pending}}",
+        "messagesTitle": "Inbox",
+        "messages": "{count, plural, =0 {Nothing unread} =1 {1 unread message} other {# unread messages}}",
+        "tasksTitle": "Background tasks",
+        "tasks": "{count, plural, =0 {Nothing running} =1 {1 still running} other {# still running}}"
+      },
+      "activity": {
+        "title": "Latest activity",
+        "description": "What your agents did, in plain words.",
+        "go": "See all activity"
+      },
+      "apps": {
+        "title": "Your apps",
+        "description": "Apps your agents built for you.",
+        "go": "All apps",
+        "empty": {
+          "title": "No apps run yet",
+          "description": "Ask an agent to build one, or run one you already have."
+        }
+      },
+      "spend": {
+        "title": "Spend",
+        "description": "What the work cost.",
+        "go": "See spending",
+        "perRun": "About {amount} a run",
+        "perRunSub": "Cost per run this period",
         "finished": "{share} finished",
-        "waiting": "{count, plural, =1 {1 thing waiting on you} other {# things waiting on you}}"
+        "runs": "{count, plural, =1 {1 run} other {# runs}}",
+        "empty": {
+          "title": "No runs yet",
+          "description": "Runs and spend will show here once your agents have run."
+        }
       }
     },
     "activeSessions": "Active sessions",
@@ -3165,13 +3196,14 @@
     "revokeSession": "Revoke session",
     "revokeSession2": "Revoke session",
     "sections": {
+      "activity": "Latest activity",
+      "apps": "Your apps",
       "attention": "Needs attention",
-      "ask": "Ask",
       "deployment": "Deployment",
-      "do": "Do",
+      "needs": "Needs you",
       "people": "People & quality",
       "sandboxes": "Where agents run code",
-      "track": "Track",
+      "spend": "Spend",
       "usage": "Usage & cost",
       "workspace": "Your workspace"
     },
@@ -4161,8 +4193,7 @@
     "views": {
       "label": "Dashboard view",
       "me": {
-        "label": "Me",
-        "description": "Your agents, your conversations and what is waiting on you."
+        "label": "Me"
       },
       "org": {
         "label": "Organization",
@@ -4177,24 +4208,6 @@
         "label": "Deployment",
         "description": "The whole deployment - every organization, the services and answer quality."
       }
-    },
-    "greeting": {
-      "morning": "Good morning",
-      "afternoon": "Good afternoon",
-      "evening": "Good evening",
-      "morningNamed": "Good morning, {name}",
-      "afternoonNamed": "Good afternoon, {name}",
-      "eveningNamed": "Good evening, {name}",
-      "ran": "Your agents ran <b>{runs, plural, =0 {nothing} =1 {once} other {# times}}</b> in this period.",
-      "nothingWaiting": "Nothing is waiting on you.",
-      "waitingOn": "Waiting on you: <b>{items}</b>.",
-      "waiting": {
-        "approvals": "{count, plural, =1 {1 call} other {# calls}}",
-        "review": "{count, plural, =1 {1 answer to review} other {# answers to review}}",
-        "suites": "{count, plural, =1 {1 failing suite} other {# failing suites}}",
-        "suggestions": "{count, plural, =1 {1 suggestion} other {# suggestions}}"
-      },
-      "summary": "Your agents ran <b>{runs, plural, =0 {nothing} =1 {once} other {# times}}</b> in this period. {waiting, plural, =0 {Nothing is waiting on you.} =1 {<b>One call</b> is waiting on you.} other {<b># calls</b> are waiting on you.}}"
     },
     "discover": {
       "dismiss": "Hide the tip {title}",

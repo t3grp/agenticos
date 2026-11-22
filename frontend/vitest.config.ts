@@ -106,7 +106,6 @@ export default defineConfig({
         "src/components/dashboard/widgets/my-summary.tsx",
         "src/components/dashboard/widgets/approvals.tsx",
         "src/components/dashboard/agent-face.tsx",
-        "src/components/dashboard/me-header.tsx",
         "src/components/dashboard/widgets/artifacts.tsx",
         "src/components/dashboard/widgets/datasets.tsx",
         "src/components/dashboard/widgets/review-queue.tsx",
@@ -129,8 +128,10 @@ export default defineConfig({
         // The dashboard's start checklist (#2072).
         "src/components/dashboard/start-checklist.tsx",
         "src/components/dashboard/me-opening.tsx",
-        // Round 3: the person's own dashboard as three one-click band cards.
-        "src/components/dashboard/me-bands/*.tsx",
+        // Round 4: the person's own dashboard as a command center - a status
+        // strip, controls as buttons and four live panels. Replaces the
+        // Round 3 band cards.
+        "src/components/dashboard/me-command/*.tsx",
         // What the platform can do that is easy to miss, and a quiet group said once.
         "src/components/dashboard/discover-tips.tsx",
         "src/components/dashboard/quiet-group.tsx",

@@ -12,8 +12,8 @@ import { useStart } from "@/hooks/use-start";
 import { DashboardEditor } from "@/components/dashboard/dashboard-editor";
 import { DashboardPresetMenu } from "@/components/dashboard/dashboard-preset-menu";
 import { FilterRow } from "@/components/dashboard/filter-row";
-import { MeHeader } from "@/components/dashboard/me-header";
-import { MeBands } from "@/components/dashboard/me-bands/me-bands";
+import { CommandCenter } from "@/components/dashboard/me-command/command-center";
+import { CommandHeader } from "@/components/dashboard/me-command/command-header";
 import { MeOpening } from "@/components/dashboard/me-opening";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DiscoverTips } from "@/components/dashboard/discover-tips";
@@ -132,7 +132,7 @@ export default function DashboardPage() {
   if (isLoading || layoutLoading || (viewParam === "group" && groupsLoading)) {
     return (
       <div className="space-y-4">
-        {personal ? <MeHeader period={period} canRun={false} /> : <PageHeader title={t("title")} />}
+        {personal ? <CommandHeader /> : <PageHeader title={t("title")} />}
         <div className="flex min-h-56 items-center justify-center">
           <div role="status" aria-busy="true" aria-label={t("states.loading")}>
             <Spinner className="text-muted-foreground size-5" aria-hidden />
@@ -149,7 +149,7 @@ export default function DashboardPage() {
   if (layoutLoadError) {
     return (
       <div className="space-y-4">
-        {personal ? <MeHeader period={period} canRun={false} /> : <PageHeader title={t("title")} />}
+        {personal ? <CommandHeader /> : <PageHeader title={t("title")} />}
         <ErrorState
           title={t("layoutError.title")}
           description={t("layoutError.description")}
@@ -172,8 +172,8 @@ export default function DashboardPage() {
     if (option === "deployment") return isAppAdmin;
     return true;
   });
-  // Everybody opens on their own view - the greeting, their activity and the
-  // tips - and switches to the organization's from there.
+  // Everybody opens on their own view - the command center, their activity
+  // and the tips - and switches to the organization's from there.
   const fallbackView: DashboardView = "me";
   const view: DashboardView = available.includes(viewParam as DashboardView)
     ? (viewParam as DashboardView)
@@ -430,7 +430,7 @@ export default function DashboardPage() {
   return (
     <div>
       {view === "me" ? (
-        <MeHeader period={period} canRun={can(Perm.agentsRun)} actions={headerActions} />
+        <CommandHeader actions={headerActions} />
       ) : (
         <PageHeader
           className="mb-4"
@@ -465,11 +465,12 @@ export default function DashboardPage() {
           control strip above keep the 24px every other page uses. */}
       {view === "me" ? (
         <div className={cn(BAND_GAP, "mt-6")}>
-          {/* One card per band, each a single click to its destination, each
-              carrying its own preview rows - the page shows everything at a
-              glance, and the usage hero's figures live in the Track card
-              now, not in a card of their own above the bands. */}
-          <MeBands sections={sections} period={period} can={can} isAppAdmin={isAppAdmin} />
+          {/* A command center, not a questionnaire: the status strip first,
+              the controls as buttons, then the four panels - what needs the
+              reader, what happened, their apps, what it cost. The heading
+              above says the page's name, not a greeting; the strip says the
+              figures, once. */}
+          <CommandCenter sections={sections} period={period} can={can} isAppAdmin={isAppAdmin} />
           {activeOrgId && <MeOpening orgId={activeOrgId} pending={openingLoading} />}
           <DiscoverTips />
         </div>

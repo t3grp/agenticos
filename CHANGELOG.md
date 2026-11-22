@@ -21,7 +21,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Added
 
-- **Your dashboard as three cards, one click each.** Ask, Do and Track are single links - to chat, the inbox and Activity - and each carries its own preview rows, so the page shows everything at a glance: recent conversations or most-run agents in Ask (the agents shared with you, for a viewer), the briefing with the agents that need attention behind it in Do, and what waits on you beside the period's runs, spend and finished share in Track. The usage hero above the bands is gone, its figures folded into Track. No time-saved figure: no endpoint counts it.
+- **Your dashboard as a command center, not a questionnaire.** The home opens on a status strip - what waits on you, approvals pending, runs, spend - then the controls as buttons (New chat, Build an app, Start a workflow, Connect a service), then four live panels: Needs you, Latest activity, Your apps and Spend, each linking through to its destination. No "What would you like to do?", no Ask / Do / Track cards; the greeting and summary sentence are gone, the strip says the figures once. The briefing and the agents-needing-attention list leave the home (both still live in the inbox and the organization's view). No time-saved figure: no endpoint counts it, so Spend shows the cost per run, the finished share and the busiest agent instead.
 
 ### Upgrading
 
