@@ -98,8 +98,9 @@ class ResourceGrantUpsert(BaseSchema):
     expires_at: AwareDatetime | None = Field(
         default=None,
         description=(
-            "When the share stops working. Member shares may be permanent; group shares "
-            "default to 90 days when omitted."
+            "When the share stops working. Omitted: a new grant lasts 90 days, "
+            "and changing a grant's level keeps the expiry it already has. "
+            "Null is a share with no expiry; a date is that expiry."
         ),
     )
 
@@ -111,6 +112,17 @@ class ResourceGrantUpsert(BaseSchema):
         return self
 
 
+class ResourceGrantBulkUpsert(BaseSchema):
+    """Share a resource with several members or groups in one call.
+
+    Each item follows `ResourceGrantUpsert` — including its expiry rule, so an
+    omitted expiry is 90 days for a new grant and keeps what a grant already
+    has. The whole call applies or nothing does: the first refusal aborts it.
+    """
+
+    grants: list[ResourceGrantUpsert] = Field(min_length=1, max_length=100)
+
+
 class SharingDeferred(BaseSchema):
     """The answer to a share that a resource type's guard turned into a request, and did
     not apply."""
@@ -120,6 +132,17 @@ class SharingDeferred(BaseSchema):
     waiting_for: str | None = Field(
         default=None, description="Who decides it, by name; null when it has nobody left to"
     )
+
+
+class ResourceGrantBulkResult(BaseSchema):
+    """What a bulk share did, split by outcome.
+
+    A grant the guard deferred is not in `granted`: it is a request waiting
+    for a decision, listed in `requested` with who decides it.
+    """
+
+    granted: list[ResourceGrantRead]
+    requested: list[SharingDeferred]
 
 
 class ResourceSharing(BaseSchema):

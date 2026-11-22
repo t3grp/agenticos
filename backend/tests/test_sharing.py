@@ -214,6 +214,123 @@ class TestShare:
             )
 
     @pytest.mark.anyio
+    async def test_a_member_share_without_an_expiry_defaults_to_ninety_days_for_a_new_grant(self):
+        """The console default matches the group default; only the route asks for it."""
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+
+        with (
+            patch("app.services.sharing.member_repo.get", new=AsyncMock(return_value=MagicMock())),
+            patch(
+                "app.services.sharing.resource_grant_repo.list_for_resource",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()),
+        ):
+            before = datetime.now(UTC)
+            await SharingService(_db()).share(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                subject_user_id=uuid.uuid4(),
+                level=GrantLevel.EDIT,
+                apply_default_expiry=True,
+            )
+
+        expires_at = upsert.call_args.kwargs["expires_at"]
+        assert timedelta(days=89) < expires_at - before < timedelta(days=91)
+        assert upsert.call_args.kwargs["clear_expiry"] is False
+
+    @pytest.mark.anyio
+    async def test_a_level_change_without_an_expiry_keeps_the_expiry_the_grant_has(self):
+        """A re-share that only changes the level must not silently reset the clock."""
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+        subject = uuid.uuid4()
+        kept = datetime.now(UTC) + timedelta(days=30)
+        existing = MagicMock(subject_user_id=subject, subject_group_id=None, expires_at=kept)
+
+        with (
+            patch("app.services.sharing.member_repo.get", new=AsyncMock(return_value=MagicMock())),
+            patch(
+                "app.services.sharing.resource_grant_repo.list_for_resource",
+                new=AsyncMock(return_value=[existing]),
+            ),
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()),
+        ):
+            await SharingService(_db()).share(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                subject_user_id=subject,
+                level=GrantLevel.USE,
+                apply_default_expiry=True,
+            )
+
+        assert upsert.call_args.kwargs["expires_at"] is None
+        assert upsert.call_args.kwargs["clear_expiry"] is False
+
+    @pytest.mark.anyio
+    async def test_an_explicit_no_expiry_clears_the_expiry_a_grant_had(self):
+        """Null is a choice, not an omission: it ends the expiry rather than keeping it."""
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+        subject = uuid.uuid4()
+
+        with (
+            patch("app.services.sharing.member_repo.get", new=AsyncMock(return_value=MagicMock())),
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()),
+        ):
+            await SharingService(_db()).share(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                subject_user_id=subject,
+                level=GrantLevel.USE,
+                clear_expiry=True,
+            )
+
+        assert upsert.call_args.kwargs["expires_at"] is None
+        assert upsert.call_args.kwargs["clear_expiry"] is True
+
+    @pytest.mark.anyio
+    async def test_a_share_without_the_default_flag_stays_permanent(self):
+        """Internal callers never asked for the console default, so they keep it."""
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+
+        with (
+            patch("app.services.sharing.member_repo.get", new=AsyncMock(return_value=MagicMock())),
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()),
+        ):
+            await SharingService(_db()).share(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                subject_user_id=uuid.uuid4(),
+                level=GrantLevel.EDIT,
+            )
+
+        assert upsert.call_args.kwargs["expires_at"] is None
+        assert upsert.call_args.kwargs["clear_expiry"] is False
+
+    @pytest.mark.anyio
     async def test_member_cannot_share_someone_elses_resource(self):
         ctx = _ctx(OrgRoleName.MEMBER)
         resource = _resource(ctx.organization_id, owner_user_id=uuid.uuid4())
@@ -322,6 +439,66 @@ class TestShareWithGroup:
         lookup.assert_not_awaited()
         upsert.assert_not_awaited()
         audit.assert_not_awaited()
+
+    @pytest.mark.anyio
+    async def test_an_explicit_no_expiry_for_a_group_is_refused(self):
+        """A group grant always has an expiry; null is a choice the service cannot honor."""
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+
+        with (
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert_for_group", new=AsyncMock()
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()) as audit,
+            pytest.raises(BadRequestError, match="always expires"),
+        ):
+            await SharingService(_db()).share_with_group(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                group_id=uuid.uuid4(),
+                level=GrantLevel.USE,
+                no_expiry=True,
+            )
+        upsert.assert_not_awaited()
+        audit.assert_not_awaited()
+
+    @pytest.mark.anyio
+    async def test_a_group_level_change_without_an_expiry_keeps_the_expiry_it_has(self):
+        """Re-sharing a group replaces the stored expiry, so the default hands it back in."""
+        ctx = _ctx(OrgRoleName.OWNER)
+        resource = _resource(ctx.organization_id, owner_user_id=ctx.user_id)
+        group = MagicMock(id=uuid.uuid4())
+        kept = datetime.now(UTC) + timedelta(days=30)
+        existing = MagicMock(subject_user_id=None, subject_group_id=group.id, expires_at=kept)
+
+        with (
+            patch(
+                "app.services.sharing.group_repo.get", new=AsyncMock(return_value=group)
+            ) as found,
+            patch(
+                "app.services.sharing.resource_grant_repo.list_for_resource",
+                new=AsyncMock(return_value=[existing]),
+            ),
+            patch(
+                "app.services.sharing.resource_grant_repo.upsert_for_group",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as upsert,
+            patch("app.services.sharing.record_audit", new=AsyncMock()),
+            patch.object(SharingService, "_tell_the_group", new=AsyncMock()),
+        ):
+            await SharingService(_db()).share_with_group(
+                ctx,
+                resource,
+                resource_type=COLLECTION,
+                group_id=group.id,
+                level=GrantLevel.USE,
+                apply_default_expiry=True,
+            )
+
+        assert found.call_args.kwargs["organization_id"] == ctx.organization_id
+        assert upsert.call_args.kwargs["expires_at"] == kept
 
     @pytest.mark.anyio
     @pytest.mark.security

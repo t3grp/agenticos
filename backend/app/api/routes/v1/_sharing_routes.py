@@ -34,6 +34,8 @@ from app.api.deps import Auth, DBSession, SharingSvc
 from app.core.permissions import AuthContext
 from app.db.models.resource_grant import GrantLevel, Visibility
 from app.schemas.resource_grant import (
+    ResourceGrantBulkResult,
+    ResourceGrantBulkUpsert,
     ResourceGrantRead,
     ResourceGrantUpsert,
     ResourceSharing,
@@ -63,7 +65,7 @@ def build_sharing_router(
     resource_type: ResourceType,
     load: ResourceLoader,
 ) -> APIRouter:
-    """Five sharing endpoints for one resource type.
+    """Six sharing endpoints for one resource type.
 
     The path parameter is `resource_id` for every type rather than `agent_id`,
     `kb_id` and so on: FastAPI binds path parameters by name, so per-type names
@@ -88,6 +90,49 @@ def build_sharing_router(
             emails=state.emails,
             group_names=state.group_names,
         )
+
+    async def _grant_one(
+        service: SharingService, ctx: Any, resource: Any, data: ResourceGrantUpsert
+    ) -> ResourceGrantRead | Deferred:
+        """One grant, from one upsert item — the single and the bulk share agree.
+
+        Omitted expiry and explicit null are different answers, and only the
+        caller can tell them apart: `model_fields_set` is what distinguishes
+        them. Omitted asks the service for its default — 90 days for a new
+        grant, the expiry it already has for a level change; null asks for no
+        expiry, which a group share refuses.
+        """
+        no_expiry = "expires_at" in data.model_fields_set and data.expires_at is None
+        if data.subject_group_id is not None:
+            grant = await service.share_with_group(
+                ctx,
+                resource,
+                resource_type=resource_type,
+                group_id=data.subject_group_id,
+                level=GrantLevel(data.level),
+                confirmed=data.confirmed,
+                expires_at=data.expires_at,
+                no_expiry=no_expiry,
+                apply_default_expiry=True,
+            )
+        else:
+            # `ResourceGrantUpsert` guarantees exactly one subject, so with no
+            # group named there is a person.
+            assert data.subject_user_id is not None
+            grant = await service.share(
+                ctx,
+                resource,
+                resource_type=resource_type,
+                subject_user_id=data.subject_user_id,
+                level=GrantLevel(data.level),
+                confirmed=data.confirmed,
+                expires_at=data.expires_at,
+                clear_expiry=no_expiry,
+                apply_default_expiry=True,
+            )
+        if isinstance(grant, Deferred):
+            return grant
+        return ResourceGrantRead.of(grant, emails={}, group_names={})
 
     @router.get("/{resource_id}/sharing", response_model=ResourceSharing)
     async def get_sharing(
@@ -116,34 +161,47 @@ def build_sharing_router(
         Answers 202 with the request filed, and applies nothing, for a resource type whose
         guard defers widening to someone else (a page that reads live data, when the
         caller may edit it but is not the one who decides who sees its data).
+
+        An omitted expiry is 90 days for a new grant and keeps the expiry a
+        grant already has; an explicit null is a share with no expiry, which a
+        group share refuses.
         """
         resource = await _resolve(db, resource_id, ctx)
-        if data.subject_group_id is not None:
-            grant = await service.share_with_group(
-                ctx,
-                resource,
-                resource_type=resource_type,
-                group_id=data.subject_group_id,
-                level=GrantLevel(data.level),
-                confirmed=data.confirmed,
-                expires_at=data.expires_at,
-            )
-        else:
-            # `ResourceGrantUpsert` guarantees exactly one subject, so with no
-            # group named there is a person.
-            assert data.subject_user_id is not None
-            grant = await service.share(
-                ctx,
-                resource,
-                resource_type=resource_type,
-                subject_user_id=data.subject_user_id,
-                level=GrantLevel(data.level),
-                confirmed=data.confirmed,
-                expires_at=data.expires_at,
-            )
+        grant = await _grant_one(service, ctx, resource, data)
         if isinstance(grant, Deferred):
             return _requested(grant)
-        return ResourceGrantRead.of(grant, emails={}, group_names={})
+        return grant
+
+    @router.put(
+        "/{resource_id}/sharing/grants/bulk",
+        response_model=ResourceGrantBulkResult,
+    )
+    async def share_bulk(
+        resource_id: UUID,
+        data: ResourceGrantBulkUpsert,
+        db: DBSession,
+        service: SharingSvc,
+        ctx: Auth,
+    ) -> Any:
+        """Share with several members or groups in one call.
+
+        Each item follows the single share — including its expiry rule. The
+        whole call applies or nothing does: the first refusal aborts it. A
+        grant the guard defers is not applied; it is listed in `requested`
+        with who decides it, and the rest still land.
+        """
+        resource = await _resolve(db, resource_id, ctx)
+        granted: list[ResourceGrantRead] = []
+        requested: list[SharingDeferred] = []
+        for item in data.grants:
+            outcome = await _grant_one(service, ctx, resource, item)
+            if isinstance(outcome, Deferred):
+                requested.append(
+                    SharingDeferred(request_id=outcome.request_id, waiting_for=outcome.waiting_for)
+                )
+            else:
+                granted.append(outcome)
+        return ResourceGrantBulkResult(granted=granted, requested=requested)
 
     @router.delete(
         "/{resource_id}/sharing/grants/{subject_user_id}",

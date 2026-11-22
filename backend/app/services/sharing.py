@@ -116,8 +116,9 @@ _CONSOLE_PATHS = {
     "project": "/projects/{id}",
     "table": "/tables/{id}",
     "workflow": "/workflows/{id}",
+    "network_connection": "/connectors/devices",
 }
-_GROUP_SHARE_LIFETIME = timedelta(days=90)
+_SHARE_LIFETIME = timedelta(days=90)
 """Where the console opens a shared resource of each kind."""
 
 
@@ -220,11 +221,19 @@ class SharingService:
         level: GrantLevel,
         confirmed: str | None = None,
         expires_at: datetime | None = None,
+        clear_expiry: bool = False,
+        apply_default_expiry: bool = False,
     ) -> ResourceGrant | Deferred:
         """Grant a member access to one resource.
 
         A resource type's guard may file a request instead of granting, and the
         :class:`Deferred` it returns is passed on with nothing applied.
+
+        An omitted `expires_at` is permanent unless `apply_default_expiry`
+        asks for the console default: a new grant then lasts 90 days, and a
+        grant that already has a future expiry keeps it — a level change must
+        not silently reset the clock. `clear_expiry` is the explicit choice of
+        no expiry, which an omitted expiry can never say.
 
         Raises:
             BadRequestError: If the subject is not a member of this
@@ -233,6 +242,10 @@ class SharingService:
         """
         await self._require_edit(ctx, resource, resource_type)
         _require_level_for(resource_type, level)
+        if apply_default_expiry and expires_at is None and not clear_expiry:
+            expires_at = await self._default_member_expiry(
+                ctx, resource, resource_type=resource_type, subject_user_id=subject_user_id
+            )
         _refuse_past_expiry(expires_at)
 
         membership = await member_repo.get(
@@ -261,6 +274,7 @@ class SharingService:
             level=level,
             created_by_user_id=ctx.user_id,
             expires_at=expires_at,
+            clear_expiry=clear_expiry,
         )
         details = {
             "subject_user_id": str(subject_user_id),
@@ -279,6 +293,63 @@ class SharingService:
         )
         return grant
 
+    async def _default_member_expiry(
+        self,
+        ctx: AuthContext,
+        resource: OwnedResource,
+        *,
+        resource_type: ResourceType,
+        subject_user_id: UUID,
+    ) -> datetime | None:
+        """The expiry an omitted expiry resolves to for a member grant.
+
+        A grant that already has a future expiry keeps it, and one that is
+        already permanent stays permanent — only a new grant, or one whose
+        expiry has already passed, starts a fresh 90 days. `None` here means
+        "keep what the row has", which the upsert understands.
+        """
+        grants = await resource_grant_repo.list_for_resource(
+            self.db,
+            organization_id=ctx.organization_id,
+            resource_type=resource_type.key,
+            resource_id=resource.id,
+        )
+        existing = next((g for g in grants if g.subject_user_id == subject_user_id), None)
+        if existing is None:
+            return datetime.now(UTC) + _SHARE_LIFETIME
+        if existing.expires_at is None or existing.expires_at > datetime.now(UTC):
+            return None
+        return datetime.now(UTC) + _SHARE_LIFETIME
+
+    async def _default_group_expiry(
+        self,
+        ctx: AuthContext,
+        resource: OwnedResource,
+        *,
+        resource_type: ResourceType,
+        group_id: UUID,
+    ) -> datetime:
+        """The expiry an omitted expiry resolves to for a group grant.
+
+        A group grant always has an expiry, so keeping what the row has means
+        passing its date back in; only a new grant, or one whose expiry has
+        already passed, starts a fresh 90 days.
+        """
+        grants = await resource_grant_repo.list_for_resource(
+            self.db,
+            organization_id=ctx.organization_id,
+            resource_type=resource_type.key,
+            resource_id=resource.id,
+        )
+        existing = next((g for g in grants if g.subject_group_id == group_id), None)
+        if (
+            existing is not None
+            and existing.expires_at is not None
+            and existing.expires_at > datetime.now(UTC)
+        ):
+            return existing.expires_at
+        return datetime.now(UTC) + _SHARE_LIFETIME
+
     async def share_with_group(
         self,
         ctx: AuthContext,
@@ -289,6 +360,8 @@ class SharingService:
         level: GrantLevel,
         confirmed: str | None = None,
         expires_at: datetime | None = None,
+        no_expiry: bool = False,
+        apply_default_expiry: bool = False,
     ) -> ResourceGrant | Deferred:
         """Grant every member of a group access to one resource.
 
@@ -298,6 +371,11 @@ class SharingService:
         people joining later reach the resource and people leaving stop - there
         is no per-person row to keep in step.
 
+        An omitted `expires_at` lasts 90 days, matching the group default the
+        console applies. `no_expiry` is refused: a group grant always has an
+        expiry — the group is dynamic, and a share with no end would outlive
+        every review of who is in it.
+
         Raises:
             BadRequestError: If the group is not one of this organization's. The
                 same refusal as sharing with an outsider, for the same reason: a
@@ -305,8 +383,17 @@ class SharingService:
         """
         await self._require_edit(ctx, resource, resource_type)
         _require_level_for(resource_type, level)
+        if no_expiry:
+            raise BadRequestError(
+                message="A group share always expires; choose an expiry",
+                details={"subject_group_id": str(group_id)},
+            )
+        if apply_default_expiry and expires_at is None:
+            expires_at = await self._default_group_expiry(
+                ctx, resource, resource_type=resource_type, group_id=group_id
+            )
         if expires_at is None:
-            expires_at = datetime.now(UTC) + _GROUP_SHARE_LIFETIME
+            expires_at = datetime.now(UTC) + _SHARE_LIFETIME
         _refuse_past_expiry(expires_at)
 
         group = await group_repo.get(

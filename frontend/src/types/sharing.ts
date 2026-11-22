@@ -43,6 +43,8 @@ interface GrantBase {
   resource_type: string;
   resource_id: string;
   level: GrantLevel;
+  /** When the share stops working; null is a share with no expiry. */
+  expires_at: string | null;
 }
 
 /** A grant to one member. */
@@ -90,4 +92,10 @@ export type ShareInput = (
 ) & {
   /** Granting `edit_data`: the id of the text the person confirmed; see `EDIT_DATA_WORDING`. */
   confirmed?: string;
+  /**
+   * When the share stops working. Omitted asks the server for its default —
+   * 90 days for a new grant, the expiry a grant already has for a level
+   * change; null is a share with no expiry.
+   */
+  expires_at?: string | null;
 };

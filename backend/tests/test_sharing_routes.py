@@ -1,13 +1,14 @@
 """Tests for the generated sharing routes.
 
-The five sharing endpoints exist once per resource type - agents, collections,
+The six sharing endpoints exist once per resource type - agents, collections,
 skills, context files, vault secrets, artifacts, datasets - generated from one definition.
 What is worth testing is the generation itself: that each type really gets all
-five, that they are wired to the right resource type, and that a row from
+six, that they are wired to the right resource type, and that a row from
 another organization is refused before the sharing service is ever reached.
 """
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -41,8 +42,9 @@ from app.api.routes.v1.sharing import (
 from app.core.exceptions import NotFoundError
 from app.core.permissions import AuthContext, OrgRoleName, Perm
 from app.db.models.resource_grant import Visibility
+from app.schemas.resource_grant import ResourceGrantBulkUpsert, ResourceGrantUpsert
 from app.services.access import AGENT, COLLECTION, SECRET, SKILL, resolve_access
-from app.services.sharing import SharingState
+from app.services.sharing import Deferred, SharingState
 
 _RESOLVE = "app.api.routes.v1._sharing_loaders.resolve_access"
 
@@ -95,6 +97,7 @@ class TestGeneratedRoutes:
         assert methods == {
             ("/{resource_id}/sharing", "GET"),
             ("/{resource_id}/sharing/grants", "PUT"),
+            ("/{resource_id}/sharing/grants/bulk", "PUT"),
             ("/{resource_id}/sharing/grants/{subject_user_id}", "DELETE"),
             ("/{resource_id}/sharing/group-grants/{group_id}", "DELETE"),
             ("/{resource_id}/sharing/visibility", "PATCH"),
@@ -428,6 +431,147 @@ class TestHandlerBehaviour:
         result = await handler(resource.id, MagicMock(visibility="org"), db, service, ctx)
 
         assert result.visibility == "org"
+
+
+class TestShareExpiryAndBulk:
+    """Omitted expiry and explicit null are different answers, and bulk shares them all."""
+
+    def _grant(self, resource, subject, group_id=None):
+        return MagicMock(
+            id=uuid.uuid4(),
+            subject_user_id=subject,
+            subject_group_id=group_id,
+            resource_type=AGENT.key,
+            resource_id=resource.id,
+            level="edit",
+            expires_at=None,
+        )
+
+    @pytest.mark.anyio
+    async def test_an_omitted_expiry_asks_the_service_for_its_default(self):
+        ctx = MagicMock(organization_id=uuid.uuid4())
+        subject = uuid.uuid4()
+        resource = MagicMock(id=uuid.uuid4(), organization_id=ctx.organization_id)
+        service = MagicMock(share=AsyncMock(return_value=self._grant(resource, subject)))
+        db = MagicMock(get=AsyncMock(return_value=resource))
+
+        handler = TestHandlerBehaviour._handler(
+            agent_sharing_router, "/{resource_id}/sharing/grants", "PUT"
+        )
+        result = await handler(
+            resource.id,
+            ResourceGrantUpsert(subject_user_id=subject, level="edit"),
+            db,
+            service,
+            ctx,
+        )
+
+        assert result.subject_user_id == subject
+        assert service.share.call_args.kwargs["expires_at"] is None
+        assert service.share.call_args.kwargs["clear_expiry"] is False
+        assert service.share.call_args.kwargs["apply_default_expiry"] is True
+
+    @pytest.mark.anyio
+    async def test_an_explicit_null_asks_for_no_expiry(self):
+        ctx = MagicMock(organization_id=uuid.uuid4())
+        subject = uuid.uuid4()
+        resource = MagicMock(id=uuid.uuid4(), organization_id=ctx.organization_id)
+        service = MagicMock(share=AsyncMock(return_value=self._grant(resource, subject)))
+        db = MagicMock(get=AsyncMock(return_value=resource))
+
+        handler = TestHandlerBehaviour._handler(
+            agent_sharing_router, "/{resource_id}/sharing/grants", "PUT"
+        )
+        await handler(
+            resource.id,
+            ResourceGrantUpsert(subject_user_id=subject, level="edit", expires_at=None),
+            db,
+            service,
+            ctx,
+        )
+
+        assert service.share.call_args.kwargs["expires_at"] is None
+        assert service.share.call_args.kwargs["clear_expiry"] is True
+        assert service.share.call_args.kwargs["apply_default_expiry"] is True
+
+    @pytest.mark.anyio
+    async def test_an_explicit_expiry_passes_through_unchanged(self):
+        ctx = MagicMock(organization_id=uuid.uuid4())
+        subject = uuid.uuid4()
+        resource = MagicMock(id=uuid.uuid4(), organization_id=ctx.organization_id)
+        service = MagicMock(share=AsyncMock(return_value=self._grant(resource, subject)))
+        db = MagicMock(get=AsyncMock(return_value=resource))
+        chosen = datetime.now(UTC) + timedelta(days=7)
+
+        handler = TestHandlerBehaviour._handler(
+            agent_sharing_router, "/{resource_id}/sharing/grants", "PUT"
+        )
+        await handler(
+            resource.id,
+            ResourceGrantUpsert(subject_user_id=subject, level="edit", expires_at=chosen),
+            db,
+            service,
+            ctx,
+        )
+
+        assert service.share.call_args.kwargs["expires_at"] == chosen
+        assert service.share.call_args.kwargs["clear_expiry"] is False
+
+    @pytest.mark.anyio
+    async def test_an_explicit_null_for_a_group_is_marked_no_expiry(self):
+        ctx = MagicMock(organization_id=uuid.uuid4())
+        group_id = uuid.uuid4()
+        resource = MagicMock(id=uuid.uuid4(), organization_id=ctx.organization_id)
+        service = MagicMock(
+            share_with_group=AsyncMock(return_value=self._grant(resource, None, group_id)),
+            share=AsyncMock(),
+        )
+        db = MagicMock(get=AsyncMock(return_value=resource))
+
+        handler = TestHandlerBehaviour._handler(
+            agent_sharing_router, "/{resource_id}/sharing/grants", "PUT"
+        )
+        await handler(
+            resource.id,
+            ResourceGrantUpsert(subject_group_id=group_id, level="use", expires_at=None),
+            db,
+            service,
+            ctx,
+        )
+
+        assert service.share_with_group.call_args.kwargs["no_expiry"] is True
+        assert service.share_with_group.call_args.kwargs["apply_default_expiry"] is True
+        service.share.assert_not_awaited()
+
+    @pytest.mark.anyio
+    async def test_bulk_splits_granted_from_requested(self):
+        ctx = MagicMock(organization_id=uuid.uuid4())
+        first, second = uuid.uuid4(), uuid.uuid4()
+        resource = MagicMock(id=uuid.uuid4(), organization_id=ctx.organization_id)
+        deferred = Deferred(request_id=uuid.uuid4(), waiting_for="Ada Lovelace")
+        service = MagicMock(share=AsyncMock(side_effect=[self._grant(resource, first), deferred]))
+        db = MagicMock(get=AsyncMock(return_value=resource))
+
+        handler = TestHandlerBehaviour._handler(
+            agent_sharing_router, "/{resource_id}/sharing/grants/bulk", "PUT"
+        )
+        result = await handler(
+            resource.id,
+            ResourceGrantBulkUpsert(
+                grants=[
+                    ResourceGrantUpsert(subject_user_id=first, level="read"),
+                    ResourceGrantUpsert(subject_user_id=second, level="read"),
+                ]
+            ),
+            db,
+            service,
+            ctx,
+        )
+
+        assert [g.subject_user_id for g in result.granted] == [first]
+        assert [r.request_id for r in result.requested] == [deferred.request_id]
+        assert result.requested[0].waiting_for == "Ada Lovelace"
+        assert service.share.await_count == 2
 
 
 class TestRendering:
