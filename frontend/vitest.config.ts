@@ -129,6 +129,8 @@ export default defineConfig({
         // The dashboard's start checklist (#2072).
         "src/components/dashboard/start-checklist.tsx",
         "src/components/dashboard/me-opening.tsx",
+        // Round 3: the person's own dashboard as three one-click band cards.
+        "src/components/dashboard/me-bands/*.tsx",
         // What the platform can do that is easy to miss, and a quiet group said once.
         "src/components/dashboard/discover-tips.tsx",
         "src/components/dashboard/quiet-group.tsx",

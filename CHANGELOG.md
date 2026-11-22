@@ -19,6 +19,10 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- **Your dashboard as three cards, one click each.** Ask, Do and Track are single links - to chat, the inbox and Activity - and each carries its own preview rows, so the page shows everything at a glance: recent conversations or most-run agents in Ask (the agents shared with you, for a viewer), the briefing with the agents that need attention behind it in Do, and what waits on you beside the period's runs, spend and finished share in Track. The usage hero above the bands is gone, its figures folded into Track. No time-saved figure: no endpoint counts it.
+
 ### Upgrading
 
 - Tailscale enrollment adds migration `0347_network_connections` after `0346_merge_t3_v1850`, a connection vault table and the `network` background-worker pool. The feature remains disabled unless `TAILSCALE_ENABLED=true`; custom worker pool lists must include `network` and retain a `system` worker for cleanup. Downgrade refuses retained network connections or jobs. See the [deployment and cleanup contract](docs/design/tailscale-enrollment-implementation.md).

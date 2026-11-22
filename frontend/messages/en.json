@@ -3105,6 +3105,28 @@
     "actions": {
       "newChat": "New chat"
     },
+    "bands": {
+      "label": "What would you like to do?",
+      "ask": {
+        "description": "Your conversations, ready to continue.",
+        "go": "Open chat"
+      },
+      "do": {
+        "description": "What needs doing now, in one place.",
+        "go": "See what's next"
+      },
+      "track": {
+        "description": "What your agents did, and what it cost.",
+        "go": "See activity",
+        "approvals": "{count, plural, =1 {1 approval} other {# approvals}}",
+        "messages": "{count, plural, =1 {1 message} other {# messages}}",
+        "notifications": "{count, plural, =1 {1 notification} other {# notifications}}",
+        "tasks": "{count, plural, =1 {1 background task} other {# background tasks}}",
+        "runs": "{count, plural, =1 {1 run} other {# runs}}",
+        "finished": "{share} finished",
+        "waiting": "{count, plural, =1 {1 thing waiting on you} other {# things waiting on you}}"
+      }
+    },
     "activeSessions": "Active sessions",
     "allOtherSessionsRevoked": "All other sessions revoked",
     "breadcrumb": "Breadcrumb",

@@ -6,10 +6,10 @@ import { useTranslations } from "next-intl";
 import { StartChecklist } from "./start-checklist";
 
 /**
- * What opens the Do band on a person's own dashboard: the start checklist,
- * for a person still setting up. Once it is done or closed it renders
- * nothing, and the Do band stands on its own. The briefing used to sit beside
- * it here; it is a widget now, in the Do band below.
+ * What opens below the bands on a person's own dashboard: the start
+ * checklist, for a person still setting up. Once it is done or closed it
+ * renders nothing, and the bands stand on their own. The briefing used to
+ * sit beside it here; it is a preview row now, in the Do card below.
  */
 export function MeOpening({ orgId, pending = false }: { orgId: string | null; pending?: boolean }) {
   const states = useTranslations("dashboard.states");

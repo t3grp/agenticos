@@ -13,6 +13,7 @@ import { DashboardEditor } from "@/components/dashboard/dashboard-editor";
 import { DashboardPresetMenu } from "@/components/dashboard/dashboard-preset-menu";
 import { FilterRow } from "@/components/dashboard/filter-row";
 import { MeHeader } from "@/components/dashboard/me-header";
+import { MeBands } from "@/components/dashboard/me-bands/me-bands";
 import { MeOpening } from "@/components/dashboard/me-opening";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DiscoverTips } from "@/components/dashboard/discover-tips";
@@ -20,7 +21,6 @@ import { QuietGroup } from "@/components/dashboard/quiet-group";
 import { StartChecklist } from "@/components/dashboard/start-checklist";
 import { ViewSwitcher } from "@/components/dashboard/view-switcher";
 import { WIDGET_COMPONENTS } from "@/components/dashboard/widgets";
-import { MySummaryWidget } from "@/components/dashboard/widgets/my-summary";
 import { Button } from "@/components/ui";
 import { EmptyState, ErrorState } from "@/components/states";
 import { useDashboardLayout, useDashboardPresets, useGroups, usePermissions } from "@/hooks";
@@ -327,20 +327,6 @@ export default function DashboardPage() {
   const selectedSections = parseSectionsParam(sectionsParam, visible);
   const sections = applySectionsFilter(visible, selectedSections);
 
-  const personalSummary =
-    view === "me"
-      ? sections
-          .flatMap((section) => section.entries)
-          .find((entry) => entry.widget === "my-summary")
-      : undefined;
-
-  const bandSections = personalSummary
-    ? sections.map((section) => ({
-        ...section,
-        entries: section.entries.filter((entry) => entry.widget !== "my-summary"),
-      }))
-    : sections;
-
   const renderSection = (section: SectionDef) => {
     // A custom divider carries the person's own caption (`title`) and an
     // accent; the curated defaults carry a translated `titleKey` and no
@@ -439,14 +425,7 @@ export default function DashboardPage() {
     );
   };
 
-  const bands = <div className={cn(BAND_GAP, "mt-6")}>{bandSections.map(renderSection)}</div>;
-
-  // The person's own bands, by id: Ask, then the start checklist opening Do,
-  // then Do and Track. A section a filter hid, or a gate emptied, is simply
-  // absent - the order is the layout's, not a second list to keep in step.
-  const askSection = bandSections.find((section) => section.id === "ask");
-  const doSection = bandSections.find((section) => section.id === "do");
-  const trackSection = bandSections.find((section) => section.id === "track");
+  const bands = <div className={cn(BAND_GAP, "mt-6")}>{sections.map(renderSection)}</div>;
 
   return (
     <div>
@@ -481,30 +460,17 @@ export default function DashboardPage() {
           own view or the organization's - not beside a group's or the host's
           numbers. */}
       {activeOrgId && view === "org" && <StartChecklist orgId={activeOrgId} />}
-      {personalSummary && (
-        <div className="mt-6 min-h-64 lg:h-[18.5rem]">
-          <MySummaryWidget
-            title={t(personalSummary.titleKey ?? "widgets.my-summary.title")}
-            hint={t("widgets.my-summary.description")}
-            period={
-              personalSummary.options?.period
-                ? resolvePreset(personalSummary.options.period)
-                : period
-            }
-            options={personalSummary.options}
-            seeAll={WIDGETS["my-summary"].seeAll}
-          />
-        </div>
-      )}
       {/* The bands own a rhythm of their own, four times the gap between two
           cards, which is what makes a band read as a band. The header and the
           control strip above keep the 24px every other page uses. */}
       {view === "me" ? (
         <div className={cn(BAND_GAP, "mt-6")}>
-          {askSection ? renderSection(askSection) : null}
+          {/* One card per band, each a single click to its destination, each
+              carrying its own preview rows - the page shows everything at a
+              glance, and the usage hero's figures live in the Track card
+              now, not in a card of their own above the bands. */}
+          <MeBands sections={sections} period={period} can={can} isAppAdmin={isAppAdmin} />
           {activeOrgId && <MeOpening orgId={activeOrgId} pending={openingLoading} />}
-          {doSection ? renderSection(doSection) : null}
-          {trackSection ? renderSection(trackSection) : null}
           <DiscoverTips />
         </div>
       ) : view === "group" && group !== null ? (

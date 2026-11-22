@@ -316,11 +316,16 @@ const DEFAULT_SECTIONS: SectionDef[] = [
  * Ask is where a question starts and where work left off - the recent threads
  * to continue, the agents to ask, the projects and drawings behind them. Do is
  * what needs doing now - the briefing and what the org's attention card
- * flags; the start checklist, for a person still setting up, opens the Do band
- * on the page itself. Track is everything waiting on the reader, fanned into
- * one card; the plain-language activity feed slots in beside it as a second
- * card in the section when it lands. The usage hero still opens the page,
- * above the bands, as the greeting's own summary.
+ * flags; the start checklist, for a person still setting up, opens below the
+ * bands on the page itself. Track is everything waiting on the reader, fanned
+ * into one card, with the period's figures beside it.
+ *
+ * The page renders one link card per section, not the widget grid: the
+ * entries below are the section's gate set and the data its card previews -
+ * a section survives when any entry's gate passes, and the card fans in the
+ * same reads its widgets made. The usage hero's figures live in the Track
+ * card's rows, so `my-summary` stays in Ask only as part of that gate set.
+ * The widgets themselves stay in the catalog, for the organization's view.
  */
 const ME_SECTIONS: SectionDef[] = [
   {

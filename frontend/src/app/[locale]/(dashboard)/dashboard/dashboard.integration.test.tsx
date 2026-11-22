@@ -632,8 +632,10 @@ describe("the viewer's dashboard", () => {
       expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull(),
     );
 
-    // The my-agents card under its overridden title.
-    expect(screen.getByText("dashboard.widgets.my-agents.sharedTitle")).toBeInTheDocument();
+    // The shared shelf, now the Ask card's rows: the agents shared with the
+    // viewer, each tagged shared, and the card's one click goes to chat.
+    expect(await screen.findByText("Support triage")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.widgets.my-agents.shared")).toBeInTheDocument();
     await waitFor(() => expect(callsTo("/agents").length).toBeGreaterThan(0));
 
     // Not merely unrendered - never fetched.
@@ -1144,7 +1146,6 @@ it("keeps one loading state until onboarding and briefing can mount in their fin
   render(<DashboardPage />, { wrapper });
   await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith("/me/onboarding"));
   expect(document.querySelectorAll('[role="status"][aria-busy="true"]')).toHaveLength(1);
-  expect(screen.queryByRole("heading", { name: "dashboard.widgets.suggestions.title" })).toBeNull();
   pending.resolve({
     organization_id: org,
     organization_name: "Demo",
@@ -1160,27 +1161,26 @@ it("keeps one loading state until onboarding and briefing can mount in their fin
     has_result: true,
     has_activity: true,
   });
-  expect(
-    await screen.findByRole("heading", { name: "dashboard.widgets.suggestions.title" }),
-  ).toBeInTheDocument();
+  // The briefing is a card now, so its final shape is the Do card's empty
+  // note, not a widget heading - it appears once the page settles.
+  expect(await screen.findByText("dashboard.widgets.suggestions.empty.title")).toBeInTheDocument();
   expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull();
 });
 
-it("shows personal metrics once, before the briefing", async () => {
+it("shows personal metrics once, in the Track card", async () => {
   render(<DashboardPage />, { wrapper });
-  const briefing = await screen.findByRole("heading", {
-    name: "dashboard.widgets.suggestions.title",
-  });
-  const summary = screen.getByRole("heading", { name: "dashboard.widgets.my-summary.title" });
-  expect(
-    screen.getAllByRole("heading", { name: "dashboard.widgets.my-summary.title" }),
-  ).toHaveLength(1);
-  expect(summary.compareDocumentPosition(briefing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // The usage hero is gone; its figures are rows in the Track card, and
+  // nowhere else - one runs row, one finished row, no hero heading. The
+  // rows arrive with their queries, so the wait is on a row, not the card.
+  await screen.findByText("dashboard.bands.track.runs");
+  expect(screen.getAllByText("dashboard.bands.track.runs")).toHaveLength(1);
+  expect(screen.getAllByText("dashboard.bands.track.finished")).toHaveLength(1);
+  expect(screen.queryByText("dashboard.widgets.my-summary.title")).not.toBeInTheDocument();
 });
 
 it("keeps Me free of quality-management cards and their requests", async () => {
   render(<DashboardPage />, { wrapper });
-  await screen.findByRole("heading", { name: "dashboard.widgets.suggestions.title" });
+  await screen.findByText("dashboard.bands.do.description");
   for (const widget of [
     "eval-runs",
     "eval-suites",
