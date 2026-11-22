@@ -210,6 +210,13 @@ describe("pageKey", () => {
     ]);
   });
 
+  it("offers the money page's one stop, and only to a caller who may see spend", () => {
+    expect(stepsForPage(ROUTES.FINANCE, () => true).map((step) => step.id)).toEqual([
+      "finance-overview",
+    ]);
+    expect(stepsForPage(ROUTES.FINANCE, () => false)).toEqual([]);
+  });
+
   it("collapses one workflow's runs, but not every workflow's runs, onto its identity", () => {
     expect(pageKey(ROUTES.WORKFLOW_RUNS("wf-1"))).toBe(WORKFLOW_RUNS_DETAIL);
     expect(pageKey(ROUTES.WORKFLOW_ALL_RUNS)).toBe(ROUTES.WORKFLOW_ALL_RUNS);

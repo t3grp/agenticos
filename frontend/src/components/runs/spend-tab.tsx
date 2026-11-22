@@ -70,7 +70,15 @@ function windowLabel(
 }
 
 /** A right-aligned money cell; `partial` marks a floor the way the run table does. */
-function CostCell({ cost, partial, title }: { cost: string; partial?: boolean; title: string }) {
+export function CostCell({
+  cost,
+  partial,
+  title,
+}: {
+  cost: string;
+  partial?: boolean;
+  title: string;
+}) {
   const locale = useLocale();
   return (
     <span className="font-mono text-xs tabular-nums">
@@ -113,7 +121,7 @@ function CostCell({ cost, partial, title }: { cost: string; partial?: boolean; t
  * makes colour the message and the number alone is the division done for them
  * without the picture.
  */
-function ShareCell({ cost, total }: { cost: string; total: number }) {
+export function ShareCell({ cost, total }: { cost: string; total: number }) {
   const share = total > 0 ? (Number(cost) / total) * 100 : 0;
   return (
     <span className="flex items-center justify-end gap-2">

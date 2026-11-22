@@ -16,7 +16,6 @@ describe("ROUTES", () => {
     expect(ROUTES.RAG_DETAIL("kb1")).toBe("/rag/kb1");
     expect(ROUTES.ORG_MEMBERS("o1")).toBe("/orgs/o1/members");
     expect(ROUTES.ORG_ROLES("o1")).toBe("/orgs/o1/roles");
-    expect(ROUTES.ORG_SETTINGS("o1")).toBe("/orgs/o1/settings");
     expect(ROUTES.WORKFLOW_DETAIL("wf-1")).toBe("/workflows/wf-1");
     expect(ROUTES.WORKFLOW_RUNS("wf-1")).toBe("/workflows/wf-1/runs");
     expect(ROUTES.WORKFLOW_RUN_DETAIL("wf-1", "run-9")).toBe("/workflows/wf-1/runs/run-9");
@@ -45,5 +44,8 @@ describe("ROUTES", () => {
       if (typeof value !== "string") continue;
       expect(value.startsWith("/"), name).toBe(true);
     }
+    // The money page is a static route, not a builder: it reads the active
+    // organization like the dashboard does.
+    expect(ROUTES.FINANCE).toBe("/finance");
   });
 });

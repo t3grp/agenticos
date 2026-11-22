@@ -156,6 +156,9 @@ export default defineConfig({
         "src/components/orgs/**/*.tsx",
         "src/components/public-config/**/*.tsx",
         "src/components/runs/**/*.tsx",
+        // The one honest money page: month against cap, per-provider spend with
+        // billing links, the caveat and the TCO checklist.
+        "src/components/finance/**/*.{ts,tsx}",
         "src/components/sandboxes/**/*.tsx",
         "src/components/remote-agents/**/*.tsx",
         // Projects: the pages, the composer's picker and the sidebar's rows.

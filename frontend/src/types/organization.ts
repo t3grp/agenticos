@@ -81,9 +81,6 @@ export interface Organization {
    */
   is_default?: boolean;
   owner_id: string;
-  stripe_customer_id: string | null;
-  subscription_tier: string;
-  seats_limit: number | null;
   /**
    * Dollars every agent in this organization may spend between the first of the
    * month and the next, or `null` for no ceiling. It is the limit *over* each

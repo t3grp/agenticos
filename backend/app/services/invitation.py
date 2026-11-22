@@ -12,7 +12,6 @@ from app.core.exceptions import (
     AuthorizationError,
     BadRequestError,
     NotFoundError,
-    PaymentRequiredError,
 )
 from app.core.permissions import Perm, assignable_roles, role_has
 from app.db.models.organization import Invitation, InvitationStatus, Organization
@@ -373,15 +372,6 @@ class InvitationService:
                 message="You are already a member of this organization",
                 details={"org_id": str(invite.organization_id)},
             )
-        org = await organization_repo.get_by_id(self.db, invite.organization_id)
-        seats_limit = getattr(org, "seats_limit", None) if org is not None else None
-        if seats_limit is not None:
-            current_count = await member_repo.count_for_org(self.db, invite.organization_id)
-            if current_count >= seats_limit:
-                raise PaymentRequiredError(
-                    message="Seat limit reached - upgrade your plan to add more members",
-                    details={"seats_limit": seats_limit, "current": current_count},
-                )
         await member_repo.create(
             self.db,
             organization_id=invite.organization_id,
