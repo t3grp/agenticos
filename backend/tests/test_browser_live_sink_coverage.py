@@ -88,3 +88,20 @@ async def test_a_protected_event_without_a_guard_is_published_and_sent_to_chat(
     protect_view.assert_awaited_once_with(run, "call", event)
     chat.assert_awaited_once_with(event)
     publish.assert_not_awaited()
+
+
+async def test_a_protected_event_without_a_guard_returns_true_without_chat(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(live_browse, "available", lambda: True)
+    monkeypatch.setattr(live_browse, "open_view", AsyncMock())
+    monkeypatch.setattr(live_browse, "publish", AsyncMock())
+    protect_view = AsyncMock()
+    monkeypatch.setattr(live_browse, "protect_view", protect_view)
+    sink, _, run = await _live(_deps(None, with_run=True), "call", "task")
+    event = _event("browser_protected", url=ORIGIN, output_protected=True)
+
+    assert sink is not None and run is not None
+    assert await sink(event) is True
+    protect_view.assert_awaited_once_with(run, "call", event)
+    live_browse.publish.assert_not_awaited()
