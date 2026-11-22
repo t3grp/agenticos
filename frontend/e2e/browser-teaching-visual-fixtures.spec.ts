@@ -25,12 +25,9 @@ async function json(route: Route, body: unknown) {
 async function seed(page: Page) {
   // The stored selection is null on a fresh login, so the first Skills read is
   // sent before /api/orgs resolves and carries no organization. Select the
-  // owner's organization the way the app does (default, then personal, then
-  // first) and persist it before the first navigation, so the read is scoped.
-  const orgs = await rowsAt(page.request, "/api/orgs");
-  const chosen =
-    orgs.find((row) => row.is_default) ?? orgs.find((row) => row.is_personal) ?? orgs[0];
-  const organization = chosen?.id;
+  // seeded owner's organization (the first, as seed.setup.ts does) and persist
+  // it before the first navigation, so that read is scoped.
+  const organization = (await rowsAt(page.request, "/api/orgs"))[0]?.id;
   expect(organization, "the seeded owner belongs to an organization").toMatch(/^[0-9a-f-]{36}$/i);
   if (typeof organization !== "string") throw new Error("The owner has no organization");
   await page.addInitScript((id) => {
