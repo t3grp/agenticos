@@ -24,7 +24,10 @@ async function json(route: Route, body: unknown) {
 }
 async function seed(page: Page) {
   const request = page.waitForRequest(
-    (value) => new URL(value.url()).pathname === "/api/skills" && value.method() === "GET",
+    (value) =>
+      new URL(value.url()).pathname === "/api/skills" &&
+      value.method() === "GET" &&
+      Boolean(value.headers()["x-organization-id"]),
   );
   await page.goto("/skills");
   await expect(pageHeading(page, "Skills")).toBeVisible();
