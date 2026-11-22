@@ -5127,7 +5127,8 @@
     "devicesNetworks": "Devices & networks",
     "failureLearning": "Failure learning",
     "noFavouriteApps": "Star an app to pin it here. <link>All apps</link>",
-    "onboarding": "Onboarding"
+    "onboarding": "Onboarding",
+    "finance": "Finance"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -5250,6 +5251,10 @@
       "activity-spend": {
         "title": "Where the money went",
         "body": "Spend over time and by agent, against the budgets you've set - so an agent quietly getting expensive shows up here before the bill does."
+      },
+      "finance-overview": {
+        "title": "One honest money page",
+        "body": "The month's spend against the cap, what each provider will bill, and the costs no meter counts — with the caveat that these figures are estimates, not the invoice."
       },
       "agent-availability": {
         "title": "Put it to work",
@@ -8355,6 +8360,49 @@
       "tryAgain": "Try again",
       "unexpectedWhileLoading": "An unexpected error occurred while loading this view. Please try again.",
       "unexpectedWithDigest": "An unexpected error occurred. Error ID: {digest}"
+    },
+    "finance": {
+      "title": "Finance",
+      "description": "The month's model spend against the cap, what each provider will actually bill, and what running this costs in total.",
+      "noAccessTitle": "You can't see spend",
+      "noAccessDescription": "Seeing spend needs runs:view. Ask an admin for access, or for the figures.",
+      "spendCouldNotBeRead": "Spend could not be read",
+      "spendErrorFallback": "The money was still spent — only the read failed.",
+      "tryAgain": "Try again",
+      "monthAgainstCapTitle": "This month against the cap",
+      "monthAgainstCapDescription": "Calendar month to date, against the ceiling that stops new runs.",
+      "againstCap": "{used} of a {cap} monthly cap — {left} left",
+      "noCapTitle": "No monthly cap set",
+      "noCapDescription": "Without a ceiling there is nothing to measure the month against. The cap is the limit over every agent in the organization.",
+      "monthSpent": "Spent this month: {amount}",
+      "setCap": "Set the cap on the Members page",
+      "changeCap": "Change the cap on the Members page",
+      "capNeedsAdmin": "Only an admin can change the cap. The cap editor lives on the Members page.",
+      "providersTitle": "By provider, this month",
+      "providersDescription": "Estimated spend per provider over the calendar month. The link beside each one opens that provider's own billing — the invoice is theirs, not this page's.",
+      "unpricedRunsNote": "{count, plural, =1 {1 run this month could not be priced, so its cost is a floor, not a total} other {# runs this month could not be priced, so their cost is a floor, not a total}}",
+      "providerColumn": "Provider",
+      "runsColumn": "Runs",
+      "share": "Share",
+      "cost": "Cost",
+      "billingColumn": "Billing",
+      "notRecorded": "Not recorded",
+      "nothingSpentYet": "Nothing spent yet.",
+      "theCostIsAFloor": "A model in these runs had no price, so this provider's cost is a floor",
+      "openBilling": "Open {provider} billing",
+      "selfHostedNote": "Runs on your own hardware — no vendor bill.",
+      "subscriptionNote": "Billed to a personal subscription, not an API key.",
+      "noBillingLink": "No billing link on file — check the provider's own console.",
+      "caveatTitle": "Spend is not your bill",
+      "caveat": "These figures are estimates, priced from genai-prices snapshots of public model prices. Where a provider reports its own cost, that figure wins; models with no price are booked at zero, so a total with unpriced runs is a floor, not a total. The invoice lives at the provider — follow the billing link beside each one.",
+      "tcoTitle": "What running this actually costs",
+      "tcoDescription": "Model spend is the only line this product meters. The total has two more, and neither is metered here.",
+      "tcoHostTitle": "Hosting",
+      "tcoHostBody": "The server, database and storage this deployment runs on. That bill comes from your host, not from this page.",
+      "tcoModelsTitle": "Models",
+      "tcoModelsBody": "The month's estimated spend above — reconciled against each provider's own billing, linked per provider.",
+      "tcoOperatorTitle": "Operator time",
+      "tcoOperatorBody": "Approving runs, onboarding people, keeping keys and models current. No meter counts it; budget for it anyway."
     },
     "runs": {
       "aParkedRunIsStill": "A parked run is still parked. Nothing was decided, and nothing expired.",

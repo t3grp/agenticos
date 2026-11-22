@@ -56,6 +56,12 @@ describe("the budget headroom card", () => {
     expect(screen.getByText("40%")).toBeInTheDocument();
     expect(screen.getByText("Near")).toBeInTheDocument();
     expect(screen.getByText("Half")).toBeInTheDocument();
+    // "See all" goes where the cap is edited — the Members page — not to the
+    // /orgs/{id}/settings page, which never existed.
+    expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute(
+      "href",
+      "/orgs/o-1/members",
+    );
     // Third closest, and the card holds two: counted, not drawn off its edge.
     expect(screen.queryByText("Low")).toBeNull();
     expect(screen.getByText("1 more agent with a cap")).toBeInTheDocument();

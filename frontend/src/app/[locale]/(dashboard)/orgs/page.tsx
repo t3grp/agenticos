@@ -199,13 +199,9 @@ export default function OrgsPage() {
                             shouty uppercase pair of its own. */}
                         {org.is_personal && <Badge variant="outline">{t("personal")}</Badge>}
                       </div>
-                      {/* Only the parts there are: an organization with no tier
-                          used to read "· admin", a separator in front of nothing. */}
+                      {/* The slug alone: there is no subscription tier in this
+                          product, so nothing else belongs on this line. */}
                       <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                        {org.subscription_tier && (
-                          <span className="capitalize">{org.subscription_tier}</span>
-                        )}
-                        {org.subscription_tier && org.slug && <span aria-hidden> · </span>}
                         {org.slug && <span className="font-mono">{org.slug}</span>}
                       </p>
                     </div>

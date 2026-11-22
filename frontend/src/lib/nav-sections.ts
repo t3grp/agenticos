@@ -9,6 +9,7 @@ import {
   Plug,
   ShieldCheck,
   UsersRound,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -199,6 +200,16 @@ export const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     items: [
       { labelKey: "activity", href: ROUTES.RUNS, icon: Activity, permission: Perm.runsView },
+      {
+        // The one honest money page: month-to-date spend against the cap, what
+        // each provider will bill, and the costs no meter counts. It sits with
+        // Activity because it reads the same `runs:view` spend data, not with
+        // settings — there is no billing to configure here.
+        labelKey: "finance",
+        href: ROUTES.FINANCE,
+        icon: Wallet,
+        permission: Perm.runsView,
+      },
       {
         labelKey: "failureLearning",
         href: ROUTES.FAILURE_LEARNING,

@@ -80,6 +80,22 @@ describe("the Connectors nav entry", () => {
   });
 });
 
+describe("the Finance nav entry", () => {
+  it("sits with Activity in the monitoring group, gated on the spend permission", () => {
+    const group = NAV_GROUPS.find((g) => g.labelKey === "monitoring");
+    expect(group?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          labelKey: "finance",
+          href: ROUTES.FINANCE,
+          permission: Perm.runsView,
+        }),
+      ]),
+    );
+    expect(navSectionFor("/finance")).toMatchObject({ domain: "build", isRoot: true });
+  });
+});
+
 describe("role navigation preferences", () => {
   const item = (labelKey: string) =>
     NAV_GROUPS.flatMap((group) => group.items).find((entry) => entry.labelKey === labelKey)!;

@@ -88,7 +88,8 @@ export const ROUTES = {
   PROJECT_CHAT: (id: string) => `/chat?project=${id}`,
   ARTIFACTS: "/apps",
   ARTIFACT_DETAIL: (id: string) => `/apps/${id}`,
-  ORG_SETTINGS: (id: string) => `/orgs/${id}/settings`,
+  /** The one honest money page: month-to-date spend against the cap, per-provider estimates with links to each provider's own billing, and the total cost of running this. */
+  FINANCE: "/finance",
   BILLING: "/billing",
   BILLING_USAGE: "/billing/usage",
   BILLING_CREDITS: "/billing/credits",

@@ -23,8 +23,10 @@ import type { DashboardWidgetProps } from "./types";
  *
  * Its "see all" is computed rather than taken from the registry, because the
  * page worth reaching from here is the one holding the cap, and that path
- * carries the organization's id. Raising the cap is still somewhere else -
- * this is navigation, not a budget-request flow.
+ * carries the organization's id. That page is the Members page, where
+ * `OrgSpendingLimit` edits the cap: the `/orgs/{id}/settings` page this used
+ * to point at never existed, so the one click a budget holder makes to raise
+ * a cap went nowhere.
  */
 /** As many capped agents as a two-row card holds under the organization's bar. */
 const SHOWN_AGENTS = 2;
@@ -61,7 +63,7 @@ export function BudgetHeadroomWidget({ title, hint, options }: DashboardWidgetPr
     <WidgetFrame
       title={title}
       hint={hint}
-      seeAll={organization ? ROUTES.ORG_SETTINGS(organization.id) : undefined}
+      seeAll={organization ? ROUTES.ORG_MEMBERS(organization.id) : undefined}
       options={options}
     >
       {isLoading || organizations.isLoading ? (

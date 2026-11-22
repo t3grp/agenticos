@@ -1255,6 +1255,17 @@ export const TOUR_STEPS: readonly TourStep[] = [
     optional: true,
   },
 
+  // The one honest money page: month-to-date spend against the cap, what each
+  // provider will bill, and the costs no meter counts. "?"-only — it is a
+  // destination a budget holder opens on purpose, not a stop on the first-run
+  // walk.
+  {
+    id: "finance-overview",
+    page: ROUTES.FINANCE,
+    target: "finance-overview",
+    permission: Perm.runsView,
+  },
+
   {
     id: "knowledge-new",
     page: ROUTES.RAG,
