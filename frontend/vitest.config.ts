@@ -87,6 +87,8 @@ export default defineConfig({
         "src/components/dashboard/widgets/background-tasks.tsx",
         // The agent messages card.
         "src/components/dashboard/widgets/agent-messages.tsx",
+        // Everything waiting on the reader, fanned into one card.
+        "src/components/dashboard/widgets/waiting-on-me.tsx",
         // What the nightly look proposed (#2301).
         "src/components/dashboard/widgets/authoring-suggestions.tsx",
         "src/components/dashboard/widgets/recent-visuals.tsx",
@@ -104,7 +106,6 @@ export default defineConfig({
         "src/components/dashboard/widgets/my-summary.tsx",
         "src/components/dashboard/widgets/approvals.tsx",
         "src/components/dashboard/agent-face.tsx",
-        "src/components/dashboard/me-header.tsx",
         "src/components/dashboard/widgets/artifacts.tsx",
         "src/components/dashboard/widgets/datasets.tsx",
         "src/components/dashboard/widgets/review-queue.tsx",
@@ -127,6 +128,10 @@ export default defineConfig({
         // The dashboard's start checklist (#2072).
         "src/components/dashboard/start-checklist.tsx",
         "src/components/dashboard/me-opening.tsx",
+        // Round 4: the person's own dashboard as a command center - a status
+        // strip, controls as buttons and four live panels. Replaces the
+        // Round 3 band cards.
+        "src/components/dashboard/me-command/*.tsx",
         // What the platform can do that is easy to miss, and a quiet group said once.
         "src/components/dashboard/discover-tips.tsx",
         "src/components/dashboard/quiet-group.tsx",

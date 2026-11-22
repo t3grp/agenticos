@@ -556,7 +556,9 @@ describe("the view switcher", () => {
       expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull(),
     );
 
-    expect(screen.getByRole("heading", { name: /dashboard\.greeting/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /dashboard\.commandCenter\.title/ }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("dashboard.edit.customize")).not.toBeInTheDocument();
   });
 
@@ -593,7 +595,9 @@ describe("the view switcher", () => {
     );
 
     expect(screen.queryByRole("group", { name: "dashboard.views.label" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /dashboard\.greeting/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /dashboard\.commandCenter\.title/ }),
+    ).toBeInTheDocument();
   });
 
   it("narrows every usage question to the chosen group", async () => {
@@ -632,8 +636,10 @@ describe("the viewer's dashboard", () => {
       expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull(),
     );
 
-    // The my-agents card under its overridden title.
-    expect(screen.getByText("dashboard.widgets.my-agents.sharedTitle")).toBeInTheDocument();
+    // The shared shelf, now the Your apps panel's rows: the agents shared with
+    // the viewer, each tagged shared, and the panel's foot goes to All apps.
+    expect(await screen.findByText("Support triage")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.widgets.my-agents.shared")).toBeInTheDocument();
     await waitFor(() => expect(callsTo("/agents").length).toBeGreaterThan(0));
 
     // Not merely unrendered - never fetched.
@@ -1015,7 +1021,9 @@ describe("dashboard links while the page stays mounted", () => {
     await waitFor(() =>
       expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull(),
     );
-    expect(screen.getByRole("heading", { name: /dashboard\.greeting/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /dashboard\.commandCenter\.title/ }),
+    ).toBeInTheDocument();
 
     params.set("view", "org");
     params.set("period", "2026-09-01..2026-09-07");
@@ -1087,7 +1095,9 @@ describe("dashboard links while the page stays mounted", () => {
     params.delete("sections");
     params.delete("group");
     page.rerender(<DashboardPage />);
-    expect(await screen.findByRole("heading", { name: /dashboard\.greeting/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /dashboard\.commandCenter\.title/ }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -1133,7 +1143,7 @@ it("waits for a saved arrangement before mounting and fetching default widgets",
   view.unmount();
 });
 
-it("keeps one loading state until onboarding and briefing can mount in their final shape", async () => {
+it("keeps one loading state until onboarding can mount in its final shape", async () => {
   const pending = Promise.withResolvers<unknown>();
   const org = "00000000-0000-4000-8000-000000000001";
   useOrgStore.setState({ activeOrgId: org });
@@ -1144,7 +1154,6 @@ it("keeps one loading state until onboarding and briefing can mount in their fin
   render(<DashboardPage />, { wrapper });
   await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith("/me/onboarding"));
   expect(document.querySelectorAll('[role="status"][aria-busy="true"]')).toHaveLength(1);
-  expect(screen.queryByRole("heading", { name: "dashboard.widgets.suggestions.title" })).toBeNull();
   pending.resolve({
     organization_id: org,
     organization_name: "Demo",
@@ -1160,27 +1169,35 @@ it("keeps one loading state until onboarding and briefing can mount in their fin
     has_result: true,
     has_activity: true,
   });
-  expect(
-    await screen.findByRole("heading", { name: "dashboard.widgets.suggestions.title" }),
-  ).toBeInTheDocument();
-  expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull();
+  // The briefing no longer lives on the home, so its final shape is the
+  // Needs panel's heading - it appears once the page settles. The heading
+  // renders while the panels are still fetching, so wait for every
+  // skeleton to clear before asserting there is no loading state left.
+  expect(await screen.findByText("dashboard.commandCenter.needs.title")).toBeInTheDocument();
+  await waitFor(() =>
+    expect(document.querySelector('[role="status"][aria-busy="true"]')).toBeNull(),
+  );
 });
 
-it("shows personal metrics once, before the briefing", async () => {
+it("shows personal metrics once, in the status strip and the Spend panel", async () => {
   render(<DashboardPage />, { wrapper });
-  const briefing = await screen.findByRole("heading", {
-    name: "dashboard.widgets.suggestions.title",
-  });
-  const summary = screen.getByRole("heading", { name: "dashboard.widgets.my-summary.title" });
-  expect(
-    screen.getAllByRole("heading", { name: "dashboard.widgets.my-summary.title" }),
-  ).toHaveLength(1);
-  expect(summary.compareDocumentPosition(briefing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // The strip carries the period's runs and spend, and the Spend panel carries
+  // what those two do not say - the cost per run, the finished share, the
+  // busiest agent - so no figure is said twice: one runs label, one spent
+  // label, one finished row, no hero heading. The rows arrive with their
+  // queries, so the wait is on a row, not the panel.
+  await screen.findByText("dashboard.commandCenter.spend.finished");
+  expect(screen.getAllByText("dashboard.commandCenter.strip.runsLabel")).toHaveLength(1);
+  expect(screen.getAllByText("dashboard.commandCenter.strip.spentLabel")).toHaveLength(1);
+  expect(screen.getAllByText("dashboard.commandCenter.spend.finished")).toHaveLength(1);
+  expect(screen.getAllByText("40")).toHaveLength(1);
+  expect(screen.getAllByText("$1.64")).toHaveLength(1);
+  expect(screen.queryByText("dashboard.widgets.my-summary.title")).not.toBeInTheDocument();
 });
 
 it("keeps Me free of quality-management cards and their requests", async () => {
   render(<DashboardPage />, { wrapper });
-  await screen.findByRole("heading", { name: "dashboard.widgets.suggestions.title" });
+  await screen.findByText("dashboard.commandCenter.needs.description");
   for (const widget of [
     "eval-runs",
     "eval-suites",

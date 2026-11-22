@@ -44,6 +44,12 @@ export type NavItem = {
   labelKey: string;
   href: string;
   icon: LucideIcon;
+  /**
+   * The section hue this entry carries, when its group holds entries from
+   * several sections - the "More" group. Absent, the entry takes its group's
+   * hue, which is the rule for every group that names one section.
+   */
+  domain?: NavDomain;
   /** Hidden unless the caller holds this. Omitted means always shown. */
   permission?: Permission;
   /** Hidden unless the caller holds at least one of these: for an entry that opens to several areas. */
@@ -95,13 +101,6 @@ export const NAV_GROUPS: NavGroup[] = [
         dataTour: "nav-inbox",
         count: "inbox",
       },
-      {
-        labelKey: "agentMessages",
-        href: ROUTES.AGENT_MESSAGES,
-        icon: MessagesSquare,
-        permission: Perm.agentsRun,
-        dataTour: "nav-agent-messages",
-      },
     ],
   },
   {
@@ -120,38 +119,6 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    labelKey: "build",
-    domain: "build",
-    items: [
-      {
-        labelKey: "agents",
-        href: ROUTES.AGENTS,
-        icon: BotMessageSquare,
-        permission: Perm.agentsView,
-        dataTour: "nav-agents",
-      },
-      {
-        labelKey: "workflows",
-        href: ROUTES.WORKFLOWS,
-        icon: Workflow,
-        permission: Perm.workflowsView,
-        dataTour: "nav-workflows",
-      },
-      {
-        labelKey: "routines",
-        href: ROUTES.ROUTINES,
-        icon: TimerReset,
-        permission: Perm.agentsView,
-      },
-      {
-        labelKey: "datasets",
-        href: ROUTES.DATASETS,
-        icon: FlaskConical,
-        permission: Perm.datasetsView,
-      },
-    ],
-  },
-  {
     labelKey: "projects",
     domain: "use",
     items: [
@@ -165,62 +132,116 @@ export const NAV_GROUPS: NavGroup[] = [
       },
     ],
   },
+  // Everything else, behind one heading: the sidebar's top level is the five
+  // entries a person reaches for every day (Overview, Chat, Inbox, All apps,
+  // All projects), and this group is the rest. One group, but its entries keep
+  // the hue of the section they came from - each names its own `domain`,
+  // because the page chrome colours itself by it and a build page must not
+  // turn the colour of a use page for having moved in the sidebar.
+  // Folded until opened, or until the page on screen is inside it.
   {
-    labelKey: "knowledge",
-    domain: "knowledge",
+    labelKey: "more",
+    domain: "use",
     collapsible: true,
     items: [
+      {
+        labelKey: "agentMessages",
+        href: ROUTES.AGENT_MESSAGES,
+        icon: MessagesSquare,
+        domain: "use",
+        permission: Perm.agentsRun,
+        dataTour: "nav-agent-messages",
+      },
+      {
+        labelKey: "agents",
+        href: ROUTES.AGENTS,
+        icon: BotMessageSquare,
+        domain: "build",
+        permission: Perm.agentsView,
+        dataTour: "nav-agents",
+      },
+      {
+        labelKey: "workflows",
+        href: ROUTES.WORKFLOWS,
+        icon: Workflow,
+        domain: "build",
+        permission: Perm.workflowsView,
+        dataTour: "nav-workflows",
+      },
+      {
+        labelKey: "routines",
+        href: ROUTES.ROUTINES,
+        icon: TimerReset,
+        domain: "build",
+        permission: Perm.agentsView,
+      },
+      {
+        labelKey: "datasets",
+        href: ROUTES.DATASETS,
+        icon: FlaskConical,
+        domain: "build",
+        permission: Perm.datasetsView,
+      },
       {
         labelKey: "knowledgeBases",
         href: ROUTES.RAG,
         icon: LibraryBig,
+        domain: "knowledge",
         permission: Perm.collectionsView,
       },
       {
         labelKey: "tables",
         href: ROUTES.TABLES,
         icon: Table2,
+        domain: "knowledge",
         permission: Perm.tablesView,
         dataTour: "nav-tables",
       },
-      { labelKey: "skills", href: ROUTES.SKILLS, icon: Waypoints, permission: Perm.skillsView },
+      {
+        labelKey: "skills",
+        href: ROUTES.SKILLS,
+        icon: Waypoints,
+        domain: "knowledge",
+        permission: Perm.skillsView,
+      },
       {
         labelKey: "context",
         href: ROUTES.CONTEXT,
         icon: NotebookTabs,
+        domain: "knowledge",
         permission: Perm.contextView,
       },
-      { labelKey: "documents", href: ROUTES.DOCUMENTS, icon: Files },
-    ],
-  },
-  {
-    labelKey: "monitoring",
-    domain: "build",
-    collapsible: true,
-    items: [
-      { labelKey: "activity", href: ROUTES.RUNS, icon: Activity, permission: Perm.runsView },
+      {
+        labelKey: "documents",
+        href: ROUTES.DOCUMENTS,
+        icon: Files,
+        domain: "knowledge",
+      },
+      {
+        labelKey: "activity",
+        href: ROUTES.RUNS,
+        icon: Activity,
+        domain: "build",
+        permission: Perm.runsView,
+      },
       {
         labelKey: "failureLearning",
         href: ROUTES.FAILURE_LEARNING,
         icon: Bug,
+        domain: "build",
         permission: Perm.runsView,
       },
-      { labelKey: "backgroundWork", href: ROUTES.WORK, icon: BackgroundIcon },
-    ],
-  },
-  // What the organization is connected to, in one place: the apps agents use,
-  // with the lower-level channels, remote agents, vault and sandboxes behind an
-  // Advanced tab (#connectors). Set up once, revisited rarely, so folded until
-  // opened.
-  {
-    labelKey: "connections",
-    domain: "workspace",
-    collapsible: true,
-    items: [
+      {
+        labelKey: "backgroundWork",
+        href: ROUTES.WORK,
+        icon: BackgroundIcon,
+        domain: "build",
+      },
       {
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
         icon: Plug,
+        domain: "workspace",
         // Each area of the page keeps its own gate; the entry shows to anyone
         // who can reach one of them.
         permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView, Perm.networksView],
@@ -292,7 +313,8 @@ export function isActive(
 /**
  * The nav entry a path belongs to, with its group's hue, and whether the path is
  * the section's own page rather than something below it. `null` outside every
- * section - settings, a profile page.
+ * section - settings, a profile page. An entry in a multi-section group names
+ * its own hue; the group's is only the fallback.
  */
 export function navSectionFor(
   pathname: string,
@@ -302,7 +324,11 @@ export function navSectionFor(
       if (isActive(pathname, item.href)) {
         const path = stripLocale(pathname);
         const tab = item.tabbed && /^\/[^/]+$/.test(path.slice(item.href.length));
-        return { item, domain: group.domain, isRoot: path === item.href || Boolean(tab) };
+        return {
+          item,
+          domain: item.domain ?? group.domain,
+          isRoot: path === item.href || Boolean(tab),
+        };
       }
     }
   }

@@ -42,9 +42,38 @@ describe("navSectionFor", () => {
   });
 });
 
+describe("the More group", () => {
+  const topGroups = () => NAV_GROUPS.filter((group) => !group.switcherOnly && !group.adminOnly);
+
+  it("keeps five entries at the top level and folds the rest behind one heading", () => {
+    // The top level is what a person reaches for every day; the rest is one
+    // disclosure, not four more headings.
+    expect(topGroups().map((group) => group.labelKey)).toEqual([null, "apps", "projects", "more"]);
+    expect(
+      topGroups()
+        .slice(0, 3)
+        .flatMap((group) => group.items.map((item) => item.labelKey)),
+    ).toEqual(["dashboard", "chat", "inbox", "allApps", "allProjects"]);
+  });
+
+  it("gives every folded entry its own section hue, so moving it did not recolour its page", () => {
+    // The More group holds entries from four sections; its own hue is only a
+    // fallback, never the answer for an entry that forgot to name its own.
+    const more = NAV_GROUPS.find((group) => group.labelKey === "more");
+    expect(more?.items.length).toBeGreaterThan(0);
+    for (const item of more?.items ?? []) {
+      expect(item.domain, item.labelKey).toBeTruthy();
+    }
+    expect(navSectionFor("/agents")).toMatchObject({ domain: "build" });
+    expect(navSectionFor("/rag")).toMatchObject({ domain: "knowledge" });
+    expect(navSectionFor("/connectors")).toMatchObject({ domain: "workspace" });
+    expect(navSectionFor("/agent-messages")).toMatchObject({ domain: "use" });
+  });
+});
+
 describe("the Connectors nav entry", () => {
   const connectors = () => {
-    const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
+    const group = NAV_GROUPS.find((g) => g.labelKey === "more");
     return group?.items.find((item) => item.labelKey === "connectors");
   };
   const holding =
@@ -52,15 +81,15 @@ describe("the Connectors nav entry", () => {
     (permission: Permission) =>
       granted.includes(permission);
 
-  it("is the one entry in the connections group, opening to any of the three areas", () => {
-    const group = NAV_GROUPS.find((g) => g.labelKey === "connections");
-    expect(group?.items).toEqual([
+  it("is the one connectors entry in the More group, opening to any of the four areas", () => {
+    const group = NAV_GROUPS.find((g) => g.labelKey === "more");
+    expect(group?.items).toContainEqual(
       expect.objectContaining({
         labelKey: "connectors",
         href: ROUTES.CONNECTORS,
-        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView],
+        permissions: [Perm.agentsView, Perm.secretsView, Perm.connectionsView, Perm.networksView],
       }),
-    ]);
+    );
   });
 
   it("shows to a role that can see only the vault", () => {

@@ -1,51 +1,37 @@
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { MeOpening } from "./me-opening";
-import type { Period } from "@/lib/dashboard/period";
 
 /**
- * The person's dashboard opens with Get started and the Briefing side by side
- * (#2301); the Briefing only for whoever may talk to an agent.
+ * The person's dashboard opens Do with Get started, for whoever is still
+ * setting up; the Briefing is a widget in the Do band now, not a second half
+ * of this opening.
  */
 
-const state = vi.hoisted(() => ({ canRun: true }));
-
-vi.mock("@/hooks", () => ({
-  usePermissions: () => ({ can: () => state.canRun }),
-}));
 vi.mock("./start-checklist", () => ({
   StartChecklist: ({ orgId, className }: { orgId: string; className?: string }) => (
     <section aria-label={`checklist:${orgId}`} className={className} />
   ),
 }));
-vi.mock("./widgets/suggestions", () => ({
-  SuggestionsWidget: ({ title, seeAll }: { title: string; seeAll?: string }) => (
-    <section aria-label={title} data-see-all={seeAll} />
-  ),
-}));
-
-const period = { preset: "30d" } as unknown as Period;
-
-beforeEach(() => {
-  state.canRun = true;
-});
 
 describe("MeOpening", () => {
-  it("puts what to do next beside what waits", () => {
-    render(<MeOpening orgId="o1" period={period} />);
+  it("shows the start checklist for a person in an organization", () => {
+    render(<MeOpening orgId="o1" />);
 
     expect(screen.getByRole("region", { name: "checklist:o1" })).toHaveClass("mt-0");
-    expect(screen.getByRole("region", { name: "Briefing" })).toHaveAttribute(
-      "data-see-all",
-      "/inbox",
-    );
   });
 
-  it("has no checklist without an organization and no briefing without agents:run", () => {
-    state.canRun = false;
-    render(<MeOpening orgId={null} period={period} />);
+  it("shows nothing without an organization", () => {
+    render(<MeOpening orgId={null} />);
 
     expect(screen.queryByRole("region")).toBeNull();
+  });
+
+  it("holds a loading state while the start state is still arriving", () => {
+    render(<MeOpening orgId="o1" pending />);
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "checklist:o1" })).toBeNull();
   });
 });

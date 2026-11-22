@@ -77,6 +77,7 @@ export type WidgetId =
   | "knowledge-gaps"
   | "needs-attention"
   | "improvements-waiting"
+  | "waiting-on-me"
   | "tables"
   | "workflows"
   | "approval-outcomes"
@@ -338,6 +339,19 @@ export const WIDGETS: Record<WidgetId, WidgetDef> = {
     defaultRows: "r3",
     category: "attention",
     seeAll: ROUTES.AGENT_MESSAGES,
+  },
+  // Everything waiting on the reader, fanned in from the four places that hold
+  // it - the approvals queue, the unread agent threads, the unread
+  // notifications and the background tasks still running. Gated on running
+  // agents, the one thing the agent-message read needs; the approvals half is
+  // permission-safe on its own (an empty list for a caller who may not decide).
+  "waiting-on-me": {
+    id: "waiting-on-me",
+    gate: holds(Perm.agentsRun),
+    defaultSpan: "s12",
+    defaultRows: "r4",
+    category: "attention",
+    seeAll: ROUTES.INBOX,
   },
   notifications: {
     id: "notifications",

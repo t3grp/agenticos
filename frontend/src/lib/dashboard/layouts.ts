@@ -311,22 +311,40 @@ const DEFAULT_SECTIONS: SectionDef[] = [
 ];
 
 /**
- * A person's own page: their agents, their threads, their runs, and what is
- * waiting on them. The view a member without `runs:view` opens on, and one
- * click away for everybody else.
+ * A person's own page, as a command center: status first, then the four
+ * panels - what needs them, what happened, their apps, what it cost.
+ *
+ * The page renders one panel per section, not the widget grid: the entries
+ * below are the section's gate set and the data its panel previews - a
+ * section survives when any entry's gate passes, and the panel fans in the
+ * same reads its widgets made. The status strip's figures live in the Needs
+ * and Spend panels' rows, so `my-summary` stays in Spend only as part of
+ * that gate set. The widgets themselves stay in the catalog, for the
+ * organization's view.
  */
 const ME_SECTIONS: SectionDef[] = [
   {
-    id: "workspace",
-    titleKey: null,
+    id: "needs",
+    titleKey: "needs",
+    entries: [{ widget: "waiting-on-me", span: "s12", rows: "r4" }],
+  },
+  {
+    id: "activity",
+    titleKey: "activity",
+    entries: [{ widget: "conversations", span: "s12", rows: "r3" }],
+  },
+  {
+    id: "apps",
+    titleKey: "apps",
     entries: [
-      { widget: "my-summary", span: "s12", rows: "r3" },
-      { widget: "conversations", span: "s12", rows: "r3" },
-      { widget: "projects", span: "s6", rows: "r3" },
       { widget: "my-top-agents", span: "s6", rows: "r3" },
-      { widget: "my-agents", span: "s12", rows: "r3" },
-      { widget: "recent-visuals", span: "s12", rows: "r6" },
+      { widget: "my-agents", span: "s6", rows: "r3" },
     ],
+  },
+  {
+    id: "spend",
+    titleKey: "spend",
+    entries: [{ widget: "my-summary", span: "s12", rows: "r3" }],
   },
 ];
 

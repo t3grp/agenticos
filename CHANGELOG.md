@@ -19,6 +19,10 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- **Your dashboard as a command center, not a questionnaire.** The home opens on a status strip - what waits on you, approvals pending, runs, spend - then the controls as buttons (New chat, Build an app, Start a workflow, Connect a service), then four live panels: Needs you, Latest activity, Your apps and Spend, each linking through to its destination. No "What would you like to do?", no Ask / Do / Track cards; the greeting and summary sentence are gone, the strip says the figures once. The briefing and the agents-needing-attention list leave the home (both still live in the inbox and the organization's view). No time-saved figure: no endpoint counts it, so Spend shows the cost per run, the finished share and the busiest agent instead.
+
 ### Upgrading
 
 - Tailscale enrollment adds migration `0347_network_connections` after `0346_merge_t3_v1850`, a connection vault table and the `network` background-worker pool. The feature remains disabled unless `TAILSCALE_ENABLED=true`; custom worker pool lists must include `network` and retain a `system` worker for cleanup. Downgrade refuses retained network connections or jobs. See the [deployment and cleanup contract](docs/design/tailscale-enrollment-implementation.md).

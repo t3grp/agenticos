@@ -3105,6 +3105,59 @@
     "actions": {
       "newChat": "New chat"
     },
+    "commandCenter": {
+      "title": "Command center",
+      "strip": {
+        "approvalsLabel": "approvals pending",
+        "loading": "Loading status",
+        "runsLabel": "runs",
+        "spentLabel": "spent",
+        "waitingLabel": "waiting on you"
+      },
+      "actions": {
+        "buildApp": "Build an app",
+        "connectService": "Connect a service",
+        "startWorkflow": "Start a workflow"
+      },
+      "needs": {
+        "title": "Needs you",
+        "description": "Decisions only you can make.",
+        "go": "Open inbox",
+        "approvalsTitle": "Approvals",
+        "approvals": "{count, plural, =0 {Nothing waiting for a yes or no} =1 {1 pending} other {# pending}}",
+        "messagesTitle": "Inbox",
+        "messages": "{count, plural, =0 {Nothing unread} =1 {1 unread message} other {# unread messages}}",
+        "tasksTitle": "Background tasks",
+        "tasks": "{count, plural, =0 {Nothing running} =1 {1 still running} other {# still running}}"
+      },
+      "activity": {
+        "title": "Latest activity",
+        "description": "What your agents did, in plain words.",
+        "go": "See all activity"
+      },
+      "apps": {
+        "title": "Your apps",
+        "description": "Apps your agents built for you.",
+        "go": "All apps",
+        "empty": {
+          "title": "No apps run yet",
+          "description": "Ask an agent to build one, or run one you already have."
+        }
+      },
+      "spend": {
+        "title": "Spend",
+        "description": "What the work cost.",
+        "go": "See spending",
+        "perRun": "About {amount} a run",
+        "perRunSub": "Cost per run this period",
+        "finished": "{share} finished",
+        "runs": "{count, plural, =1 {1 run} other {# runs}}",
+        "empty": {
+          "title": "No runs yet",
+          "description": "Runs and spend will show here once your agents have run."
+        }
+      }
+    },
     "activeSessions": "Active sessions",
     "allOtherSessionsRevoked": "All other sessions revoked",
     "breadcrumb": "Breadcrumb",
@@ -3143,10 +3196,14 @@
     "revokeSession": "Revoke session",
     "revokeSession2": "Revoke session",
     "sections": {
+      "activity": "Latest activity",
+      "apps": "Your apps",
       "attention": "Needs attention",
       "deployment": "Deployment",
+      "needs": "Needs you",
       "people": "People & quality",
       "sandboxes": "Where agents run code",
+      "spend": "Spend",
       "usage": "Usage & cost",
       "workspace": "Your workspace"
     },
@@ -3959,6 +4016,26 @@
         "title": "Background topics",
         "description": "Your delegated work and its results"
       },
+      "waiting-on-me": {
+        "title": "Waiting on you",
+        "description": "Everything waiting on you: approvals, agent messages, notifications and background tasks.",
+        "empty": {
+          "title": "Nothing waiting on you",
+          "description": "Approvals, agent messages, notifications and background tasks will show up here when they need you."
+        },
+        "groups": {
+          "approvals": "Approvals",
+          "agentMessages": "Agent messages",
+          "notifications": "Notifications",
+          "backgroundTasks": "Background tasks"
+        },
+        "more": "{count} more waiting",
+        "groupLoadFailed": "Couldn't load these right now.",
+        "retry": "Try again",
+        "review": "Review",
+        "someAgent": "An agent",
+        "waiting": "waiting {ago}"
+      },
       "agent-messages": {
         "description": "Threads waiting on you.",
         "empty": {
@@ -4116,8 +4193,7 @@
     "views": {
       "label": "Dashboard view",
       "me": {
-        "label": "Me",
-        "description": "Your agents, your conversations and what is waiting on you."
+        "label": "Me"
       },
       "org": {
         "label": "Organization",
@@ -4133,30 +4209,7 @@
         "description": "The whole deployment - every organization, the services and answer quality."
       }
     },
-    "greeting": {
-      "morning": "Good morning",
-      "afternoon": "Good afternoon",
-      "evening": "Good evening",
-      "morningNamed": "Good morning, {name}",
-      "afternoonNamed": "Good afternoon, {name}",
-      "eveningNamed": "Good evening, {name}",
-      "ran": "Your agents ran <b>{runs, plural, =0 {nothing} =1 {once} other {# times}}</b> in this period.",
-      "nothingWaiting": "Nothing is waiting on you.",
-      "waitingOn": "Waiting on you: <b>{items}</b>.",
-      "waiting": {
-        "approvals": "{count, plural, =1 {1 call} other {# calls}}",
-        "review": "{count, plural, =1 {1 answer to review} other {# answers to review}}",
-        "suites": "{count, plural, =1 {1 failing suite} other {# failing suites}}",
-        "suggestions": "{count, plural, =1 {1 suggestion} other {# suggestions}}"
-      },
-      "summary": "Your agents ran <b>{runs, plural, =0 {nothing} =1 {once} other {# times}}</b> in this period. {waiting, plural, =0 {Nothing is waiting on you.} =1 {<b>One call</b> is waiting on you.} other {<b># calls</b> are waiting on you.}}"
-    },
     "discover": {
-      "title": "Discover AgenticOS",
-      "subtitle": "What your agents can do that is easy to miss.",
-      "previous": "Previous tips",
-      "next": "More tips",
-      "dismissAll": "Hide tips",
       "dismiss": "Hide the tip {title}",
       "tips": {
         "mentions": {
@@ -5116,7 +5169,7 @@
     "whatsNewTitle": "What’s new in {version}",
     "whatsNewDescription": "Recent changes in the version you are using.",
     "whatsNewDone": "Got it",
-    "monitoring": "Monitoring",
+    "more": "More",
     "backgroundWork": "Background work",
     "developerAccess": "API & MCP",
     "agentMessages": "Agent messages",

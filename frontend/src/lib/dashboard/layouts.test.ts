@@ -48,17 +48,14 @@ describe("resolveAudience", () => {
 describe("the layouts", () => {
   it("keeps Me focused on the reader's daily work for every audience", () => {
     for (const audience of AUDIENCES) {
-      expect(
-        viewLayout("me", audience).flatMap((section) =>
-          section.entries.map((entry) => entry.widget),
-        ),
-      ).toEqual([
-        "my-summary",
+      const sections = viewLayout("me", audience);
+      expect(sections.map((section) => section.id)).toEqual(["needs", "activity", "apps", "spend"]);
+      expect(sections.flatMap((section) => section.entries.map((entry) => entry.widget))).toEqual([
+        "waiting-on-me",
         "conversations",
-        "projects",
         "my-top-agents",
         "my-agents",
-        "recent-visuals",
+        "my-summary",
       ]);
     }
   });
@@ -136,7 +133,7 @@ describe("visibleSections", () => {
       false,
     );
 
-    expect(sections.map((section) => section.id)).toEqual(["workspace"]);
+    expect(sections.map((section) => section.id)).toEqual(["apps"]);
     expect(sections[0]?.entries.map((entry) => entry.widget)).toEqual(["my-agents"]);
   });
 
@@ -193,9 +190,9 @@ describe("visibleSections", () => {
   });
 
   it("an org admin never sees the deployment strip", () => {
-    // Everybody is offered the same arrangement, so what withholds the band is
-    // the gate on its four cards - all four are app-admin-only, so the heading
-    // goes with them.
+    // Everybody is offered the same arrangement, so what withholds the section
+    // is the gate on its four cards - all four are app-admin-only, so the
+    // heading goes with them.
     const sections = visibleSections(LAYOUTS.steward, () => true, false);
 
     expect(sections.map((section) => section.id)).not.toContain("deployment");
