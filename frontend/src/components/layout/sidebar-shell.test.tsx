@@ -82,6 +82,32 @@ describe("SidebarShell", () => {
     }
   });
 
+  it("puts Settings in the footer, above the account block", () => {
+    renderShell();
+
+    const settings = screen.getByRole("link", { name: "Settings" });
+    expect(follows(screen.getByRole("button", { name: "the bell" }), settings)).toBe(true);
+    expect(follows(settings, screen.getByRole("button", { name: "the account menu" }))).toBe(true);
+    expect(settings).toHaveAttribute("href", "/settings");
+  });
+
+  it("keeps Settings as an icon with its name when collapsed", () => {
+    renderShell({ collapsed: true });
+
+    const settings = screen.getByRole("link", { name: "Settings" });
+    expect(settings).toHaveAttribute("title", "Settings");
+    expect(settings).toHaveAttribute("href", "/settings");
+  });
+
+  it("lets Settings dismiss the mobile navigation", () => {
+    const onNavigate = vi.fn();
+    renderShell({ onNavigate });
+
+    fireEvent.click(screen.getByRole("link", { name: "Settings" }));
+
+    expect(onNavigate).toHaveBeenCalledOnce();
+  });
+
   it("scrolls the destinations without taking the pinned controls with them", () => {
     // The one rule the column cannot break: with enough entries the list moves,
     // and the strip below it does not.
