@@ -188,7 +188,7 @@ describe("pageKey", () => {
     expect(pageKey(ROUTES.SETTINGS_SLASH_COMMANDS)).toBe(SETTINGS_DETAIL);
     expect(pageKey(ROUTES.SETTINGS_AI_CONNECTIONS)).toBe(ROUTES.SETTINGS_AI_CONNECTIONS);
     expect(stepsForPage(ROUTES.SETTINGS_AI_CONNECTIONS, () => true).map((step) => step.id)).toEqual(
-      ["personal-model-connections", "claude-subscription-connect"],
+      ["personal-model-connections"],
     );
     expect(pageKey("/documents/abc-123")).toBe(WORKSPACE_DETAIL);
     expect(pageKey("/projects/abc-123")).toBe(PROJECT_DETAIL);
@@ -362,7 +362,6 @@ describe("stepsForPage", () => {
       "chat-voice-call",
       "chat-approval-mode",
       "chat-your-connections",
-      "chat-subscription-model",
     ]);
   });
 
@@ -858,6 +857,7 @@ it("describes the start of an improvement on the page that starts one", () => {
   ).toEqual([
     "improvement-start",
     "improvement-quote",
+    "improvement-mode",
     "improvement-question-set",
     "improvement-details",
   ]);
@@ -885,4 +885,10 @@ it("describes every stage of an improvement on its own page", () => {
 it("uses the improvement walkthrough while the start modal is open over an agent", () => {
   expect(pageKey("/agents/a1?improve=new")).toBe(IMPROVEMENT_START);
   expect(pageKey("/agents/a1?tab=evals&improve=baseline")).toBe(IMPROVEMENT_START);
+});
+
+it("gives subscription settings their own help instead of hunting for the old profile card", () => {
+  expect(stepsForPage(ROUTES.SETTINGS_SUBSCRIPTIONS, () => true).map((step) => step.id)).toEqual([
+    "personal-subscription-accounts",
+  ]);
 });

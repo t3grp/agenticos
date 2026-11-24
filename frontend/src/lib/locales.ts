@@ -19,7 +19,7 @@ export const defaultLocale: Locale = "en";
  * Locales upstream served and this fork does not. A bookmark or shared link
  * under one of these prefixes redirects to the same page in English.
  */
-export const retiredLocales = ["pl", "de", "tr"] as const;
+export const retiredLocales = ["pl", "de", "tr", "fr"] as const;
 
 /** Whether a person can choose a language at all. Every language control hides when not. */
 export const hasLocaleChoice: boolean = (locales as readonly string[]).length > 1;

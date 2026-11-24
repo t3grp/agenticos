@@ -48,7 +48,6 @@ from app.api.routes.v1 import agent_environments, agent_exposures, agent_trigger
 from app.api.routes.v1 import trigger_webhooks
 from app.api.routes.v1 import agents as agent_registry
 from app.api.routes.v1 import model_providers
-from app.api.routes.v1 import personal_subscriptions
 from app.api.routes.v1 import secrets
 from app.api.routes.v1 import runs as agent_runs
 from app.api.routes.v1 import stats
@@ -85,6 +84,7 @@ from app.api.routes.v1 import browser_sign_ins
 from app.api.routes.v1 import browser_credentials
 from app.api.routes.v1 import browser_procedure_teaching
 from app.api.routes.v1 import coding_accounts
+from app.api.routes.v1 import subscription_accounts
 from app.api.routes.v1 import permissions
 from app.api.routes.v1 import email_webhook, imessage_webhook, sms_webhook, telegram_webhook, phone
 from app.api.routes.v1 import slack_webhook
@@ -138,9 +138,6 @@ v1_router.include_router(
 )
 v1_router.include_router(run_requests.router, tags=["agents"])
 v1_router.include_router(model_providers.router, prefix="/providers", tags=["providers"])
-v1_router.include_router(
-    personal_subscriptions.router, prefix="/personal-subscriptions", tags=["personal-subscriptions"]
-)
 v1_router.include_router(catalog_icons.router, prefix="/catalog", tags=["catalog"])
 v1_router.include_router(secrets.router, prefix="/secrets", tags=["secrets"])
 v1_router.include_router(ml_services.router, prefix="/ml", tags=["ml-services"])
@@ -385,6 +382,9 @@ v1_router.include_router(phone.router, prefix="/phone", tags=["voice"])
 
 v1_router.include_router(
     coding_accounts.router, prefix="/coding-accounts", tags=["coding-accounts"]
+)
+v1_router.include_router(
+    subscription_accounts.router, prefix="/subscription-accounts", tags=["subscription-accounts"]
 )
 
 v1_router.include_router(me_onboarding.router, prefix="/me/onboarding", tags=["me:onboarding"])

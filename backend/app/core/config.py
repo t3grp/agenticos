@@ -63,34 +63,52 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Personal provider accounts and native conversation runtimes. Each person
+    # answers for their own account's terms; these switches let an operator
+    # withhold a runtime or attest plan-usage eligibility.
+    GITHUB_COPILOT_OAUTH_CLIENT_ID: str = Field(default="", max_length=128)
+
+    SUBSCRIPTION_GATEWAY_URL: str | None = None
+    """The bundled subscription gateway (`subscription-gateway` in compose); unset turns
+    subscription accounts off."""
+
+    SUBSCRIPTION_GATEWAY_TOKEN: str = ""
+    """Shared with the gateway container; it accepts nothing without it."""
+
+    @model_validator(mode="after")
+    def subscription_gateway_token(self) -> Settings:
+        if self.SUBSCRIPTION_GATEWAY_URL and len(self.SUBSCRIPTION_GATEWAY_TOKEN) < 32:
+            raise ValueError(
+                "SUBSCRIPTION_GATEWAY_URL is set, so SUBSCRIPTION_GATEWAY_TOKEN must be "
+                "at least 32 characters - the same value the gateway container runs with"
+            )
+        return self
+
+    CLAUDE_NATIVE_CONVERSATION_ENABLED: bool = True
+    """Disable to withhold Claude Agent; each person answers for their own account's terms."""
+
+    EXTERNAL_NATIVE_CONVERSATION_ENABLED: bool = True
+    """Disable to withhold registered Desktop ACP agents as conversation runtimes."""
+
+    CODEX_NATIVE_CONVERSATION_ENABLED: bool = True
+    """Disable to withhold Codex; each person answers for their own account's terms."""
+
+    OPENAI_CHATGPT_PLAN_USAGE_ENABLED: bool = False
+    OPENAI_CHATGPT_HOST_ID: UUID | None = None
+    """Operator attestation that this deployment is eligible for official ChatGPT plan usage."""
+
+    @model_validator(mode="after")
+    def chatgpt_plan_host(self) -> Settings:
+        if self.OPENAI_CHATGPT_PLAN_USAGE_ENABLED and self.OPENAI_CHATGPT_HOST_ID is None:
+            raise ValueError(
+                "OPENAI_CHATGPT_HOST_ID must be a stable installation UUID when official ChatGPT plan usage is enabled"
+            )
+        return self
+
     PROJECT_NAME: str = "agenticos"
     API_V1_STR: str = "/api/v1"
     UPDATE_AGENT_SOCKET: Path | None = None
     UPDATE_PIPELINE_URL: str | None = None
-    CLAUDE_SUBSCRIPTION_URL: str | None = None
-    CLAUDE_SUBSCRIPTION_SERVICE_KEY: SecretStr | None = Field(
-        default=None, min_length=32, repr=False
-    )
-
-    @field_validator("CLAUDE_SUBSCRIPTION_URL")
-    @classmethod
-    def claude_subscription_origin(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        url = urlsplit(value)
-        if (
-            url.scheme not in {"http", "https"}
-            or not url.hostname
-            or url.username is not None
-            or url.password is not None
-            or url.path not in {"", "/"}
-            or url.query
-            or url.fragment
-        ):
-            raise ValueError(
-                "Claude subscription runtime must be an HTTP(S) origin without credentials or a path"
-            )
-        return value.rstrip("/")
 
     @field_validator("UPDATE_PIPELINE_URL")
     @classmethod
@@ -490,6 +508,9 @@ class Settings(BaseSettings):
     # model's own price; one with no known price falls back to a flat guess.
     EVAL_FALLBACK_INPUT_TOKENS: int = 2000
     EVAL_FALLBACK_OUTPUT_TOKENS: int = 400
+    # An answer from an agent with tools takes this many requests more than one: each
+    # tool call is answered in another request.
+    EVAL_FALLBACK_TOOL_ROUNDS: int = Field(default=2, ge=0)
     EVAL_FALLBACK_CASE_COST_USD: Decimal = Decimal("0.05")
     EVAL_ESTIMATE_SAMPLE: int = 50
     # A running eval run whose worker has not said it is alive, nor started or
