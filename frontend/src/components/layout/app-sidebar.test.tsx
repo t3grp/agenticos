@@ -520,12 +520,16 @@ describe("daily-work navigation", () => {
     sidebar.openGroups = [];
     renderNav();
     const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-    expect(hrefs.slice(0, 8)).toEqual([
+    expect(hrefs.slice(0, 9)).toEqual([
       "/dashboard",
       "/chat",
       "/inbox",
       "/agent-messages",
       "/apps",
+      "/projects",
+      "/agents",
+      "/workflows",
+      "/routines",
       "/agents",
       "/workflows",
       "/routines",
@@ -535,22 +539,18 @@ describe("daily-work navigation", () => {
       "aria-expanded",
       "false",
     );
-    expect(hrefs.indexOf("/documents")).toBeGreaterThan(hrefs.indexOf("/rag"));
+    expect(screen.getByRole("button", { name: "knowledge" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     expect(screen.queryByRole("button", { name: "build" })).not.toBeInTheDocument();
   });
 
-  it("opens knowledge by default but respects an explicit saved closure", () => {
+  it("folds knowledge until opened and always reveals its active destination", () => {
     can.mockReturnValue(true);
     currentPath.mockReturnValue("/chat");
     sidebar.openGroups = [];
     const { rerender } = renderNav();
-    expect(screen.getByRole("button", { name: "knowledge" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    expect(screen.getByRole("link", { name: "skills" })).toBeInTheDocument();
-    sidebar.closedGroups = ["knowledge"];
-    rerender(<SidebarNav />);
     expect(screen.getByRole("button", { name: "knowledge" })).toHaveAttribute(
       "aria-expanded",
       "false",
@@ -559,10 +559,14 @@ describe("daily-work navigation", () => {
     const hiddenLink = screen.getByRole("link", { name: "skills", hidden: true });
     expect(hiddenLink.closest("[inert]")).toHaveAttribute("aria-hidden", "true");
     sidebar.openGroups = ["knowledge"];
-    sidebar.closedGroups = [];
     rerender(<SidebarNav />);
     expect(screen.getByRole("link", { name: "skills" })).toBe(hiddenLink);
     expect(hiddenLink.closest("[inert]")).toBeNull();
+    sidebar.openGroups = [];
+    currentPath.mockReturnValue("/skills");
+    rerender(<SidebarNav />);
+    expect(screen.getByRole("link", { name: "skills" })).toBe(hiddenLink);
+    expect(screen.getByRole("button", { name: "knowledge" })).toBeDisabled();
   });
 });
 
