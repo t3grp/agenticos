@@ -214,6 +214,7 @@ function NavGroupBlock({
   const pathname = usePathname();
   const mounted = useMounted();
   const openGroups = useSidebarStore((state) => state.openGroups);
+  const closedGroups = useSidebarStore((state) => state.closedGroups);
   const toggleGroup = useSidebarStore((state) => state.toggleGroup);
   const key = group.labelKey ?? "main";
   // The page you are on is never hidden behind a folded heading. The stored
