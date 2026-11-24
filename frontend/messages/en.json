@@ -1524,11 +1524,6 @@
       "greetingMorning": "Good morning, {name}. What’s on your mind?",
       "greetingAfternoon": "Good afternoon, {name}. What can I help with?",
       "greetingEvening": "Good evening, {name}. What are we working on?",
-      "groups": {
-        "ask": "Ask",
-        "do": "Do",
-        "track": "Track"
-      },
       "trackTitle": "See what ran"
     },
     "failedArchiveConversation": "Failed to archive conversation",

@@ -171,12 +171,20 @@ describe("ChatEmptyState", () => {
     expect(screen.queryByText("Plan a trip on a map")).toBeNull();
   });
 
-  it("groups the default openers under Ask, Do and Track, with Track linking to Activity", () => {
+  it("lists the default openers flat, with no Ask, Do or Track headings, and Track linking to Activity", () => {
     render(<ChatEmptyState onPick={vi.fn()} />);
 
-    expect(screen.getByRole("heading", { name: "Ask" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Do" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Track" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Ask" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Do" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Track" })).toBeNull();
+    for (const title of [
+      "What can you do?",
+      "Summarize my docs",
+      "Set up a routine",
+      "Draft an email",
+    ]) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
     expect(screen.getByRole("link", { name: /See what ran/ })).toHaveAttribute("href", "/runs");
   });
 

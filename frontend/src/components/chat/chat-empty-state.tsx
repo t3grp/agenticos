@@ -48,14 +48,14 @@ export function greetingKey(
  * The four openers for an agent that names none of its own, in order. Their
  * words live in the catalog under `empty.<id>*`. Two of them show what an agent
  * here does beyond answering - say what it can, and run on a schedule (#2301).
- * Grouped under the same three verbs as home - Ask, Do, Track - so the empty
- * chat reads as the same product as the dashboard.
+ * A flat list: the empty chat is not grouped under verbs, so it reads as a set
+ * of places to start rather than a questionnaire.
  */
 const PROMPTS = [
-  { icon: Compass, id: "capabilities", group: "ask" },
-  { icon: FileSearch, id: "docs", group: "ask" },
-  { icon: CalendarClock, id: "routine", group: "do" },
-  { icon: Mail, id: "email", group: "do" },
+  { icon: Compass, id: "capabilities" },
+  { icon: FileSearch, id: "docs" },
+  { icon: CalendarClock, id: "routine" },
+  { icon: Mail, id: "email" },
 ] as const;
 
 /**
@@ -134,12 +134,9 @@ function Welcome({ agent, starters, loading, onPick, suggestionsSlot }: WelcomeP
         icon: p.icon,
         title: t(`${p.id}Title`),
         prompt: t(`${p.id}Prompt`),
-        // The visual prompts are one ungrouped set; the four openers carry
-        // their Ask / Do group, resolved here where the translator lives.
-        group: "group" in p ? t(`groups.${p.group}`) : undefined,
       }));
   // Track is not a prompt - it is a door to `/runs`, where what ran already
-  // lives. It closes the same three verbs home opens with.
+  // lives. It sits in the same flat list as the four openers.
   if (!starters.length && !draws) {
     suggestions.push({
       key: "track",
@@ -148,7 +145,6 @@ function Welcome({ agent, starters, loading, onPick, suggestionsSlot }: WelcomeP
       prompt: "",
       description: "",
       href: ROUTES.RUNS,
-      group: t("groups.track"),
     });
   }
 

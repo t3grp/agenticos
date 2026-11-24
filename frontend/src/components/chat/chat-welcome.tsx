@@ -62,11 +62,10 @@ export function ChatWelcome({
   suggestionsSlot,
 }: ChatWelcomeProps) {
   const t = useTranslations("chat.empty");
-  // Suggestions arrive in order, grouped where the caller grouped them - the
-  // empty chat's Ask / Do / Track under the same verbs as home - and ungrouped
-  // where it did not (an agent's own starters, the visual prompts), which
-  // render exactly as before, with no heading. Consecutive cards sharing a
-  // group share its heading.
+  // Suggestions arrive in order, grouped where the caller grouped them - and
+  // ungrouped where it did not (an agent's own starters, the visual prompts,
+  // the empty chat's flat list), which render exactly as before, with no
+  // heading. Consecutive cards sharing a group share its heading.
   const groups: { label: string | null; items: WelcomeSuggestion[] }[] = [];
   for (const suggestion of suggestions) {
     const label = suggestion.group ?? null;
