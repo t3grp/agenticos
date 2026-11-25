@@ -206,7 +206,11 @@ on a real delivery. The test URL checks no signature and never starts a run.
 ### trigger.schedule { #trigger-schedule }
 
 **Schedule.** Started on a clock, in the workflow's timezone and at most once a
-minute.
+minute. The tick also hands on its weekday, date and time in that timezone -
+`weekday` (the English day name, such as `Monday`), `local_date` (`YYYY-MM-DD`)
+and `local_time` (`HH:MM`) - derived from `fired_at` when the tick is admitted,
+so a message step can write `{{Schedule.weekday}}` without a test run. A run
+input that predates them reads them in UTC instead.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 

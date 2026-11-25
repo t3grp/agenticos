@@ -1,5 +1,5 @@
 ---
-source_sha: "0ffe0c35d627"
+source_sha: "d4a765b290d9"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -219,7 +219,11 @@ nie uruchamia runu.
 ### trigger.schedule { #trigger-schedule }
 
 **Schedule.** Uruchamiany według zegara, w strefie czasowej workflow i najczęściej raz na
-minutę.
+minutę. Tick przekazuje też swój dzień tygodnia, datę i czas w tej strefie czasowej -
+`weekday` (angielska nazwa dnia, na przykład `Monday`), `local_date` (`YYYY-MM-DD`)
+i `local_time` (`HH:MM`) - wyprowadzone z `fired_at` przy przyjęciu ticka, więc krok
+wysyłający wiadomość może napisać `{{Schedule.weekday}}` bez przebiegu testowego.
+Wejście runa starsze od tych pól odczytuje je w UTC.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 

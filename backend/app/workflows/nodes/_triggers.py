@@ -9,9 +9,10 @@ it received as the run's input, already in this node's output shape, so the
 handler only checks it and hands it on (`run_input_as`).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
@@ -75,11 +76,67 @@ class ScheduleTriggerConfig(_Frozen):
         return self
 
 
-class ScheduleTriggerOutput(_Frozen):
-    """When the tick fired, and the input the schedule starts every run with."""
+class ScheduleTriggerOutputV1(_Frozen):
+    """The tick as version 1 handed it on: when it fired, and the input.
+
+    Kept so a published graph pinned to `trigger.schedule` version 1 still
+    resolves; version 2 adds the tick's local fields below. New graphs take
+    version 2.
+    """
 
     fired_at: datetime
     input: dict[str, Any] = Field(default_factory=dict)
+
+
+# `strftime("%A")` follows the process locale; the weekday a schedule hands on
+# is English by contract, so the names are fixed here.
+_WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def schedule_local_fields(fired_at: datetime, timezone: str) -> dict[str, str]:
+    """A schedule tick's weekday, date and time in `timezone`, from `fired_at`.
+
+    A moment with no timezone of its own is read as UTC. The date is ISO
+    `YYYY-MM-DD` and the time `HH:MM`, both in the timezone asked for.
+    """
+    moment = fired_at if fired_at.tzinfo is not None else fired_at.replace(tzinfo=UTC)
+    local = moment.astimezone(ZoneInfo(timezone))
+    return {
+        "weekday": _WEEKDAYS[local.weekday()],
+        "local_date": local.strftime("%Y-%m-%d"),
+        "local_time": local.strftime("%H:%M"),
+    }
+
+
+class ScheduleTriggerOutput(_Frozen):
+    """When the tick fired, the input the schedule starts every run with, and
+    the tick's weekday, date and time in the workflow's timezone.
+
+    The three local fields are derived from `fired_at` at tick time, never
+    author-supplied; `fired_at` stays the source of truth. A run input that
+    predates them - a test run, or one stored before version 2 - reads them
+    in UTC instead.
+    """
+
+    fired_at: datetime
+    input: dict[str, Any] = Field(default_factory=dict)
+    weekday: str = Field(
+        default="",
+        description="The day name in the workflow's timezone, such as Monday",
+    )
+    local_date: str = Field(
+        default="", description="The date in the workflow's timezone, YYYY-MM-DD"
+    )
+    local_time: str = Field(default="", description="The time in the workflow's timezone, HH:MM")
+
+    @model_validator(mode="after")
+    def _local_fields(self) -> ScheduleTriggerOutput:
+        if self.weekday and self.local_date and self.local_time:
+            return self
+        derived = schedule_local_fields(self.fired_at, "UTC")
+        return self.model_copy(
+            update={field: value for field, value in derived.items() if not getattr(self, field)}
+        )
 
 
 RecordEvent = Literal["created", "updated", "deleted"]

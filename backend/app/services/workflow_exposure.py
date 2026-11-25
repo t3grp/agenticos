@@ -100,6 +100,7 @@ from app.workflows.nodes._triggers import (
     GithubTriggerOutput,
     MailAttachment,
     ScheduleTriggerConfig,
+    schedule_local_fields,
 )
 from app.workflows.nodes.core_input._handler import input_problems
 from app.workflows.nodes.trigger_channel_message._handler import ChannelMessageTriggerConfig
@@ -1604,7 +1605,11 @@ class WorkflowExposureService:
                         version,
                         entry_node_id=exposure.node_instance_id,
                         triggered_by=WorkflowRunTrigger.SCHEDULE,
-                        run_input={"fired_at": now.isoformat(), "input": exposure.run_input},
+                        run_input={
+                            "fired_at": now.isoformat(),
+                            "input": exposure.run_input,
+                            **schedule_local_fields(now, workflow_timezone(workflow)),
+                        },
                     )
             except (
                 WorkflowAdmissionQuotaError,

@@ -1,5 +1,5 @@
 ---
-source_sha: "0ffe0c35d627"
+source_sha: "d4a765b290d9"
 ---
 
 # Workflow-Knoten { #workflow-nodes }
@@ -233,7 +233,12 @@ Signatur und startet nie einen Run.
 ### trigger.schedule { #trigger-schedule }
 
 **Schedule.** Nach der Uhr gestartet, in der Zeitzone des Workflows und höchstens einmal
-pro Minute.
+pro Minute. Der Tick gibt außerdem seinen Wochentag, sein Datum und seine Uhrzeit in
+dieser Zeitzone weiter - `weekday` (der englische Tagesname, etwa `Monday`),
+`local_date` (`YYYY-MM-DD`) und `local_time` (`HH:MM`) - abgeleitet aus `fired_at`,
+wenn der Tick aufgenommen wird, sodass ein Nachrichtenschritt `{{Schedule.weekday}}`
+ohne einen Testlauf schreiben kann. Eine Run-Eingabe, die älter ist als diese Felder,
+liest sie stattdessen in UTC.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
