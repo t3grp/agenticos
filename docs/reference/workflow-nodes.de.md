@@ -1,5 +1,5 @@
 ---
-source_sha: "d4a765b290d9"
+source_sha: "cfdaf55eda0b"
 ---
 
 # Workflow-Knoten { #workflow-nodes }
@@ -228,6 +228,18 @@ ein JSON-Objekt, wird als Ausgabe des Triggers angeheftet, sodass jeder Schritt
 danach mit einer echten Zustellung getestet werden kann. Die Test-URL prüft keine
 Signatur und startet nie einen Run.
 
+Der Knoten kann auch deklarieren, was `body` enthält - einfache Felder
+(`payload_fields`) oder ein JSON Schema (`payload_schema`), eines oder das
+andere. Deklarierte Felder sind bei der Veröffentlichung typisiert, sodass
+`{{Webhook.body.orderId}}` ohne einen Testlauf prüft, und eine Zustellung, die
+nicht passt, wird abgelehnt, bevor ein Run startet. Eine Feldliste ist
+geschlossen - ein nicht deklarierter Schlüssel wird abgelehnt - und eine
+verschachtelte Zustellung braucht die Schema-Stufe. Felder sind nach ihrem
+JSON-Namen geschlüsselt, sodass `orderId` und `First name` beide gültige Namen
+sind.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
@@ -238,7 +250,11 @@ dieser Zeitzone weiter - `weekday` (der englische Tagesname, etwa `Monday`),
 `local_date` (`YYYY-MM-DD`) und `local_time` (`HH:MM`) - abgeleitet aus `fired_at`,
 wenn der Tick aufgenommen wird, sodass ein Nachrichtenschritt `{{Schedule.weekday}}`
 ohne einen Testlauf schreiben kann. Eine Run-Eingabe, die älter ist als diese Felder,
-liest sie stattdessen in UTC.
+liest sie stattdessen in UTC. Sein `input` kann denselben Payload-Vertrag
+deklarieren wie ein Webhook - einfache Felder oder ein JSON Schema. Das
+deklarierte `input` wird bei der Veröffentlichung geprüft und erneut zur
+Tick-Zeit, wenn die gespeicherte Eingabe geändert wurde: Ein Tick, der nicht
+mehr passt, wird übersprungen und der Zeitplan behält seinen nächsten Tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -250,6 +266,11 @@ liest sie stattdessen in UTC.
 oder gelöscht wird - je nachdem, was `events` nennt - und jedem Filter entspricht. Eine
 Änderung startet ihn nur, wenn sich eine für die Tabelle gewählte Spalte geändert hat,
 sofern Spalten gewählt sind. Das Veröffentlichen braucht Lesezugriff auf die Tabelle.
+Seine Datensatzfelder lassen sich auf dieselbe Weise deklarieren, als einfache
+Felder, die nach Spaltenbezeichnung geschlüsselt sind - `{{Record.fields.Email}}` -
+und die Veröffentlichung prüft jedes deklarierte Feld gegen eine aktuelle Spalte
+der Tabelle: Eine Spalte, die entfernt oder umbenannt wurde, oder ein Typ, den die
+Spalte nicht halten kann, ist ein Veröffentlichungsproblem.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -278,7 +299,11 @@ veröffentlicht hat. `triggered_by` ist `form`.
 eines der Ereignisse und - sofern er welche nennt - eine der Aktionen, die der Knoten
 nennt. Die Veröffentlichung registriert den Hook über das verbundene GitHub-Konto der
 Organisation, wenn sie kann, oder zeigt das Geheimnis einmal zum Einfügen.
-`triggered_by` ist `github`.
+`triggered_by` ist `github`. Der Knoten kann deklarieren, was `payload` enthält -
+einfache Felder oder ein JSON Schema. Eine Zustellung, die nicht passt, wird
+abgelehnt, bevor ein Run startet. Eine Feldliste deckt nur skalare Schlüssel der
+obersten Ebene ab, sodass eine echte GitHub-Zustellung mit ihren `repository`-
+und `sender`-Objekten die Schema-Stufe braucht.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 

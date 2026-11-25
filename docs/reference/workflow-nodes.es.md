@@ -1,5 +1,5 @@
 ---
-source_sha: "d4a765b290d9"
+source_sha: "cfdaf55eda0b"
 ---
 
 # Nodos de workflow { #workflow-nodes }
@@ -223,6 +223,17 @@ se le envía, un objeto JSON, queda fijada como salida del disparador, así que 
 paso posterior se puede probar con una entrega real. La URL de prueba no comprueba
 ninguna firma y nunca inicia un run.
 
+El nodo también puede declarar lo que contiene `body`: campos simples
+(`payload_fields`) o un JSON Schema (`payload_schema`), uno u otro. Los campos
+declarados se tipan al publicar, así que `{{Webhook.body.orderId}}` se comprueba
+sin una ejecución de prueba, y una entrega que no encaja se rechaza antes de que
+empiece ningún run. Una lista de campos es cerrada: una clave no declarada se
+rechaza, y una entrega anidada necesita el nivel de esquema. Los campos se
+identifican por su nombre JSON, así que `orderId` y `First name` son ambos
+nombres válidos.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
@@ -233,6 +244,10 @@ zona horaria - `weekday` (el nombre del día en inglés, por ejemplo `Monday`),
 `local_date` (`YYYY-MM-DD`) y `local_time` (`HH:MM`) - derivados de `fired_at` cuando
 se admite el tick, de modo que un paso de mensaje puede escribir `{{Schedule.weekday}}`
 sin una ejecución de prueba. Una entrada de run anterior a estos campos los lee en UTC.
+Su `input` puede declarar el mismo contrato de payload que un webhook: campos
+simples o un JSON Schema. El `input` declarado se comprueba al publicar y otra
+vez en el momento del tick si la entrada guardada se editó: un tick que ya no
+encaja se omite y la programación conserva su próximo tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -243,7 +258,11 @@ sin una ejecución de prueba. Una entrada de run anterior a estos campos los lee
 **Table record.** Se inicia cuando un registro de su tabla se añade, cambia o borra -
 según nombre `events` - y cumple cada filtro. Un cambio solo lo inicia cuando cambió una
 columna elegida para la tabla, si hay columnas elegidas. Publicarlo requiere acceso de
-lectura a la tabla.
+lectura a la tabla. Sus campos de registro se pueden declarar de la misma forma,
+como campos simples identificados por la etiqueta de columna -
+`{{Record.fields.Email}}` - y al publicar se comprueba cada campo declarado
+contra una columna viva de la tabla: una columna eliminada o renombrada, o un
+tipo que la columna no puede contener, es un problema de publicación.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -271,7 +290,11 @@ es `form`.
 **GitHub.** Se inicia con una entrega que GitHub firma para el repositorio, uno de los
 eventos y - si el nodo nombra alguna - una de las acciones que nombra. La publicación
 registra el hook a través de la cuenta de GitHub conectada de la organización cuando
-puede, o muestra el secreto una vez para pegarlo. `triggered_by` es `github`.
+puede, o muestra el secreto una vez para pegarlo. `triggered_by` es `github`. El
+nodo puede declarar lo que contiene `payload`: campos simples o un JSON Schema.
+Una entrega que no encaja se rechaza antes de que empiece ningún run. Una lista
+de campos cubre solo claves escalares de nivel superior, así que una entrega real
+de GitHub, con sus objetos `repository` y `sender`, necesita el nivel de esquema.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 

@@ -1,5 +1,5 @@
 ---
-source_sha: "29083d2aceb5"
+source_sha: "e1f6c320dcb4"
 ---
 
 # Workflows { #workflows }
@@ -905,7 +905,12 @@ od najnowszego, każdy z jego statusem, tym, czy uruchomił draft czy opublikowa
 wersję, co go uruchomiło, kiedy, jak długo trwał i ile kosztował. **Start a run**
 uruchamia run ręcznie: **Test the draft** uruchamia draft w obecnym stanie, a
 **Published version** uruchamia żywą wersję. Jego **Input (JSON)** to to, co krok
-**Input** workflow przekazuje dalej jako `payload`.
+**Input** workflow przekazuje dalej jako `payload`. Dostarczenie do wyzwalacza
+webhook albo GitHub, którego payload nie pasuje do schematu zadeklarowanego przez
+wyzwalacz, jest odrzucane przed startem jakiegokolwiek runa: nie powstaje żaden
+run, a dla webhooka dostarczenie nie zużywa limitu. Tick harmonogramu, którego
+zapisane wejście już nie pasuje, jest pomijany tak samo, a harmonogram zachowuje
+następny tick.
 
 Nad listą **How it ran** podsumowuje prawdziwe runy z ostatnich 7, 30 lub 90 dni: ile
 się uruchomiło i ile zawiodło, jaki odsetek zakończonych się udał, typowy czas i czas,

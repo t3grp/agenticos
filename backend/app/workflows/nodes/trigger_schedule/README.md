@@ -18,3 +18,8 @@ offered for new steps.
 A tick that finds the last run still going is skipped rather than stacked, and a
 schedule whose member can no longer run the workflow is switched off and audited.
 It does not catch up on ticks it missed while the worker was down.
+
+The `input` every run starts with can declare its payload contract - simple
+fields or a JSON Schema, one or the other. The declared `input` is checked at
+publish, and again at tick time if the stored input was edited: a tick that no
+longer fits is skipped and the schedule keeps its next tick.

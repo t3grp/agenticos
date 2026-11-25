@@ -877,7 +877,11 @@ runs, newest first, each with its status, whether it ran the draft or the publis
 version, what started it, when, for how long and at what cost. **Start a run**
 starts one by hand: **Test the draft** runs the draft as it stands, and **Published
 version** runs the live one. Its **Input (JSON)** is what the workflow's **Input**
-step hands on as `payload`.
+step hands on as `payload`. A delivery to a webhook or GitHub trigger whose payload
+does not fit the schema the trigger declares is refused before any run starts:
+no run is created and, for a webhook, the delivery spends no allowance. A schedule
+tick whose stored input no longer fits is skipped the same way, and the schedule
+keeps its next tick.
 
 Above the list, **How it ran** sums up the real runs of the last 7, 30 or 90 days:
 how many ran and how many failed, the share of those that ended that succeeded, the

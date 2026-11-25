@@ -201,6 +201,16 @@ opens a test URL for the draft for two minutes. The one call sent to it, a JSON
 object, is pinned as the trigger's output, so each step after it can be tested
 on a real delivery. The test URL checks no signature and never starts a run.
 
+The node can also declare what `body` holds - simple fields (`payload_fields`)
+or a JSON Schema (`payload_schema`), one or the other. Declared fields are typed
+at publish, so `{{Webhook.body.orderId}}` checks without a test run, and a
+delivery that does not fit is refused before any run starts. A field list is
+closed - an undeclared key is refused - and a nested delivery needs the schema
+tier. Fields are keyed by their JSON name, so `orderId` and `First name` are
+both valid names.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
@@ -210,7 +220,11 @@ minute. The tick also hands on its weekday, date and time in that timezone -
 `weekday` (the English day name, such as `Monday`), `local_date` (`YYYY-MM-DD`)
 and `local_time` (`HH:MM`) - derived from `fired_at` when the tick is admitted,
 so a message step can write `{{Schedule.weekday}}` without a test run. A run
-input that predates them reads them in UTC instead.
+input that predates them reads them in UTC instead. Its `input` can declare the
+same payload contract as a webhook - simple fields or a JSON Schema. The
+declared `input` is checked at publish, and again at tick time if the stored
+input was edited: a tick that no longer fits is skipped and the schedule keeps
+its next tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -221,7 +235,10 @@ input that predates them reads them in UTC instead.
 **Table record.** Started by a record of its table being added, changed or deleted -
 whichever its `events` name - that matches every filter. A change starts it only when a
 column chosen for the table changed, when columns are chosen. Publishing it needs read
-access to the table.
+access to the table. Its record fields can be declared the same way, as simple
+fields keyed by column label - `{{Record.fields.Email}}` - and publishing checks
+each declared field against a live column of the table: a column that was
+removed or renamed, or a type the column cannot hold, is a publish problem.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -248,7 +265,11 @@ run as the member who published it. `triggered_by` is `form`.
 **GitHub.** Started by a delivery GitHub signs for the repository, one of the events
 and - when it names any - one of the actions the node names. Publishing registers the
 hook through the organization's connected GitHub account when it can, or shows the
-secret once to paste. `triggered_by` is `github`.
+secret once to paste. `triggered_by` is `github`. The node can declare what
+`payload` holds - simple fields or a JSON Schema. A delivery that does not fit
+is refused before any run starts. A field list covers only scalar top-level
+keys, so a real GitHub delivery, with its `repository` and `sender` objects,
+needs the schema tier.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 

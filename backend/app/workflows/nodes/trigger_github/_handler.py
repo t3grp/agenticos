@@ -12,6 +12,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
+from app.workflows.contracts.definition import Port
+from app.workflows.contracts.payload_schema import PayloadSchemaConfig, typed_trigger_output
 from app.workflows.contracts.results import Completed, Failed, NodeResult
 from app.workflows.nodes._triggers import GithubTriggerOutput, run_input_as
 
@@ -30,8 +32,15 @@ REPOSITORY = r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$"
 GithubAction = Annotated[str, StringConstraints(pattern=r"^[a-z_]{1,40}$")]
 
 
-class GithubTriggerConfig(BaseModel):
-    """Which repository, and which of its events, start the workflow."""
+class GithubTriggerConfig(PayloadSchemaConfig):
+    """Which repository, and which of its events, start the workflow.
+
+    `payload_fields` / `payload_schema` declare the shape of the delivery's
+    `payload`: a delivery that does not fit is refused at admission with
+    `WORKFLOW_RUN_INPUT_INVALID` and starts no run. The fixed top fields
+    (`event`, `action`, `repository`, `sender`, `delivery_id`) are not part
+    of the declaration.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -81,6 +90,17 @@ class GithubTriggerConfig(BaseModel):
         if repository.casefold() != self.repository.casefold() or event not in self.events:
             return False
         return not self.actions or action in self.actions
+
+
+def ports_for(config: BaseModel | None) -> tuple[Port, ...]:
+    """`out`, carrying a `payload` typed by the declared fields when there are any."""
+    typed = (
+        typed_trigger_output(config, GithubTriggerOutput, "payload")
+        if isinstance(config, GithubTriggerConfig)
+        else None
+    )
+    schema = typed if typed is not None else GithubTriggerOutput
+    return (Port(id="out", label="Out", kind="output", schema=schema),)
 
 
 async def handle(config: BaseModel | None, node_input: BaseModel | None) -> NodeResult:

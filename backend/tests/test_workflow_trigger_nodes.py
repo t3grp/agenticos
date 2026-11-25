@@ -470,6 +470,64 @@ async def test_a_table_trigger_watches_only_columns_a_record_stores(monkeypatch)
     assert [field for field, _ in problems] == ["table.column_ids.1", "table.column_ids.2"]
 
 
+async def test_a_table_trigger_declares_its_record_fields_against_live_columns(monkeypatch):
+    # `side_effect`, not `return_value`: the shared list would keep every
+    # problem a previous call appended to it.
+    monkeypatch.setattr(
+        "app.workflows.nodes.trigger_table_record._handler.check_table",
+        AsyncMock(side_effect=lambda *args, **kwargs: []),
+    )
+    monkeypatch.setattr(
+        "app.workflows.nodes.trigger_table_record._handler.virtual_table_repo.get_schema_version",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                columns=[
+                    {"id": str(uuid.uuid4()), "label": "Email", "type": "email"},
+                    {"id": str(uuid.uuid4()), "label": "Score", "type": "integer"},
+                    {"id": str(uuid.uuid4()), "label": "Old", "type": "text", "archived": True},
+                ]
+            )
+        ),
+    )
+
+    def _config(fields: list[dict]) -> TableRecordTriggerConfig:
+        return TableRecordTriggerConfig.model_validate(
+            {
+                "table": {"table_id": str(_TABLE), "schema_version": 1},
+                "payload_fields": fields,
+            }
+        )
+
+    assert (
+        await check_resources(
+            MagicMock(),
+            MagicMock(),
+            _config(
+                [
+                    {"name": "Email", "type": "text"},
+                    {"name": "Score", "type": "integer"},
+                ]
+            ),
+        )
+        == []
+    )
+    # A field naming a column the table no longer has - removed or renamed -
+    # is a publish problem, not a missing value at run time.
+    removed = await check_resources(
+        MagicMock(), MagicMock(), _config([{"name": "Gone", "type": "text"}])
+    )
+    assert [field for field, _ in removed] == ["payload_fields.0.name"]
+    archived = await check_resources(
+        MagicMock(), MagicMock(), _config([{"name": "Old", "type": "text"}])
+    )
+    assert [field for field, _ in archived] == ["payload_fields.0.name"]
+    # A field claiming a type the column cannot hold is a publish problem too.
+    mistyped = await check_resources(
+        MagicMock(), MagicMock(), _config([{"name": "Score", "type": "text"}])
+    )
+    assert [field for field, _ in mistyped] == ["payload_fields.0.type"]
+
+
 def test_a_table_trigger_starts_on_added_records_unless_told_more_and_names_each_once():
     table = {"table_id": str(_TABLE), "schema_version": 1}
 

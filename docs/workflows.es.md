@@ -1,5 +1,5 @@
 ---
-source_sha: "29083d2aceb5"
+source_sha: "e1f6c320dcb4"
 ---
 
 # Workflows { #workflows }
@@ -932,7 +932,12 @@ workflow, abren sus runs, del más reciente al más antiguo, cada uno con su est
 ejecutó el draft o la versión publicada, qué lo inició, cuándo, cuánto duró y cuánto
 costó. **Start a run** inicia uno a mano: **Test the draft** ejecuta el draft tal
 como está, y **Published version** ejecuta la versión en vivo. Su **Input (JSON)** es
-lo que el paso **Input** del workflow entrega como `payload`.
+lo que el paso **Input** del workflow entrega como `payload`. Una entrega a un
+disparador de webhook o GitHub cuyo payload no encaja con el esquema que el
+disparador declara se rechaza antes de que empiece ningún run: no se crea ningún
+run y, para un webhook, la entrega no gasta su asignación. Un tick de programación
+cuya entrada guardada ya no encaja se omite de la misma forma, y la programación
+conserva su próximo tick.
 
 Sobre la lista, **How it ran** resume las ejecuciones reales de los últimos 7, 30 o 90
 días: cuántas se ejecutaron y cuántas fallaron, la parte de las terminadas que salió

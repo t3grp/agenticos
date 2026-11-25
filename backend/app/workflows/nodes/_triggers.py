@@ -23,6 +23,7 @@ from app.schemas.virtual_table import RecordFilter
 from app.schemas.virtual_table_trigger import MAX_FILTERS
 from app.services.workflow_execution import context
 from app.workflows.contracts.io import FileRef, TableIORef
+from app.workflows.contracts.payload_schema import PayloadSchemaConfig
 from app.workflows.contracts.results import Failed, WorkflowError
 
 
@@ -45,8 +46,13 @@ class WebhookTriggerOutput(_Frozen):
     delivery_id: str
 
 
-class ScheduleTriggerConfig(_Frozen):
-    """How often the workflow runs, and what every run starts with."""
+class ScheduleTriggerConfig(PayloadSchemaConfig):
+    """How often the workflow runs, and what every run starts with.
+
+    `payload_fields` / `payload_schema` declare the shape of `input`: the
+    run is refused at publish when the configured `input` does not fit, and
+    again at tick time when the stored input was edited since.
+    """
 
     schedule_kind: Literal["interval", "cron"] = "interval"
     interval_seconds: int | None = Field(
@@ -142,8 +148,19 @@ class ScheduleTriggerOutput(_Frozen):
 RecordEvent = Literal["created", "updated", "deleted"]
 
 
-class TableRecordTriggerConfig(_Frozen):
-    """Which table, which of its records' events, and which records, start the workflow."""
+class TableRecordTriggerConfig(PayloadSchemaConfig):
+    """Which table, which of its records' events, and which records, start the workflow.
+
+    `payload_fields` declares the record's `fields` - the values by column
+    label - by hand: the table's live columns are what the declaration is
+    checked against at publish, so a field naming a column the table no
+    longer has, or of a type the column cannot hold, is a publish problem.
+    The columns are not derived into the declaration automatically: the
+    catalog and the graph checker are per-definition, while a table's columns
+    belong to one table, and deriving them would need a live schema read in
+    the (synchronous) port resolution. `values`, keyed by column id rather
+    than label, stays untyped.
+    """
 
     table: TableIORef = Field(
         json_schema_extra={"x-resource": "table", "x-columns": "stored"},

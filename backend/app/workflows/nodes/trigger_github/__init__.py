@@ -3,7 +3,7 @@
 from app.workflows._registry import register
 from app.workflows.contracts.definition import TRIGGER_CATEGORY, NodeDefinition, Port
 from app.workflows.nodes._triggers import GithubTriggerOutput
-from app.workflows.nodes.trigger_github._handler import GithubTriggerConfig, handle
+from app.workflows.nodes.trigger_github._handler import GithubTriggerConfig, handle, ports_for
 from app.workflows.triggers import GITHUB
 
 register(
@@ -21,5 +21,6 @@ register(
         effect_kind="pure",
         retry_guarantee="idempotent",
         handler=handle,
+        ports_for=ports_for,
     )
 )

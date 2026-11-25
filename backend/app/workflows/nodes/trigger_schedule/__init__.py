@@ -13,7 +13,7 @@ from app.workflows.nodes._triggers import (
     ScheduleTriggerOutput,
     ScheduleTriggerOutputV1,
 )
-from app.workflows.nodes.trigger_schedule._handler import handle
+from app.workflows.nodes.trigger_schedule._handler import handle, ports_for
 from app.workflows.triggers import SCHEDULE
 
 register(
@@ -31,6 +31,7 @@ register(
         effect_kind="pure",
         retry_guarantee="idempotent",
         handler=handle,
+        ports_for=ports_for,
     )
 )
 

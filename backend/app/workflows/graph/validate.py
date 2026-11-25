@@ -97,6 +97,7 @@ from app.workflows.contracts.io import (
     output_refs,
     target_path,
 )
+from app.workflows.contracts.payload_schema import PayloadSchemaConfig, payload_problems
 from app.workflows.contracts.policy import ERROR_PORT
 from app.workflows.contracts.results import WorkflowError
 from app.workflows.graph.errors import GraphValidationError
@@ -113,7 +114,7 @@ from app.workflows.graph.model import Edge, NodeInstance, ScopeBoundary, Workflo
 from app.workflows.graph.quick_log import references, refused_reference
 from app.workflows.nodes._port_names import clash_message
 from app.workflows.nodes.control_foreach._handler import DONE_PORT
-from app.workflows.triggers import UNATTENDED, entry_graph, entry_nodes
+from app.workflows.triggers import SCHEDULE, UNATTENDED, entry_graph, entry_nodes
 
 Problems = list[tuple[str, str]]
 DefinitionMap = dict[UUID, NodeDefinition | None]
@@ -175,6 +176,7 @@ async def validate_graph(db: AsyncSession, ctx: AuthContext, graph: WorkflowGrap
     problems += _missing_version_problems(graph, definitions)
     problems += _scope_access_problems(graph, definitions)
     problems += _config_schema_problems(graph, definitions)
+    problems += _schedule_payload_problems(graph, definitions)
     problems += _error_port_clash_problems(graph, definitions)
     problems += _binding_target_field_problems(graph, definitions)
     problems += _literal_binding_type_problems(graph, definitions)
@@ -552,6 +554,42 @@ def _config_schema_problems(graph: WorkflowGraph, definitions: DefinitionMap) ->
             ]
             for problem in field_problems(errors, root=root):
                 problems.append((problem["field"], problem["message"]))
+    return problems
+
+
+def _schedule_payload_problems(graph: WorkflowGraph, definitions: DefinitionMap) -> Problems:
+    """A schedule trigger's configured `input` against its declared payload schema.
+
+    The input is author-supplied, so it is checked at publish - in-process,
+    since the author is the one who wrote both sides - rather than at tick
+    time. A config that fails its own schema is already refused above, so
+    `_validated_config` returning nothing means there is nothing to check
+    here. The check reads the config through `PayloadSchemaConfig` rather
+    than importing the trigger's own config class: that class lives behind
+    the trigger handler, which the execution service (and through it this
+    module) cannot import without a cycle.
+    """
+    problems: Problems = []
+    for node in graph.nodes:
+        definition = definitions.get(node.id)
+        if definition is None or definition.id != SCHEDULE or node.disabled:
+            continue
+        config = _validated_config(node, definition)
+        if not isinstance(config, PayloadSchemaConfig):
+            continue
+        schedule_input = getattr(config, "input", {})
+        if not isinstance(schedule_input, dict):
+            continue
+        for problem in payload_problems(config, schedule_input):
+            field = problem["field"]
+            problems.append(
+                (
+                    f"nodes.{node.id}.config.input.{field}"
+                    if field
+                    else f"nodes.{node.id}.config.input",
+                    problem["message"],
+                )
+            )
     return problems
 
 
@@ -1054,6 +1092,13 @@ def _resolve_field_path(ports: tuple[Port, ...], port_id: str, field_path: tuple
         if not (isinstance(current, type) and issubclass(current, BaseModel)):
             return _UNKNOWN
         if part not in current.model_fields:
+            # A model that accepts undeclared keys - a Tier 2 payload schema
+            # without `additionalProperties: false` - holds anything under an
+            # undeclared key: the path stays dynamic, allowed at publish and
+            # checked when the node is dispatched, because the schema itself
+            # allows the key. A closed model refuses it, as a missing field.
+            if current.model_config.get("extra") == "allow":
+                return Any
             return _UNKNOWN
         current = current.model_fields[part].annotation
     return current

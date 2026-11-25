@@ -17,7 +17,14 @@ from app.core.permissions import AuthContext, OrgRoleName
 from app.repositories import virtual_table_repo
 from app.workflows._registry import REGISTRY, register
 from app.workflows.contracts.definition import NodeDefinition, Port
-from app.workflows.contracts.io import Binding, FileRef, LiteralValue, NodeOutputRef, TableIORef
+from app.workflows.contracts.io import (
+    Binding,
+    FileRef,
+    LiteralValue,
+    NodeOutputRef,
+    TableIORef,
+    TemplateValue,
+)
 from app.workflows.contracts.policy import NodePolicy
 from app.workflows.graph.errors import GraphValidationError
 from app.workflows.graph.model import Edge, NodeInstance, NodePosition, ScopeBoundary, WorkflowGraph
@@ -630,6 +637,276 @@ async def test_a_binding_to_a_node_on_every_path_publishes(mock_db_session, regi
     graph = WorkflowGraph(entry_node_id=a.id, nodes=(a, b), edges=(edge,), bindings=(binding,))
     validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
     assert validated.bindings == (binding,)
+
+
+# Rule 3 - declared trigger payload paths
+
+
+class _PayloadConsumerInput(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    text_value: str = ""
+    count_value: int = 0
+
+
+def _payload_consumer(registered_node, node_id: str) -> NodeDefinition:
+    return registered_node(
+        NodeDefinition(
+            id=node_id,
+            version=1,
+            name=node_id,
+            category="test",
+            description="test node",
+            kind="action",
+            config_schema=None,
+            input_schema=_PayloadConsumerInput,
+            output_schema=_PlainOutput,
+            ports=(
+                Port(id="in", label="In", kind="input", schema=None),
+                Port(id="out", label="Out", kind="output", schema=_PlainOutput),
+            ),
+            effect_kind="pure",
+            retry_guarantee="idempotent",
+        )
+    )
+
+
+def _trigger_node(definition_id: str, version: int, config: dict) -> NodeInstance:
+    return NodeInstance(
+        id=uuid4(),
+        definition_id=definition_id,
+        definition_version=version,
+        config=config,
+        layout=_pos(),
+    )
+
+
+def _payload_graph(
+    trigger: NodeInstance, consumer: NodeInstance, binding: Binding
+) -> WorkflowGraph:
+    edge = _edge(trigger.id, "out", consumer.id, "in")
+    return WorkflowGraph(
+        entry_node_id=trigger.id, nodes=(trigger, consumer), edges=(edge,), bindings=(binding,)
+    )
+
+
+def _consumer_node(definition: NodeDefinition) -> NodeInstance:
+    return NodeInstance(
+        id=uuid4(), definition_id=definition.id, definition_version=1, config={}, layout=_pos()
+    )
+
+
+def _webhook_config() -> dict:
+    return {
+        "payload_fields": [
+            {"name": "title", "type": "text"},
+            {"name": "count", "type": "integer", "required": False},
+        ]
+    }
+
+
+async def test_a_binding_to_a_declared_payload_field_publishes(mock_db_session, registered_node):
+    consumer = _payload_consumer(registered_node, "test.payload_consumer")
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "title")),
+    )
+    validated = await validate_graph(
+        mock_db_session, _owner_ctx(), _payload_graph(trigger, target, binding)
+    )
+    assert validated.bindings == (binding,)
+
+
+async def test_a_binding_of_a_declared_payload_field_to_the_wrong_type_is_refused(
+    mock_db_session, registered_node
+):
+    consumer = _payload_consumer(registered_node, "test.payload_mistyped")
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "count")),
+    )
+    fields = await _fields(_payload_graph(trigger, target, binding), mock_db_session)
+    assert _has(fields, "bindings.0", "not compatible")
+
+
+async def test_a_binding_to_a_field_the_declared_payload_does_not_have_is_refused(
+    mock_db_session, registered_node
+):
+    consumer = _payload_consumer(registered_node, "test.payload_missing")
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "nope")),
+    )
+    fields = await _fields(_payload_graph(trigger, target, binding), mock_db_session)
+    assert _has(fields, "bindings.0", "does not exist")
+
+
+async def test_a_template_binding_to_a_declared_payload_field_publishes(
+    mock_db_session, registered_node
+):
+    consumer = _payload_consumer(registered_node, "test.payload_template")
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=TemplateValue(
+            parts=(
+                "New lead: ",
+                NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "title")),
+            )
+        ),
+    )
+    validated = await validate_graph(
+        mock_db_session, _owner_ctx(), _payload_graph(trigger, target, binding)
+    )
+    assert validated.bindings == (binding,)
+
+
+async def test_a_template_placeholder_naming_a_field_the_declared_payload_does_not_have_is_refused(
+    mock_db_session, registered_node
+):
+    consumer = _payload_consumer(registered_node, "test.payload_template_missing")
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=TemplateValue(
+            parts=(
+                "New lead: ",
+                NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "nope")),
+            )
+        ),
+    )
+    fields = await _fields(_payload_graph(trigger, target, binding), mock_db_session)
+    assert _has(fields, "bindings.0", "does not exist")
+
+
+async def test_a_binding_into_an_undeclared_payload_stays_dynamic(mock_db_session, registered_node):
+    consumer = _payload_consumer(registered_node, "test.payload_dynamic")
+    trigger = _trigger_node("trigger.webhook", 1, {})
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "whatever")),
+    )
+    validated = await validate_graph(
+        mock_db_session, _owner_ctx(), _payload_graph(trigger, target, binding)
+    )
+    assert validated.bindings == (binding,)
+
+
+async def test_a_binding_into_a_declared_tier_2_payload_is_typed(mock_db_session, registered_node):
+    consumer = _payload_consumer(registered_node, "test.payload_schema")
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {
+            "payload_schema": {
+                "type": "object",
+                "properties": {
+                    "pull_request": {
+                        "type": "object",
+                        "properties": {"title": {"type": "string"}},
+                        "required": ["title"],
+                        "additionalProperties": False,
+                    }
+                },
+                "required": ["pull_request"],
+                "additionalProperties": False,
+            }
+        },
+    )
+    target = _consumer_node(consumer)
+    good = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(
+            node_id=trigger.id, port="out", field_path=("body", "pull_request", "title")
+        ),
+    )
+    validated = await validate_graph(
+        mock_db_session, _owner_ctx(), _payload_graph(trigger, target, good)
+    )
+    assert validated.bindings == (good,)
+    closed = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(
+            node_id=trigger.id, port="out", field_path=("body", "pull_request", "nope")
+        ),
+    )
+    fields = await _fields(_payload_graph(trigger, target, closed), mock_db_session)
+    assert _has(fields, "bindings.0", "does not exist")
+
+
+async def test_a_binding_into_an_open_tier_2_payload_stays_dynamic(
+    mock_db_session, registered_node
+):
+    consumer = _payload_consumer(registered_node, "test.payload_schema_open")
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {
+            "payload_schema": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        },
+    )
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=NodeOutputRef(node_id=trigger.id, port="out", field_path=("body", "surprise")),
+    )
+    validated = await validate_graph(
+        mock_db_session, _owner_ctx(), _payload_graph(trigger, target, binding)
+    )
+    assert validated.bindings == (binding,)
+
+
+async def test_a_schedule_input_that_does_not_fit_its_declared_schema_is_refused(
+    mock_db_session,
+):
+    trigger = _trigger_node(
+        "trigger.schedule",
+        2,
+        {
+            "schedule_kind": "interval",
+            "interval_seconds": 3600,
+            "input": {"region": 7},
+            "payload_fields": [{"name": "region", "type": "text"}],
+        },
+    )
+    graph = WorkflowGraph(entry_node_id=trigger.id, nodes=(trigger,))
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{trigger.id}.config.input.region", "valid string")
+    fitting = _trigger_node(
+        "trigger.schedule",
+        2,
+        {
+            "schedule_kind": "interval",
+            "interval_seconds": 3600,
+            "input": {"region": "eu"},
+            "payload_fields": [{"name": "region", "type": "text"}],
+        },
+    )
+    validated = await validate_graph(
+        mock_db_session, _owner_ctx(), WorkflowGraph(entry_node_id=fitting.id, nodes=(fitting,))
+    )
+    assert validated.nodes == (fitting,)
 
 
 # Rule 5 - exclusive merge

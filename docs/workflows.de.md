@@ -1,5 +1,5 @@
 ---
-source_sha: "29083d2aceb5"
+source_sha: "e1f6c320dcb4"
 ---
 
 # Workflows { #workflows }
@@ -976,7 +976,12 @@ Draft oder die veröffentlichte Version ausgeführt hat, was ihn gestartet hat, 
 wie lange und zu welchen Kosten. **Start a run** startet einen von Hand: **Test the
 draft** führt den Draft in seinem jetzigen Stand aus, **Published version** die
 Live-Version. Sein **Input (JSON)** ist das, was der **Input**-Schritt des Workflows
-als `payload` weitergibt.
+als `payload` weitergibt. Eine Zustellung an einen Webhook- oder GitHub-Trigger,
+deren Payload nicht zu dem Schema passt, das der Trigger deklariert, wird
+abgelehnt, bevor ein Run startet: Es wird kein Run angelegt und bei einem Webhook
+verbraucht die Zustellung kein Kontingent. Ein Zeitplan-Tick, dessen gespeicherte
+Eingabe nicht mehr passt, wird genauso übersprungen, und der Zeitplan behält
+seinen nächsten Tick.
 
 Über der Liste fasst **How it ran** die echten Läufe der letzten 7, 30 oder 90 Tage
 zusammen: wie viele liefen und wie viele fehlschlugen, der Anteil der beendeten, der

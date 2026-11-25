@@ -1,5 +1,5 @@
 ---
-source_sha: "d4a765b290d9"
+source_sha: "cfdaf55eda0b"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -214,6 +214,16 @@ JSON, zostaje przypięte jako wynik wyzwalacza, więc każdy kolejny krok da si�
 przetestować na prawdziwym dostarczeniu. Testowy URL nie sprawdza podpisu i nigdy
 nie uruchamia runu.
 
+Węzeł może też zadeklarować, co zawiera `body` - proste pola (`payload_fields`)
+albo JSON Schema (`payload_schema`), jedno albo drugie. Zadeklarowane pola są
+typowane przy publikacji, więc `{{Webhook.body.orderId}}` sprawdza się bez
+przebiegu testowego, a dostarczenie, które nie pasuje, jest odrzucane przed
+startem jakiegokolwiek runa. Lista pól jest zamknięta - niezgłoszony klucz jest
+odrzucany - a zagnieżdżone dostarczenie wymaga warstwy schematu. Pola są
+kluczowane swoją nazwą JSON, więc `orderId` i `First name` to obie poprawne nazwy.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
@@ -223,7 +233,11 @@ minutę. Tick przekazuje też swój dzień tygodnia, datę i czas w tej strefie 
 `weekday` (angielska nazwa dnia, na przykład `Monday`), `local_date` (`YYYY-MM-DD`)
 i `local_time` (`HH:MM`) - wyprowadzone z `fired_at` przy przyjęciu ticka, więc krok
 wysyłający wiadomość może napisać `{{Schedule.weekday}}` bez przebiegu testowego.
-Wejście runa starsze od tych pól odczytuje je w UTC.
+Wejście runa starsze od tych pól odczytuje je w UTC. Jego `input` może
+zadeklarować ten sam kontrakt payloadu co webhook - proste pola albo JSON
+Schema. Zadeklarowane `input` jest sprawdzane przy publikacji i ponownie w
+chwili ticka, jeśli zapisane wejście zostało zmienione: tick, który już nie
+pasuje, jest pomijany, a harmonogram zachowuje następny tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -234,7 +248,11 @@ Wejście runa starsze od tych pól odczytuje je w UTC.
 **Table record.** Uruchamiany dodaniem, zmianą lub usunięciem rekordu jego tabeli -
 tym, co wymienia `events` - gdy rekord pasuje do każdego filtra. Zmiana uruchamia go
 tylko wtedy, gdy zmieniła się kolumna wybrana dla tabeli, o ile kolumny są wybrane.
-Publikacja wymaga dostępu do odczytu tabeli.
+Publikacja wymaga dostępu do odczytu tabeli. Jego pola rekordu można
+zadeklarować w ten sam sposób, jako proste pola kluczowane etykietą kolumny -
+`{{Record.fields.Email}}` - a publikacja sprawdza każde zadeklarowane pole
+względem bieżącej kolumny tabeli: kolumna, która została usunięta lub
+przemianowana, albo typ, którego kolumna nie pomieści, to problem publikacji.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -261,7 +279,11 @@ jako członek, który go opublikował. `triggered_by` to `form`.
 **GitHub.** Startuje od dostawy podpisanej przez GitHub dla repozytorium, jednego ze
 zdarzeń i - jeśli węzeł je wymienia - jednej z akcji, które wskazuje węzeł. Publikacja
 rejestruje hook przez podłączone konto GitHub organizacji, gdy może, albo raz pokazuje
-sekret do wklejenia. `triggered_by` to `github`.
+sekret do wklejenia. `triggered_by` to `github`. Węzeł może zadeklarować, co
+zawiera `payload` - proste pola albo JSON Schema. Dostarczenie, które nie pasuje,
+jest odrzucane przed startem jakiegokolwiek runa. Lista pól obejmuje tylko
+skalarne klucze najwyższego poziomu, więc prawdziwe dostarczenie GitHub, z
+obiektami `repository` i `sender`, wymaga warstwy schematu.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 

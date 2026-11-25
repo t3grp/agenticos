@@ -14,3 +14,8 @@ deleted. A change starts it only when one of the table's chosen columns changed,
 when columns are chosen. Publishing a version subscribes the workflow; nothing
 done before that starts it. A chain of runs writing into each other's tables
 stops at the first trigger it already passed.
+
+Its record fields can be declared as simple fields keyed by column label, and
+publishing checks each declared field against a live column of the table: a
+column that was removed or renamed, or a type the column cannot hold, is a
+publish problem.

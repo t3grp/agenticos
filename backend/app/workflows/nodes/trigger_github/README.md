@@ -23,7 +23,11 @@ A delivery must carry GitHub's `X-Hub-Signature-256` under the secret and its
 It starts a run only when it is for the repository named, one of the events
 named and - when actions are named - one of those actions. Anything else,
 GitHub's `ping` included, is answered `202` with what it was skipped for, and
-starts nothing. A body over `WORKFLOW_RUN_MAX_INPUT_BYTES` is refused.
+starts nothing. A body over `WORKFLOW_RUN_MAX_INPUT_BYTES` is refused. The node
+can declare what `payload` holds - simple fields or a JSON Schema, one or the
+other - and a delivery that does not fit is refused before any run starts. A
+field list covers only scalar top-level keys, so a real delivery needs the
+schema tier.
 
 ## Ports
 
