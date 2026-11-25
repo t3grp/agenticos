@@ -133,6 +133,24 @@ export function effectivePayloadSchema(config: Record<string, unknown>): JsonSch
   return fields.length === 0 ? null : payloadSchema(fields);
 }
 
+/**
+ * A model step's declared answer schema, or null when it declares none.
+ * `agent.run` asks for `structured_output_schema` in place of the agent
+ * configured here's own `output_schema`; an extraction carries its fields
+ * as `output_schema`; a prompt asks for `structured_output_schema`. A
+ * catalog agent's own answer format is not in the step's config, so a
+ * pinned agent without an override declares nothing here.
+ */
+export function answerSchemaOf(config: Record<string, unknown>): JsonSchema | null {
+  const override = inputSchemaOf(config, "structured_output_schema");
+  if (override !== null) return override;
+  const inline = config["inline"];
+  if (typeof inline === "object" && inline !== null) {
+    return inputSchemaOf(inline as Record<string, unknown>, "output_schema");
+  }
+  return inputSchemaOf(config, "output_schema");
+}
+
 /** The words a field is shown under: its label, or its name. */
 export function fieldCaption(field: Pick<InputField, "name" | "label">): string {
   return field.label ?? field.name;
@@ -173,12 +191,14 @@ export function payloadSchema(fields: readonly InputField[]): JsonSchema {
 }
 
 /**
- * The trigger's `out` port with one attribute typed by a declared payload
- * contract - `body`, `payload`, `input` or `fields`, by trigger - or the port
- * unchanged when it carries no payload. The backend's `ports_for` types the
- * same attribute from the same declaration.
+ * An output port with one attribute typed by a declared schema - the
+ * trigger payloads and the model steps' answers share this: the declaration
+ * travels in the node's config, and the typed port is derived here, so the
+ * binding picker, the template box and the validation mirror all read the
+ * declared fields with their types, without a test run. The port is
+ * unchanged when it carries no payload.
  */
-export function typedPayloadAttrPort(port: Port, schema: JsonSchema, attr: string): Port {
+export function typedAttrPort(port: Port, schema: JsonSchema, attr: string): Port {
   const own = port.schema;
   if (own === null || port.kind !== "output") return port;
   const properties = (own["properties"] ?? {}) as Record<string, JsonSchema>;
@@ -186,6 +206,16 @@ export function typedPayloadAttrPort(port: Port, schema: JsonSchema, attr: strin
     ...port,
     schema: { ...own, properties: { ...properties, [attr]: schema } },
   };
+}
+
+/**
+ * The trigger's `out` port with one attribute typed by a declared payload
+ * contract - `body`, `payload`, `input` or `fields`, by trigger - or the port
+ * unchanged when it carries no payload. The backend's `ports_for` types the
+ * same attribute from the same declaration.
+ */
+export function typedPayloadAttrPort(port: Port, schema: JsonSchema, attr: string): Port {
+  return typedAttrPort(port, schema, attr);
 }
 
 /**

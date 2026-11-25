@@ -231,6 +231,96 @@ describe("sourceCandidates", () => {
     });
   });
 
+  describe("a model step with a declared answer", () => {
+    const agent = makeDefinition({
+      id: "agent.run",
+      name: "Run an agent",
+      ports: [
+        port(
+          "out",
+          "output",
+          objectSchema("AgentRunOutput", { structured: { type: "object" }, text: STRING }, [
+            "text",
+          ]),
+        ),
+      ],
+    });
+    const run = (config: Record<string, unknown>) =>
+      graph({
+        entry: "A",
+        nodes: [node("A", "agent.run", config), echo("B")],
+        edges: [edge("e", "A", "out", "B", "in")],
+      });
+    const answered = makeCatalog([DEBUG_ECHO, agent]);
+    const SCHEMA = {
+      type: "object",
+      properties: {
+        priority: { type: "string", enum: ["high", "normal", "low"] },
+        count: { type: "number" },
+      },
+    };
+
+    it("offers a declared answer field with its type, and the field is not dynamic", () => {
+      const offered = sourceCandidates(
+        run({ structured_output_schema: SCHEMA }),
+        answered,
+        "B",
+        STRING,
+      );
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["structured", "priority"], false],
+        [["text"], false],
+      ]);
+      expect(offered[0]?.typeToken).toBe("string");
+    });
+
+    it("offers an undeclared answer as one dynamic value, for a field inside it", () => {
+      const offered = sourceCandidates(run({}), answered, "B", STRING);
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["structured"], true],
+        [["text"], false],
+      ]);
+    });
+
+    it("offers a classifier's category as a declared string field", () => {
+      const classify = makeDefinition({
+        id: "ai.classify",
+        name: "Classify",
+        ports: [
+          port(
+            "sales",
+            "output",
+            objectSchema("AiClassifyOutput", { category: STRING, reason: STRING }, [
+              "category",
+              "reason",
+            ]),
+          ),
+        ],
+      });
+      const classified = graph({
+        entry: "C",
+        nodes: [
+          node("C", "ai.classify", {
+            categories: [{ name: "sales" }, { name: "support" }],
+          }),
+          echo("B"),
+        ],
+        edges: [edge("e", "C", "sales", "B", "in")],
+      });
+      const offered = sourceCandidates(
+        classified,
+        makeCatalog([DEBUG_ECHO, classify]),
+        "B",
+        STRING,
+      );
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["category"], false],
+        [["reason"], false],
+      ]);
+      expect(offered[0]?.typeToken).toBe("string");
+    });
+  });
+
   it("skips a reachable node whose definition is unknown", () => {
     const broken = graph({
       entry: "X",

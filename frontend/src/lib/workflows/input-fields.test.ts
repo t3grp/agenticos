@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   type InputField,
+  answerSchemaOf,
   effectivePayloadSchema,
   fieldCaption,
   initialValues,
@@ -13,6 +14,7 @@ import {
   payloadSchema,
   runInputFrom,
   serverFieldProblems,
+  typedAttrPort,
   typedPayloadAttrPort,
   typedPayloadPort,
 } from "./input-fields";
@@ -145,6 +147,27 @@ describe("typedPayloadAttrPort", () => {
     expect(typedPayloadAttrPort(input, payloadSchema([field()]), "body")).toBe(input);
     // The field-list form types the same attribute.
     expect(typedPayloadPort(out, [field()], "body")).toEqual(typed);
+    // The generic form types the same attribute: payloads and answers share it.
+    expect(typedAttrPort(out, payloadSchema([field()]), "body")).toEqual(typed);
+  });
+});
+
+describe("answerSchemaOf", () => {
+  it("reads the override first, else the agent configured here, else the step's own schema", () => {
+    const override = { type: "object", properties: { priority: { type: "string" } } };
+    const inline = { type: "object", properties: { tier: { type: "string" } } };
+    const own = { type: "object", properties: { total: { type: "number" } } };
+    expect(answerSchemaOf({ structured_output_schema: override })).toBe(override);
+    expect(answerSchemaOf({ inline: { output_schema: inline } })).toBe(inline);
+    expect(
+      answerSchemaOf({
+        inline: { output_schema: inline },
+        structured_output_schema: override,
+      }),
+    ).toBe(override);
+    expect(answerSchemaOf({ output_schema: own })).toBe(own);
+    expect(answerSchemaOf({ agent: { agent_id: "a", version_id: "v" } })).toBeNull();
+    expect(answerSchemaOf({})).toBeNull();
   });
 });
 

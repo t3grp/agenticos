@@ -554,6 +554,36 @@ def json_schema_model(schema: InputSchema) -> type[BaseModel] | None:
     return converted
 
 
+def typed_output_attr(
+    output_model: type[BaseModel],
+    attr: str,
+    schema: dict[str, Any],
+    *,
+    required: bool = False,
+) -> type[BaseModel] | None:
+    """The output model with one attribute typed by a JSON Schema object.
+
+    `None` when the schema cannot be typed as a model (too many properties,
+    a shape no model can carry): the caller keeps the attribute dynamic, as
+    it is today. Only a typing device for publish checks (`ports_for`): the
+    handler still validates the run's value against the schema itself, and
+    the dispatcher resolves bindings against the run's real values. The
+    trigger twin is `typed_trigger_output`, which types a payload attribute
+    from a whole payload contract instead of one schema.
+    """
+    typed = json_schema_model(schema)
+    if typed is None:
+        return None
+    return create_model(  # type: ignore
+        output_model.__name__,
+        __base__=output_model,
+        __config__=ConfigDict(frozen=True, extra="forbid"),
+        **{
+            attr: (typed, Field(...)) if required else (typed | None, Field(default=None)),
+        },
+    )
+
+
 def typed_trigger_output(
     config: PayloadSchemaConfig,
     output_model: type[BaseModel],

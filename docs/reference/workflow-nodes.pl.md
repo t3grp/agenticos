@@ -1,5 +1,5 @@
 ---
-source_sha: "cfdaf55eda0b"
+source_sha: "ee667918c4c1"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -733,6 +733,22 @@ Publikacja sprawdza, czy autor może używać modelu.
 | `ai.extract` | Wyciąga ze zbindowanego `text` pola nazwane w `output_schema`, pomijając to, czego tekst nie mówi | `data`, obiekt tego kształtu |
 | `ai.rewrite` | Streszcza (`short`, `medium`, `long`), tłumaczy na `language` albo przepisuje zbindowany `text` w danym `style` | `text` |
 
+**Typowane pola odpowiedzi.** Gdy odpowiedź kroku ma zadeklarowany kształt,
+edytor oferuje jej pola wraz z typami, a publikacja sprawdza wiązanie względem
+nich - bez przebiegu testowego. `ai.prompt` typuje `structured` z
+`structured_output_schema`; `ai.extract` typuje `data` z `output_schema`;
+`ai.classify` typuje `category` jako wyliczenie swoich kategorii (i `other`),
+z `reason` i `confidence` jak zadeklarowano. Wiązanie do pola, którego
+odpowiedź nie deklaruje, jest problemem publikacji, podobnie jak wiązanie do
+zadeklarowanego pola o niewłaściwym typie. Bez zadeklarowanego kształtu
+odpowiedź pozostaje dynamiczna: edytor oferuje tylko to, co widział przebieg
+testowy, a przebieg sprawdza ścieżkę, gdy krok zostanie wysłany. Odpowiedź
+modelu, która nie pasuje do schematu, jest odsyłana, a potem kończy krok
+błędem `STRUCTURED_OUTPUT_MISMATCH`, jak wcześniej; wiązanie w dół do
+zadeklarowanego pola, którego brakuje w odpowiedzi w czasie przebiegu, kończy
+krok odczytujący błędem `INVALID_BINDING`, jak dziś brakujące odwołanie
+w szablonie.
+
 Kategorie klasyfikatora są jego portami, w kolejności, a model może odpowiedzieć
 tylko nazwą jednej z nich albo `other`. Odpowiedź, która nie jest obiektem, o
 który prosił krok, kończy go błędem `STRUCTURED_OUTPUT_MISMATCH`; wyczerpany
@@ -847,7 +863,13 @@ Agent z własnym formatem odpowiedzi przekazuje swój obiekt jako `structured`.
 z tym schematem, a odpowiedź, która go łamie, wraca do modelu do poprawki. Obiekt
 jest sprawdzany jeszcze raz, zanim cokolwiek dalej się wykona. Agent, który nigdy
 nie da pasującego obiektu, kończy krok błędem `AGENT_RUN_FAILED`, a odpowiedź bez
-obiektu tam, gdzie o niego proszono, błędem `STRUCTURED_OUTPUT_MISMATCH`.
+obiektu tam, gdzie o niego proszono, błędem `STRUCTURED_OUTPUT_MISMATCH`. Pola
+schematu są typowane na wyjściu, więc późniejszy krok wiąże
+`{{Agent.structured.priority}}` z jego zadeklarowanym typem, a publikacja
+sprawdza wiązanie - zob. [typowane pola odpowiedzi](#model-steps). Agent
+skonfigurowany w kroku typuje `structured` z własnego formatu odpowiedzi w ten
+sam sposób; format przypiętego agenta z katalogu nie znajduje się w kroku, więc
+jego odpowiedź pozostaje dynamiczna do czasu ustawienia nadpisania.
 
 | Jak zakończył się run agenta | Wynik kroku |
 |---|---|

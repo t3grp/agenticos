@@ -1,5 +1,5 @@
 ---
-source_sha: "cfdaf55eda0b"
+source_sha: "ee667918c4c1"
 ---
 
 # Nodos de workflow { #workflow-nodes }
@@ -752,6 +752,22 @@ el modelo.
 | `ai.extract` | Saca de un `text` enlazado los campos que nombra `output_schema`, omitiendo lo que no dice | `data`, un objeto con esa forma |
 | `ai.rewrite` | Resume (`short`, `medium`, `long`), traduce a `language` o reescribe un `text` enlazado con un `style` | `text` |
 
+**Campos de respuesta tipados.** Cuando la respuesta de un paso tiene una forma
+declarada, el editor ofrece sus campos con sus tipos y la publicación comprueba
+cada binding con ellos, sin necesidad de una ejecución de prueba. `ai.prompt`
+tipa `structured` a partir de su `structured_output_schema`; `ai.extract` tipa
+`data` a partir de su `output_schema`; `ai.classify` tipa `category` como la
+enumeración de sus categorías (y `other`), con `reason` y `confidence` según lo
+declarado. Un binding a un campo que la respuesta no declara es un problema de
+publicación, y también lo es un binding a un campo declarado de tipo incorrecto.
+Sin forma declarada, la respuesta sigue siendo dinámica: el editor solo ofrece
+lo que vio una ejecución de prueba, y la ejecución comprueba la ruta cuando se
+ejecuta el paso. Una respuesta del modelo que no se ajusta a su esquema se
+devuelve para corregirla y luego hace fallar el paso con
+`STRUCTURED_OUTPUT_MISMATCH`, como antes; un binding posterior a un campo
+declarado que falta en la respuesta en tiempo de ejecución hace fallar el paso
+lector con `INVALID_BINDING`, como hoy una referencia de plantilla ausente.
+
 Las categorías de un clasificador son sus puertos, en orden, y el modelo solo
 puede responder con uno de sus nombres o `other`. Una respuesta que no es el
 objeto que pidió el paso lo hace fallar con `STRUCTURED_OUTPUT_MISMATCH`; un
@@ -870,7 +886,14 @@ Un agent con un formato de respuesta propio pasa su objeto como `structured`.
 ese esquema, y una respuesta que lo incumple vuelve al modelo para corregirla. El
 objeto se comprueba una vez más antes de que se ejecute nada después. Un agent que
 nunca produce uno que encaje hace fallar el paso con `AGENT_RUN_FAILED`, y una
-respuesta sin objeto donde se pidió uno, con `STRUCTURED_OUTPUT_MISMATCH`.
+respuesta sin objeto donde se pidió uno, con `STRUCTURED_OUTPUT_MISMATCH`. Los
+campos del esquema van tipados en la salida, así que un paso posterior enlaza
+`{{Agent.structured.priority}}` con su tipo declarado y la publicación comprueba
+el binding - véase [campos de respuesta tipados](#model-steps). Un agent
+configurado en el paso tipa `structured` a partir de su propio formato de
+respuesta de la misma manera; el formato de un agent de catálogo fijado no está
+en el paso, así que su respuesta sigue siendo dinámica hasta que se establezca
+la anulación.
 
 | Cómo terminó el run del agent | Resultado del paso |
 |---|---|

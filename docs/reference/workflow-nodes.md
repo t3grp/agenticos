@@ -711,6 +711,21 @@ Publishing checks that the author may use the model.
 | `ai.extract` | Pulls the fields `output_schema` names out of a bound `text`, leaving out what it does not say | `data`, an object of that shape |
 | `ai.rewrite` | Summarizes (`short`, `medium`, `long`), translates into `language`, or rewrites a bound `text` in a `style` | `text` |
 
+**Typed answer fields.** When a step's answer has a declared shape, the
+editor offers its fields with their types and publishing checks a binding
+against them - no test run needed. `ai.prompt` types `structured` from its
+`structured_output_schema`; `ai.extract` types `data` from its
+`output_schema`; `ai.classify` types `category` as the enum of its categories
+(and `other`), with `reason` and `confidence` as declared. A binding to a
+field the answer does not declare is a publish problem, and so is a binding
+to a declared field of the wrong type. With no declared shape the answer
+stays dynamic: the editor offers only what a test run saw, and the run
+checks the path when the step is dispatched. A model answer that does not
+fit its schema is sent back and then fails the step with
+`STRUCTURED_OUTPUT_MISMATCH`, as before; a downstream binding to a declared
+field the answer lacks at run time fails the reading step with
+`INVALID_BINDING`, as a missing template reference does today.
+
 A classifier's categories are its ports, in order, and the model can only
 answer with one of their names or `other`. An answer that is not the object a
 step asked for fails it with `STRUCTURED_OUTPUT_MISMATCH`; a spent limit fails
@@ -824,7 +839,12 @@ with that schema, and an answer that breaks it is sent back to the model to be
 fixed. The object is checked once more before anything downstream runs. An
 agent that never produces one that fits fails the step with `AGENT_RUN_FAILED`,
 and an answer with no object where one was asked for fails it with
-`STRUCTURED_OUTPUT_MISMATCH`.
+`STRUCTURED_OUTPUT_MISMATCH`. The schema's fields are typed on the output, so
+a later step binds `{{Agent.structured.priority}}` with its declared type and
+publishing checks the binding - see [typed answer fields](#model-steps). An
+agent configured in the step types `structured` from its own answer format
+the same way; a pinned catalog agent's format is not in the step, so its
+answer stays dynamic until the override is set.
 
 | Agent run ended | Step result |
 |---|---|

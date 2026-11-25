@@ -9,6 +9,7 @@ from app.workflows.nodes.agent_run._handler import (
     AgentVersionPin,
     check_resources,
     handle,
+    ports_for,
 )
 
 __all__ = ["AgentRunConfig", "AgentRunInput", "AgentRunOutput", "AgentVersionPin"]
@@ -34,6 +35,7 @@ register(
         retry_guarantee="none",
         handler=handle,
         spends_budget=True,
+        ports_for=ports_for,
         resource_check=check_resources,
     )
 )

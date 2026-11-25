@@ -6,7 +6,7 @@ to reach them would be more contrived than informative.
 """
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -840,8 +840,22 @@ def test_a_read_that_is_safe_to_repeat_may_retry():
         (tuple[int, ...], list[Any], True),
         (list[str], tuple[str, ...], True),
         (tuple[str, ...], list[int], False),
+        (Literal["high", "low"], str, True),
+        (Literal["high", "low"], int, False),
+        (Literal[1, 2], int, True),
+        (Literal[1, 2], str, False),
+        (Literal["high", "low"], str | None, True),
     ],
-    ids=["tuple-into-open-list", "list-into-tuple", "wrong-element"],
+    ids=[
+        "tuple-into-open-list",
+        "list-into-tuple",
+        "wrong-element",
+        "enum-into-text",
+        "enum-into-number",
+        "number-enum-into-number",
+        "number-enum-into-text",
+        "enum-into-optional-text",
+    ],
 )
 def test_a_list_and_a_tuple_bind_to_each_other_by_what_they_hold(source, target, fits):
     assert _types_compatible(source, target) is fits

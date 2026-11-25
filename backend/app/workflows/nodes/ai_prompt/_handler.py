@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.spec import AgentSpec, checked_output_schema
 from app.core.permissions import AuthContext
+from app.workflows.contracts.definition import Port
+from app.workflows.contracts.payload_schema import typed_output_attr
 from app.workflows.contracts.results import Completed, Failed, NodeResult, WorkflowError
 from app.workflows.nodes import _model_step
 
@@ -53,6 +55,22 @@ class AiPromptOutput(BaseModel):
     text: str
     structured: dict[str, Any] | None = None
     agent_run_id: UUID
+
+
+def ports_for(config: BaseModel | None) -> tuple[Port, ...]:
+    """`in`, and `out` with `structured` typed by the schema the step asks the
+    model for - so `{{Ask.structured.score}}` type-checks at publish. With no
+    schema the port stays as the catalog serves it and the answer stays
+    dynamic, as today."""
+    out_schema = AiPromptOutput
+    if isinstance(config, AiPromptConfig) and config.structured_output_schema is not None:
+        typed = typed_output_attr(AiPromptOutput, "structured", config.structured_output_schema)
+        if typed is not None:
+            out_schema = typed
+    return (
+        Port(id="in", label="In", kind="input", schema=None),
+        Port(id="out", label="Out", kind="output", schema=out_schema),
+    )
 
 
 def _spec(config: AiPromptConfig) -> AgentSpec:

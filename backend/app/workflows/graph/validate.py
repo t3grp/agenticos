@@ -65,7 +65,7 @@ import types
 from collections import deque
 from collections.abc import Callable, Iterator
 from itertools import islice
-from typing import Any, Union, get_args, get_origin
+from typing import Any, Literal, Union, get_args, get_origin
 from uuid import UUID
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
@@ -1147,6 +1147,12 @@ def _types_compatible(source: Any, target: Any) -> bool:
         _is_dynamic(source) or (isinstance(source, type) and issubclass(source, BaseModel))
     ):
         return True
+    # An enum is the type it narrows, with a few values allowed: a Tier 2
+    # payload enum or a classifier's category fits a text field, a number
+    # enum a number field, and a value outside the enum never reaches a
+    # target the enum itself would not fit.
+    if get_origin(source) is Literal:
+        return all(_types_compatible(type(value), target) for value in get_args(source))
     if get_origin(source) in _SEQUENCES and get_origin(target) in _SEQUENCES:
         return _sequences_compatible(source, target)
     source_members, target_members = _members(source), _members(target)

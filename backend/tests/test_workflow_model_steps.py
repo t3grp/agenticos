@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from dataclasses import replace
 from decimal import Decimal
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, Literal, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -22,6 +22,7 @@ from app.core.permissions import AuthContext
 from app.db.models.agent_run import AgentRun, RunStatus
 from app.services.workflow_execution import context
 from app.workflows.contracts.results import Completed, Failed
+from app.workflows.graph.validate import _UNKNOWN, _resolve_field_path, _types_compatible
 from app.workflows.nodes import _model_step
 from app.workflows.nodes.ai_classify import _handler as classify
 from app.workflows.nodes.ai_extract import _handler as extract
@@ -260,7 +261,16 @@ class TestClassify:
         ]
         ports = classify.ports_for(self._with_minimum(0.7))
         assert [p.id for p in ports] == ["in", "sales", "support", "other", "unsure"]
-        assert ports[-1].kind == "output" and ports[-1].schema is classify.AiClassifyOutput
+        assert ports[-1].kind == "output"
+        # The port carries the answer typed by the categories, not the
+        # catalog's untyped output: its `category` is the enum.
+        assert ports[-1].schema is not None and issubclass(
+            ports[-1].schema, classify.AiClassifyOutput
+        )
+        assert (
+            _resolve_field_path((ports[-1],), "unsure", ("category",))
+            == Literal["sales", "support", "other"]
+        )
 
     def test_a_stored_output_from_before_routes_by_its_category(self):
         stored = {"category": "sales", "reason": "r", "text": "t"}
@@ -536,3 +546,93 @@ def test_an_agent_runs_ending_is_read_the_same_by_every_step(status, code):
     run = SimpleNamespace(id=uuid.uuid4(), status=status.value, error=None)
     failed = _model_step.outcome(cast(AgentRun, run))
     assert (failed.error.code if failed else None) == code
+
+
+class TestAnswerPorts:
+    SCHEMA = {
+        "type": "object",
+        "properties": {
+            "priority": {"type": "string", "enum": ["high", "normal", "low"]},
+            "count": {"type": "number"},
+        },
+        "required": ["priority", "count"],
+        "additionalProperties": False,
+    }
+
+    def test_the_extracted_fields_type_the_data_port(self):
+        config = extract.AiExtractConfig(model_profile_id=MODEL, output_schema=self.SCHEMA)
+        ports = extract.ports_for(config)
+
+        assert (
+            _resolve_field_path(ports, "out", ("data", "priority"))
+            == Literal["high", "normal", "low"]
+        )
+        assert _resolve_field_path(ports, "out", ("data", "count")) is float
+        assert _resolve_field_path(ports, "out", ("data", "nope")) is _UNKNOWN
+
+    def test_a_schema_no_model_can_carry_keeps_the_extracted_data_dynamic(self):
+        big = {
+            "type": "object",
+            "properties": {f"field_{index}": {"type": "string"} for index in range(201)},
+        }
+        config = extract.AiExtractConfig(model_profile_id=MODEL, output_schema=big)
+        ports = extract.ports_for(config)
+
+        assert _resolve_field_path(ports, "out", ("data", "field_0")) is Any
+
+    def test_the_categories_type_the_classifiers_category(self):
+        config = classify.AiClassifyConfig(
+            model_profile_id=MODEL,
+            categories=(
+                classify.Category(name="sales", description="Wants to buy"),
+                classify.Category(name="support", description="Needs help"),
+            ),
+            min_confidence=0.5,
+        )
+        ports = classify.ports_for(config)
+
+        assert [port.id for port in ports] == ["in", "sales", "support", "other", "unsure"]
+        for port in ("sales", "support", "other", "unsure"):
+            assert (
+                _resolve_field_path(ports, port, ("category",))
+                == Literal["sales", "support", "other"]
+            )
+            assert _types_compatible(_resolve_field_path(ports, port, ("category",)), str)
+        assert _resolve_field_path(ports, "sales", ("confidence",)) == float | None
+        assert _resolve_field_path(ports, "sales", ("reason",)) is str
+        assert _resolve_field_path(ports, "sales", ("nope",)) is _UNKNOWN
+
+    def test_a_classifier_without_a_minimum_still_types_its_category(self):
+        config = classify.AiClassifyConfig(
+            model_profile_id=MODEL,
+            categories=(classify.Category(name="sales", description="Wants to buy"),),
+        )
+        ports = classify.ports_for(config)
+
+        assert [port.id for port in ports] == ["in", "sales", "other"]
+        assert _resolve_field_path(ports, "sales", ("category",)) == Literal["sales", "other"]
+
+    def test_ports_for_without_a_config_keeps_the_catalog_ports(self):
+        assert [port.id for port in extract.ports_for(None)] == ["in", "out"]
+        assert extract.ports_for(None)[1].schema is extract.AiExtractOutput
+        assert [port.id for port in classify.ports_for(None)] == ["in", "other"]
+        assert classify.ports_for(None)[1].schema is classify.AiClassifyOutput
+
+    def test_the_asked_for_object_types_the_prompts_structured_port(self):
+        config = prompt.AiPromptConfig(model_profile_id=MODEL, structured_output_schema=self.SCHEMA)
+        ports = prompt.ports_for(config)
+
+        assert (
+            _resolve_field_path(ports, "out", ("structured", "priority"))
+            == Literal["high", "normal", "low"]
+        )
+        assert _resolve_field_path(ports, "out", ("structured", "count")) is float
+        assert _resolve_field_path(ports, "out", ("structured", "nope")) is _UNKNOWN
+
+    def test_a_prompt_that_answers_in_text_keeps_its_answer_dynamic(self):
+        config = prompt.AiPromptConfig(model_profile_id=MODEL)
+        ports = prompt.ports_for(config)
+
+        assert _resolve_field_path(ports, "out", ("structured", "score")) is Any
+        assert [port.id for port in prompt.ports_for(None)] == ["in", "out"]
+        assert prompt.ports_for(None)[1].schema is prompt.AiPromptOutput

@@ -1,5 +1,5 @@
 ---
-source_sha: "cfdaf55eda0b"
+source_sha: "ee667918c4c1"
 ---
 
 # Workflow-Knoten { #workflow-nodes }
@@ -772,6 +772,23 @@ Veröffentlichen prüft, ob der Autor das Modell verwenden darf.
 | `ai.extract` | Zieht die in `output_schema` genannten Felder aus einem gebundenen `text` und lässt weg, was er nicht sagt | `data`, ein Objekt dieser Form |
 | `ai.rewrite` | Fasst zusammen (`short`, `medium`, `long`), übersetzt in `language` oder schreibt einen gebundenen `text` in einem `style` um | `text` |
 
+**Typisierte Antwortfelder.** Wenn die Antwort eines Schritts eine deklarierte
+Form hat, bietet der Editor ihre Felder mit ihren Typen an und die
+Veröffentlichung prüft eine Bindung gegen sie - ohne Testlauf. `ai.prompt`
+typisiert `structured` aus seinem `structured_output_schema`; `ai.extract`
+typisiert `data` aus seinem `output_schema`; `ai.classify` typisiert
+`category` als die Aufzählung seiner Kategorien (und `other`), mit `reason`
+und `confidence` wie deklariert. Eine Bindung an ein Feld, das die Antwort
+nicht deklariert, ist ein Veröffentlichungsproblem, ebenso eine Bindung an ein
+deklariertes Feld des falschen Typs. Ohne deklarierte Form bleibt die Antwort
+dynamisch: Der Editor bietet nur an, was ein Testlauf gesehen hat, und der Lauf
+prüft den Pfad beim Ausführen des Schritts. Eine Modellantwort, die nicht zum
+Schema passt, wird zurückgeschickt und lässt den Schritt danach mit
+`STRUCTURED_OUTPUT_MISMATCH` fehlschlagen, wie bisher; eine nachgelagerte
+Bindung an ein deklariertes Feld, das der Antwort zur Laufzeit fehlt, lässt
+den lesenden Schritt mit `INVALID_BINDING` fehlschlagen, wie heute eine
+fehlende Vorlagenreferenz.
+
 Die Kategorien eines Klassifikators sind seine Ports, in Reihenfolge, und das
 Modell kann nur mit einem ihrer Namen oder `other` antworten. Eine Antwort, die
 nicht das verlangte Objekt ist, lässt den Schritt mit
@@ -894,7 +911,13 @@ mit diesem Schema, und eine Antwort, die es verletzt, geht zum Korrigieren an da
 Modell zurück. Das Objekt wird noch einmal geprüft, bevor irgendetwas danach läuft.
 Ein Agent, der nie ein passendes liefert, lässt den Schritt mit `AGENT_RUN_FAILED`
 fehlschlagen, und eine Antwort ohne Objekt, wo eines verlangt war, mit
-`STRUCTURED_OUTPUT_MISMATCH`.
+`STRUCTURED_OUTPUT_MISMATCH`. Die Felder des Schemas sind auf der Ausgabe
+typisiert, sodass ein späterer Schritt `{{Agent.structured.priority}}` mit seinem
+deklarierten Typ bindet und die Veröffentlichung die Bindung prüft - siehe
+[typisierte Antwortfelder](#model-steps). Ein im Schritt konfigurierter Agent
+typisiert `structured` aus seinem eigenen Antwortformat auf dieselbe Weise; das
+Format eines angepinnten Katalog-Agenten steht nicht im Schritt, sodass seine
+Antwort dynamisch bleibt, bis die Überschreibung gesetzt wird.
 
 | Wie der Agent-Run endete | Ergebnis des Schritts |
 |---|---|

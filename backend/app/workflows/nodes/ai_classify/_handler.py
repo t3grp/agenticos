@@ -17,9 +17,17 @@ asked, so the prompt, the answer's schema and the output's `confidence` (null)
 are what they were before the field existed.
 """
 
-from typing import Any, Self
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    create_model,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import InitErrorDetails, PydanticCustomError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -139,48 +147,57 @@ STATIC_PORTS = (
 
 
 def ports_for(config: BaseModel | None) -> tuple[Port, ...]:
-    """`in`, one output per category in order, `other`, and `unsure` with a minimum."""
+    """`in`, one output per category in order, `other`, and `unsure` with a minimum.
+
+    Every output carries the answer typed by the categories: `category` is
+    the enum of their names (and `other`), so a binding to it type-checks at
+    publish. With no valid config the ports stay as the catalog serves them.
+    """
+    schema = AiClassifyOutput
+    if isinstance(config, AiClassifyConfig):
+        schema = _typed_output(config)
     categories = config.categories if isinstance(config, AiClassifyConfig) else ()
     unsure = (
-        (Port(id=UNSURE_PORT, label="Unsure", kind="output", schema=AiClassifyOutput),)
+        (Port(id=UNSURE_PORT, label="Unsure", kind="output", schema=schema),)
         if isinstance(config, AiClassifyConfig) and config.min_confidence is not None
         else ()
     )
     return (
-        STATIC_PORTS[0],
+        Port(id="in", label="In", kind="input", schema=None),
         *(
-            Port(id=category.name, label=category.name, kind="output", schema=AiClassifyOutput)
+            Port(id=category.name, label=category.name, kind="output", schema=schema)
             for category in categories
         ),
-        STATIC_PORTS[1],
+        Port(id=OTHER, label="Other", kind="output", schema=schema),
         *unsure,
     )
 
 
-def routes(output: dict[str, Any] | None) -> frozenset[str]:
-    """The one port the stored output chose: `unsure`, else its category."""
-    category = (output or {}).get("category")
-    return unsure_or(category, output) if isinstance(category, str) else frozenset()
+def _typed_output(config: AiClassifyConfig) -> type[AiClassifyOutput]:
+    """The output with `category` narrowed to the enum the answer schema declares.
 
-
-def _spec(config: AiClassifyConfig) -> AgentSpec:
-    names = [category.name for category in config.categories]
-    listed = "\n".join(f"- {c.name}: {c.description}" for c in config.categories)
-    instructions = (
-        "Classify the text you are given into exactly one of these categories:\n"
-        f"{listed}\n"
-        f"If none of them fits, answer {OTHER}. Give the reason in one sentence."
+    The enum is read off `_answer_schema`, the same schema `_spec` asks the
+    model with, so the two cannot drift.
+    """
+    enum = _answer_schema(config)["properties"]["category"]["enum"]
+    return create_model(
+        "AiClassifyOutput",
+        __base__=AiClassifyOutput,
+        __config__=ConfigDict(frozen=True, extra="forbid"),
+        category=(Literal[tuple(enum)], Field(...)),  # type: ignore
     )
+
+
+def _answer_schema(config: AiClassifyConfig) -> dict[str, Any]:
+    """The JSON Schema of the answer the model is asked for: the category enum,
+    a one-sentence reason, and confidence when a minimum is set."""
+    names = [category.name for category in config.categories]
     properties: dict[str, Any] = {
         "category": {"type": "string", "enum": [*names, OTHER]},
         "reason": {"type": "string"},
     }
     required = ["category", "reason"]
     if config.min_confidence is not None:
-        instructions += (
-            " Then say how sure you are that the category is right,"
-            " as a number from 0 (a guess) to 1 (certain)."
-        )
         properties["confidence"] = {
             "type": "number",
             "minimum": 0,
@@ -190,13 +207,34 @@ def _spec(config: AiClassifyConfig) -> AgentSpec:
             ),
         }
         required.append("confidence")
+    return {"type": "object", "properties": properties, "required": required}
+
+
+def routes(output: dict[str, Any] | None) -> frozenset[str]:
+    """The one port the stored output chose: `unsure`, else its category."""
+    category = (output or {}).get("category")
+    return unsure_or(category, output) if isinstance(category, str) else frozenset()
+
+
+def _spec(config: AiClassifyConfig) -> AgentSpec:
+    listed = "\n".join(f"- {c.name}: {c.description}" for c in config.categories)
+    instructions = (
+        "Classify the text you are given into exactly one of these categories:\n"
+        f"{listed}\n"
+        f"If none of them fits, answer {OTHER}. Give the reason in one sentence."
+    )
+    if config.min_confidence is not None:
+        instructions += (
+            " Then say how sure you are that the category is right,"
+            " as a number from 0 (a guess) to 1 (certain)."
+        )
     if config.instructions:
         instructions += f"\n\n{config.instructions}"
     return _model_step.spec_for(
         config,
         name=NAME,
         instructions=instructions,
-        output_schema={"type": "object", "properties": properties, "required": required},
+        output_schema=_answer_schema(config),
     )
 
 

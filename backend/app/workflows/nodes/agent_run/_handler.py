@@ -62,7 +62,9 @@ from app.services.workflow_execution import budget, context, questions
 from app.services.workflow_execution.agent_conversations import ChatSourceGuard, for_agent_step
 from app.services.workflow_execution.errors import workflow_error
 from app.workflows import files
+from app.workflows.contracts.definition import Port
 from app.workflows.contracts.io import FileRef, SourceRef
+from app.workflows.contracts.payload_schema import typed_output_attr
 from app.workflows.contracts.results import (
     Completed,
     Failed,
@@ -165,6 +167,40 @@ class AgentRunOutput(BaseModel):
     artifacts: tuple[FileRef, ...] = ()
     structured: dict[str, Any] | None = None
     agent_run_id: UUID | None = None
+
+
+def answer_schema(config: AgentRunConfig) -> dict[str, Any] | None:
+    """The JSON Schema of the object this step's agent answers with, or `None`.
+
+    The step's override first, else the agent configured here's own answer
+    format. A catalog agent's format is not in the config - the pin names a
+    version the registry holds - so it cannot be typed here; the runner
+    still enforces that format at run time, and the answer stays dynamic
+    until the override is set.
+    """
+    if config.structured_output_schema is not None:
+        return config.structured_output_schema
+    if config.inline is not None:
+        return config.inline.output_schema
+    return None
+
+
+def ports_for(config: BaseModel | None) -> tuple[Port, ...]:
+    """`in`, and `out` with `structured` typed by the answer's schema when the
+    step declares one - so `{{Agent.structured.priority}}` type-checks at
+    publish. With no schema the port stays as the catalog serves it and the
+    answer stays dynamic, as today."""
+    out_schema = AgentRunOutput
+    if isinstance(config, AgentRunConfig):
+        declared = answer_schema(config)
+        if declared is not None:
+            typed = typed_output_attr(AgentRunOutput, "structured", declared)
+            if typed is not None:
+                out_schema = typed
+    return (
+        Port(id="in", label="In", kind="input", schema=None),
+        Port(id="out", label="Out", kind="output", schema=out_schema),
+    )
 
 
 async def check_resources(

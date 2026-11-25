@@ -1,6 +1,8 @@
 import {
+  answerSchemaOf,
   effectivePayloadSchema,
   inputFieldsOf,
+  typedAttrPort,
   typedPayloadAttrPort,
   typedPayloadPort,
 } from "./input-fields";
@@ -207,6 +209,37 @@ export function instancePorts(instance: NodeInstance, definition: NodeDefinition
     const schema = effectivePayloadSchema(instance.config);
     if (schema !== null) {
       ports = ports.map((port) => typedPayloadAttrPort(port, schema, payloadAttr));
+    }
+  }
+  // A model step's declared answer types the attribute its answer arrives
+  // under - `structured` for an agent or a prompt, `data` for an extraction -
+  // the same channel the event triggers use. With no declaration the port
+  // stays as the catalog serves it, and the answer stays dynamic.
+  if (
+    definition.id === "agent.run" ||
+    definition.id === "ai.prompt" ||
+    definition.id === "ai.extract"
+  ) {
+    const schema = answerSchemaOf(instance.config);
+    if (schema !== null) {
+      const attr = definition.id === "ai.extract" ? "data" : "structured";
+      ports = ports.map((port) => typedAttrPort(port, schema, attr));
+    }
+  }
+  // A classifier's answer is its output itself: the category is the enum of
+  // the names it declares, and `other`. Every output port carries the same
+  // output, so each is typed - including `unsure`, added above. With no
+  // categories the config is not valid yet, and the ports stay as the
+  // catalog serves them.
+  if (definition.id === "ai.classify") {
+    const categories = classifyCategories(instance.config);
+    if (categories.length > 0) {
+      const names = [...categories, "other"];
+      ports = ports.map((port) =>
+        port.kind === "output"
+          ? typedAttrPort(port, { type: "string", enum: names }, "category")
+          : port,
+      );
     }
   }
   if (routesErrors(instance) && !ports.some((port) => port.id === ERROR_PORT)) {

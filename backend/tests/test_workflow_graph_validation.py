@@ -29,6 +29,8 @@ from app.workflows.contracts.policy import NodePolicy
 from app.workflows.graph.errors import GraphValidationError
 from app.workflows.graph.model import Edge, NodeInstance, NodePosition, ScopeBoundary, WorkflowGraph
 from app.workflows.graph.validate import derive_scopes, validate_graph
+from app.workflows.nodes import _model_step
+from app.workflows.nodes.agent_run import _handler as agent_run_handler
 
 pytestmark = pytest.mark.anyio
 
@@ -647,6 +649,7 @@ class _PayloadConsumerInput(BaseModel):
 
     text_value: str = ""
     count_value: int = 0
+    score_value: float = 0.0
 
 
 def _payload_consumer(registered_node, node_id: str) -> NodeDefinition:
@@ -931,6 +934,328 @@ async def test_a_schedule_with_an_invalid_config_is_refused_on_its_config_not_it
     assert not any(
         field["field"].startswith(f"nodes.{trigger.id}.config.input") for field in fields
     )
+
+
+# Rule 3 - declared model-step answer fields
+
+
+class _PinnedAgentService:
+    """A registry that finds whatever agent version a step pins."""
+
+    def __init__(self, _db: object) -> None:
+        pass
+
+    async def get_pinned_spec(self, *_args: object, **_kwargs: object):
+        return (SimpleNamespace(), SimpleNamespace(), uuid4())
+
+
+_ANSWER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "priority": {"type": "string", "enum": ["high", "normal", "low"]},
+        "count": {"type": "number"},
+    },
+    "required": ["priority", "count"],
+    "additionalProperties": False,
+}
+
+
+def _model_node(definition_id: str, config: dict) -> NodeInstance:
+    return NodeInstance(
+        id=uuid4(),
+        definition_id=definition_id,
+        definition_version=1,
+        config=config,
+        layout=_pos(),
+    )
+
+
+def _agent_config(**over: object) -> dict:
+    return {
+        "agent": {"agent_id": str(uuid4()), "version_id": str(uuid4())},
+        "structured_output_schema": _ANSWER_SCHEMA,
+        **over,
+    }
+
+
+def _answer_graph(
+    source: NodeInstance,
+    source_port: str,
+    target: NodeInstance,
+    binding: Binding,
+    *,
+    source_input: str,
+) -> WorkflowGraph:
+    """The source step wired into the consumer, with the source's own required
+    input bound to a literal - rule 9 refuses a graph that leaves it unbound,
+    and the answer binding is what these tests are about."""
+    return WorkflowGraph(
+        entry_node_id=source.id,
+        nodes=(source, target),
+        edges=(_edge(source.id, source_port, target.id, "in"),),
+        bindings=(
+            Binding(
+                target_node_id=source.id,
+                target_field=source_input,
+                source=LiteralValue(value="Lead: Acme, 500 seats"),
+            ),
+            binding,
+        ),
+    )
+
+
+def _answer_binding(
+    source: NodeInstance,
+    target: NodeInstance,
+    field_path: tuple[str, ...],
+    target_field: str,
+    port: str = "out",
+) -> Binding:
+    return Binding(
+        target_node_id=target.id,
+        target_field=target_field,
+        source=NodeOutputRef(node_id=source.id, port=port, field_path=field_path),
+    )
+
+
+async def test_a_binding_to_a_declared_answer_field_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(agent_run_handler, "AgentRegistryService", _PinnedAgentService)
+    consumer = _payload_consumer(registered_node, "test.answer_agent")
+    agent = _model_node("agent.run", _agent_config())
+    target = _consumer_node(consumer)
+    binding = _answer_binding(agent, target, ("structured", "priority"), "text_value")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(agent, "out", target, binding, source_input="prompt"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_to_a_declared_answer_number_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(agent_run_handler, "AgentRegistryService", _PinnedAgentService)
+    consumer = _payload_consumer(registered_node, "test.answer_number")
+    agent = _model_node("agent.run", _agent_config())
+    target = _consumer_node(consumer)
+    binding = _answer_binding(agent, target, ("structured", "count"), "score_value")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(agent, "out", target, binding, source_input="prompt"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_of_a_declared_answer_field_to_the_wrong_type_is_refused(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(agent_run_handler, "AgentRegistryService", _PinnedAgentService)
+    consumer = _payload_consumer(registered_node, "test.answer_mistyped")
+    agent = _model_node("agent.run", _agent_config())
+    target = _consumer_node(consumer)
+    binding = _answer_binding(agent, target, ("structured", "count"), "text_value")
+    fields = await _fields(
+        _answer_graph(agent, "out", target, binding, source_input="prompt"), mock_db_session
+    )
+    assert _has(fields, "bindings.1", "not compatible")
+
+
+async def test_a_binding_to_a_field_the_declared_answer_does_not_have_is_refused(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(agent_run_handler, "AgentRegistryService", _PinnedAgentService)
+    consumer = _payload_consumer(registered_node, "test.answer_missing")
+    agent = _model_node("agent.run", _agent_config())
+    target = _consumer_node(consumer)
+    binding = _answer_binding(agent, target, ("structured", "nope"), "text_value")
+    fields = await _fields(
+        _answer_graph(agent, "out", target, binding, source_input="prompt"), mock_db_session
+    )
+    assert _has(fields, "bindings.1", "does not exist")
+
+
+async def test_a_binding_into_an_undeclared_answer_stays_dynamic(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(agent_run_handler, "AgentRegistryService", _PinnedAgentService)
+    consumer = _payload_consumer(registered_node, "test.answer_dynamic")
+    agent = _model_node(
+        "agent.run", {"agent": {"agent_id": str(uuid4()), "version_id": str(uuid4())}}
+    )
+    target = _consumer_node(consumer)
+    binding = _answer_binding(agent, target, ("structured", "whatever"), "text_value")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(agent, "out", target, binding, source_input="prompt"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_into_an_open_answer_schema_stays_dynamic(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(agent_run_handler, "AgentRegistryService", _PinnedAgentService)
+    consumer = _payload_consumer(registered_node, "test.answer_open")
+    open_schema = {
+        key: value for key, value in _ANSWER_SCHEMA.items() if key != "additionalProperties"
+    }
+    agent = _model_node("agent.run", _agent_config(structured_output_schema=open_schema))
+    target = _consumer_node(consumer)
+    binding = _answer_binding(agent, target, ("structured", "surprise"), "text_value")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(agent, "out", target, binding, source_input="prompt"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_to_an_extracted_field_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_extract")
+    extract = _model_node(
+        "ai.extract",
+        {"model_profile_id": str(uuid4()), "output_schema": _ANSWER_SCHEMA},
+    )
+    target = _consumer_node(consumer)
+    binding = _answer_binding(extract, target, ("data", "count"), "score_value")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(extract, "out", target, binding, source_input="text"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_template_binding_to_an_extracted_field_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_extract_template")
+    extract = _model_node(
+        "ai.extract",
+        {"model_profile_id": str(uuid4()), "output_schema": _ANSWER_SCHEMA},
+    )
+    target = _consumer_node(consumer)
+    binding = Binding(
+        target_node_id=target.id,
+        target_field="text_value",
+        source=TemplateValue(
+            parts=(
+                "Priority: ",
+                NodeOutputRef(node_id=extract.id, port="out", field_path=("data", "priority")),
+            )
+        ),
+    )
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(extract, "out", target, binding, source_input="text"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_to_an_asked_for_object_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_prompt")
+    ask = _model_node(
+        "ai.prompt",
+        {"model_profile_id": str(uuid4()), "structured_output_schema": _ANSWER_SCHEMA},
+    )
+    target = _consumer_node(consumer)
+    binding = _answer_binding(ask, target, ("structured", "priority"), "text_value")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(ask, "out", target, binding, source_input="prompt"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_to_a_field_the_extraction_does_not_have_is_refused(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_extract_missing")
+    extract = _model_node(
+        "ai.extract",
+        {"model_profile_id": str(uuid4()), "output_schema": _ANSWER_SCHEMA},
+    )
+    target = _consumer_node(consumer)
+    binding = _answer_binding(extract, target, ("data", "nope"), "text_value")
+    fields = await _fields(
+        _answer_graph(extract, "out", target, binding, source_input="text"), mock_db_session
+    )
+    assert _has(fields, "bindings.1", "does not exist")
+
+
+def _classifier_node(**over: object) -> NodeInstance:
+    return _model_node(
+        "ai.classify",
+        {
+            "model_profile_id": str(uuid4()),
+            "categories": [
+                {"name": "sales", "description": "Wants to buy"},
+                {"name": "support", "description": "Needs help"},
+            ],
+            **over,
+        },
+    )
+
+
+async def test_a_binding_to_a_classified_category_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_classify")
+    classify = _classifier_node()
+    target = _consumer_node(consumer)
+    binding = _answer_binding(classify, target, ("category",), "text_value", port="sales")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(classify, "sales", target, binding, source_input="text"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_to_classified_confidence_publishes(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_classify_confidence")
+    classify = _classifier_node(min_confidence=0.5)
+    target = _consumer_node(consumer)
+    binding = _answer_binding(classify, target, ("confidence",), "score_value", port="unsure")
+    validated = await validate_graph(
+        mock_db_session,
+        _owner_ctx(),
+        _answer_graph(classify, "unsure", target, binding, source_input="text"),
+    )
+    assert binding in validated.bindings
+
+
+async def test_a_binding_to_a_field_a_classification_does_not_have_is_refused(
+    mock_db_session, registered_node, monkeypatch
+):
+    monkeypatch.setattr(_model_step, "problems", AsyncMock(return_value=[]))
+    consumer = _payload_consumer(registered_node, "test.answer_classify_missing")
+    classify = _classifier_node()
+    target = _consumer_node(consumer)
+    binding = _answer_binding(classify, target, ("nope",), "text_value", port="sales")
+    fields = await _fields(
+        _answer_graph(classify, "sales", target, binding, source_input="text"), mock_db_session
+    )
+    assert _has(fields, "bindings.1", "does not exist")
 
 
 # Rule 5 - exclusive merge
