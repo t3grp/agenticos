@@ -1,5 +1,5 @@
 ---
-source_sha: "e1f6c320dcb4"
+source_sha: "baf2794278c7"
 ---
 
 # Workflows { #workflows }
@@ -320,7 +320,11 @@ anteriores a la vez, como `New lead: {{Form.payload.name}} from {{Form.payload.c
 **Data**, a su lado, inserta un valor en el cursor, y lo mismo hace un campo arrastrado
 desde **Input**. Escribir `{{` lista esos mismos valores y, dentro del payload de un
 trigger o del elemento de un bucle, los campos que vio allí la última ejecución de
-prueba; lo que escribes a continuación acota la lista, y `Enter` o `Tab` escribe el
+prueba. Donde un trigger o un paso anterior declara los campos que tiene - el payload
+declarado de un trigger, la respuesta declarada de un paso de modelo - estos se listan
+con sus tipos sin ninguna ejecución de prueba, por delante de lo que mostró una ejecución;
+si no hay nada declarado, solo se ofrecen los campos de la ejecución de prueba. Lo que
+escribes a continuación acota la lista, y `Enter` o `Tab` escribe el
 marcador.
 
 Un marcador nombra un paso y una ruta en su salida, se colorea en la caja - en rojo, al
@@ -352,7 +356,15 @@ del elemento o del valor, una comprobación - **is equal to**, **is at least**,
 **contains**, **is not empty** y las demás - y aquello con lo que se compara. Un número,
 `true` y `false` se comparan como tales, todo lo demás como texto. Con varias filas,
 **Match all of these** o **any** dice cómo se combinan, y se sugieren los campos que
-mostraron la última ejecución o los datos de prueba. La condición se guarda como la
+mostraron la última ejecución o los datos de prueba. Donde el paso que lee la
+condición declara sus campos - el payload declarado de un trigger, la respuesta
+declarada de un paso de modelo - esos campos se sugieren con sus tipos junto a los
+observados: una enumeración ofrece sus opciones para comparar, un número ofrece
+comprobaciones numéricas, un sí/no ofrece `true` y `false`. La publicación rechaza
+una comparación con un valor de tipo incorrecto para un campo declarado, nombrando
+el campo; una condición sobre un valor que nada declara solo se comprueba por su
+sintaxis, y una discrepancia de tipos dentro de ella hace fallar el paso en tiempo de
+ejecución. La condición se guarda como la
 expresión JMESPath que evalúa el paso. **Write it as an expression** la edita como tal, y
 una que las filas no pueden mostrar sigue siendo una expresión.
 

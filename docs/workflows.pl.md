@@ -1,5 +1,5 @@
 ---
-source_sha: "e1f6c320dcb4"
+source_sha: "baf2794278c7"
 ---
 
 # Workflows { #workflows }
@@ -309,7 +309,10 @@ Parametr przyjmujący tekst to jedno pole na wpisany tekst i wartości z wcześn
 kroków naraz, na przykład `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 Przycisk **Data** obok wstawia wartość w miejscu kursora, podobnie jak pole
 przeciągnięte z panelu **Input**. Wpisanie `{{` wyświetla te same wartości, a wewnątrz payloadu triggera
-albo elementu pętli także pola, które widział tam ostatni przebieg testowy; dalsze
+albo elementu pętli także pola, które widział tam ostatni przebieg testowy. Gdy trigger albo wcześniejszy krok
+deklaruje pola, które posiada - zadeklarowany payload triggera albo zadeklarowaną odpowiedź kroku modelowego -
+są one wyświetlane wraz z typami bez żadnego przebiegu testowego, przed tym, co pokazał przebieg; gdy nic nie
+zadeklarowano, oferowane są tylko pola przebiegu testowego. Dalsze
 pisanie zawęża listę, a `Enter` lub `Tab` wstawia placeholder.
 
 Placeholder wskazuje krok i ścieżkę w jego wyjściu i jest w polu pokolorowany - na
@@ -341,7 +344,14 @@ elementu albo wartości, sprawdzenie - **is equal to**, **is at least**, **conta
 **is not empty** i pozostałe - oraz to, z czym jest porównywane. Liczba, `true` i
 `false` są porównywane jako takie, cała reszta jako tekst. Przy kilku wierszach
 **Match all of these** albo **any** mówi, jak się łączą, a pola, które pokazał ostatni
-przebieg albo dane testowe, są podpowiadane. Warunek jest zapisywany jako wyrażenie
+przebieg albo dane testowe, są podpowiadane. Gdy krok, który odczytuje warunek,
+deklaruje swoje pola - zadeklarowany payload triggera, zadeklarowaną odpowiedź kroku
+modelowego - pola te są podpowiadane wraz z typami obok zaobserwowanych: wyliczenie
+oferuje swoje opcje do porównania, liczba oferuje sprawdzenia liczbowe, tak/nie
+oferuje `true` i `false`. Publikacja odrzuca porównanie z wartością o niewłaściwym
+typie dla zadeklarowanego pola, nazywając to pole; warunek na wartości, której nic
+nie deklaruje, jest sprawdzany tylko pod kątem składni, a niezgodność typów wewnątrz
+niego kończy krok błędem w czasie przebiegu. Warunek jest zapisywany jako wyrażenie
 JMESPath, które krok wylicza. **Write it as an expression** edytuje go jako to
 wyrażenie, a takie, którego wiersze nie pokażą, zostaje wyrażeniem.
 

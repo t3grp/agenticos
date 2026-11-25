@@ -36,6 +36,11 @@ started with an input of another shape fails the trigger with
 `TRIGGER_INPUT_INVALID`. A second trigger, or a trigger that is not where the graph
 starts, is refused at publish.
 
+A webhook, GitHub, schedule or table-record trigger can declare what its payload
+holds - simple fields or a JSON Schema - in the trigger step's own dialog, under
+**Payload fields** beside its other settings. The **Trigger** sheet under **More**
+shows the published starts and their controls; it does not edit the declaration.
+
 ### core.input { #core-input }
 
 **API request.** Started from an HTTP request or over a WebSocket. It hands the graph the run's input as `payload`, whatever the caller sent, and names the surface in `triggered_by`. Its id stays `core.input`, so a graph written before Manual and API were separate still starts from the API.
@@ -204,10 +209,12 @@ on a real delivery. The test URL checks no signature and never starts a run.
 The node can also declare what `body` holds - simple fields (`payload_fields`)
 or a JSON Schema (`payload_schema`), one or the other. Declared fields are typed
 at publish, so `{{Webhook.body.orderId}}` checks without a test run, and a
-delivery that does not fit is refused before any run starts. A field list is
-closed - an undeclared key is refused - and a nested delivery needs the schema
-tier. Fields are keyed by their JSON name, so `orderId` and `First name` are
-both valid names.
+delivery that does not fit is refused before any run starts. The editor offers
+the declared fields with their types ahead of the fields a test run showed for
+the same name; with nothing declared, only the test run's fields are offered.
+A field list is closed - an undeclared key is refused - and a nested delivery
+needs the schema tier. Fields are keyed by their JSON name, so `orderId` and
+`First name` are both valid names.
 
 ::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
 
@@ -712,8 +719,10 @@ Publishing checks that the author may use the model.
 | `ai.rewrite` | Summarizes (`short`, `medium`, `long`), translates into `language`, or rewrites a bound `text` in a `style` | `text` |
 
 **Typed answer fields.** When a step's answer has a declared shape, the
-editor offers its fields with their types and publishing checks a binding
-against them - no test run needed. `ai.prompt` types `structured` from its
+editor offers its fields with their types - in `{{` completions and in the
+**Data** picker beside a parameter - and publishing checks a binding
+against them - no test run needed. Where a test run showed a field of the same
+name, the declared type wins. `ai.prompt` types `structured` from its
 `structured_output_schema`; `ai.extract` types `data` from its
 `output_schema`; `ai.classify` types `category` as the enum of its categories
 (and `other`), with `reason` and `confidence` as declared. A binding to a

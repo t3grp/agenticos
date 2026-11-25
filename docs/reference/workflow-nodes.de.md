@@ -1,5 +1,5 @@
 ---
-source_sha: "ee667918c4c1"
+source_sha: "311c9f4e9166"
 ---
 
 # Workflow-Knoten { #workflow-nodes }
@@ -43,6 +43,12 @@ gestartet hat, beim Annehmen des Runs eingefroren und höchstens
 gestartet wird, lässt den Trigger mit `TRIGGER_INPUT_INVALID` fehlschlagen. Ein zweiter
 Trigger oder ein Trigger, mit dem der Graph nicht beginnt, wird beim Veröffentlichen
 abgelehnt.
+
+Ein Webhook-, GitHub-, Schedule- oder Table-record-Trigger kann deklarieren, was sein
+Payload enthält - einfache Felder oder ein JSON Schema - im eigenen Dialog des
+Trigger-Schritts, unter **Payload fields** neben seinen anderen Einstellungen. Das
+Sheet **Trigger** unter **More** zeigt die veröffentlichten Starts und ihre
+Steuerelemente; es bearbeitet die Deklaration nicht.
 
 ### core.input { #core-input }
 
@@ -232,7 +238,10 @@ Der Knoten kann auch deklarieren, was `body` enthält - einfache Felder
 (`payload_fields`) oder ein JSON Schema (`payload_schema`), eines oder das
 andere. Deklarierte Felder sind bei der Veröffentlichung typisiert, sodass
 `{{Webhook.body.orderId}}` ohne einen Testlauf prüft, und eine Zustellung, die
-nicht passt, wird abgelehnt, bevor ein Run startet. Eine Feldliste ist
+nicht passt, wird abgelehnt, bevor ein Run startet. Der Editor bietet die
+deklarierten Felder mit ihren Typen vor den Feldern an, die ein Testlauf für
+denselben Namen gezeigt hat; ist nichts deklariert, werden nur die Felder des
+Testlaufs angeboten. Eine Feldliste ist
 geschlossen - ein nicht deklarierter Schlüssel wird abgelehnt - und eine
 verschachtelte Zustellung braucht die Schema-Stufe. Felder sind nach ihrem
 JSON-Namen geschlüsselt, sodass `orderId` und `First name` beide gültige Namen
@@ -773,8 +782,10 @@ Veröffentlichen prüft, ob der Autor das Modell verwenden darf.
 | `ai.rewrite` | Fasst zusammen (`short`, `medium`, `long`), übersetzt in `language` oder schreibt einen gebundenen `text` in einem `style` um | `text` |
 
 **Typisierte Antwortfelder.** Wenn die Antwort eines Schritts eine deklarierte
-Form hat, bietet der Editor ihre Felder mit ihren Typen an und die
-Veröffentlichung prüft eine Bindung gegen sie - ohne Testlauf. `ai.prompt`
+Form hat, bietet der Editor ihre Felder mit ihren Typen an - in
+`{{`-Vervollständigungen und im **Data**-Picker neben einem Parameter - und die
+Veröffentlichung prüft eine Bindung gegen sie - ohne Testlauf. Wo ein Testlauf ein
+Feld desselben Namens gezeigt hat, gewinnt der deklarierte Typ. `ai.prompt`
 typisiert `structured` aus seinem `structured_output_schema`; `ai.extract`
 typisiert `data` aus seinem `output_schema`; `ai.classify` typisiert
 `category` als die Aufzählung seiner Kategorien (und `other`), mit `reason`

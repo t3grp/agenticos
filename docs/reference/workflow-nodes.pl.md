@@ -1,5 +1,5 @@
 ---
-source_sha: "ee667918c4c1"
+source_sha: "311c9f4e9166"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -40,6 +40,11 @@ run, zamrożone przy przyjęciu runa i najwyżej `WORKFLOW_RUN_MAX_INPUT_BYTES`.
 testowy uruchomiony z wejściem innego kształtu kończy wyzwalacz błędem
 `TRIGGER_INPUT_INVALID`. Drugi wyzwalacz albo wyzwalacz, od którego graf się nie
 zaczyna, jest odrzucany przy publikacji.
+
+Webhook, GitHub, Schedule albo Table record może zadeklarować, co zawiera jego
+payload - proste pola albo JSON Schema - we własnym oknie kroku wyzwalacza, w
+**Payload fields** obok innych ustawień. Arkusz **Trigger** w **More** pokazuje
+opublikowane starty i ich kontrolki; nie edytuje deklaracji.
 
 ### core.input { #core-input }
 
@@ -218,7 +223,9 @@ Węzeł może też zadeklarować, co zawiera `body` - proste pola (`payload_fiel
 albo JSON Schema (`payload_schema`), jedno albo drugie. Zadeklarowane pola są
 typowane przy publikacji, więc `{{Webhook.body.orderId}}` sprawdza się bez
 przebiegu testowego, a dostarczenie, które nie pasuje, jest odrzucane przed
-startem jakiegokolwiek runa. Lista pól jest zamknięta - niezgłoszony klucz jest
+startem jakiegokolwiek runa. Edytor oferuje zadeklarowane pola wraz z ich typami
+przed polami, które pokazał przebieg testowy dla tej samej nazwy; gdy nic nie
+zadeklarowano, oferowane są tylko pola przebiegu testowego. Lista pól jest zamknięta - niezgłoszony klucz jest
 odrzucany - a zagnieżdżone dostarczenie wymaga warstwy schematu. Pola są
 kluczowane swoją nazwą JSON, więc `orderId` i `First name` to obie poprawne nazwy.
 
@@ -734,8 +741,10 @@ Publikacja sprawdza, czy autor może używać modelu.
 | `ai.rewrite` | Streszcza (`short`, `medium`, `long`), tłumaczy na `language` albo przepisuje zbindowany `text` w danym `style` | `text` |
 
 **Typowane pola odpowiedzi.** Gdy odpowiedź kroku ma zadeklarowany kształt,
-edytor oferuje jej pola wraz z typami, a publikacja sprawdza wiązanie względem
-nich - bez przebiegu testowego. `ai.prompt` typuje `structured` z
+edytor oferuje jej pola wraz z typami - w uzupełnieniach `{{` i w selektorze
+**Data** obok parametru - a publikacja sprawdza wiązanie względem
+nich - bez przebiegu testowego. Gdy przebieg testowy pokazał pole o tej samej
+nazwie, wygrywa zadeklarowany typ. `ai.prompt` typuje `structured` z
 `structured_output_schema`; `ai.extract` typuje `data` z `output_schema`;
 `ai.classify` typuje `category` jako wyliczenie swoich kategorii (i `other`),
 z `reason` i `confidence` jak zadeklarowano. Wiązanie do pola, którego

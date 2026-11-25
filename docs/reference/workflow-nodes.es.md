@@ -1,5 +1,5 @@
 ---
-source_sha: "ee667918c4c1"
+source_sha: "311c9f4e9166"
 ---
 
 # Nodos de workflow { #workflow-nodes }
@@ -41,6 +41,11 @@ run, congelado al admitir el run y como mucho `WORKFLOW_RUN_MAX_INPUT_BYTES`. Un
 prueba iniciado con una entrada de otra forma hace fallar el trigger con
 `TRIGGER_INPUT_INVALID`. Un segundo trigger, o un trigger por el que no empieza el
 grafo, se rechaza al publicar.
+
+Un trigger Webhook, GitHub, Schedule o Table record puede declarar lo que contiene
+su payload - campos simples o un JSON Schema - en el propio diálogo del paso
+trigger, en **Payload fields** junto a sus otros ajustes. La hoja **Trigger** en
+**More** muestra los inicios publicados y sus controles; no edita la declaración.
 
 ### core.input { #core-input }
 
@@ -227,7 +232,10 @@ El nodo también puede declarar lo que contiene `body`: campos simples
 (`payload_fields`) o un JSON Schema (`payload_schema`), uno u otro. Los campos
 declarados se tipan al publicar, así que `{{Webhook.body.orderId}}` se comprueba
 sin una ejecución de prueba, y una entrega que no encaja se rechaza antes de que
-empiece ningún run. Una lista de campos es cerrada: una clave no declarada se
+empiece ningún run. El editor ofrece los campos declarados con sus tipos por
+delante de los campos que mostró una ejecución de prueba para el mismo nombre;
+si no hay nada declarado, solo se ofrecen los campos de la ejecución de prueba.
+Una lista de campos es cerrada: una clave no declarada se
 rechaza, y una entrega anidada necesita el nivel de esquema. Los campos se
 identifican por su nombre JSON, así que `orderId` y `First name` son ambos
 nombres válidos.
@@ -753,8 +761,11 @@ el modelo.
 | `ai.rewrite` | Resume (`short`, `medium`, `long`), traduce a `language` o reescribe un `text` enlazado con un `style` | `text` |
 
 **Campos de respuesta tipados.** Cuando la respuesta de un paso tiene una forma
-declarada, el editor ofrece sus campos con sus tipos y la publicación comprueba
-cada binding con ellos, sin necesidad de una ejecución de prueba. `ai.prompt`
+declarada, el editor ofrece sus campos con sus tipos - en los completados de `{{`
+y en el selector **Data** junto a un parámetro - y la publicación comprueba
+cada binding con ellos, sin necesidad de una ejecución de prueba. Donde una
+ejecución de prueba mostró un campo del mismo nombre, gana el tipo declarado.
+`ai.prompt`
 tipa `structured` a partir de su `structured_output_schema`; `ai.extract` tipa
 `data` a partir de su `output_schema`; `ai.classify` tipa `category` como la
 enumeración de sus categorías (y `other`), con `reason` y `confidence` según lo

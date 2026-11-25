@@ -1,5 +1,5 @@
 ---
-source_sha: "e1f6c320dcb4"
+source_sha: "baf2794278c7"
 ---
 
 # Workflows { #workflows }
@@ -331,7 +331,11 @@ Schritten zugleich, etwa `New lead: {{Form.payload.name}} from {{Form.payload.co
 **Data** daneben fügt einen Wert an der Cursorposition ein, ebenso ein aus **Input**
 gezogenes Feld. Tippen Sie `{{`, erscheinen dieselben Werte als Liste, und innerhalb des
 Payloads eines Triggers oder des Elements einer Schleife die Felder, die der letzte
-Testlauf dort gesehen hat; was Sie weiter tippen, grenzt die Liste ein, und `Enter` oder
+Testlauf dort gesehen hat. Wo ein Trigger oder ein früherer Schritt die Felder deklariert,
+die er hält - ein deklariertes Payload eines Triggers, eine deklarierte Antwort eines
+Modellschritts - werden diese mit ihren Typen ohne einen Testlauf aufgeführt, vor dem,
+was ein Lauf gezeigt hat; ist nichts deklariert, werden nur die Felder des Testlaufs
+angeboten. Was Sie weiter tippen, grenzt die Liste ein, und `Enter` oder
 `Tab` schreibt den Platzhalter.
 
 Ein Platzhalter nennt einen Schritt und einen Pfad in dessen Ausgabe, ist im Feld
@@ -363,7 +367,15 @@ Feld des Elements oder des Werts, eine Prüfung - **is equal to**, **is at least
 **contains**, **is not empty** und die übrigen - und womit verglichen wird. Eine Zahl,
 `true` und `false` werden als solche verglichen, alles andere als Text. Bei mehreren
 Zeilen sagt **Match all of these** oder **any**, wie sie verknüpft sind, und die Felder,
-die der letzte Lauf oder die Testdaten zeigten, werden vorgeschlagen. Die Bedingung wird
+die der letzte Lauf oder die Testdaten zeigten, werden vorgeschlagen. Wo der Schritt,
+den die Bedingung liest, seine Felder deklariert - ein deklariertes Payload eines
+Triggers, eine deklarierte Antwort eines Modellschritts - werden diese Felder mit
+ihren Typen neben den beobachteten vorgeschlagen: Eine Aufzählung bietet ihre Optionen
+zum Vergleichen an, eine Zahl bietet numerische Prüfungen an, ein Ja/Nein bietet
+`true` und `false` an. Die Veröffentlichung lehnt einen Vergleich mit einem Wert des
+falschen Typs für ein deklariertes Feld ab und nennt das Feld; eine Bedingung über
+einen Wert, den nichts deklariert, wird nur auf ihre Syntax geprüft, und eine
+Typabweichung in ihr lässt den Schritt zur Laufzeit fehlschlagen. Die Bedingung wird
 als JMESPath-Ausdruck gespeichert, den der Schritt auswertet. **Write it as an
 expression** bearbeitet sie als diesen, und einer, den die Zeilen nicht zeigen können,
 bleibt ein Ausdruck.

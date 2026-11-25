@@ -301,8 +301,11 @@ A parameter that takes text is one box for typed text and values from earlier st
 together, such as `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 **Data** beside it inserts a value at the cursor, and so does a field dragged from
 **Input**. Typing `{{` lists the same values, and inside a trigger's payload or a
-loop's item, the fields the last test run saw there; what you type next narrows the
-list, and `Enter` or `Tab` writes the placeholder.
+loop's item, the fields the last test run saw there. Where a trigger or an earlier
+step declares the fields it holds - a trigger's declared payload, a model step's
+declared answer - those are listed with their types without any test run, ahead of
+what a run happened to show; with nothing declared, only the test run's fields are
+offered. What you type next narrows the list, and `Enter` or `Tab` writes the placeholder.
 
 A placeholder names a step and a
 path into its output, coloured in the box - red, once you leave the box, when it names
@@ -333,9 +336,15 @@ field of the item or the value, a check - **is equal to**, **is at least**,
 **contains**, **is not empty** and the rest - and what it is compared with. A number,
 `true` and `false` are compared as such, anything else as text. With several rows,
 **Match all of these** or **any** says how they combine, and the fields the last run
-or the test data showed are suggested. The condition is stored as the JMESPath
-expression the step evaluates. **Write it as an expression** edits it as that, and
-one the rows cannot show stays an expression.
+or the test data showed are suggested. Where the step the condition reads declares
+its fields - a trigger's declared payload, a model step's declared answer - those
+fields are suggested with their types beside the observed ones: an enum offers its
+options to compare with, a number offers numeric checks, a yes/no offers `true` and
+`false`. Publishing refuses a comparison against a value of the wrong type for a
+declared field, naming the field; a condition on a value nothing declares is checked
+for its syntax only, and a type mismatch inside it fails the step at run time. The
+condition is stored as the JMESPath expression the step evaluates. **Write it as an
+expression** edits it as that, and one the rows cannot show stays an expression.
 
 Renaming a **Switch** rule, a classifier category, an error branch, a **Split** branch
 or an approval choice carries the wires, bindings and quick log that used the old name, unless
