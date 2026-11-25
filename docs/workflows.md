@@ -300,12 +300,16 @@ removes the step. A read-only dialog shows every setting, disabled, at its value
 A parameter that takes text is one box for typed text and values from earlier steps
 together, such as `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 **Data** beside it inserts a value at the cursor, and so does a field dragged from
-**Input**. Typing `{{` lists the same values, and inside a trigger's payload or a
+**Input**.
+
+Typing `{{` lists the same values, and inside a trigger's payload or a
 loop's item, the fields the last test run saw there. Where a trigger or an earlier
 step declares the fields it holds - a trigger's declared payload, a model step's
 declared answer - those are listed with their types without any test run, ahead of
 what a run happened to show; with nothing declared, only the test run's fields are
-offered. What you type next narrows the list, and `Enter` or `Tab` writes the placeholder.
+offered.
+
+What you type next narrows the list, and `Enter` or `Tab` writes the placeholder.
 
 A placeholder names a step and a
 path into its output, coloured in the box - red, once you leave the box, when it names

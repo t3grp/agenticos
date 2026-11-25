@@ -1,5 +1,5 @@
 ---
-source_sha: "baf2794278c7"
+source_sha: "ffd96aa33aaf"
 ---
 
 # Workflows { #workflows }
@@ -308,12 +308,15 @@ wartością.
 Parametr przyjmujący tekst to jedno pole na wpisany tekst i wartości z wcześniejszych
 kroków naraz, na przykład `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 Przycisk **Data** obok wstawia wartość w miejscu kursora, podobnie jak pole
-przeciągnięte z panelu **Input**. Wpisanie `{{` wyświetla te same wartości, a wewnątrz payloadu triggera
+przeciągnięte z panelu **Input**.
+
+Wpisanie `{{` wyświetla te same wartości, a wewnątrz payloadu triggera
 albo elementu pętli także pola, które widział tam ostatni przebieg testowy. Gdy trigger albo wcześniejszy krok
 deklaruje pola, które posiada - zadeklarowany payload triggera albo zadeklarowaną odpowiedź kroku modelowego -
 są one wyświetlane wraz z typami bez żadnego przebiegu testowego, przed tym, co pokazał przebieg; gdy nic nie
-zadeklarowano, oferowane są tylko pola przebiegu testowego. Dalsze
-pisanie zawęża listę, a `Enter` lub `Tab` wstawia placeholder.
+zadeklarowano, oferowane są tylko pola przebiegu testowego.
+
+Dalsze pisanie zawęża listę, a `Enter` lub `Tab` wstawia placeholder.
 
 Placeholder wskazuje krok i ścieżkę w jego wyjściu i jest w polu pokolorowany - na
 czerwono, gdy po wyjściu z pola okaże się, że nie wskazuje niczego, co ten krok może

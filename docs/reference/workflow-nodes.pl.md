@@ -1,5 +1,5 @@
 ---
-source_sha: "311c9f4e9166"
+source_sha: "966a0aa38d11"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -870,13 +870,16 @@ a krok kończy się błędem `AGENT_BUDGET_EXCEEDED`.
 Agent z własnym formatem odpowiedzi przekazuje swój obiekt jako `structured`.
 `structured_output_schema` prosi w zamian o inny kształt: agent jest uruchamiany
 z tym schematem, a odpowiedź, która go łamie, wraca do modelu do poprawki. Obiekt
-jest sprawdzany jeszcze raz, zanim cokolwiek dalej się wykona. Agent, który nigdy
-nie da pasującego obiektu, kończy krok błędem `AGENT_RUN_FAILED`, a odpowiedź bez
-obiektu tam, gdzie o niego proszono, błędem `STRUCTURED_OUTPUT_MISMATCH`. Pola
-schematu są typowane na wyjściu, więc późniejszy krok wiąże
+jest sprawdzany jeszcze raz, zanim cokolwiek dalej się wykona.
+
+Agent, który nigdy nie da pasującego obiektu, kończy krok błędem `AGENT_RUN_FAILED`, a odpowiedź bez
+obiektu tam, gdzie o niego proszono, błędem `STRUCTURED_OUTPUT_MISMATCH`.
+
+Pola schematu są typowane na wyjściu, więc późniejszy krok wiąże
 `{{Agent.structured.priority}}` z jego zadeklarowanym typem, a publikacja
-sprawdza wiązanie - zob. [typowane pola odpowiedzi](#model-steps). Agent
-skonfigurowany w kroku typuje `structured` z własnego formatu odpowiedzi w ten
+sprawdza wiązanie - zob. [typowane pola odpowiedzi](#model-steps).
+
+Agent skonfigurowany w kroku typuje `structured` z własnego formatu odpowiedzi w ten
 sam sposób; format przypiętego agenta z katalogu nie znajduje się w kroku, więc
 jego odpowiedź pozostaje dynamiczna do czasu ustawienia nadpisania.
 

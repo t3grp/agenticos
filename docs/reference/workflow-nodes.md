@@ -845,13 +845,17 @@ with `AGENT_BUDGET_EXCEEDED`.
 An agent with an answer format of its own hands its object on as `structured`.
 `structured_output_schema` asks for another shape in its place: the agent is run
 with that schema, and an answer that breaks it is sent back to the model to be
-fixed. The object is checked once more before anything downstream runs. An
-agent that never produces one that fits fails the step with `AGENT_RUN_FAILED`,
+fixed. The object is checked once more before anything downstream runs.
+
+An agent that never produces one that fits fails the step with `AGENT_RUN_FAILED`,
 and an answer with no object where one was asked for fails it with
-`STRUCTURED_OUTPUT_MISMATCH`. The schema's fields are typed on the output, so
+`STRUCTURED_OUTPUT_MISMATCH`.
+
+The schema's fields are typed on the output, so
 a later step binds `{{Agent.structured.priority}}` with its declared type and
-publishing checks the binding - see [typed answer fields](#model-steps). An
-agent configured in the step types `structured` from its own answer format
+publishing checks the binding - see [typed answer fields](#model-steps).
+
+An agent configured in the step types `structured` from its own answer format
 the same way; a pinned catalog agent's format is not in the step, so its
 answer stays dynamic until the override is set.
 

@@ -1,5 +1,5 @@
 ---
-source_sha: "baf2794278c7"
+source_sha: "ffd96aa33aaf"
 ---
 
 # Workflows { #workflows }
@@ -329,13 +329,17 @@ Wert.
 Ein Parameter, der Text nimmt, ist ein Feld für eingegebenen Text und Werte aus früheren
 Schritten zugleich, etwa `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 **Data** daneben fügt einen Wert an der Cursorposition ein, ebenso ein aus **Input**
-gezogenes Feld. Tippen Sie `{{`, erscheinen dieselben Werte als Liste, und innerhalb des
+gezogenes Feld.
+
+Tippen Sie `{{`, erscheinen dieselben Werte als Liste, und innerhalb des
 Payloads eines Triggers oder des Elements einer Schleife die Felder, die der letzte
 Testlauf dort gesehen hat. Wo ein Trigger oder ein früherer Schritt die Felder deklariert,
 die er hält - ein deklariertes Payload eines Triggers, eine deklarierte Antwort eines
 Modellschritts - werden diese mit ihren Typen ohne einen Testlauf aufgeführt, vor dem,
 was ein Lauf gezeigt hat; ist nichts deklariert, werden nur die Felder des Testlaufs
-angeboten. Was Sie weiter tippen, grenzt die Liste ein, und `Enter` oder
+angeboten.
+
+Was Sie weiter tippen, grenzt die Liste ein, und `Enter` oder
 `Tab` schreibt den Platzhalter.
 
 Ein Platzhalter nennt einen Schritt und einen Pfad in dessen Ausgabe, ist im Feld

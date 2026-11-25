@@ -1,5 +1,5 @@
 ---
-source_sha: "311c9f4e9166"
+source_sha: "966a0aa38d11"
 ---
 
 # Workflow-Knoten { #workflow-nodes }
@@ -920,12 +920,17 @@ Ein Agent mit eigenem Antwortformat gibt sein Objekt als `structured` weiter.
 `structured_output_schema` verlangt stattdessen eine andere Form: Der Agent läuft
 mit diesem Schema, und eine Antwort, die es verletzt, geht zum Korrigieren an das
 Modell zurück. Das Objekt wird noch einmal geprüft, bevor irgendetwas danach läuft.
+
 Ein Agent, der nie ein passendes liefert, lässt den Schritt mit `AGENT_RUN_FAILED`
 fehlschlagen, und eine Antwort ohne Objekt, wo eines verlangt war, mit
-`STRUCTURED_OUTPUT_MISMATCH`. Die Felder des Schemas sind auf der Ausgabe
+`STRUCTURED_OUTPUT_MISMATCH`.
+
+Die Felder des Schemas sind auf der Ausgabe
 typisiert, sodass ein späterer Schritt `{{Agent.structured.priority}}` mit seinem
 deklarierten Typ bindet und die Veröffentlichung die Bindung prüft - siehe
-[typisierte Antwortfelder](#model-steps). Ein im Schritt konfigurierter Agent
+[typisierte Antwortfelder](#model-steps).
+
+Ein im Schritt konfigurierter Agent
 typisiert `structured` aus seinem eigenen Antwortformat auf dieselbe Weise; das
 Format eines angepinnten Katalog-Agenten steht nicht im Schritt, sodass seine
 Antwort dynamisch bleibt, bis die Überschreibung gesetzt wird.

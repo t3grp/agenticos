@@ -1,5 +1,5 @@
 ---
-source_sha: "311c9f4e9166"
+source_sha: "966a0aa38d11"
 ---
 
 # Nodos de workflow { #workflow-nodes }
@@ -232,9 +232,12 @@ El nodo también puede declarar lo que contiene `body`: campos simples
 (`payload_fields`) o un JSON Schema (`payload_schema`), uno u otro. Los campos
 declarados se tipan al publicar, así que `{{Webhook.body.orderId}}` se comprueba
 sin una ejecución de prueba, y una entrega que no encaja se rechaza antes de que
-empiece ningún run. El editor ofrece los campos declarados con sus tipos por
+empiece ningún run.
+
+El editor ofrece los campos declarados con sus tipos por
 delante de los campos que mostró una ejecución de prueba para el mismo nombre;
 si no hay nada declarado, solo se ofrecen los campos de la ejecución de prueba.
+
 Una lista de campos es cerrada: una clave no declarada se
 rechaza, y una entrega anidada necesita el nivel de esquema. Los campos se
 identifican por su nombre JSON, así que `orderId` y `First name` son ambos
@@ -895,13 +898,16 @@ supere, y el paso falla con `AGENT_BUDGET_EXCEEDED`.
 Un agent con un formato de respuesta propio pasa su objeto como `structured`.
 `structured_output_schema` pide otra forma en su lugar: el agent se ejecuta con
 ese esquema, y una respuesta que lo incumple vuelve al modelo para corregirla. El
-objeto se comprueba una vez más antes de que se ejecute nada después. Un agent que
-nunca produce uno que encaje hace fallar el paso con `AGENT_RUN_FAILED`, y una
-respuesta sin objeto donde se pidió uno, con `STRUCTURED_OUTPUT_MISMATCH`. Los
-campos del esquema van tipados en la salida, así que un paso posterior enlaza
+objeto se comprueba una vez más antes de que se ejecute nada después.
+
+Un agent que nunca produce uno que encaje hace fallar el paso con `AGENT_RUN_FAILED`, y una
+respuesta sin objeto donde se pidió uno, con `STRUCTURED_OUTPUT_MISMATCH`.
+
+Los campos del esquema van tipados en la salida, así que un paso posterior enlaza
 `{{Agent.structured.priority}}` con su tipo declarado y la publicación comprueba
-el binding - véase [campos de respuesta tipados](#model-steps). Un agent
-configurado en el paso tipa `structured` a partir de su propio formato de
+el binding - véase [campos de respuesta tipados](#model-steps).
+
+Un agent configurado en el paso tipa `structured` a partir de su propio formato de
 respuesta de la misma manera; el formato de un agent de catálogo fijado no está
 en el paso, así que su respuesta sigue siendo dinámica hasta que se establezca
 la anulación.
