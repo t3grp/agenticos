@@ -107,7 +107,17 @@ def _copy(locale: str) -> dict[str, dict[str, object]]:
 
 def test_ids_and_labels_never_collide_as_keys():
     definitions = all_node_definitions()
-    assert len({_key(d.id) for d in definitions}) == len(definitions)
+    # A node id may carry several versions (trigger.schedule v1 and v2): they
+    # share the one copy entry, so the keys must be unique per id, not per
+    # definition - and the versions must agree on the words that entry holds.
+    by_id: dict[str, Any] = {}
+    for definition in definitions:
+        previous = by_id.setdefault(definition.id, definition)
+        assert (previous.name, previous.description) == (
+            definition.name,
+            definition.description,
+        )
+    assert len({_key(d.id) for d in definitions}) == len(by_id)
     labels = {port.label for d in definitions for port in d.ports}
     assert len({_key(label) for label in labels}) == len(labels)
 
