@@ -68,6 +68,8 @@ from itertools import islice
 from typing import Any, Literal, Union, get_args, get_origin
 from uuid import UUID
 
+import jmespath
+from jmespath import exceptions as jmespath_errors
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -217,6 +219,7 @@ def _structure_problems(graph: WorkflowGraph, definitions: DefinitionMap) -> Pro
     problems += _rule_1_single_entry(graph)
     problems += _rule_2_reachable_outputs(graph, node_scope, outer_order)
     problems += _rule_3_type_compatibility(graph, definitions, ports)
+    problems += _condition_type_problems(graph, definitions, ports)
 
     problems += _rule_4_branch_local_availability(graph, analysis.precede, node_scope)
     problems += _merge_mode_problems(analysis)
@@ -932,6 +935,279 @@ def _rule_3_type_compatibility(
                 (f"bindings.{index}", "The source value is not compatible with this field")
             )
     return problems
+
+
+# Conditions on declared fields
+
+_CONDITION_NODES: dict[str, tuple[str, str]] = {
+    # definition id -> (input field the condition reads, expression root)
+    "logic.if": ("value", "value"),
+    "logic.switch": ("value", "value"),
+    "data.filter": ("items", "item"),
+}
+
+
+def _condition_type_problems(
+    graph: WorkflowGraph, definitions: DefinitionMap, ports: PortMap
+) -> Problems:
+    """A condition comparing a declared field with a value of the wrong type.
+
+    The row builder writes comparisons of one field against one literal
+    (`value.count >= 50`, `value.name == 'Ada'`), and the editor offers
+    the comparison from the field's declared type - so a comparison the type
+    cannot hold is an authoring mistake, caught here the way rule 3 catches
+    a mistyped binding. Only the row builder's shapes are judged: anything
+    else - a function, a nested expression, a comparison against another
+    field - keeps today's behaviour, checked for syntax and allowed
+    functions only, and a type mismatch inside a function still fails the
+    node at run time with `CONDITION_FAILED`.
+
+    Where the compared value's type is not declared - the bound value is
+    dynamic, unbound, or the path reaches past a dynamic value - there is
+    nothing to judge, and the condition is left alone.
+    """
+    problems: Problems = []
+    for node in graph.nodes:
+        if node.disabled:
+            continue
+        definition = definitions.get(node.id)
+        if definition is None:
+            continue
+        spec = _CONDITION_NODES.get(definition.id)
+        if spec is None:
+            continue
+        input_field, root = spec
+        root_type = _condition_root_type(graph, node, input_field, root, ports)
+        if root_type is None:
+            continue
+        for field_key, expression in _condition_expressions(node, definition.id):
+            for path, literal in _condition_comparisons(expression, root):
+                declared = _resolve_on_type(root_type, path)
+                if declared is _UNKNOWN or _is_dynamic(declared) or declared is Any:
+                    continue
+                if not _literal_fits(literal, declared):
+                    problems.append(
+                        (
+                            field_key,
+                            f"Condition compares '{'.'.join(path) or root}' "
+                            f"({_declared_word(declared)}) with {_literal_word(literal)}",
+                        )
+                    )
+    return problems
+
+
+def _condition_expressions(node: NodeInstance, definition_id: str) -> list[tuple[str, str]]:
+    """A node's conditions with the field that holds each, from its raw config.
+
+    Read from the config as stored, not the validated model: the handler
+    classes live behind the node modules, and an invalid config is already
+    refused by `_config_schema_problems` - a condition that is not a string
+    here is that problem's, not this one's.
+    """
+    config = node.config if isinstance(node.config, dict) else {}
+    if definition_id == "logic.switch":
+        rules = config.get("rules")
+        if not isinstance(rules, list):
+            return []
+        return [
+            (f"nodes.{node.id}.config.rules.{index}.condition", rule["condition"])
+            for index, rule in enumerate(rules)
+            if isinstance(rule, dict) and isinstance(rule.get("condition"), str)
+        ]
+    condition = config.get("condition")
+    if not isinstance(condition, str):
+        return []
+    return [(f"nodes.{node.id}.config.condition", condition)]
+
+
+def _condition_root_type(
+    graph: WorkflowGraph,
+    node: NodeInstance,
+    input_field: str,
+    root: str,
+    ports: PortMap,
+) -> Any | None:
+    """The declared type the condition's root reads, or None when undeclared.
+
+    The `value`/`items` binding resolves to the source field's type; a
+    filter reads one item of that list, so its root is the list's element
+    type. Unbound, literal-bound, unknown or dynamic: nothing declared to
+    judge a comparison against.
+    """
+    for binding in graph.bindings:
+        if binding.target_node_id != node.id or binding.target_field != input_field:
+            continue
+        if not isinstance(binding.source, NodeOutputRef):
+            return None
+        ref = binding.source
+        source_ports = ports.get(ref.node_id)
+        if source_ports is None:
+            # Unresolvable definition is already reported by
+            # `_missing_version_problems`; nothing more to say here.
+            return None
+        bound = _resolve_field_path(source_ports, ref.port, ref.field_path)
+        if bound is _UNKNOWN or bound is None or _is_dynamic(bound) or bound is Any:
+            return None
+        if root == "item":
+            return _item_type(bound)
+        return bound
+    return None
+
+
+def _item_type(bound: Any) -> Any | None:
+    """The element type of a list annotation, unwrapped from an optional."""
+    members = _members(bound)
+    if len(members) != 1:
+        return None
+    only = members[0]
+    if get_origin(only) not in (list, tuple, set, frozenset):
+        return None
+    args = [arg for arg in get_args(only) if arg is not Ellipsis]
+    if len(args) != 1:
+        return None
+    item = args[0]
+    return None if item is Any or _is_dynamic(item) else item
+
+
+def _condition_comparisons(expression: str, root: str) -> list[tuple[tuple[str, ...], Any]]:
+    """The row builder's comparisons in an expression: `(field path, literal)`.
+
+    A comparator whose one side is a path under `root` and whose other side
+    is a literal. Anything else is not a comparison this check judges, so
+    it is left out rather than guessed at.
+    """
+    try:
+        parsed = jmespath.compile(expression).parsed
+    except jmespath_errors.JMESPathError:
+        return []
+    comparisons: list[tuple[tuple[str, ...], Any]] = []
+    pending = deque([parsed])
+    while pending:
+        node = pending.popleft()
+        if node.get("type") == "comparator":
+            found = _comparison_of(node.get("children", []), root)
+            if found is not None:
+                comparisons.append(found)
+        pending.extend(node.get("children", []))
+    return comparisons
+
+
+def _comparison_of(children: list[Any], root: str) -> tuple[tuple[str, ...], Any] | None:
+    """`(path, literal)` when one side is a path under `root` and the other a literal."""
+    left, right = children
+    left_path = _root_path(left, root)
+    if left_path is not None and isinstance(right, dict) and right.get("type") == "literal":
+        return left_path, right.get("value")
+    right_path = _root_path(right, root)
+    if right_path is not None and isinstance(left, dict) and left.get("type") == "literal":
+        return right_path, left.get("value")
+    return None
+
+
+def _root_path(node: Any, root: str) -> tuple[str, ...] | None:
+    """The path under `root` a node reads, or None when it reads anything else."""
+    if not isinstance(node, dict):
+        return None
+    if node.get("type") == "field":
+        return () if node.get("value") == root else None
+    if node.get("type") != "subexpression":
+        return None
+    parts: list[str] = []
+    for child in node.get("children", []):
+        if not isinstance(child, dict) or child.get("type") != "field":
+            return None
+        parts.append(str(child.get("value")))
+    if not parts or parts[0] != root:
+        return None
+    return tuple(parts[1:])
+
+
+def _resolve_on_type(annotation: Any, path: tuple[str, ...]) -> Any:
+    """`_resolve_field_path` from an annotation instead of a port: walk a
+    path of model fields, `Any` past a dynamic value, `_UNKNOWN` for a step
+    into a scalar or a name the model does not declare."""
+    current = annotation
+    for part in path:
+        if _is_dynamic(current):
+            return Any
+        members = _members(current)
+        if len(members) == 1:
+            current = members[0]
+        if not (isinstance(current, type) and issubclass(current, BaseModel)):
+            return _UNKNOWN
+        if part not in current.model_fields:
+            if current.model_config.get("extra") == "allow":
+                return Any
+            return _UNKNOWN
+        current = current.model_fields[part].annotation
+    return current
+
+
+def _literal_fits(literal: Any, annotation: Any) -> bool:
+    """Whether a JMESPath literal could be the value of a declared field.
+
+    A JSON literal carries its own type - a number, text, true/false - so a
+    comparison against a field of another type is judged here, at publish,
+    rather than failing the node at run time. An enum fits only one of its
+    offered values: a comparison against any other value can never hold.
+    Anything this cannot judge - a date, a list, an object - is left to the
+    run.
+    """
+    if annotation is Any or _is_dynamic(annotation):
+        return True
+    members = _members(annotation)
+    if len(members) > 1:
+        return any(_literal_fits(literal, member) for member in members)
+    only = members[0]
+    if get_origin(only) is Literal:
+        return any(
+            type(literal) is type(offered) and literal == offered for offered in get_args(only)
+        )
+    if only is str:
+        return isinstance(literal, str)
+    if only is bool:
+        return isinstance(literal, bool)
+    if only is int:
+        return type(literal) is int
+    if only is float:
+        return type(literal) in (int, float)
+    return True
+
+
+def _declared_word(annotation: Any) -> str:
+    """The kind of value a declared field holds, for a refusal that names it."""
+    members = _members(annotation)
+    if len(members) == 1:
+        only = members[0]
+        if get_origin(only) is Literal:
+            offered = ", ".join(repr(value) for value in get_args(only))
+            return f"one of {offered}"
+        if only is str:
+            return "text"
+        if only is bool:
+            return "true or false"
+        if only is int:
+            return "an integer"
+        if only is float:
+            return "a number"
+    return "a declared type"
+
+
+def _literal_word(literal: Any) -> str:
+    """The kind of value a JMESPath literal is, for a refusal that names it."""
+    if isinstance(literal, bool):
+        return "true or false"
+    if isinstance(literal, str):
+        return "text"
+    if isinstance(literal, (int, float)):
+        return "a number"
+    if isinstance(literal, list):
+        return "a list"
+    if isinstance(literal, dict):
+        return "an object"
+    if literal is None:
+        return "nothing"
+    return "a value"
 
 
 def _literal_binding_type_problems(graph: WorkflowGraph, definitions: DefinitionMap) -> Problems:

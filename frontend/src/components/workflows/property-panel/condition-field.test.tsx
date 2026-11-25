@@ -11,20 +11,28 @@ import {
   node,
   port,
 } from "@/components/workflows/validation/fixtures";
+import type { ConditionFieldSuggestion } from "@/lib/workflows/conditions";
 import type { Binding } from "@/lib/workflows/types";
 
 import { ConditionField, conditionFields } from "./condition-field";
+
+const UNKNOWN_FIELDS: ConditionFieldSuggestion[] = [
+  { field: "score", kind: "unknown" },
+  { field: "name", kind: "unknown" },
+];
 
 function Harness({
   initial,
   onChange,
   disabled,
   root = "item",
+  fields = UNKNOWN_FIELDS,
 }: {
   initial?: string;
   onChange: (value: string | undefined) => void;
   disabled?: boolean;
   root?: "item" | "value";
+  fields?: ConditionFieldSuggestion[];
 }) {
   const [value, setValue] = useState(initial);
   return (
@@ -36,7 +44,7 @@ function Harness({
         hint="A JMESPath expression"
         value={value}
         disabled={disabled}
-        fields={["score", "name"]}
+        fields={fields}
         onChange={(next) => {
           setValue(next);
           onChange(next);
@@ -64,6 +72,56 @@ describe("ConditionField", () => {
     expect(onChange).toHaveBeenLastCalledWith("item.score >= `50`");
     // The fields the step reads are suggested.
     expect(document.querySelectorAll("datalist option")).toHaveLength(2);
+  });
+
+  it("offers an enum's options as the value", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        onChange={onChange}
+        fields={[{ field: "priority", kind: "enum", options: ["high", "normal", "low"] }]}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText("Field of condition 1"), "priority");
+    await userEvent.click(screen.getByRole("combobox", { name: "Value of condition 1" }));
+    await userEvent.click(screen.getByRole("option", { name: "high" }));
+    expect(onChange).toHaveBeenLastCalledWith("item.priority == 'high'");
+  });
+
+  it("offers true and false for a yes/no field", async () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} fields={[{ field: "active", kind: "boolean" }]} />);
+    await userEvent.type(screen.getByLabelText("Field of condition 1"), "active");
+    await userEvent.click(screen.getByRole("combobox", { name: "Value of condition 1" }));
+    await userEvent.click(screen.getByRole("option", { name: "true" }));
+    expect(onChange).toHaveBeenLastCalledWith("item.active == `true`");
+  });
+
+  it("offers only numeric checks for a number field, and resets a check it drops", async () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        onChange={onChange}
+        fields={[
+          { field: "score", kind: "number" },
+          { field: "name", kind: "unknown" },
+        ]}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText("Field of condition 1"), "name");
+    await userEvent.click(screen.getByRole("combobox", { name: "Check of condition 1" }));
+    expect(screen.getByRole("option", { name: "contains" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("option", { name: "contains" }));
+    await userEvent.type(screen.getByLabelText("Value of condition 1"), "a");
+    expect(onChange).toHaveBeenLastCalledWith("contains(item.name || '', 'a')");
+
+    // A number takes no text check: the check falls back to "is equal to".
+    await userEvent.clear(screen.getByLabelText("Field of condition 1"));
+    await userEvent.type(screen.getByLabelText("Field of condition 1"), "score");
+    expect(onChange).toHaveBeenLastCalledWith("item.score == 'a'");
+    await userEvent.click(screen.getByRole("combobox", { name: "Check of condition 1" }));
+    expect(screen.queryByRole("option", { name: "contains" })).toBeNull();
+    expect(screen.getByRole("option", { name: "is at least" })).toBeTruthy();
   });
 
   it("joins several conditions by all or any, and removes one", async () => {
@@ -134,10 +192,42 @@ describe("conditionFields", () => {
       }),
     ],
   });
-  const catalog = makeCatalog([SOURCE]);
+  const TYPED = makeDefinition({
+    id: "test.typed",
+    ports: [
+      port("out", "output", {
+        type: "object",
+        properties: {
+          body: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              count: { type: "integer" },
+              active: { type: "boolean" },
+              priority: { type: "string", enum: ["high", "normal", "low"] },
+              address: { type: "object", properties: { city: { type: "string" } } },
+            },
+          },
+          rows: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: { score: { type: "integer" }, tag: { type: "string" } },
+            },
+          },
+        },
+      }),
+    ],
+  });
+  const catalog = makeCatalog([SOURCE, TYPED]);
   const chain = graph({
     entry: "A",
     nodes: [node("A", "test.source"), node("B", "test.source")],
+    edges: [edge("e", "A", "out", "B", "in")],
+  });
+  const typedChain = graph({
+    entry: "A",
+    nodes: [node("A", "test.typed"), node("B", "test.typed")],
     edges: [edge("e", "A", "out", "B", "in")],
   });
   const reading = (field: string, path: string[]): Binding[] => [
@@ -152,14 +242,17 @@ describe("conditionFields", () => {
     const stepData = { A: { output: { records: [{ score: 1, name: "Ada" }] } } };
     expect(
       conditionFields("item", "B", chain, catalog, reading("items", ["records"]), stepData),
-    ).toEqual(["score", "name"]);
+    ).toEqual([
+      { field: "score", kind: "unknown" },
+      { field: "name", kind: "unknown" },
+    ]);
     // Nothing seen yet, and a list declares no item fields to suggest.
     expect(conditionFields("item", "B", chain, catalog, reading("items", ["records"]), {})).toEqual(
       [],
     );
   });
 
-  it("names a value's fields as seen, or as the step before declares them", () => {
+  it("names a value's fields as seen, with the step's declared ones first", () => {
     const pinned = graph({
       entry: "A",
       nodes: [
@@ -169,10 +262,41 @@ describe("conditionFields", () => {
       edges: [],
     });
     expect(conditionFields("value", "B", pinned, catalog, reading("value", ["lead"]), {})).toEqual([
-      "owner",
+      { field: "status", kind: "string" },
+      { field: "owner", kind: "unknown" },
     ]);
     expect(conditionFields("value", "B", chain, catalog, reading("value", ["lead"]), {})).toEqual([
-      "status",
+      { field: "status", kind: "string" },
+    ]);
+  });
+
+  it("names a declared payload's fields with their types, without any test run", () => {
+    expect(
+      conditionFields("value", "B", typedChain, catalog, reading("value", ["body"]), {}),
+    ).toEqual([
+      { field: "title", kind: "string" },
+      { field: "count", kind: "number" },
+      { field: "active", kind: "boolean" },
+      { field: "priority", kind: "enum", options: ["high", "normal", "low"] },
+      { field: "address", kind: "unknown" },
+      { field: "address.city", kind: "string" },
+    ]);
+  });
+
+  it("names a declared list's item fields, beside the ones a run saw", () => {
+    expect(
+      conditionFields("item", "B", typedChain, catalog, reading("items", ["rows"]), {}),
+    ).toEqual([
+      { field: "score", kind: "number" },
+      { field: "tag", kind: "string" },
+    ]);
+    const stepData = { A: { output: { rows: [{ score: 1, tag: "a", note: "n" }] } } };
+    expect(
+      conditionFields("item", "B", typedChain, catalog, reading("items", ["rows"]), stepData),
+    ).toEqual([
+      { field: "score", kind: "number" },
+      { field: "tag", kind: "string" },
+      { field: "note", kind: "unknown" },
     ]);
   });
 

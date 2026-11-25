@@ -24,10 +24,19 @@ from app.workflows.graph.errors import GraphValidationError
 from app.workflows.graph.model import Edge, NodeInstance, NodePosition, WorkflowGraph
 from app.workflows.graph.validate import (
     _UNKNOWN,
+    _comparison_of,
+    _condition_comparisons,
+    _condition_expressions,
+    _declared_word,
+    _item_type,
     _kahn,
+    _literal_fits,
+    _literal_word,
     _reached_through,
     _resolve_definitions,
     _resolve_field_path,
+    _resolve_on_type,
+    _root_path,
     _rule_8_one_port,
     _rule_12_policies,
     _types_compatible,
@@ -906,3 +915,170 @@ def ordinary_tables_only(monkeypatch):
     from unittest.mock import AsyncMock
 
     monkeypatch.setattr("app.repositories.task.for_table", AsyncMock(return_value=None))
+
+
+# Conditions on declared fields: the pure helpers, exercised directly where
+# building a full graph to reach a branch would be more contrived than
+# informative.
+
+
+def test_an_item_type_comes_from_a_list_of_one_type():
+    assert _item_type(list[str]) is str
+    assert _item_type(list[str] | None) is str
+    assert _item_type(tuple[int, ...]) is int
+
+
+def test_an_item_type_is_none_for_anything_but_a_list_of_one_type():
+    assert _item_type(int | str) is None
+    assert _item_type(int) is None
+    assert _item_type(tuple[int, str]) is None
+    assert _item_type(list) is None
+    assert _item_type(list[Any]) is None
+
+
+def test_a_literal_fits_a_value_of_its_own_type():
+    assert _literal_fits("Ada", str) is True
+    assert _literal_fits(50, int) is True
+    assert _literal_fits(50, float) is True
+    assert _literal_fits(1.5, float) is True
+    assert _literal_fits(True, bool) is True
+
+
+def test_a_literal_does_not_fit_a_value_of_another_type():
+    assert _literal_fits("three", int) is False
+    assert _literal_fits(50, str) is False
+    assert _literal_fits("yes", bool) is False
+    assert _literal_fits(True, int) is False
+    assert _literal_fits(1.5, int) is False
+
+
+def test_a_literal_fits_anything_undeclared_or_unjudgeable():
+    class _Lead(BaseModel):
+        name: str
+
+    assert _literal_fits("x", Any) is True
+    assert _literal_fits("x", dict[str, Any]) is True
+    assert _literal_fits("x", _Lead) is True
+
+
+def test_a_literal_fits_a_union_when_any_member_fits():
+    assert _literal_fits("x", int | str) is True
+    assert _literal_fits(True, int | str) is False
+    assert _literal_fits(5, str | dict[str, Any]) is True
+
+
+def test_a_literal_fits_an_enum_only_when_offered():
+    assert _literal_fits("high", Literal["high", "low"]) is True
+    assert _literal_fits("urgent", Literal["high", "low"]) is False
+    assert _literal_fits(1, Literal["high", "low"]) is False
+    assert _literal_fits(True, Literal[1, 2]) is False
+
+
+def test_a_declared_type_is_named_for_a_refusal():
+    assert _declared_word(str) == "text"
+    assert _declared_word(bool) == "true or false"
+    assert _declared_word(int) == "an integer"
+    assert _declared_word(float) == "a number"
+    assert _declared_word(Literal["high", "low"]) == "one of 'high', 'low'"
+    assert _declared_word(int | str) == "a declared type"
+    assert _declared_word(dict[str, Any]) == "a declared type"
+    assert _declared_word(str | None) == "text"
+
+
+def test_a_literal_is_named_for_a_refusal():
+    assert _literal_word(True) == "true or false"
+    assert _literal_word("x") == "text"
+    assert _literal_word(5) == "a number"
+    assert _literal_word(1.5) == "a number"
+    assert _literal_word([1]) == "a list"
+    assert _literal_word({"a": 1}) == "an object"
+    assert _literal_word(None) == "nothing"
+    assert _literal_word(object()) == "a value"
+
+
+def test_a_root_path_reads_only_paths_under_its_root():
+    field = {"type": "field", "value": "value", "children": []}
+    assert _root_path(field, "value") == ()
+    assert _root_path({"type": "field", "value": "other", "children": []}, "value") is None
+    assert _root_path("not-a-node", "value") is None
+    sub = {
+        "type": "subexpression",
+        "children": [field, {"type": "field", "value": "count", "children": []}],
+    }
+    assert _root_path(sub, "value") == ("count",)
+    other = {
+        "type": "subexpression",
+        "children": [
+            {"type": "field", "value": "other", "children": []},
+            {"type": "field", "value": "name", "children": []},
+        ],
+    }
+    assert _root_path(other, "value") is None
+    indexed = {
+        "type": "subexpression",
+        "children": [field, {"type": "index_expression", "children": []}],
+    }
+    assert _root_path(indexed, "value") is None
+    assert (
+        _root_path({"type": "function_expression", "value": "length", "children": []}, "value")
+        is None
+    )
+
+
+def test_a_comparison_is_a_path_against_a_literal():
+    path = {
+        "type": "subexpression",
+        "children": [
+            {"type": "field", "value": "value", "children": []},
+            {"type": "field", "value": "count", "children": []},
+        ],
+    }
+    literal = {"type": "literal", "value": 50, "children": []}
+    assert _comparison_of([path, literal], "value") == (("count",), 50)
+    assert _comparison_of([literal, path], "value") == (("count",), 50)
+    assert _comparison_of([path, path], "value") is None
+
+
+def test_condition_comparisons_read_only_the_row_builders_shapes():
+    assert _condition_comparisons("value.count >= `50` && value.name == 'x'", "value") == [
+        (("count",), 50),
+        (("name",), "x"),
+    ]
+    assert _condition_comparisons("length(value.tags) > `2`", "value") == []
+    assert _condition_comparisons("value.count == ", "value") == []
+    assert _condition_comparisons("value == 'x'", "value") == [((), "x")]
+
+
+def test_condition_expressions_read_a_switchs_rules_and_an_ifs_condition():
+    if_node = NodeInstance(
+        id=uuid4(),
+        definition_id="logic.if",
+        definition_version=1,
+        config={"condition": "value.ok"},
+        layout=_pos(),
+    )
+    assert _condition_expressions(if_node, "logic.if") == [
+        (f"nodes.{if_node.id}.config.condition", "value.ok")
+    ]
+    switch = NodeInstance(
+        id=uuid4(),
+        definition_id="logic.switch",
+        definition_version=1,
+        config={"rules": [{"name": "big", "condition": "value.ok"}]},
+        layout=_pos(),
+    )
+    assert _condition_expressions(switch, "logic.switch") == [
+        (f"nodes.{switch.id}.config.rules.0.condition", "value.ok")
+    ]
+
+
+def test_a_condition_path_through_a_union_of_two_types_resolves_nowhere():
+    assert _resolve_on_type(int | str, ("deeper",)) is _UNKNOWN
+
+
+def test_a_path_past_a_dynamic_value_stays_dynamic():
+    class _Envelope(BaseModel):
+        meta: dict[str, Any]
+
+    assert _resolve_on_type(_Envelope, ("meta", "anything")) is Any
+    assert _resolve_on_type(dict[str, Any], ("anything",)) is Any

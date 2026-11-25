@@ -65,6 +65,7 @@ export {
   portSchema,
   outputFieldNames,
   resolveFieldType,
+  resolveItemType,
   fieldType,
   isDynamic,
   typesCompatible,

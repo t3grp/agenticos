@@ -1258,6 +1258,734 @@ async def test_a_binding_to_a_field_a_classification_does_not_have_is_refused(
     assert _has(fields, "bindings.1", "does not exist")
 
 
+# Conditions on declared fields
+
+
+def _condition_node(definition_id: str, config: dict) -> NodeInstance:
+    return NodeInstance(
+        id=uuid4(), definition_id=definition_id, definition_version=1, config=config, layout=_pos()
+    )
+
+
+def _reads(target: NodeInstance, source: NodeInstance, target_field: str, *path: str) -> Binding:
+    return Binding(
+        target_node_id=target.id,
+        target_field=target_field,
+        source=NodeOutputRef(node_id=source.id, port="out", field_path=path),
+    )
+
+
+def _bool_webhook_config() -> dict:
+    return {
+        "payload_fields": [
+            {"name": "title", "type": "text"},
+            {"name": "count", "type": "integer", "required": False},
+            {"name": "active", "type": "boolean"},
+        ]
+    }
+
+
+def _enum_webhook_config() -> dict:
+    return {
+        "payload_schema": {
+            "type": "object",
+            "properties": {"priority": {"type": "string", "enum": ["high", "normal", "low"]}},
+            "required": ["priority"],
+            "additionalProperties": False,
+        }
+    }
+
+
+async def test_a_condition_comparing_a_declared_integer_with_text_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.count == 'three'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'count'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "(an integer)")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with text")
+
+
+async def test_a_condition_comparing_a_declared_integer_with_a_number_publishes(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.count >= `50`"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_a_declared_text_field_with_text_publishes(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.title == 'Acme'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_a_declared_boolean_with_text_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.active == 'yes'"})
+    trigger = _trigger_node("trigger.webhook", 1, _bool_webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'active'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "(true or false)")
+
+
+async def test_a_condition_comparing_a_declared_boolean_with_true_publishes(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.active == `true`"})
+    trigger = _trigger_node("trigger.webhook", 1, _bool_webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_an_enum_with_an_option_publishes(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.priority == 'high'"})
+    trigger = _trigger_node("trigger.webhook", 1, _enum_webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_an_enum_with_another_value_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.priority == 'urgent'"})
+    trigger = _trigger_node("trigger.webhook", 1, _enum_webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'priority'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "one of 'high', 'normal', 'low'")
+
+
+async def test_a_condition_on_an_undeclared_payload_stays_dynamic(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.count == 'three'"})
+    trigger = _trigger_node("trigger.webhook", 1, {})
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_switch_rule_comparing_a_declared_field_with_the_wrong_type_is_refused(
+    mock_db_session,
+):
+    decider = _condition_node(
+        "logic.switch", {"rules": [{"name": "big", "condition": "value.count == 'three'"}]}
+    )
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "big", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.rules.0.condition", "compares 'count'")
+
+
+async def test_a_filter_condition_on_a_declared_list_item_is_checked(mock_db_session):
+    decider = _condition_node("data.filter", {"condition": "item > `5`"})
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {"payload_fields": [{"name": "records", "type": "string_list"}]},
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "out", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "items", "body", "records"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'item'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "(text)")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with a number")
+
+
+async def test_a_filter_condition_comparing_an_item_with_text_publishes(mock_db_session):
+    decider = _condition_node("data.filter", {"condition": "item == 'vip'"})
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {"payload_fields": [{"name": "records", "type": "string_list"}]},
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "out", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "items", "body", "records"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_that_is_not_a_comparison_is_left_to_the_run(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "length(value.title) > `2`"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_two_fields_is_left_to_the_run(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.title == value.count"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_on_the_bound_value_itself_is_checked(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value == 'three'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body", "count"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'value'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "(an integer)")
+
+
+async def test_a_disabled_filter_with_a_mistyped_condition_publishes(mock_db_session):
+    decider = NodeInstance(
+        id=uuid4(),
+        definition_id="data.filter",
+        definition_version=1,
+        config={"condition": "item > `5`"},
+        layout=_pos(),
+        disabled=True,
+    )
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {"payload_fields": [{"name": "records", "type": "string_list"}]},
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "out", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "items", "body", "records"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_on_a_field_the_declared_payload_does_not_have_is_left_alone(
+    mock_db_session,
+):
+    decider = _condition_node("logic.if", {"condition": "value.nope == 'x'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_into_an_open_tier_2_payload_stays_dynamic(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.surprise == 'x'"})
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {
+            "payload_schema": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        },
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_past_a_dynamic_value_is_left_alone(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.meta.anything == 'x'"})
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {
+            "payload_schema": {
+                "type": "object",
+                "properties": {"meta": {"type": "object"}},
+                "additionalProperties": False,
+            }
+        },
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_with_the_literal_first_is_checked(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "'three' == value.count"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'count'")
+
+
+async def test_a_condition_on_another_root_is_left_alone(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "other.name == 'x'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_stepping_into_a_scalar_is_left_alone(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.count.x == 'y'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_on_an_index_is_left_alone(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.tags[0] == 'x'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_a_declared_choice_with_an_option_publishes(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.priority == 'high'"})
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {
+            "payload_fields": [
+                {"name": "priority", "type": "choice", "options": ["high", "normal", "low"]}
+            ]
+        },
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_a_declared_choice_with_a_number_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.priority == `5`"})
+    trigger = _trigger_node(
+        "trigger.webhook",
+        1,
+        {
+            "payload_fields": [
+                {"name": "priority", "type": "choice", "options": ["high", "normal", "low"]}
+            ]
+        },
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'priority'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "(text)")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with a number")
+
+
+async def test_a_condition_comparing_a_declared_number_with_text_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.score == 'high'"})
+    trigger = _trigger_node(
+        "trigger.webhook", 1, {"payload_fields": [{"name": "score", "type": "number"}]}
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'score'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "(a number)")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with text")
+
+
+async def test_a_condition_comparing_a_declared_number_with_a_number_publishes(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.score == `1.5`"})
+    trigger = _trigger_node(
+        "trigger.webhook", 1, {"payload_fields": [{"name": "score", "type": "number"}]}
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    validated = await validate_graph(mock_db_session, _owner_ctx(), graph)
+    assert validated.entry_node_id == trigger.id
+
+
+async def test_a_condition_comparing_a_declared_text_field_with_true_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.title == `true`"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "compares 'title'")
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with true or false")
+
+
+async def test_a_condition_comparing_a_declared_text_field_with_a_list_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.title == `[1, 2]`"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with a list")
+
+
+async def test_a_condition_comparing_a_declared_text_field_with_an_object_is_refused(
+    mock_db_session,
+):
+    decider = _condition_node("logic.if", {"condition": 'value.title == `{"a": 1}`'})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with an object")
+
+
+async def test_a_condition_comparing_a_declared_text_field_with_nothing_is_refused(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.title == `null`"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.condition", "with nothing")
+
+
+async def test_a_malformed_condition_is_the_config_problem_not_a_type_problem(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.count == "})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert not any("Condition compares" in field["message"] for field in fields)
+
+
+async def test_a_switch_with_rules_that_are_not_a_list_has_no_condition_problem(mock_db_session):
+    decider = _condition_node("logic.switch", {"rules": "nope"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "big", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert not any("Condition compares" in field["message"] for field in fields)
+
+
+async def test_a_switch_skips_rules_that_are_not_conditions(mock_db_session):
+    decider = _condition_node(
+        "logic.switch",
+        {
+            "rules": [
+                {"name": "big", "condition": "value.count == 'three'"},
+                "junk",
+                {"name": "small", "condition": 42},
+            ]
+        },
+    )
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "big", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert _has(fields, f"nodes.{decider.id}.config.rules.0.condition", "compares 'count'")
+
+
+async def test_an_if_with_a_condition_that_is_not_text_has_no_condition_problem(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": 42})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, trigger, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert not any("Condition compares" in field["message"] for field in fields)
+
+
+async def test_a_condition_reading_a_node_with_no_definition_is_left_alone(mock_db_session):
+    decider = _condition_node("logic.if", {"condition": "value.count == 'three'"})
+    trigger = _trigger_node("trigger.webhook", 1, _webhook_config())
+    ghost = NodeInstance(
+        id=uuid4(),
+        definition_id="test.no_such_node",
+        definition_version=1,
+        config={},
+        layout=_pos(),
+    )
+    leg = _leg()
+    graph = WorkflowGraph(
+        entry_node_id=trigger.id,
+        nodes=(trigger, ghost, decider, leg),
+        edges=(
+            _edge(trigger.id, "out", decider.id, "in"),
+            _edge(trigger.id, "out", ghost.id, "in"),
+            _edge(decider.id, "true", leg.id, "in"),
+        ),
+        bindings=(_reads(decider, ghost, "value", "body"),),
+    )
+    fields = await _fields(graph, mock_db_session)
+    assert not any("Condition compares" in field["message"] for field in fields)
+
+
 # Rule 5 - exclusive merge
 
 
