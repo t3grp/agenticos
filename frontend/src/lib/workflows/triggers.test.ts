@@ -3,10 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import type { NodeDefinition, WorkflowGraph } from "@/lib/workflows/types";
 
 import {
+  PAYLOAD_TRIGGER_ATTRS,
+  PAYLOAD_TRIGGER_IDS,
   declaredFields,
   declaredInputSchema,
   entryGraph,
   isTrigger,
+  payloadAttrOf,
   sampleRunInput,
   startsByHand,
   triggerNodeOf,
@@ -44,6 +47,20 @@ describe("triggers", () => {
       expect(declaredInputSchema(graph(trigger, { input_schema: schema }))).toBe(schema);
     }
   });
+  it("names the output attribute each event trigger's declared payload types", () => {
+    expect(PAYLOAD_TRIGGER_ATTRS).toEqual({
+      "trigger.webhook": "body",
+      "trigger.github": "payload",
+      "trigger.schedule": "input",
+      "trigger.table_record": "fields",
+    });
+    expect([...PAYLOAD_TRIGGER_IDS].sort()).toEqual(Object.keys(PAYLOAD_TRIGGER_ATTRS).sort());
+    expect(payloadAttrOf("trigger.webhook")).toBe("body");
+    expect(payloadAttrOf("trigger.table_record")).toBe("fields");
+    expect(payloadAttrOf("core.input")).toBeUndefined();
+    expect(payloadAttrOf("trigger.chat")).toBeUndefined();
+  });
+
   it("tells a trigger by its category, and finds the graph's", () => {
     const trigger = { category: TRIGGER_CATEGORY } as NodeDefinition;
     expect(isTrigger(trigger)).toBe(true);

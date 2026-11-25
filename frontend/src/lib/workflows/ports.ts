@@ -1,5 +1,10 @@
-import { inputFieldsOf, typedPayloadPort } from "./input-fields";
-import { FIELD_TRIGGERS } from "./triggers";
+import {
+  effectivePayloadSchema,
+  inputFieldsOf,
+  typedPayloadAttrPort,
+  typedPayloadPort,
+} from "./input-fields";
+import { FIELD_TRIGGERS, PAYLOAD_TRIGGER_ATTRS } from "./triggers";
 import type { JsonSchema, NodeDefinition, NodeInstance, Port } from "./types";
 
 /**
@@ -189,6 +194,20 @@ export function instancePorts(instance: NodeInstance, definition: NodeDefinition
   if (FIELD_TRIGGERS.has(definition.id)) {
     const fields = inputFieldsOf(instance.config);
     if (fields.length > 0) ports = ports.map((port) => typedPayloadPort(port, fields));
+  }
+  // An event trigger's declared payload types the attribute its deliveries
+  // arrive under - `body`, `payload`, `input` or a record's `fields` - the
+  // same channel `core.input` already uses: the declaration travels in the
+  // node's config, and the typed port is derived here, so the binding picker,
+  // the template box and the validation mirror all read the declared fields
+  // with their types, without a test run. With no declaration the port stays
+  // as the catalog serves it, and the payload stays dynamic.
+  const payloadAttr = PAYLOAD_TRIGGER_ATTRS[definition.id];
+  if (payloadAttr !== undefined) {
+    const schema = effectivePayloadSchema(instance.config);
+    if (schema !== null) {
+      ports = ports.map((port) => typedPayloadAttrPort(port, schema, payloadAttr));
+    }
   }
   if (routesErrors(instance) && !ports.some((port) => port.id === ERROR_PORT)) {
     ports = [

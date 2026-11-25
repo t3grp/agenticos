@@ -49,16 +49,19 @@ function textOrNull(value: unknown): string | null {
 }
 
 /** The portable JSON Schema contract a trigger declares; simple fields stay separate. */
-export function inputSchemaOf(config: Record<string, unknown>): JsonSchema | null {
-  const schema = config["input_schema"];
+export function inputSchemaOf(
+  config: Record<string, unknown>,
+  key = "input_schema",
+): JsonSchema | null {
+  const schema = config[key];
   return typeof schema === "object" && schema !== null && !Array.isArray(schema)
     ? (schema as JsonSchema)
     : null;
 }
 
 /** The fields a trigger's config declares, in order - entries of no known shape skipped. */
-export function inputFieldsOf(config: Record<string, unknown>): InputField[] {
-  const fields = config["fields"];
+export function inputFieldsOf(config: Record<string, unknown>, key = "fields"): InputField[] {
+  const fields = config[key];
   if (!Array.isArray(fields)) return [];
   return fields.flatMap((entry: unknown): InputField[] => {
     if (typeof entry !== "object" || entry === null) return [];
@@ -80,6 +83,54 @@ export function inputFieldsOf(config: Record<string, unknown>): InputField[] {
       },
     ];
   });
+}
+
+/**
+ * What a payload field's name must look like: whatever the sender sends - a
+ * key, not a form field's snake_case name. Any non-empty key without a dot (a
+ * dot would break the `{{Trigger.body.a.b}}` path it is bound by) or control
+ * character, and no surrounding whitespace. Mirrors `PayloadField` in
+ * `app/workflows/contracts/payload_schema.py`.
+ */
+export const PAYLOAD_FIELD_NAME_MAX = 128;
+
+export function isPayloadFieldName(name: string): boolean {
+  return (
+    name.length >= 1 &&
+    name.length <= PAYLOAD_FIELD_NAME_MAX &&
+    !name.includes(".") &&
+    name === name.trim() &&
+    !/[\u0000-\u001f]/.test(name)
+  );
+}
+
+/**
+ * The payload fields an event trigger's config declares, in order - entries of
+ * no known shape skipped. Same shape as an input field; only the name rule
+ * differs, and it is the form's job to flag a name no sender's key may be -
+ * as with an input field's name, a stored entry is read and marked, not
+ * dropped, so an edit cannot silently lose it.
+ */
+export function payloadFieldsOf(config: Record<string, unknown>): InputField[] {
+  return inputFieldsOf(config, "payload_fields");
+}
+
+/** An event trigger's Tier 2 payload contract, or null when it declares none. */
+export function payloadSchemaOf(config: Record<string, unknown>): JsonSchema | null {
+  return inputSchemaOf(config, "payload_schema");
+}
+
+/**
+ * The portable payload contract a trigger declares: the Tier 2 schema as
+ * written, or the Tier 1 fields as JSON Schema. `null` when it declares
+ * nothing. Mirrors `effective_payload_schema` in
+ * `app/workflows/contracts/payload_schema.py`.
+ */
+export function effectivePayloadSchema(config: Record<string, unknown>): JsonSchema | null {
+  const schema = payloadSchemaOf(config);
+  if (schema !== null) return schema;
+  const fields = payloadFieldsOf(config);
+  return fields.length === 0 ? null : payloadSchema(fields);
 }
 
 /** The words a field is shown under: its label, or its name. */
@@ -122,17 +173,32 @@ export function payloadSchema(fields: readonly InputField[]): JsonSchema {
 }
 
 /**
+ * The trigger's `out` port with one attribute typed by a declared payload
+ * contract - `body`, `payload`, `input` or `fields`, by trigger - or the port
+ * unchanged when it carries no payload. The backend's `ports_for` types the
+ * same attribute from the same declaration.
+ */
+export function typedPayloadAttrPort(port: Port, schema: JsonSchema, attr: string): Port {
+  const own = port.schema;
+  if (own === null || port.kind !== "output") return port;
+  const properties = (own["properties"] ?? {}) as Record<string, JsonSchema>;
+  return {
+    ...port,
+    schema: { ...own, properties: { ...properties, [attr]: schema } },
+  };
+}
+
+/**
  * The trigger's `out` port with `payload` typed by its declared fields, or the
  * port unchanged when it declares none - its payload is then any object.
  */
-export function typedPayloadPort(port: Port, fields: readonly InputField[]): Port {
-  const schema = port.schema;
-  if (fields.length === 0 || schema === null || port.kind !== "output") return port;
-  const properties = (schema["properties"] ?? {}) as Record<string, JsonSchema>;
-  return {
-    ...port,
-    schema: { ...schema, properties: { ...properties, payload: payloadSchema(fields) } },
-  };
+export function typedPayloadPort(
+  port: Port,
+  fields: readonly InputField[],
+  attr = "payload",
+): Port {
+  if (fields.length === 0) return port;
+  return typedPayloadAttrPort(port, payloadSchema(fields), attr);
 }
 
 /** A value the Run form holds for one field: typed text, or a switch's state. */

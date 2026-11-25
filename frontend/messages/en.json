@@ -12564,7 +12564,14 @@
       "jsonSchema": "JSON Schema",
       "formatHint": "Choose simple fields or a JSON Schema contract. Each saved format is kept while this trigger stays open; only the selected format is saved to the workflow.",
       "schemaHint": "Use JSON Schema Draft 2020-12 for nested objects, arrays and references. Inputs are checked before a run starts.",
-      "schemaInvalid": "Enter a JSON object. This edit was not saved."
+      "schemaInvalid": "Enter a JSON object. This edit was not saved.",
+      "payloadTitle": "Payload fields",
+      "payloadNoneHint": "None yet: a delivery takes any JSON object. Add fields to declare what the payload holds, so later steps read each with its type and a delivery that does not fit is refused.",
+      "payloadSomeHint": "Later steps read each field under {attr}, with its type. A delivery that does not fit is refused before a run starts.",
+      "payloadNameInvalid": "One key, with no dot in it: whatever the sender sends, such as orderId, or a table column's label.",
+      "payloadContractFormat": "Payload contract",
+      "payloadFormatHint": "Choose simple fields or a JSON Schema contract. Each saved format is kept while this trigger stays open; only the selected format is saved to the workflow.",
+      "payloadSchemaHint": "Use JSON Schema Draft 2020-12 for nested objects, arrays and references. Deliveries are checked against it before a run starts."
     },
     "pickerHostLabel": "Sandbox host",
     "pickerHostDefault": "The organization's default host",

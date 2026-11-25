@@ -153,6 +153,84 @@ describe("sourceCandidates", () => {
     expect(sourceCandidates(chain, catalog, "B", INTEGER)).toEqual([]);
   });
 
+  describe("a trigger with a declared payload", () => {
+    const webhook = makeDefinition({
+      id: "trigger.webhook",
+      name: "Webhook",
+      ports: [
+        port(
+          "out",
+          "output",
+          objectSchema("WebhookTriggerOutput", { body: { type: "object" }, delivery_id: STRING }, [
+            "delivery_id",
+          ]),
+        ),
+      ],
+    });
+    const hooked = (config: Record<string, unknown>) =>
+      graph({
+        entry: "W",
+        nodes: [node("W", "trigger.webhook", config), echo("B")],
+        edges: [edge("e", "W", "out", "B", "in")],
+      });
+    const both = makeCatalog([DEBUG_ECHO, webhook]);
+
+    it("offers a declared field with its type, and the field is not dynamic", () => {
+      const offered = sourceCandidates(
+        hooked({ payload_fields: [{ name: "title", type: "text" }] }),
+        both,
+        "B",
+        STRING,
+      );
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["body", "title"], false],
+        [["delivery_id"], false],
+      ]);
+      expect(offered[0]?.typeToken).toBe("string");
+    });
+
+    it("offers an undeclared payload as one dynamic value, for a field inside it", () => {
+      const offered = sourceCandidates(hooked({}), both, "B", STRING);
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["body"], true],
+        [["delivery_id"], false],
+      ]);
+    });
+
+    it("offers a nested Tier 2 field from the schema, three levels in", () => {
+      const github = makeDefinition({
+        id: "trigger.github",
+        name: "GitHub",
+        ports: [
+          port(
+            "out",
+            "output",
+            objectSchema("GithubTriggerOutput", { payload: { type: "object" } }, []),
+          ),
+        ],
+      });
+      const delivered = graph({
+        entry: "G",
+        nodes: [
+          node("G", "trigger.github", {
+            payload_schema: {
+              type: "object",
+              properties: {
+                pull_request: { type: "object", properties: { title: { type: "string" } } },
+              },
+            },
+          }),
+          echo("B"),
+        ],
+        edges: [edge("e", "G", "out", "B", "in")],
+      });
+      const offered = sourceCandidates(delivered, makeCatalog([DEBUG_ECHO, github]), "B", STRING);
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["payload", "pull_request", "title"], false],
+      ]);
+    });
+  });
+
   it("skips a reachable node whose definition is unknown", () => {
     const broken = graph({
       entry: "X",

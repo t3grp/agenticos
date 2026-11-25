@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   type InputField,
+  effectivePayloadSchema,
   fieldCaption,
   initialValues,
   inputFieldsOf,
   inputSchemaOf,
+  isPayloadFieldName,
+  payloadFieldsOf,
+  payloadSchemaOf,
   payloadSchema,
   runInputFrom,
   serverFieldProblems,
+  typedPayloadAttrPort,
   typedPayloadPort,
 } from "./input-fields";
 import type { Port } from "./types";
@@ -58,6 +63,88 @@ describe("inputFieldsOf", () => {
       field(),
       field({ name: "plan", type: "choice", label: "Plan", required: false, options: ["a"] }),
     ]);
+  });
+});
+
+describe("payloadFieldsOf", () => {
+  it("names a payload field by the sender's key, not a form field's name rule", () => {
+    expect(isPayloadFieldName("orderId")).toBe(true);
+    expect(isPayloadFieldName("First name")).toBe(true);
+    expect(isPayloadFieldName("pull_request")).toBe(true);
+    expect(isPayloadFieldName("")).toBe(false);
+    expect(isPayloadFieldName("a.b")).toBe(false);
+    expect(isPayloadFieldName(" lead")).toBe(false);
+    expect(isPayloadFieldName("trail ")).toBe(false);
+    expect(isPayloadFieldName("tab\there")).toBe(false);
+    expect(isPayloadFieldName("x".repeat(129))).toBe(false);
+    expect(isPayloadFieldName("x".repeat(128))).toBe(true);
+  });
+
+  it("reads the declared payload fields and skips entries of no known shape", () => {
+    expect(payloadFieldsOf({})).toEqual([]);
+    expect(
+      payloadFieldsOf({
+        payload_fields: [
+          { name: "orderId", type: "text" },
+          { name: "First name", type: "choice", options: ["Ada", 1] },
+          { name: "a.b", type: "text" },
+          { name: "odd", type: "colour" },
+          { type: "text" },
+          "text",
+          null,
+        ],
+      }),
+    ).toEqual([
+      field({ name: "orderId" }),
+      field({ name: "First name", type: "choice", options: ["Ada"] }),
+      // A dotted name is read, not dropped: the form marks it, as it does
+      // an input field's bad name, so an edit cannot silently lose it.
+      field({ name: "a.b" }),
+    ]);
+    // A payload's fields live under their own key, apart from an input's.
+    expect(payloadFieldsOf({ fields: [{ name: "email", type: "text" }] })).toEqual([]);
+  });
+});
+
+describe("effectivePayloadSchema", () => {
+  it("prefers the Tier 2 schema, else builds one from the Tier 1 fields, else nothing", () => {
+    const schema = { type: "object", properties: { pull_request: { type: "object" } } };
+    expect(payloadSchemaOf({ payload_schema: schema })).toBe(schema);
+    expect(payloadSchemaOf({ payload_schema: [] })).toBeNull();
+    expect(effectivePayloadSchema({ payload_schema: schema, payload_fields: [field()] })).toBe(
+      schema,
+    );
+    expect(effectivePayloadSchema({ payload_fields: [field()] })).toEqual(payloadSchema([field()]));
+    expect(effectivePayloadSchema({})).toBeNull();
+    expect(effectivePayloadSchema({ payload_fields: [] })).toBeNull();
+  });
+});
+
+describe("typedPayloadAttrPort", () => {
+  it("types the named attribute of an output port, and leaves the rest alone", () => {
+    const out: Port = {
+      id: "out",
+      label: "Out",
+      kind: "output",
+      schema: {
+        type: "object",
+        properties: { body: { type: "object" }, delivery_id: { type: "string" } },
+      },
+    };
+    const typed = typedPayloadAttrPort(out, payloadSchema([field()]), "body");
+    expect((typed.schema as { properties: Record<string, unknown> }).properties["body"]).toEqual(
+      payloadSchema([field()]),
+    );
+    expect(
+      (typed.schema as { properties: Record<string, unknown> }).properties["delivery_id"],
+    ).toEqual({ type: "string" });
+    expect(
+      typedPayloadAttrPort({ ...out, schema: null }, payloadSchema([field()]), "body").schema,
+    ).toBeNull();
+    const input = { ...out, kind: "input" as const };
+    expect(typedPayloadAttrPort(input, payloadSchema([field()]), "body")).toBe(input);
+    // The field-list form types the same attribute.
+    expect(typedPayloadPort(out, [field()], "body")).toEqual(typed);
   });
 });
 

@@ -62,6 +62,12 @@ export function templateSuggestions(
   };
   for (const candidate of candidates) {
     add(candidate.nodeId, candidate.fieldPath, candidate.typeToken);
+  }
+  // Observed fields come second: a declared field and a test run's field of
+  // the same name write the same placeholder, and the first add wins - so the
+  // declared type is what the list shows, and the run's data only fills in
+  // what no schema declares.
+  for (const candidate of candidates) {
     if (!candidate.dynamic) continue;
     let value: unknown = stepData[candidate.nodeId]?.output ?? null;
     for (const part of candidate.fieldPath) {

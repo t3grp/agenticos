@@ -276,6 +276,76 @@ describe("the Manual or API trigger's ports", () => {
   });
 });
 
+describe("an event trigger's payload ports", () => {
+  const outSchema = (attr: string) => ({
+    type: "object",
+    properties: { [attr]: { type: "object" }, delivery_id: { type: "string" } },
+  });
+  const trigger = (id: string, attr: string) =>
+    makeDefinition({ id, ports: [port("out", "output", outSchema(attr))] });
+
+  it.each([
+    ["trigger.webhook", "body"],
+    ["trigger.github", "payload"],
+    ["trigger.schedule", "input"],
+    ["trigger.table_record", "fields"],
+  ])("types %s's %s by the Tier 1 fields it declares", (id, attr) => {
+    const definition = trigger(id, attr);
+    const bare = instance({ definition_id: id });
+    expect(instancePorts(bare, definition)).toBe(definition.ports);
+    const typed = instancePorts(
+      instance({
+        definition_id: id,
+        config: { payload_fields: [{ name: "title", type: "text" }] },
+      }),
+      definition,
+    );
+    expect(typed[0]?.schema).toMatchObject({
+      properties: {
+        [attr]: { properties: { title: { type: "string" } }, required: ["title"] },
+        delivery_id: { type: "string" },
+      },
+    });
+  });
+
+  it("types a payload from its Tier 2 schema as written, and leaves other attributes alone", () => {
+    const schema = {
+      type: "object",
+      properties: { pull_request: { type: "object", properties: { title: { type: "string" } } } },
+    };
+    const typed = instancePorts(
+      instance({
+        definition_id: "trigger.github",
+        config: { payload_schema: schema },
+      }),
+      trigger("trigger.github", "payload"),
+    );
+    expect(typed[0]?.schema).toMatchObject({ properties: { payload: schema } });
+  });
+
+  it("leaves a table record's values untyped: only fields, by label, is declared", () => {
+    const definition = makeDefinition({
+      id: "trigger.table_record",
+      ports: [
+        port("out", "output", {
+          type: "object",
+          properties: { fields: { type: "object" }, values: { type: "object" } },
+        }),
+      ],
+    });
+    const typed = instancePorts(
+      instance({
+        definition_id: "trigger.table_record",
+        config: { payload_fields: [{ name: "Email", type: "text" }] },
+      }),
+      definition,
+    );
+    const properties = (typed[0]?.schema as { properties: Record<string, unknown> }).properties;
+    expect(properties["fields"]).toMatchObject({ properties: { Email: { type: "string" } } });
+    expect(properties["values"]).toEqual({ type: "object" });
+  });
+});
+
 describe("effectiveDefinition", () => {
   it("is the definition itself when the instance adds no port", () => {
     expect(effectiveDefinition(instance({}), ACTION)).toBe(ACTION);

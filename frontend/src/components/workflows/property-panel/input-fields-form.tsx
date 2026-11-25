@@ -23,6 +23,8 @@ import {
   MAX_FIELDS,
   MAX_OPTIONS,
   inputFieldsOf,
+  isPayloadFieldName,
+  payloadFieldsOf,
 } from "@/lib/workflows/input-fields";
 import type { NodeInstance, Uuid } from "@/lib/workflows/types";
 
@@ -30,11 +32,25 @@ interface InputFieldsFormProps {
   node: NodeInstance;
   disabled?: boolean;
   updateNodeConfig: (nodeId: Uuid, config: Record<string, unknown>) => void;
+  /** The config key the fields live under - `fields`, or a payload's `payload_fields`. */
+  fieldsKey?: string;
+  /** The binding path the rows show - `payload`, or the payload attribute (`body`, `input`, `fields`). */
+  pathPrefix?: string;
+  /** A payload's fields: named by the sender's key, not a form field's snake_case name. */
+  payload?: boolean;
 }
 
 /** What is wrong with one field's name, among the names before it. */
-function nameProblem(field: InputField, earlier: readonly InputField[]): string | null {
-  if (!FIELD_NAME.test(field.name)) return "nameInvalid";
+function nameProblem(
+  field: InputField,
+  earlier: readonly InputField[],
+  payload: boolean,
+): string | null {
+  if (payload) {
+    if (!isPayloadFieldName(field.name)) return "payloadNameInvalid";
+  } else if (!FIELD_NAME.test(field.name)) {
+    return "nameInvalid";
+  }
   if (earlier.some((other) => other.name === field.name)) return "nameTaken";
   return null;
 }
@@ -64,24 +80,36 @@ function optionsOf(text: string): string[] {
  * typed; what cannot be published is marked on its row, and publishing names it
  * again.
  */
-export function InputFieldsForm({ node, disabled, updateNodeConfig }: InputFieldsFormProps) {
+export function InputFieldsForm({
+  node,
+  disabled,
+  updateNodeConfig,
+  fieldsKey = "fields",
+  pathPrefix = "payload",
+  payload = false,
+}: InputFieldsFormProps) {
   const t = useTranslations("workflows.inputFields");
-  const fields = inputFieldsOf(node.config);
+  const fields = payload ? payloadFieldsOf(node.config) : inputFieldsOf(node.config, fieldsKey);
 
-  const write = (next: InputField[]) => updateNodeConfig(node.id, { ...node.config, fields: next });
+  const write = (next: InputField[]) =>
+    updateNodeConfig(node.id, { ...node.config, [fieldsKey]: next });
   const setField = (index: number, patch: Partial<InputField>) =>
     write(fields.map((field, i) => (i === index ? { ...field, ...patch } : field)));
 
   return (
     <section className="space-y-3">
       <div className="space-y-1">
-        <Label>{t("title")}</Label>
+        <Label>{t(payload ? "payloadTitle" : "title")}</Label>
         <p className="text-muted-foreground text-xs">
-          {fields.length === 0 ? t("noneHint") : t("someHint")}
+          {fields.length === 0
+            ? t(payload ? "payloadNoneHint" : "noneHint")
+            : payload
+              ? t("payloadSomeHint", { attr: pathPrefix })
+              : t("someHint")}
         </p>
       </div>
       {fields.map((field, index) => {
-        const problem = nameProblem(field, fields.slice(0, index));
+        const problem = nameProblem(field, fields.slice(0, index), payload);
         const caption = field.name || String(index + 1);
         return (
           <div key={index} className="space-y-2 rounded-lg border p-3">
@@ -181,7 +209,7 @@ export function InputFieldsForm({ node, disabled, updateNodeConfig }: InputField
               {problem === null && (
                 <code className="text-muted-foreground font-mono text-xs">
                   {/* i18n-exempt: the binding path a later step reads, not copy */}
-                  {`payload.${field.name}`}
+                  {`${pathPrefix}.${field.name}`}
                 </code>
               )}
             </div>
