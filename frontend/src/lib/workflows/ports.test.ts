@@ -106,7 +106,12 @@ describe("instancePorts", () => {
     const ports = instancePorts(configured, CLASSIFY);
 
     expect(ports.map((p) => p.id)).toEqual(["in", "sales", "support", "other"]);
-    expect(ports[1]?.schema).toBe(OUT);
+    // The category port carries the answer typed by the categories: its
+    // `category` is the enum of their names, and `other`.
+    expect(ports[1]?.schema).toMatchObject({
+      title: "AiClassifyOutput",
+      properties: { category: { type: "string", enum: ["sales", "support", "other"] } },
+    });
     expect(classifyCategories({})).toEqual([]);
   });
 
@@ -198,8 +203,16 @@ describe("instancePorts", () => {
       );
 
       expect(ports.map((p) => p.id)).toEqual(["in", "sales", "support", "other", "unsure"]);
-      expect(ports[4]).toEqual({ id: "unsure", label: "Unsure", kind: "output", schema: OUT });
-      expect(ports[4]?.schema).toBe(ports[3]?.schema);
+      expect(ports[4]).toMatchObject({
+        id: "unsure",
+        label: "Unsure",
+        kind: "output",
+        schema: {
+          title: "AiClassifyOutput",
+          properties: { category: { type: "string", enum: ["sales", "support", "other"] } },
+        },
+      });
+      expect(ports[4]?.schema).toEqual(ports[3]?.schema);
     });
 
     it("draws the unsure port for a minimum of zero", () => {
@@ -273,6 +286,181 @@ describe("the Manual or API trigger's ports", () => {
     expect(typed[0]?.schema).toMatchObject({
       properties: { payload: { properties: { email: { type: "string" } }, required: ["email"] } },
     });
+  });
+});
+
+describe("an event trigger's payload ports", () => {
+  const outSchema = (attr: string) => ({
+    type: "object",
+    properties: { [attr]: { type: "object" }, delivery_id: { type: "string" } },
+  });
+  const trigger = (id: string, attr: string) =>
+    makeDefinition({ id, ports: [port("out", "output", outSchema(attr))] });
+
+  it.each([
+    ["trigger.webhook", "body"],
+    ["trigger.github", "payload"],
+    ["trigger.schedule", "input"],
+    ["trigger.table_record", "fields"],
+  ])("types %s's %s by the Tier 1 fields it declares", (id, attr) => {
+    const definition = trigger(id, attr);
+    const bare = instance({ definition_id: id });
+    expect(instancePorts(bare, definition)).toBe(definition.ports);
+    const typed = instancePorts(
+      instance({
+        definition_id: id,
+        config: { payload_fields: [{ name: "title", type: "text" }] },
+      }),
+      definition,
+    );
+    expect(typed[0]?.schema).toMatchObject({
+      properties: {
+        [attr]: { properties: { title: { type: "string" } }, required: ["title"] },
+        delivery_id: { type: "string" },
+      },
+    });
+  });
+
+  it("types a payload from its Tier 2 schema as written, and leaves other attributes alone", () => {
+    const schema = {
+      type: "object",
+      properties: { pull_request: { type: "object", properties: { title: { type: "string" } } } },
+    };
+    const typed = instancePorts(
+      instance({
+        definition_id: "trigger.github",
+        config: { payload_schema: schema },
+      }),
+      trigger("trigger.github", "payload"),
+    );
+    expect(typed[0]?.schema).toMatchObject({ properties: { payload: schema } });
+  });
+
+  it("leaves a table record's values untyped: only fields, by label, is declared", () => {
+    const definition = makeDefinition({
+      id: "trigger.table_record",
+      ports: [
+        port("out", "output", {
+          type: "object",
+          properties: { fields: { type: "object" }, values: { type: "object" } },
+        }),
+      ],
+    });
+    const typed = instancePorts(
+      instance({
+        definition_id: "trigger.table_record",
+        config: { payload_fields: [{ name: "Email", type: "text" }] },
+      }),
+      definition,
+    );
+    const properties = (typed[0]?.schema as { properties: Record<string, unknown> }).properties;
+    expect(properties["fields"]).toMatchObject({ properties: { Email: { type: "string" } } });
+    expect(properties["values"]).toEqual({ type: "object" });
+  });
+});
+
+describe("a model step's answer ports", () => {
+  const SCHEMA = {
+    type: "object",
+    properties: {
+      priority: { type: "string", enum: ["high", "normal", "low"] },
+      count: { type: "number" },
+    },
+    required: ["priority", "count"],
+  };
+  const outSchema = (attr: string) => ({
+    type: "object",
+    properties: { [attr]: { type: "object" }, text: { type: "string" } },
+  });
+  const step = (id: string, attr: string) =>
+    makeDefinition({ id, ports: [port("out", "output", outSchema(attr))] });
+
+  it.each([
+    ["agent.run", "structured", { structured_output_schema: SCHEMA }],
+    ["ai.prompt", "structured", { structured_output_schema: SCHEMA }],
+    ["ai.extract", "data", { output_schema: SCHEMA }],
+  ])("types %s's %s by the answer schema it declares", (id, attr, config) => {
+    const definition = step(id, attr);
+    const bare = instance({ definition_id: id });
+    expect(instancePorts(bare, definition)).toBe(definition.ports);
+    const typed = instancePorts(instance({ definition_id: id, config }), definition);
+    expect(typed[0]?.schema).toMatchObject({
+      properties: { [attr]: SCHEMA, text: { type: "string" } },
+    });
+  });
+
+  it("types an agent's answer from the agent configured here, and the override wins", () => {
+    const definition = step("agent.run", "structured");
+    const inline = instance({
+      definition_id: "agent.run",
+      config: { inline: { output_schema: SCHEMA } },
+    });
+    expect(instancePorts(inline, definition)[0]?.schema).toMatchObject({
+      properties: { structured: SCHEMA },
+    });
+    const other = {
+      type: "object",
+      properties: { tier: { type: "string" } },
+    };
+    const overridden = instance({
+      definition_id: "agent.run",
+      config: { inline: { output_schema: other }, structured_output_schema: SCHEMA },
+    });
+    expect(instancePorts(overridden, definition)[0]?.schema).toMatchObject({
+      properties: { structured: SCHEMA },
+    });
+  });
+
+  it("leaves a pinned agent's answer untyped: its format is not in the config", () => {
+    const definition = step("agent.run", "structured");
+    const pinned = instance({
+      definition_id: "agent.run",
+      config: { agent: { agent_id: "a", version_id: "v" } },
+    });
+    expect(instancePorts(pinned, definition)).toBe(definition.ports);
+  });
+
+  it("types a classifier's category on every output, including unsure", () => {
+    const OUT = {
+      type: "object",
+      title: "AiClassifyOutput",
+      properties: {
+        category: { type: "string" },
+        reason: { type: "string" },
+        confidence: { anyOf: [{ type: "number" }, { type: "null" }] },
+      },
+    };
+    const CLASSIFY = makeDefinition({
+      id: "ai.classify",
+      ports: [port("in", "input", null), port("other", "output", OUT)],
+    });
+    const ports = instancePorts(
+      instance({
+        definition_id: "ai.classify",
+        config: { categories: [{ name: "sales" }, { name: "support" }], min_confidence: 0.5 },
+      }),
+      CLASSIFY,
+    );
+    expect(ports.map((p) => p.id)).toEqual(["in", "sales", "support", "other", "unsure"]);
+    for (const port of ports.slice(1)) {
+      expect(port.schema).toMatchObject({
+        properties: {
+          category: { type: "string", enum: ["sales", "support", "other"] },
+          reason: { type: "string" },
+        },
+      });
+    }
+  });
+
+  it("leaves a classifier with no categories untyped: its config is not valid yet", () => {
+    const OUT = { type: "object", title: "AiClassifyOutput" };
+    const CLASSIFY = makeDefinition({
+      id: "ai.classify",
+      ports: [port("in", "input", null), port("other", "output", OUT)],
+    });
+    const ports = instancePorts(instance({ definition_id: "ai.classify", config: {} }), CLASSIFY);
+    expect(ports.map((p) => p.id)).toEqual(["in", "other"]);
+    expect(ports[1]?.schema).toBe(OUT);
   });
 });
 

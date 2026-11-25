@@ -1,5 +1,5 @@
 ---
-source_sha: "29083d2aceb5"
+source_sha: "ffd96aa33aaf"
 ---
 
 # Workflows { #workflows }
@@ -308,9 +308,15 @@ wartością.
 Parametr przyjmujący tekst to jedno pole na wpisany tekst i wartości z wcześniejszych
 kroków naraz, na przykład `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 Przycisk **Data** obok wstawia wartość w miejscu kursora, podobnie jak pole
-przeciągnięte z panelu **Input**. Wpisanie `{{` wyświetla te same wartości, a wewnątrz payloadu triggera
-albo elementu pętli także pola, które widział tam ostatni przebieg testowy; dalsze
-pisanie zawęża listę, a `Enter` lub `Tab` wstawia placeholder.
+przeciągnięte z panelu **Input**.
+
+Wpisanie `{{` wyświetla te same wartości, a wewnątrz payloadu triggera
+albo elementu pętli także pola, które widział tam ostatni przebieg testowy. Gdy trigger albo wcześniejszy krok
+deklaruje pola, które posiada - zadeklarowany payload triggera albo zadeklarowaną odpowiedź kroku modelowego -
+są one wyświetlane wraz z typami bez żadnego przebiegu testowego, przed tym, co pokazał przebieg; gdy nic nie
+zadeklarowano, oferowane są tylko pola przebiegu testowego.
+
+Dalsze pisanie zawęża listę, a `Enter` lub `Tab` wstawia placeholder.
 
 Placeholder wskazuje krok i ścieżkę w jego wyjściu i jest w polu pokolorowany - na
 czerwono, gdy po wyjściu z pola okaże się, że nie wskazuje niczego, co ten krok może
@@ -341,7 +347,14 @@ elementu albo wartości, sprawdzenie - **is equal to**, **is at least**, **conta
 **is not empty** i pozostałe - oraz to, z czym jest porównywane. Liczba, `true` i
 `false` są porównywane jako takie, cała reszta jako tekst. Przy kilku wierszach
 **Match all of these** albo **any** mówi, jak się łączą, a pola, które pokazał ostatni
-przebieg albo dane testowe, są podpowiadane. Warunek jest zapisywany jako wyrażenie
+przebieg albo dane testowe, są podpowiadane. Gdy krok, który odczytuje warunek,
+deklaruje swoje pola - zadeklarowany payload triggera, zadeklarowaną odpowiedź kroku
+modelowego - pola te są podpowiadane wraz z typami obok zaobserwowanych: wyliczenie
+oferuje swoje opcje do porównania, liczba oferuje sprawdzenia liczbowe, tak/nie
+oferuje `true` i `false`. Publikacja odrzuca porównanie z wartością o niewłaściwym
+typie dla zadeklarowanego pola, nazywając to pole; warunek na wartości, której nic
+nie deklaruje, jest sprawdzany tylko pod kątem składni, a niezgodność typów wewnątrz
+niego kończy krok błędem w czasie przebiegu. Warunek jest zapisywany jako wyrażenie
 JMESPath, które krok wylicza. **Write it as an expression** edytuje go jako to
 wyrażenie, a takie, którego wiersze nie pokażą, zostaje wyrażeniem.
 
@@ -905,7 +918,12 @@ od najnowszego, każdy z jego statusem, tym, czy uruchomił draft czy opublikowa
 wersję, co go uruchomiło, kiedy, jak długo trwał i ile kosztował. **Start a run**
 uruchamia run ręcznie: **Test the draft** uruchamia draft w obecnym stanie, a
 **Published version** uruchamia żywą wersję. Jego **Input (JSON)** to to, co krok
-**Input** workflow przekazuje dalej jako `payload`.
+**Input** workflow przekazuje dalej jako `payload`. Dostarczenie do wyzwalacza
+webhook albo GitHub, którego payload nie pasuje do schematu zadeklarowanego przez
+wyzwalacz, jest odrzucane przed startem jakiegokolwiek runa: nie powstaje żaden
+run, a dla webhooka dostarczenie nie zużywa limitu. Tick harmonogramu, którego
+zapisane wejście już nie pasuje, jest pomijany tak samo, a harmonogram zachowuje
+następny tick.
 
 Nad listą **How it ran** podsumowuje prawdziwe runy z ostatnich 7, 30 lub 90 dni: ile
 się uruchomiło i ile zawiodło, jaki odsetek zakończonych się udał, typowy czas i czas,

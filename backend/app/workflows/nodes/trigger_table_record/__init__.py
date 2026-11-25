@@ -3,7 +3,7 @@
 from app.workflows._registry import register
 from app.workflows.contracts.definition import TRIGGER_CATEGORY, NodeDefinition, Port
 from app.workflows.nodes._triggers import TableRecordTriggerConfig, TableRecordTriggerOutput
-from app.workflows.nodes.trigger_table_record._handler import check_resources, handle
+from app.workflows.nodes.trigger_table_record._handler import check_resources, handle, ports_for
 from app.workflows.triggers import TABLE_RECORD
 
 register(
@@ -21,6 +21,7 @@ register(
         effect_kind="pure",
         retry_guarantee="idempotent",
         handler=handle,
+        ports_for=ports_for,
         resource_check=check_resources,
     )
 )

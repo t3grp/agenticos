@@ -19,12 +19,14 @@ import {
   port,
 } from "./fixtures";
 import {
+  ANY_SCHEMA,
   UNKNOWN,
   fieldType,
   outputFieldNames,
   portSchema,
   portShapesCompatible,
   resolveFieldType,
+  resolveItemType,
   schemaTypeToken,
   typesCompatible,
 } from "./schema";
@@ -171,6 +173,67 @@ describe("resolveFieldType", () => {
     };
     const nested = makeDefinition({ id: "test.nested", ports: [port("out", "output", wrapper)] });
     expect(schemaTypeToken(resolveFieldType(nested, "out", ["inner", "leaf"]))).toBe("integer");
+  });
+});
+
+describe("resolveItemType", () => {
+  const records = makeDefinition({
+    id: "test.records",
+    ports: [
+      port(
+        "out",
+        "output",
+        objectSchema(
+          "Records",
+          {
+            rows: { type: "array", items: objectSchema("Row", { score: INTEGER }, ["score"]) },
+            names: STRING_LIST,
+            bare: { type: "array" },
+            open: { type: "array", items: {} },
+            pair: INT_STR_TUPLE,
+            count: INTEGER,
+          },
+          ["rows", "names", "bare", "open", "pair", "count"],
+        ),
+      ),
+    ],
+  });
+
+  it("returns one item's schema for an array of objects or scalars", () => {
+    expect(schemaTypeToken(resolveItemType(records, "out", ["rows"]))).toBe("Row");
+    expect(schemaTypeToken(resolveItemType(records, "out", ["names"]))).toBe("string");
+  });
+
+  it("is ANY_SCHEMA for an array with no item shape, or a free-form one", () => {
+    expect(resolveItemType(records, "out", ["bare"])).toBe(ANY_SCHEMA);
+    expect(resolveItemType(records, "out", ["open"])).toEqual({});
+  });
+
+  it("is UNKNOWN for a tuple, a scalar, a missing field and an unknown port", () => {
+    expect(resolveItemType(records, "out", ["pair"])).toBe(UNKNOWN);
+    expect(resolveItemType(records, "out", ["count"])).toBe(UNKNOWN);
+    expect(resolveItemType(records, "out", ["nope"])).toBe(UNKNOWN);
+    expect(resolveItemType(records, "missing", ["rows"])).toBe(UNKNOWN);
+  });
+
+  it("returns a control port's null for the empty path", () => {
+    const control = makeDefinition({
+      id: "test.control_items",
+      ports: [port("out", "output", null)],
+    });
+    expect(resolveItemType(control, "out", [])).toBeNull();
+  });
+
+  it("resolves an item $ref against the schema's own $defs", () => {
+    const wrapper = {
+      type: "object",
+      title: "Wrapper",
+      properties: { rows: { type: "array", items: { $ref: "#/$defs/Row" } } },
+      required: ["rows"],
+      $defs: { Row: objectSchema("Row", { score: INTEGER }, ["score"]) },
+    };
+    const nested = makeDefinition({ id: "test.ref_rows", ports: [port("out", "output", wrapper)] });
+    expect(schemaTypeToken(resolveItemType(nested, "out", ["rows"]))).toBe("Row");
   });
 });
 

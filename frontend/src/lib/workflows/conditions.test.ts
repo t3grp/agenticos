@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CONDITION_OPS,
   type Condition,
+  type ConditionFieldSuggestion,
   type ConditionRow,
   compileCondition,
   isComplete,
+  opsForKind,
   parseCondition,
   takesNoValue,
+  valueOptions,
 } from "./conditions";
 
 const row = (field: string, op: ConditionRow["op"], value = ""): ConditionRow => ({
@@ -88,5 +92,51 @@ describe("rows", () => {
     expect(takesNoValue("eq")).toBe(false);
     expect(isComplete(row("a", "empty"))).toBe(true);
     expect(isComplete(row("a", "eq", ""))).toBe(false);
+  });
+});
+
+describe("opsForKind", () => {
+  it("offers numeric checks for a number, equality only for a yes/no or an enum", () => {
+    expect(opsForKind("number")).toEqual([
+      "eq",
+      "ne",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "notEmpty",
+      "empty",
+    ]);
+    expect(opsForKind("boolean")).toEqual(["eq", "ne", "notEmpty", "empty"]);
+    expect(opsForKind("enum")).toEqual(["eq", "ne", "notEmpty", "empty"]);
+  });
+
+  it("offers every check for text and for a field nothing declares", () => {
+    expect(opsForKind("string")).toEqual(CONDITION_OPS);
+    expect(opsForKind("unknown")).toEqual(CONDITION_OPS);
+  });
+});
+
+describe("valueOptions", () => {
+  const suggestion = (
+    field: string,
+    kind: ConditionFieldSuggestion["kind"],
+    options?: readonly string[],
+  ): ConditionFieldSuggestion => ({ field, kind, options });
+
+  it("offers an enum's options, and true/false for a yes/no", () => {
+    expect(valueOptions(suggestion("priority", "enum", ["high", "normal", "low"]))).toEqual([
+      "high",
+      "normal",
+      "low",
+    ]);
+    expect(valueOptions(suggestion("active", "boolean"))).toEqual(["true", "false"]);
+  });
+
+  it("offers nothing to choose for text, a number, or an undeclared field", () => {
+    expect(valueOptions(suggestion("name", "string"))).toBeNull();
+    expect(valueOptions(suggestion("score", "number"))).toBeNull();
+    expect(valueOptions(suggestion("whatever", "unknown"))).toBeNull();
+    expect(valueOptions(suggestion("priority", "enum"))).toBeNull();
   });
 });

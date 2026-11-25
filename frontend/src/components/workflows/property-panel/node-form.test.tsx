@@ -282,6 +282,7 @@ vi.mock("@/hooks", () => ({
   useKnowledgeBases: () => ({ kbs: [] }),
   useMembers: () => ({ members: [] }),
   useModelProviders: () => ({ profiles: [], profilesStatus: "loaded" }),
+  usePortals: () => ({ items: [], isLoading: false }),
 }));
 vi.mock("@/components/agents/model-profile-picker", () => ({
   ModelProfilePicker: ({
@@ -924,6 +925,83 @@ describe("NodeForm sections", () => {
     expect(screen.getByLabelText("Every")).toBeVisible();
     expect(screen.queryByText("Settings")).toBeNull();
   });
+
+  it("offers a Schedule trigger its payload contract under its cadence", () => {
+    renderForm({ definition: makeDefinition({ id: "trigger.schedule", category: "triggers" }) });
+    expect(screen.getByLabelText("Every")).toBeVisible();
+    expect(screen.getByText("Payload contract")).toBeVisible();
+    expect(screen.getByText(/None yet: a delivery takes any JSON object/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Add field" })).toBeVisible();
+  });
+
+  it.each([
+    ["trigger.webhook", "body"],
+    ["trigger.github", "payload"],
+    ["trigger.table_record", "fields"],
+  ])("edits %s's payload contract instead of its raw config fields", (id, attr) => {
+    const definition = makeDefinition({
+      id,
+      category: "triggers",
+      config_schema: {
+        type: "object",
+        properties: {
+          payload_fields: { type: "array", title: "Raw payload fields" },
+          payload_schema: { type: "object", title: "Raw payload schema" },
+        },
+      } as Schema,
+    });
+    renderForm({
+      definition,
+      config: { payload_fields: [{ name: "title", type: "text" }] },
+    });
+    expect(screen.getByText("Payload contract")).toBeVisible();
+    expect(screen.getByText(new RegExp(`Later steps read each field under ${attr}`))).toBeVisible();
+    expect(screen.getByText(`${attr}.title`)).toBeVisible();
+    expect(screen.queryByText("Raw payload fields")).toBeNull();
+    expect(screen.queryByText("Raw payload schema")).toBeNull();
+  });
+
+  it("keeps a GitHub trigger's own settings beside its payload contract", () => {
+    const definition = makeDefinition({
+      id: "trigger.github",
+      category: "triggers",
+      config_schema: {
+        type: "object",
+        properties: {
+          repository: { type: "string", title: "Repository" },
+          payload_fields: { type: "array", title: "Raw payload fields" },
+          payload_schema: { type: "object", title: "Raw payload schema" },
+        },
+        required: ["repository"],
+      } as Schema,
+    });
+    renderForm({ definition });
+    expect(screen.getByLabelText(/^Repository/)).toBeVisible();
+    expect(screen.getByText("Payload contract")).toBeVisible();
+    expect(screen.queryByText("Raw payload fields")).toBeNull();
+  });
+
+  it.each([
+    ["core.output", "text", "Text"],
+    ["notification.send", "message", "Message"],
+  ])(
+    "offers a template box on %s's %s field, so a message can name earlier steps",
+    (id, field, label) => {
+      const definition = makeDefinition({
+        id,
+        input_schema: {
+          type: "object",
+          properties: { [field]: { type: "string", title: label } },
+          required: [field],
+        } as Schema,
+      });
+      renderForm({ definition });
+      expect(screen.getByRole("textbox", { name: new RegExp(`^${label}`) })).toBeVisible();
+      expect(
+        screen.getByRole("button", { name: `Insert data from an earlier step into ${label}` }),
+      ).toBeVisible();
+    },
+  );
 
   it.each([
     ["trigger.manual", /Start it with Run/],

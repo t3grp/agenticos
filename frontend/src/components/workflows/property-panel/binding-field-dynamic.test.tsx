@@ -4,12 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { Binding } from "@/lib/workflows/types";
 import {
   DEBUG_ECHO,
+  STRING,
   echo,
   edge,
   graph,
   makeCatalog,
   makeDefinition,
   node,
+  objectSchema,
   port,
 } from "@/components/workflows/validation/fixtures";
 
@@ -192,5 +194,63 @@ describe("a list of records typed in as a value", () => {
       target_field: "items",
       source: { kind: "literal", value: [{ name: "Grace" }] },
     });
+  });
+});
+
+describe("a trigger with a declared payload", () => {
+  const WEBHOOK = makeDefinition({
+    id: "trigger.webhook",
+    name: "Webhook",
+    ports: [
+      port(
+        "out",
+        "output",
+        objectSchema("WebhookTriggerOutput", { body: { type: "object" }, delivery_id: STRING }, [
+          "delivery_id",
+        ]),
+      ),
+    ],
+  });
+  const hooked = graph({
+    entry: "W",
+    nodes: [
+      node("W", "trigger.webhook", { payload_fields: [{ name: "title", type: "text" }] }),
+      echo("B"),
+    ],
+    edges: [edge("e", "W", "out", "B", "in")],
+  });
+  const catalog = makeCatalog([DEBUG_ECHO, WEBHOOK]);
+
+  it("shows a declared field as picked, with no path to type past it", () => {
+    render(
+      <BindingField
+        targetNodeId="B"
+        targetField="message"
+        name="message"
+        schema={{ type: "string", title: "Message" }}
+        required={false}
+        bindings={[
+          {
+            target_node_id: "B",
+            target_field: "message",
+            source: {
+              kind: "node_output",
+              node_id: "W",
+              port: "out",
+              field_path: ["body", "title"],
+            },
+          },
+        ]}
+        graph={hooked}
+        catalog={catalog}
+        onUpsert={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+    // The candidate is backed by the declared schema, so it is not dynamic:
+    // its sub-paths come from the schema, and no free-form path box is offered.
+    expect(screen.getByText("Webhook › body.title")).toBeTruthy();
+    expect(screen.getByText("text")).toBeTruthy();
+    expect(screen.queryByLabelText("Field inside it")).toBeNull();
   });
 });

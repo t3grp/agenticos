@@ -9,6 +9,7 @@ from app.workflows.nodes.ai_prompt._handler import (
     AiPromptOutput,
     check_resources,
     handle,
+    ports_for,
 )
 
 __all__ = ["AiPromptConfig", "AiPromptInput", "AiPromptOutput"]
@@ -32,6 +33,7 @@ register(
         retry_guarantee="idempotent",
         handler=handle,
         spends_budget=True,
+        ports_for=ports_for,
         resource_check=check_resources,
     )
 )

@@ -7,6 +7,7 @@ with a text answer.
 """
 
 import uuid
+from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -158,3 +159,169 @@ async def test_archiving_pauses_only_the_registrations_that_are_running(monkeypa
     assert [call.kwargs["exposure"] for call in update.await_args_list] == [running]
     assert update.await_args.kwargs["update_data"] == {"is_active": False}
     assert [call.kwargs["action"] for call in audit.await_args_list] == ["workflow.exposure_paused"]
+
+
+# A tick whose stored input no longer fits the schedule's declared schema
+
+
+class _Savepoint:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+def _schedule_exposure(node_id: uuid.UUID, run_input: object):
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        schedule_kind="interval",
+        interval_seconds=3600,
+        cron_expression=None,
+        timezone="UTC",
+        is_active=True,
+        adapter="schedule",
+        next_fire_at=datetime(2026, 11, 25, tzinfo=UTC),
+        node_instance_id=node_id,
+        workflow_version_id=uuid.uuid4(),
+        run_input=run_input,
+    )
+
+
+def _schedule_version(node_id: uuid.UUID):
+    from types import SimpleNamespace
+
+    from app.workflows.contracts.payload_schema import PayloadField
+    from app.workflows.graph.model import NodeInstance, NodePosition, WorkflowGraph
+
+    config = ScheduleTriggerConfig(
+        payload_fields=[PayloadField(name="region", type="text")],
+        input={"region": "eu"},
+    )
+    graph = WorkflowGraph(
+        entry_node_id=node_id,
+        nodes=(
+            NodeInstance(
+                id=node_id,
+                definition_id="trigger.schedule",
+                definition_version=2,
+                config=config.model_dump(mode="json"),
+                layout=NodePosition(x=0, y=0),
+            ),
+        ),
+    )
+    return SimpleNamespace(id=uuid.uuid4(), graph=graph.model_dump(mode="json"))
+
+
+async def test_a_tick_whose_stored_input_no_longer_fits_is_skipped(monkeypatch):
+    import importlib
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    module = importlib.import_module("app.services.workflow_exposure")
+    node_id = uuid.uuid4()
+    exposure = _schedule_exposure(node_id, {"region": 5})
+    ctx = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.OWNER)
+    workflow = SimpleNamespace(settings={})
+    admit = AsyncMock()
+    update = AsyncMock()
+    monkeypatch.setattr(
+        module.workflow_exposure_repo,
+        "claim_due_schedules",
+        AsyncMock(return_value=[exposure]),
+    )
+    monkeypatch.setattr(module.workflow_exposure_repo, "update", update)
+    monkeypatch.setattr(module, "_queue_due_check", AsyncMock())
+    db = MagicMock(begin_nested=MagicMock(return_value=_Savepoint()))
+    service = module.WorkflowExposureService(db)
+    monkeypatch.setattr(service, "_last_run_live", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        service,
+        "_fire_context",
+        AsyncMock(return_value=(ctx, workflow, _schedule_version(node_id))),
+    )
+    monkeypatch.setattr(service.runs, "admit_pinned", admit)
+
+    admitted = await service.fire_due(now=datetime(2026, 11, 25, tzinfo=UTC))
+
+    assert admitted == []
+    assert admit.await_count == 0
+    # The clock still advanced: the tick is spent, only the run is skipped.
+    assert "next_fire_at" in update.await_args_list[0].kwargs["update_data"]
+
+
+async def test_a_tick_whose_stored_input_fits_is_admitted(monkeypatch):
+    import importlib
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    module = importlib.import_module("app.services.workflow_exposure")
+    node_id = uuid.uuid4()
+    exposure = _schedule_exposure(node_id, {"region": "eu"})
+    ctx = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.OWNER)
+    workflow = SimpleNamespace(settings={})
+    run, entry_node_run_id = SimpleNamespace(id=uuid.uuid4()), uuid.uuid4()
+    admit = AsyncMock(return_value=(run, entry_node_run_id))
+    update = AsyncMock()
+    monkeypatch.setattr(
+        module.workflow_exposure_repo,
+        "claim_due_schedules",
+        AsyncMock(return_value=[exposure]),
+    )
+    monkeypatch.setattr(module.workflow_exposure_repo, "update", update)
+    monkeypatch.setattr(module, "_queue_due_check", AsyncMock())
+    db = MagicMock(begin_nested=MagicMock(return_value=_Savepoint()))
+    service = module.WorkflowExposureService(db)
+    monkeypatch.setattr(service, "_last_run_live", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        service,
+        "_fire_context",
+        AsyncMock(return_value=(ctx, workflow, _schedule_version(node_id))),
+    )
+    monkeypatch.setattr(service.runs, "admit_pinned", admit)
+
+    admitted = await service.fire_due(now=datetime(2026, 11, 25, tzinfo=UTC))
+
+    assert admitted == [(run.id, entry_node_run_id)]
+    assert admit.await_args.kwargs["run_input"]["input"] == {"region": "eu"}
+    assert "fired_at" in admit.await_args.kwargs["run_input"]
+    assert update.await_args.kwargs["update_data"]["last_fired_at"] == datetime(
+        2026, 11, 25, tzinfo=UTC
+    )
+
+
+async def test_a_tick_whose_stored_input_is_not_an_object_is_skipped(monkeypatch):
+    import importlib
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+
+    module = importlib.import_module("app.services.workflow_exposure")
+    node_id = uuid.uuid4()
+    exposure = _schedule_exposure(node_id, ["not", "an", "object"])
+    ctx = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.OWNER)
+    workflow = SimpleNamespace(settings={})
+    admit = AsyncMock()
+    monkeypatch.setattr(
+        module.workflow_exposure_repo,
+        "claim_due_schedules",
+        AsyncMock(return_value=[exposure]),
+    )
+    monkeypatch.setattr(module.workflow_exposure_repo, "update", AsyncMock())
+    monkeypatch.setattr(module, "_queue_due_check", AsyncMock())
+    db = MagicMock(begin_nested=MagicMock(return_value=_Savepoint()))
+    service = module.WorkflowExposureService(db)
+    monkeypatch.setattr(service, "_last_run_live", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        service,
+        "_fire_context",
+        AsyncMock(return_value=(ctx, workflow, _schedule_version(node_id))),
+    )
+    monkeypatch.setattr(service.runs, "admit_pinned", admit)
+
+    admitted = await service.fire_due(now=datetime(2026, 11, 25, tzinfo=UTC))
+
+    assert admitted == []
+    assert admit.await_count == 0

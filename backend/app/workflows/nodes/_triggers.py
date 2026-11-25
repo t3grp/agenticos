@@ -9,9 +9,10 @@ it received as the run's input, already in this node's output shape, so the
 handler only checks it and hands it on (`run_input_as`).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
@@ -22,6 +23,7 @@ from app.schemas.virtual_table import RecordFilter
 from app.schemas.virtual_table_trigger import MAX_FILTERS
 from app.services.workflow_execution import context
 from app.workflows.contracts.io import FileRef, TableIORef
+from app.workflows.contracts.payload_schema import PayloadSchemaConfig
 from app.workflows.contracts.results import Failed, WorkflowError
 
 
@@ -44,8 +46,13 @@ class WebhookTriggerOutput(_Frozen):
     delivery_id: str
 
 
-class ScheduleTriggerConfig(_Frozen):
-    """How often the workflow runs, and what every run starts with."""
+class ScheduleTriggerConfig(PayloadSchemaConfig):
+    """How often the workflow runs, and what every run starts with.
+
+    `payload_fields` / `payload_schema` declare the shape of `input`: the
+    run is refused at publish when the configured `input` does not fit, and
+    again at tick time when the stored input was edited since.
+    """
 
     schedule_kind: Literal["interval", "cron"] = "interval"
     interval_seconds: int | None = Field(
@@ -75,18 +82,85 @@ class ScheduleTriggerConfig(_Frozen):
         return self
 
 
-class ScheduleTriggerOutput(_Frozen):
-    """When the tick fired, and the input the schedule starts every run with."""
+class ScheduleTriggerOutputV1(_Frozen):
+    """The tick as version 1 handed it on: when it fired, and the input.
+
+    Kept so a published graph pinned to `trigger.schedule` version 1 still
+    resolves; version 2 adds the tick's local fields below. New graphs take
+    version 2.
+    """
 
     fired_at: datetime
     input: dict[str, Any] = Field(default_factory=dict)
 
 
+# `strftime("%A")` follows the process locale; the weekday a schedule hands on
+# is English by contract, so the names are fixed here.
+_WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def schedule_local_fields(fired_at: datetime, timezone: str) -> dict[str, str]:
+    """A schedule tick's weekday, date and time in `timezone`, from `fired_at`.
+
+    A moment with no timezone of its own is read as UTC. The date is ISO
+    `YYYY-MM-DD` and the time `HH:MM`, both in the timezone asked for.
+    """
+    moment = fired_at if fired_at.tzinfo is not None else fired_at.replace(tzinfo=UTC)
+    local = moment.astimezone(ZoneInfo(timezone))
+    return {
+        "weekday": _WEEKDAYS[local.weekday()],
+        "local_date": local.strftime("%Y-%m-%d"),
+        "local_time": local.strftime("%H:%M"),
+    }
+
+
+class ScheduleTriggerOutput(_Frozen):
+    """When the tick fired, the input the schedule starts every run with, and
+    the tick's weekday, date and time in the workflow's timezone.
+
+    The three local fields are derived from `fired_at` at tick time, never
+    author-supplied; `fired_at` stays the source of truth. A run input that
+    predates them - a test run, or one stored before version 2 - reads them
+    in UTC instead.
+    """
+
+    fired_at: datetime
+    input: dict[str, Any] = Field(default_factory=dict)
+    weekday: str = Field(
+        default="",
+        description="The day name in the workflow's timezone, such as Monday",
+    )
+    local_date: str = Field(
+        default="", description="The date in the workflow's timezone, YYYY-MM-DD"
+    )
+    local_time: str = Field(default="", description="The time in the workflow's timezone, HH:MM")
+
+    @model_validator(mode="after")
+    def _local_fields(self) -> ScheduleTriggerOutput:
+        if self.weekday and self.local_date and self.local_time:
+            return self
+        derived = schedule_local_fields(self.fired_at, "UTC")
+        return self.model_copy(
+            update={field: value for field, value in derived.items() if not getattr(self, field)}
+        )
+
+
 RecordEvent = Literal["created", "updated", "deleted"]
 
 
-class TableRecordTriggerConfig(_Frozen):
-    """Which table, which of its records' events, and which records, start the workflow."""
+class TableRecordTriggerConfig(PayloadSchemaConfig):
+    """Which table, which of its records' events, and which records, start the workflow.
+
+    `payload_fields` declares the record's `fields` - the values by column
+    label - by hand: the table's live columns are what the declaration is
+    checked against at publish, so a field naming a column the table no
+    longer has, or of a type the column cannot hold, is a publish problem.
+    The columns are not derived into the declaration automatically: the
+    catalog and the graph checker are per-definition, while a table's columns
+    belong to one table, and deriving them would need a live schema read in
+    the (synchronous) port resolution. `values`, keyed by column id rather
+    than label, stays untyped.
+    """
 
     table: TableIORef = Field(
         json_schema_extra={"x-resource": "table", "x-columns": "stored"},

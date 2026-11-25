@@ -73,6 +73,100 @@ describe("templateSuggestions", () => {
     const deeper = candidate({ fieldPath: ["payload", "x"], dynamic: true });
     expect(templateSuggestions([deeper], seenNull, new Map())[0]?.step).toBe("t");
   });
+
+  it("offers declared fields with their types, with no test run at all", () => {
+    // A webhook whose body declares `title` and `seats`: the picker offers
+    // both from the schema, and no run's data is needed - or consulted.
+    const suggestions = templateSuggestions(
+      [
+        candidate({ fieldPath: ["body"], typeToken: "Payload" }),
+        candidate({ fieldPath: ["body", "title"], typeToken: "string" }),
+        candidate({ fieldPath: ["body", "seats"], typeToken: "integer" }),
+      ],
+      {},
+      NAMES,
+    );
+    expect(suggestions.map((suggestion) => [suggestion.text, suggestion.type])).toEqual([
+      ["{{Manual.body}}", "Payload"],
+      ["{{Manual.body.title}}", "string"],
+      ["{{Manual.body.seats}}", "integer"],
+    ]);
+  });
+
+  it("keeps observed fields as the fallback for a dynamic value only", () => {
+    const suggestions = templateSuggestions(
+      [candidate({ fieldPath: ["body"], typeToken: "object", dynamic: true })],
+      {
+        t: {
+          output: { body: { title: "Hi", seats: 3 } },
+          error: null,
+          runId: "r",
+        },
+      },
+      NAMES,
+    );
+    expect(suggestions.map((suggestion) => [suggestion.text, suggestion.type])).toEqual([
+      ["{{Manual.body}}", "object"],
+      ["{{Manual.body.title}}", "string"],
+      ["{{Manual.body.seats}}", "number"],
+    ]);
+  });
+
+  it("lets a declared field beat an observed one of the same name", () => {
+    // The run saw `seats` as a number; the declaration says it is text.
+    // The dynamic candidate comes first, so only the declared-first order
+    // keeps the declared type.
+    const suggestions = templateSuggestions(
+      [
+        candidate({ fieldPath: ["body"], typeToken: "object", dynamic: true }),
+        candidate({ fieldPath: ["body", "seats"], typeToken: "string" }),
+      ],
+      { t: { output: { body: { seats: 3 } }, error: null, runId: "r" } },
+      NAMES,
+    );
+    const seats = suggestions.filter((suggestion) => suggestion.text === "{{Manual.body.seats}}");
+    expect(seats).toHaveLength(1);
+    expect(seats[0]?.type).toBe("string");
+  });
+
+  it("offers declared answer fields with their types, with no test run at all", () => {
+    // An agent step whose answer declares `priority` and `count`: the
+    // picker offers both from the schema, and no run's data is needed - or
+    // consulted.
+    const suggestions = templateSuggestions(
+      [
+        candidate({ fieldPath: ["structured"], typeToken: "object" }),
+        candidate({ fieldPath: ["structured", "priority"], typeToken: "string" }),
+        candidate({ fieldPath: ["structured", "count"], typeToken: "number" }),
+      ],
+      {},
+      NAMES,
+    );
+    expect(suggestions.map((suggestion) => [suggestion.text, suggestion.type])).toEqual([
+      ["{{Manual.structured}}", "object"],
+      ["{{Manual.structured.priority}}", "string"],
+      ["{{Manual.structured.count}}", "number"],
+    ]);
+  });
+
+  it("lets a declared answer field beat an observed one of the same name", () => {
+    // The run saw `priority` as a number; the declaration says it is text.
+    // The dynamic candidate comes first, so only the declared-first order
+    // keeps the declared type.
+    const suggestions = templateSuggestions(
+      [
+        candidate({ fieldPath: ["structured"], typeToken: "object", dynamic: true }),
+        candidate({ fieldPath: ["structured", "priority"], typeToken: "string" }),
+      ],
+      { t: { output: { structured: { priority: 3 } }, error: null, runId: "r" } },
+      NAMES,
+    );
+    const priority = suggestions.filter(
+      (suggestion) => suggestion.text === "{{Manual.structured.priority}}",
+    );
+    expect(priority).toHaveLength(1);
+    expect(priority[0]?.type).toBe("string");
+  });
 });
 
 describe("matchSuggestions", () => {

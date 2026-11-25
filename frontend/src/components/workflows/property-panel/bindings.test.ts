@@ -153,6 +153,174 @@ describe("sourceCandidates", () => {
     expect(sourceCandidates(chain, catalog, "B", INTEGER)).toEqual([]);
   });
 
+  describe("a trigger with a declared payload", () => {
+    const webhook = makeDefinition({
+      id: "trigger.webhook",
+      name: "Webhook",
+      ports: [
+        port(
+          "out",
+          "output",
+          objectSchema("WebhookTriggerOutput", { body: { type: "object" }, delivery_id: STRING }, [
+            "delivery_id",
+          ]),
+        ),
+      ],
+    });
+    const hooked = (config: Record<string, unknown>) =>
+      graph({
+        entry: "W",
+        nodes: [node("W", "trigger.webhook", config), echo("B")],
+        edges: [edge("e", "W", "out", "B", "in")],
+      });
+    const both = makeCatalog([DEBUG_ECHO, webhook]);
+
+    it("offers a declared field with its type, and the field is not dynamic", () => {
+      const offered = sourceCandidates(
+        hooked({ payload_fields: [{ name: "title", type: "text" }] }),
+        both,
+        "B",
+        STRING,
+      );
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["body", "title"], false],
+        [["delivery_id"], false],
+      ]);
+      expect(offered[0]?.typeToken).toBe("string");
+    });
+
+    it("offers an undeclared payload as one dynamic value, for a field inside it", () => {
+      const offered = sourceCandidates(hooked({}), both, "B", STRING);
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["body"], true],
+        [["delivery_id"], false],
+      ]);
+    });
+
+    it("offers a nested Tier 2 field from the schema, three levels in", () => {
+      const github = makeDefinition({
+        id: "trigger.github",
+        name: "GitHub",
+        ports: [
+          port(
+            "out",
+            "output",
+            objectSchema("GithubTriggerOutput", { payload: { type: "object" } }, []),
+          ),
+        ],
+      });
+      const delivered = graph({
+        entry: "G",
+        nodes: [
+          node("G", "trigger.github", {
+            payload_schema: {
+              type: "object",
+              properties: {
+                pull_request: { type: "object", properties: { title: { type: "string" } } },
+              },
+            },
+          }),
+          echo("B"),
+        ],
+        edges: [edge("e", "G", "out", "B", "in")],
+      });
+      const offered = sourceCandidates(delivered, makeCatalog([DEBUG_ECHO, github]), "B", STRING);
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["payload", "pull_request", "title"], false],
+      ]);
+    });
+  });
+
+  describe("a model step with a declared answer", () => {
+    const agent = makeDefinition({
+      id: "agent.run",
+      name: "Run an agent",
+      ports: [
+        port(
+          "out",
+          "output",
+          objectSchema("AgentRunOutput", { structured: { type: "object" }, text: STRING }, [
+            "text",
+          ]),
+        ),
+      ],
+    });
+    const run = (config: Record<string, unknown>) =>
+      graph({
+        entry: "A",
+        nodes: [node("A", "agent.run", config), echo("B")],
+        edges: [edge("e", "A", "out", "B", "in")],
+      });
+    const answered = makeCatalog([DEBUG_ECHO, agent]);
+    const SCHEMA = {
+      type: "object",
+      properties: {
+        priority: { type: "string", enum: ["high", "normal", "low"] },
+        count: { type: "number" },
+      },
+    };
+
+    it("offers a declared answer field with its type, and the field is not dynamic", () => {
+      const offered = sourceCandidates(
+        run({ structured_output_schema: SCHEMA }),
+        answered,
+        "B",
+        STRING,
+      );
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["structured", "priority"], false],
+        [["text"], false],
+      ]);
+      expect(offered[0]?.typeToken).toBe("string");
+    });
+
+    it("offers an undeclared answer as one dynamic value, for a field inside it", () => {
+      const offered = sourceCandidates(run({}), answered, "B", STRING);
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["structured"], true],
+        [["text"], false],
+      ]);
+    });
+
+    it("offers a classifier's category as a declared string field", () => {
+      const classify = makeDefinition({
+        id: "ai.classify",
+        name: "Classify",
+        ports: [
+          port(
+            "sales",
+            "output",
+            objectSchema("AiClassifyOutput", { category: STRING, reason: STRING }, [
+              "category",
+              "reason",
+            ]),
+          ),
+        ],
+      });
+      const classified = graph({
+        entry: "C",
+        nodes: [
+          node("C", "ai.classify", {
+            categories: [{ name: "sales" }, { name: "support" }],
+          }),
+          echo("B"),
+        ],
+        edges: [edge("e", "C", "sales", "B", "in")],
+      });
+      const offered = sourceCandidates(
+        classified,
+        makeCatalog([DEBUG_ECHO, classify]),
+        "B",
+        STRING,
+      );
+      expect(offered.map((candidate) => [candidate.fieldPath, candidate.dynamic])).toEqual([
+        [["category"], false],
+        [["reason"], false],
+      ]);
+      expect(offered[0]?.typeToken).toBe("string");
+    });
+  });
+
   it("skips a reachable node whose definition is unknown", () => {
     const broken = graph({
       entry: "X",

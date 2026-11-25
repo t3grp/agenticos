@@ -1,5 +1,5 @@
 ---
-source_sha: "0ffe0c35d627"
+source_sha: "966a0aa38d11"
 ---
 
 # Nodos de workflow { #workflow-nodes }
@@ -41,6 +41,11 @@ run, congelado al admitir el run y como mucho `WORKFLOW_RUN_MAX_INPUT_BYTES`. Un
 prueba iniciado con una entrada de otra forma hace fallar el trigger con
 `TRIGGER_INPUT_INVALID`. Un segundo trigger, o un trigger por el que no empieza el
 grafo, se rechaza al publicar.
+
+Un trigger Webhook, GitHub, Schedule o Table record puede declarar lo que contiene
+su payload - campos simples o un JSON Schema - en el propio diálogo del paso
+trigger, en **Payload fields** junto a sus otros ajustes. La hoja **Trigger** en
+**More** muestra los inicios publicados y sus controles; no edita la declaración.
 
 ### core.input { #core-input }
 
@@ -223,12 +228,37 @@ se le envía, un objeto JSON, queda fijada como salida del disparador, así que 
 paso posterior se puede probar con una entrega real. La URL de prueba no comprueba
 ninguna firma y nunca inicia un run.
 
+El nodo también puede declarar lo que contiene `body`: campos simples
+(`payload_fields`) o un JSON Schema (`payload_schema`), uno u otro. Los campos
+declarados se tipan al publicar, así que `{{Webhook.body.orderId}}` se comprueba
+sin una ejecución de prueba, y una entrega que no encaja se rechaza antes de que
+empiece ningún run.
+
+El editor ofrece los campos declarados con sus tipos por
+delante de los campos que mostró una ejecución de prueba para el mismo nombre;
+si no hay nada declarado, solo se ofrecen los campos de la ejecución de prueba.
+
+Una lista de campos es cerrada: una clave no declarada se
+rechaza, y una entrega anidada necesita el nivel de esquema. Los campos se
+identifican por su nombre JSON, así que `orderId` y `First name` son ambos
+nombres válidos.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
 
 **Schedule.** Se inicia según un reloj, en la zona horaria del workflow y como mucho una
-vez por minuto.
+vez por minuto. El tick también entrega su día de la semana, su fecha y su hora en esa
+zona horaria - `weekday` (el nombre del día en inglés, por ejemplo `Monday`),
+`local_date` (`YYYY-MM-DD`) y `local_time` (`HH:MM`) - derivados de `fired_at` cuando
+se admite el tick, de modo que un paso de mensaje puede escribir `{{Schedule.weekday}}`
+sin una ejecución de prueba. Una entrada de run anterior a estos campos los lee en UTC.
+Su `input` puede declarar el mismo contrato de payload que un webhook: campos
+simples o un JSON Schema. El `input` declarado se comprueba al publicar y otra
+vez en el momento del tick si la entrada guardada se editó: un tick que ya no
+encaja se omite y la programación conserva su próximo tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -239,7 +269,11 @@ vez por minuto.
 **Table record.** Se inicia cuando un registro de su tabla se añade, cambia o borra -
 según nombre `events` - y cumple cada filtro. Un cambio solo lo inicia cuando cambió una
 columna elegida para la tabla, si hay columnas elegidas. Publicarlo requiere acceso de
-lectura a la tabla.
+lectura a la tabla. Sus campos de registro se pueden declarar de la misma forma,
+como campos simples identificados por la etiqueta de columna -
+`{{Record.fields.Email}}` - y al publicar se comprueba cada campo declarado
+contra una columna viva de la tabla: una columna eliminada o renombrada, o un
+tipo que la columna no puede contener, es un problema de publicación.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -267,7 +301,11 @@ es `form`.
 **GitHub.** Se inicia con una entrega que GitHub firma para el repositorio, uno de los
 eventos y - si el nodo nombra alguna - una de las acciones que nombra. La publicación
 registra el hook a través de la cuenta de GitHub conectada de la organización cuando
-puede, o muestra el secreto una vez para pegarlo. `triggered_by` es `github`.
+puede, o muestra el secreto una vez para pegarlo. `triggered_by` es `github`. El
+nodo puede declarar lo que contiene `payload`: campos simples o un JSON Schema.
+Una entrega que no encaja se rechaza antes de que empiece ningún run. Una lista
+de campos cubre solo claves escalares de nivel superior, así que una entrega real
+de GitHub, con sus objetos `repository` y `sender`, necesita el nivel de esquema.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 
@@ -725,6 +763,25 @@ el modelo.
 | `ai.extract` | Saca de un `text` enlazado los campos que nombra `output_schema`, omitiendo lo que no dice | `data`, un objeto con esa forma |
 | `ai.rewrite` | Resume (`short`, `medium`, `long`), traduce a `language` o reescribe un `text` enlazado con un `style` | `text` |
 
+**Campos de respuesta tipados.** Cuando la respuesta de un paso tiene una forma
+declarada, el editor ofrece sus campos con sus tipos - en los completados de `{{`
+y en el selector **Data** junto a un parámetro - y la publicación comprueba
+cada binding con ellos, sin necesidad de una ejecución de prueba. Donde una
+ejecución de prueba mostró un campo del mismo nombre, gana el tipo declarado.
+`ai.prompt`
+tipa `structured` a partir de su `structured_output_schema`; `ai.extract` tipa
+`data` a partir de su `output_schema`; `ai.classify` tipa `category` como la
+enumeración de sus categorías (y `other`), con `reason` y `confidence` según lo
+declarado. Un binding a un campo que la respuesta no declara es un problema de
+publicación, y también lo es un binding a un campo declarado de tipo incorrecto.
+Sin forma declarada, la respuesta sigue siendo dinámica: el editor solo ofrece
+lo que vio una ejecución de prueba, y la ejecución comprueba la ruta cuando se
+ejecuta el paso. Una respuesta del modelo que no se ajusta a su esquema se
+devuelve para corregirla y luego hace fallar el paso con
+`STRUCTURED_OUTPUT_MISMATCH`, como antes; un binding posterior a un campo
+declarado que falta en la respuesta en tiempo de ejecución hace fallar el paso
+lector con `INVALID_BINDING`, como hoy una referencia de plantilla ausente.
+
 Las categorías de un clasificador son sus puertos, en orden, y el modelo solo
 puede responder con uno de sus nombres o `other`. Una respuesta que no es el
 objeto que pidió el paso lo hace fallar con `STRUCTURED_OUTPUT_MISMATCH`; un
@@ -841,9 +898,19 @@ supere, y el paso falla con `AGENT_BUDGET_EXCEEDED`.
 Un agent con un formato de respuesta propio pasa su objeto como `structured`.
 `structured_output_schema` pide otra forma en su lugar: el agent se ejecuta con
 ese esquema, y una respuesta que lo incumple vuelve al modelo para corregirla. El
-objeto se comprueba una vez más antes de que se ejecute nada después. Un agent que
-nunca produce uno que encaje hace fallar el paso con `AGENT_RUN_FAILED`, y una
+objeto se comprueba una vez más antes de que se ejecute nada después.
+
+Un agent que nunca produce uno que encaje hace fallar el paso con `AGENT_RUN_FAILED`, y una
 respuesta sin objeto donde se pidió uno, con `STRUCTURED_OUTPUT_MISMATCH`.
+
+Los campos del esquema van tipados en la salida, así que un paso posterior enlaza
+`{{Agent.structured.priority}}` con su tipo declarado y la publicación comprueba
+el binding - véase [campos de respuesta tipados](#model-steps).
+
+Un agent configurado en el paso tipa `structured` a partir de su propio formato de
+respuesta de la misma manera; el formato de un agent de catálogo fijado no está
+en el paso, así que su respuesta sigue siendo dinámica hasta que se establezca
+la anulación.
 
 | Cómo terminó el run del agent | Resultado del paso |
 |---|---|

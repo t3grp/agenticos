@@ -10,7 +10,7 @@ import uuid
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -22,6 +22,7 @@ from app.db.models.agent_run import RunStatus
 from app.repositories import conversation as conversation_repo
 from app.services.workflow_execution import context
 from app.workflows.contracts.results import Completed, Failed, Waiting
+from app.workflows.graph.validate import _UNKNOWN, _resolve_field_path, _types_compatible
 from app.workflows.nodes.agent_run import AgentRunConfig, AgentRunInput
 from app.workflows.nodes.agent_run import _handler as agent_node
 
@@ -527,3 +528,82 @@ async def test_a_deleted_source_stays_closed_without_a_message_to_mark(monkeypat
         await guard.check()
     await guard.keep_refusal(SimpleNamespace(run=_run(RunStatus.GUARDRAIL_BLOCKED)))
     mark.assert_not_awaited()
+
+
+class TestAnswerPorts:
+    SCHEMA = {
+        "type": "object",
+        "properties": {
+            "priority": {"type": "string", "enum": ["high", "normal", "low"]},
+            "count": {"type": "number"},
+        },
+        "required": ["priority", "count"],
+        "additionalProperties": False,
+    }
+
+    def test_the_override_schema_types_the_structured_port(self):
+        config = AgentRunConfig.model_validate(
+            {"agent": _AGENT, "structured_output_schema": self.SCHEMA}
+        )
+        ports = agent_node.ports_for(config)
+
+        assert (
+            _resolve_field_path(ports, "out", ("structured", "priority"))
+            == Literal["high", "normal", "low"]
+        )
+        assert _resolve_field_path(ports, "out", ("structured", "count")) is float
+        assert _resolve_field_path(ports, "out", ("structured", "nope")) is _UNKNOWN
+        assert _types_compatible(_resolve_field_path(ports, "out", ("structured", "priority")), str)
+
+    def test_the_inline_agents_own_format_types_the_structured_port(self):
+        config = AgentRunConfig.model_validate({"inline": {**_SPEC, "output_schema": self.SCHEMA}})
+        ports = agent_node.ports_for(config)
+
+        assert (
+            _resolve_field_path(ports, "out", ("structured", "priority"))
+            == Literal["high", "normal", "low"]
+        )
+        assert _resolve_field_path(ports, "out", ("structured", "count")) is float
+
+    def test_the_override_wins_over_the_inline_agents_format(self):
+        inline_schema = {
+            "type": "object",
+            "properties": {"tier": {"type": "string"}},
+            "required": ["tier"],
+            "additionalProperties": False,
+        }
+        config = AgentRunConfig.model_validate(
+            {
+                "inline": {**_SPEC, "output_schema": inline_schema},
+                "structured_output_schema": self.SCHEMA,
+            }
+        )
+        ports = agent_node.ports_for(config)
+
+        assert (
+            _resolve_field_path(ports, "out", ("structured", "priority"))
+            == Literal["high", "normal", "low"]
+        )
+        assert _resolve_field_path(ports, "out", ("structured", "tier")) is _UNKNOWN
+
+    def test_a_pinned_agent_without_an_override_keeps_its_answer_dynamic(self):
+        ports = agent_node.ports_for(AgentRunConfig.model_validate({"agent": _AGENT}))
+
+        assert _resolve_field_path(ports, "out", ("structured", "priority")) is Any
+        assert _resolve_field_path(ports, "out", ("structured",)) == dict[str, Any] | None
+
+    def test_a_schema_no_model_can_carry_keeps_the_answer_dynamic(self):
+        big = {
+            "type": "object",
+            "properties": {f"field_{index}": {"type": "string"} for index in range(201)},
+        }
+        config = AgentRunConfig.model_validate({"agent": _AGENT, "structured_output_schema": big})
+        ports = agent_node.ports_for(config)
+
+        assert _resolve_field_path(ports, "out", ("structured", "field_0")) is Any
+
+    def test_ports_for_without_a_config_keeps_the_catalog_ports(self):
+        ports = agent_node.ports_for(None)
+
+        assert [port.id for port in ports] == ["in", "out"]
+        assert ports[1].schema is agent_node.AgentRunOutput

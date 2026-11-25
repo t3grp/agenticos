@@ -252,6 +252,40 @@ export function resolveFieldType(
 }
 
 /**
+ * The schema of one item of the array at `fieldPath` under an output port -
+ * what a filter's condition reads. The analog of the backend's element type
+ * when a filter reads a list. {@link UNKNOWN} when the field is not an array
+ * or the schema does not declare it; {@link ANY_SCHEMA} when the array holds
+ * values with no declared shape, or none at all.
+ */
+export function resolveItemType(
+  definition: NodeDefinition,
+  portId: string,
+  fieldPath: readonly string[],
+): ResolvedType {
+  const schema = portSchema(definition, portId, "output");
+  if (schema === UNKNOWN || schema === null) return schema;
+  const defs = defsOf(schema);
+  let current: JsonSchema = schema;
+  for (const part of fieldPath) {
+    const resolved = unwrapOptional(resolveRef(current, defs), defs);
+    if (isDynamic(resolved)) return ANY_SCHEMA;
+    const properties = resolved["properties"];
+    if (!isObject(properties) || !isObject(properties[part])) return UNKNOWN;
+    current = properties[part] as JsonSchema;
+  }
+  const list = unwrapOptional(resolveRef(current, defs), defs);
+  if (list["type"] !== "array") return UNKNOWN;
+  // A tuple's positions hold different types, so no one item type to offer.
+  if (Array.isArray(list["prefixItems"])) return UNKNOWN;
+  const items = list["items"];
+  if (items === undefined) return ANY_SCHEMA;
+  if (Array.isArray(items)) return UNKNOWN;
+  if (!isObject(items)) return ANY_SCHEMA;
+  return resolveRef(items as JsonSchema, defs);
+}
+
+/**
  * The names a `field_path` can step into next: the properties of the object at
  * `fieldPath` under an output port's schema. Empty for a scalar, a control port, an
  * unknown port or a path the schema does not declare. The enumeration counterpart of

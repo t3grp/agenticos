@@ -1,5 +1,5 @@
 ---
-source_sha: "29083d2aceb5"
+source_sha: "ffd96aa33aaf"
 ---
 
 # Workflows { #workflows }
@@ -318,9 +318,16 @@ ajuste, desactivado, con su valor.
 Un parámetro que toma texto es una sola caja para texto escrito y valores de pasos
 anteriores a la vez, como `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 **Data**, a su lado, inserta un valor en el cursor, y lo mismo hace un campo arrastrado
-desde **Input**. Escribir `{{` lista esos mismos valores y, dentro del payload de un
+desde **Input**.
+
+Escribir `{{` lista esos mismos valores y, dentro del payload de un
 trigger o del elemento de un bucle, los campos que vio allí la última ejecución de
-prueba; lo que escribes a continuación acota la lista, y `Enter` o `Tab` escribe el
+prueba. Donde un trigger o un paso anterior declara los campos que tiene - el payload
+declarado de un trigger, la respuesta declarada de un paso de modelo - estos se listan
+con sus tipos sin ninguna ejecución de prueba, por delante de lo que mostró una ejecución;
+si no hay nada declarado, solo se ofrecen los campos de la ejecución de prueba.
+
+Lo que escribes a continuación acota la lista, y `Enter` o `Tab` escribe el
 marcador.
 
 Un marcador nombra un paso y una ruta en su salida, se colorea en la caja - en rojo, al
@@ -352,7 +359,15 @@ del elemento o del valor, una comprobación - **is equal to**, **is at least**,
 **contains**, **is not empty** y las demás - y aquello con lo que se compara. Un número,
 `true` y `false` se comparan como tales, todo lo demás como texto. Con varias filas,
 **Match all of these** o **any** dice cómo se combinan, y se sugieren los campos que
-mostraron la última ejecución o los datos de prueba. La condición se guarda como la
+mostraron la última ejecución o los datos de prueba. Donde el paso que lee la
+condición declara sus campos - el payload declarado de un trigger, la respuesta
+declarada de un paso de modelo - esos campos se sugieren con sus tipos junto a los
+observados: una enumeración ofrece sus opciones para comparar, un número ofrece
+comprobaciones numéricas, un sí/no ofrece `true` y `false`. La publicación rechaza
+una comparación con un valor de tipo incorrecto para un campo declarado, nombrando
+el campo; una condición sobre un valor que nada declara solo se comprueba por su
+sintaxis, y una discrepancia de tipos dentro de ella hace fallar el paso en tiempo de
+ejecución. La condición se guarda como la
 expresión JMESPath que evalúa el paso. **Write it as an expression** la edita como tal, y
 una que las filas no pueden mostrar sigue siendo una expresión.
 
@@ -932,7 +947,12 @@ workflow, abren sus runs, del más reciente al más antiguo, cada uno con su est
 ejecutó el draft o la versión publicada, qué lo inició, cuándo, cuánto duró y cuánto
 costó. **Start a run** inicia uno a mano: **Test the draft** ejecuta el draft tal
 como está, y **Published version** ejecuta la versión en vivo. Su **Input (JSON)** es
-lo que el paso **Input** del workflow entrega como `payload`.
+lo que el paso **Input** del workflow entrega como `payload`. Una entrega a un
+disparador de webhook o GitHub cuyo payload no encaja con el esquema que el
+disparador declara se rechaza antes de que empiece ningún run: no se crea ningún
+run y, para un webhook, la entrega no gasta su asignación. Un tick de programación
+cuya entrada guardada ya no encaja se omite de la misma forma, y la programación
+conserva su próximo tick.
 
 Sobre la lista, **How it ran** resume las ejecuciones reales de los últimos 7, 30 o 90
 días: cuántas se ejecutaron y cuántas fallaron, la parte de las terminadas que salió

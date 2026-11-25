@@ -55,6 +55,43 @@ export const CONDITION_OPS: readonly ConditionOp[] = [
   "empty",
 ];
 
+/**
+ * The declared type of a field a condition may compare, as the editor knows
+ * it from the step the condition reads - a trigger's declared payload, a
+ * model step's declared answer - or `unknown` when nothing declares it.
+ */
+export type ConditionFieldKind = "string" | "number" | "boolean" | "enum" | "unknown";
+
+/** A field a condition can read, with its declared type and, for an enum, its options. */
+export interface ConditionFieldSuggestion {
+  /** A path into the root, dot-separated, as `ConditionRow.field` holds it. */
+  field: string;
+  kind: ConditionFieldKind;
+  /** The values an enum field may be compared with. */
+  options?: readonly string[];
+}
+
+/**
+ * The checks that make sense for a field of this kind: numbers compare
+ * numerically, a yes/no or an enum only for equality or emptiness, and text -
+ * or a field nothing declares - takes every check.
+ */
+export function opsForKind(kind: ConditionFieldKind): readonly ConditionOp[] {
+  if (kind === "number") return ["eq", "ne", "gt", "gte", "lt", "lte", "notEmpty", "empty"];
+  if (kind === "boolean" || kind === "enum") return ["eq", "ne", "notEmpty", "empty"];
+  return CONDITION_OPS;
+}
+
+/**
+ * The values a row may compare with for a field of this suggestion: an enum's
+ * options, true/false for a yes/no, free text otherwise.
+ */
+export function valueOptions(suggestion: ConditionFieldSuggestion): readonly string[] | null {
+  if (suggestion.kind === "enum") return suggestion.options ?? null;
+  if (suggestion.kind === "boolean") return ["true", "false"];
+  return null;
+}
+
 /** The operators that compare with nothing. */
 export function takesNoValue(op: ConditionOp): boolean {
   return op === "notEmpty" || op === "empty";

@@ -49,6 +49,28 @@ export const FIELD_TRIGGERS: ReadonlySet<string> = new Set([
   FORM_TRIGGER,
 ]);
 
+/**
+ * The event triggers that declare a typed payload, and the output attribute
+ * the declaration types - the client mirror of each trigger's `ports_for`
+ * (`typed_trigger_output` in `app/workflows/contracts/payload_schema.py`).
+ * A table record's `values`, keyed by column id rather than label, stays
+ * untyped; only `fields`, by column label, is declared.
+ */
+export const PAYLOAD_TRIGGER_ATTRS: Readonly<Record<string, string>> = {
+  [WEBHOOK_TRIGGER]: "body",
+  [GITHUB_TRIGGER]: "payload",
+  [SCHEDULE_TRIGGER]: "input",
+  [TABLE_RECORD_TRIGGER]: "fields",
+};
+
+/** The event triggers that declare a typed payload. */
+export const PAYLOAD_TRIGGER_IDS: ReadonlySet<string> = new Set(Object.keys(PAYLOAD_TRIGGER_ATTRS));
+
+/** The output attribute a trigger's declared payload types, or undefined when it declares none. */
+export function payloadAttrOf(definitionId: string): string | undefined {
+  return PAYLOAD_TRIGGER_ATTRS[definitionId];
+}
+
 export const TRIGGER_IDS: ReadonlySet<string> = new Set([
   MANUAL_TRIGGER,
   API_TRIGGER,

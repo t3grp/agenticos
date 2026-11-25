@@ -1,5 +1,5 @@
 ---
-source_sha: "29083d2aceb5"
+source_sha: "ffd96aa33aaf"
 ---
 
 # Workflows { #workflows }
@@ -329,9 +329,17 @@ Wert.
 Ein Parameter, der Text nimmt, ist ein Feld für eingegebenen Text und Werte aus früheren
 Schritten zugleich, etwa `New lead: {{Form.payload.name}} from {{Form.payload.company}}`.
 **Data** daneben fügt einen Wert an der Cursorposition ein, ebenso ein aus **Input**
-gezogenes Feld. Tippen Sie `{{`, erscheinen dieselben Werte als Liste, und innerhalb des
+gezogenes Feld.
+
+Tippen Sie `{{`, erscheinen dieselben Werte als Liste, und innerhalb des
 Payloads eines Triggers oder des Elements einer Schleife die Felder, die der letzte
-Testlauf dort gesehen hat; was Sie weiter tippen, grenzt die Liste ein, und `Enter` oder
+Testlauf dort gesehen hat. Wo ein Trigger oder ein früherer Schritt die Felder deklariert,
+die er hält - ein deklariertes Payload eines Triggers, eine deklarierte Antwort eines
+Modellschritts - werden diese mit ihren Typen ohne einen Testlauf aufgeführt, vor dem,
+was ein Lauf gezeigt hat; ist nichts deklariert, werden nur die Felder des Testlaufs
+angeboten.
+
+Was Sie weiter tippen, grenzt die Liste ein, und `Enter` oder
 `Tab` schreibt den Platzhalter.
 
 Ein Platzhalter nennt einen Schritt und einen Pfad in dessen Ausgabe, ist im Feld
@@ -363,7 +371,15 @@ Feld des Elements oder des Werts, eine Prüfung - **is equal to**, **is at least
 **contains**, **is not empty** und die übrigen - und womit verglichen wird. Eine Zahl,
 `true` und `false` werden als solche verglichen, alles andere als Text. Bei mehreren
 Zeilen sagt **Match all of these** oder **any**, wie sie verknüpft sind, und die Felder,
-die der letzte Lauf oder die Testdaten zeigten, werden vorgeschlagen. Die Bedingung wird
+die der letzte Lauf oder die Testdaten zeigten, werden vorgeschlagen. Wo der Schritt,
+den die Bedingung liest, seine Felder deklariert - ein deklariertes Payload eines
+Triggers, eine deklarierte Antwort eines Modellschritts - werden diese Felder mit
+ihren Typen neben den beobachteten vorgeschlagen: Eine Aufzählung bietet ihre Optionen
+zum Vergleichen an, eine Zahl bietet numerische Prüfungen an, ein Ja/Nein bietet
+`true` und `false` an. Die Veröffentlichung lehnt einen Vergleich mit einem Wert des
+falschen Typs für ein deklariertes Feld ab und nennt das Feld; eine Bedingung über
+einen Wert, den nichts deklariert, wird nur auf ihre Syntax geprüft, und eine
+Typabweichung in ihr lässt den Schritt zur Laufzeit fehlschlagen. Die Bedingung wird
 als JMESPath-Ausdruck gespeichert, den der Schritt auswertet. **Write it as an
 expression** bearbeitet sie als diesen, und einer, den die Zeilen nicht zeigen können,
 bleibt ein Ausdruck.
@@ -976,7 +992,12 @@ Draft oder die veröffentlichte Version ausgeführt hat, was ihn gestartet hat, 
 wie lange und zu welchen Kosten. **Start a run** startet einen von Hand: **Test the
 draft** führt den Draft in seinem jetzigen Stand aus, **Published version** die
 Live-Version. Sein **Input (JSON)** ist das, was der **Input**-Schritt des Workflows
-als `payload` weitergibt.
+als `payload` weitergibt. Eine Zustellung an einen Webhook- oder GitHub-Trigger,
+deren Payload nicht zu dem Schema passt, das der Trigger deklariert, wird
+abgelehnt, bevor ein Run startet: Es wird kein Run angelegt und bei einem Webhook
+verbraucht die Zustellung kein Kontingent. Ein Zeitplan-Tick, dessen gespeicherte
+Eingabe nicht mehr passt, wird genauso übersprungen, und der Zeitplan behält
+seinen nächsten Tick.
 
 Über der Liste fasst **How it ran** die echten Läufe der letzten 7, 30 oder 90 Tage
 zusammen: wie viele liefen und wie viele fehlschlugen, der Anteil der beendeten, der

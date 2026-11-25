@@ -9,6 +9,7 @@ from app.workflows.nodes.ai_extract._handler import (
     AiExtractOutput,
     check_resources,
     handle,
+    ports_for,
 )
 
 __all__ = ["AiExtractConfig", "AiExtractInput", "AiExtractOutput"]
@@ -32,6 +33,7 @@ register(
         retry_guarantee="idempotent",
         handler=handle,
         spends_budget=True,
+        ports_for=ports_for,
         resource_check=check_resources,
     )
 )

@@ -92,6 +92,7 @@ from app.services.workflow_webhook_test import (
 )
 from app.workflows.contracts.io import Binding, LiteralValue, NodeOutputRef
 from app.workflows.graph.model import Edge, NodeInstance, NodePosition, WorkflowGraph
+from app.workflows.nodes._triggers import schedule_local_fields
 from tests.integration.workflow_run_support import SeededRun, drive, worker_running
 
 pytestmark = pytest.mark.anyio
@@ -1025,7 +1026,12 @@ class TestSchedules:
         (run,) = await _runs(db)
         assert [run_id for run_id, _node in pairs] == [run.id]
         assert run.triggered_by == WorkflowRunTrigger.SCHEDULE.value
-        assert run.input == {"fired_at": now.isoformat(), "input": {"region": "eu"}}
+        assert run.input == {
+            "fired_at": now.isoformat(),
+            "input": {"region": "eu"},
+            # The workflow names no timezone, so the tick reads in UTC.
+            **schedule_local_fields(now, "UTC"),
+        }
         assert run.execution_principal_user_id == owner.id
         fired = await db.get(WorkflowExposure, exposure_id)
         idle = await db.get(WorkflowExposure, idle_id)

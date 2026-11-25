@@ -79,6 +79,7 @@ from app.services.channels.base import IncomingMessage, split_thread
 from app.services.mcp_connection import McpConnectionService
 from app.services.portals.mail_thread import clean_text
 from app.services.workflow_authority import require_human_publisher
+from app.services.workflow_execution import input_validation
 from app.services.workflow_execution.exceptions import (
     WorkflowAdmissionQuotaError,
     WorkflowArchivedError,
@@ -91,6 +92,7 @@ from app.services.workflow_execution.exceptions import (
 from app.services.workflow_execution.facade import WorkflowExecutionService
 from app.worker.jobs import WORKFLOW_SCHEDULES_CHECK, Tick
 from app.workflows.contracts.io import output_refs
+from app.workflows.contracts.payload_schema import PayloadSchemaConfig, payload_problems
 from app.workflows.graph.model import WorkflowGraph
 from app.workflows.nodes._channels import WORKFLOW_PLATFORMS
 from app.workflows.nodes._triggers import (
@@ -100,6 +102,7 @@ from app.workflows.nodes._triggers import (
     GithubTriggerOutput,
     MailAttachment,
     ScheduleTriggerConfig,
+    schedule_local_fields,
 )
 from app.workflows.nodes.core_input._handler import input_problems
 from app.workflows.nodes.trigger_channel_message._handler import ChannelMessageTriggerConfig
@@ -107,6 +110,7 @@ from app.workflows.nodes.trigger_form._handler import FormTriggerConfig
 from app.workflows.nodes.trigger_github._handler import GithubTriggerConfig
 from app.workflows.nodes.trigger_gmail._handler import GmailTriggerConfig
 from app.workflows.nodes.trigger_outlook._handler import OutlookTriggerConfig
+from app.workflows.nodes.trigger_webhook._handler import WebhookTriggerConfig
 from app.workflows.triggers import answers_webhook, entry_graph
 
 logger = logging.getLogger(__name__)
@@ -225,6 +229,35 @@ def parse_webhook_body(body: bytes) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise BadRequestError(message="Webhook body must be a JSON object")
     return payload
+
+
+async def _payload_problems(
+    config: PayloadSchemaConfig, value: dict[str, Any]
+) -> list[dict[str, str]]:
+    """What is wrong with an admitted payload against the trigger's declared contract.
+
+    Tier 1 fields are checked inline; a Tier 2 JSON Schema is checked in the
+    isolated-process validator, since the payload is untrusted external input
+    and the schema is author-supplied - the same split the run facade makes
+    for declared trigger input. A value that is not a JSON object fits
+    neither tier.
+    """
+    if not isinstance(value, dict):
+        return [{"field": "", "message": "Must be a JSON object", "type": "type"}]
+    if config.payload_schema is not None:
+        return await input_validation.schema_problems(config.payload_schema, value)
+    return payload_problems(config, value)
+
+
+async def _check_schedule_run_input(config: PayloadSchemaConfig, value: Any) -> None:
+    """Refuse a stored schedule input that no longer fits the declared schema.
+
+    A separate function so the raise does not sit inside `fire_due`'s own
+    refusal handler: the tick is skipped and the schedule keeps its next tick.
+    """
+    problems = await _payload_problems(config, value)
+    if problems:
+        raise WorkflowRunInputInvalidError(problems=problems, root="input")
 
 
 def workflow_timezone(workflow: Workflow) -> str:
@@ -1351,6 +1384,11 @@ class WorkflowExposureService:
                 what = f"{what} {named_action}"
             where = f" on {full_name}" if isinstance(full_name, str) else ""
             return WebhookSkipped(skipped=f"{what}{where} is not one this trigger starts on")
+        # A delivery that does not fit the declared payload schema is refused
+        # before it spends the delivery allowance or starts a run.
+        problems = await _payload_problems(config, payload)
+        if problems:
+            raise WorkflowRunInputInvalidError(problems=problems, root="payload")
         await self._spend_delivery_allowance(exposure)
         delivery = GithubTriggerOutput(
             event=event,
@@ -1407,6 +1445,8 @@ class WorkflowExposureService:
             AuthorizationError: The signature did not verify, or the member it
                 runs as can no longer run the workflow.
             BadRequestError: No delivery id, or a body that is not a JSON object.
+            WorkflowRunInputInvalidError: The body does not fit the trigger's
+                declared payload schema; no run is created.
             WorkflowWebhookUnansweredError: The graph answers its deliveries, and
                 this run failed, was cancelled or ran out of budget first.
         """
@@ -1460,6 +1500,11 @@ class WorkflowExposureService:
         copy = await self._signed_copy(exposure.id, signed)
         if copy is not None:
             return await self._replay(copy)
+        # A delivery that does not fit the declared body schema is refused
+        # before it spends the delivery allowance or starts a run.
+        problems = await _payload_problems(await self._webhook_config(exposure), payload)
+        if problems:
+            raise WorkflowRunInputInvalidError(problems=problems, root="body")
         await self._spend_delivery_allowance(exposure)
 
         fire = await self._fire_context(exposure)
@@ -1595,6 +1640,16 @@ class WorkflowExposureService:
                 continue
             ctx, workflow, version = fire
             try:
+                # The stored input may have been edited since the schedule was
+                # switched on: a tick whose input no longer fits the declared
+                # schema is skipped, like any other refused admission, and the
+                # schedule keeps its next tick.
+                schedule_config = ScheduleTriggerConfig.model_validate(
+                    WorkflowGraph.model_validate(version.graph)
+                    .node_by_id[exposure.node_instance_id]
+                    .config
+                )
+                await _check_schedule_run_input(schedule_config, exposure.run_input)
                 # A savepoint, so a refused admission undoes only its own writes
                 # and the clock advanced above still commits.
                 async with self.db.begin_nested():
@@ -1604,12 +1659,17 @@ class WorkflowExposureService:
                         version,
                         entry_node_id=exposure.node_instance_id,
                         triggered_by=WorkflowRunTrigger.SCHEDULE,
-                        run_input={"fired_at": now.isoformat(), "input": exposure.run_input},
+                        run_input={
+                            "fired_at": now.isoformat(),
+                            "input": exposure.run_input,
+                            **schedule_local_fields(now, workflow_timezone(workflow)),
+                        },
                     )
             except (
                 WorkflowAdmissionQuotaError,
                 WorkflowInlineStorageLimitError,
                 WorkflowBudgetReachedError,
+                WorkflowRunInputInvalidError,
                 WorkflowRunInputTooLargeError,
             ) as exc:
                 logger.warning(
@@ -1777,6 +1837,17 @@ class WorkflowExposureService:
             scope=VaultScope.organization(exposure.organization_id),
             key_version=cast(int, exposure.secret_key_version),
         )
+
+    async def _webhook_config(self, exposure: WorkflowExposure) -> WebhookTriggerConfig:
+        """The webhook trigger's configuration, as the version the exposure runs has it."""
+        version = cast(
+            WorkflowVersion,
+            await workflow_repo.get_version(
+                self.db, exposure.workflow_version_id, organization_id=exposure.organization_id
+            ),
+        )
+        node = WorkflowGraph.model_validate(version.graph).node_by_id[exposure.node_instance_id]
+        return WebhookTriggerConfig.model_validate(node.config)
 
     async def _github_config(self, exposure: WorkflowExposure) -> GithubTriggerConfig:
         """The GitHub trigger's configuration, as the version the exposure runs has it."""

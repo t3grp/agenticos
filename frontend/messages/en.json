@@ -12564,7 +12564,14 @@
       "jsonSchema": "JSON Schema",
       "formatHint": "Choose simple fields or a JSON Schema contract. Each saved format is kept while this trigger stays open; only the selected format is saved to the workflow.",
       "schemaHint": "Use JSON Schema Draft 2020-12 for nested objects, arrays and references. Inputs are checked before a run starts.",
-      "schemaInvalid": "Enter a JSON object. This edit was not saved."
+      "schemaInvalid": "Enter a JSON object. This edit was not saved.",
+      "payloadTitle": "Payload fields",
+      "payloadNoneHint": "None yet: a delivery takes any JSON object. Add fields to declare what the payload holds, so later steps read each with its type and a delivery that does not fit is refused.",
+      "payloadSomeHint": "Later steps read each field under {attr}, with its type. A delivery that does not fit is refused before a run starts.",
+      "payloadNameInvalid": "One key, with no dot in it: whatever the sender sends, such as orderId, or a table column's label.",
+      "payloadContractFormat": "Payload contract",
+      "payloadFormatHint": "Choose simple fields or a JSON Schema contract. Each saved format is kept while this trigger stays open; only the selected format is saved to the workflow.",
+      "payloadSchemaHint": "Use JSON Schema Draft 2020-12 for nested objects, arrays and references. Deliveries are checked against it before a run starts."
     },
     "pickerHostLabel": "Sandbox host",
     "pickerHostDefault": "The organization's default host",
@@ -22187,6 +22194,34 @@
           "register_with_account": {
             "title": "Set up the webhook for me",
             "description": "Register it on the repository through the organization's connected GitHub account, when one is connected with permission to manage webhooks"
+          },
+          "payload_fields": {
+            "title": "Payload Fields",
+            "description": "The payload's declared fields, by key"
+          },
+          "payload_fields__items__name": {
+            "title": "Name",
+            "description": "The key in the payload, as the sender sends it or the table labels it"
+          },
+          "payload_fields__items__label": {
+            "title": "Label",
+            "description": "Shown in the editor"
+          },
+          "payload_fields__items__type": {
+            "title": "Type"
+          },
+          "payload_fields__items__required": {
+            "title": "Required"
+          },
+          "payload_fields__items__description": {
+            "title": "Description"
+          },
+          "payload_fields__items__options": {
+            "title": "Options",
+            "description": "What a choice offers"
+          },
+          "payload_schema": {
+            "description": "JSON Schema Draft 2020-12 contract for the payload object; references must be local to this document"
           }
         }
       },
@@ -22285,6 +22320,34 @@
           "input": {
             "title": "Input",
             "description": "What every run starts with, as JSON"
+          },
+          "payload_fields": {
+            "title": "Payload Fields",
+            "description": "The payload's declared fields, by key"
+          },
+          "payload_fields__items__name": {
+            "title": "Name",
+            "description": "The key in the payload, as the sender sends it or the table labels it"
+          },
+          "payload_fields__items__label": {
+            "title": "Label",
+            "description": "Shown in the editor"
+          },
+          "payload_fields__items__type": {
+            "title": "Type"
+          },
+          "payload_fields__items__required": {
+            "title": "Required"
+          },
+          "payload_fields__items__description": {
+            "title": "Description"
+          },
+          "payload_fields__items__options": {
+            "title": "Options",
+            "description": "What a choice offers"
+          },
+          "payload_schema": {
+            "description": "JSON Schema Draft 2020-12 contract for the payload object; references must be local to this document"
           }
         }
       },
@@ -22327,6 +22390,34 @@
           "filters__items__value": {
             "title": "Value",
             "description": "The operand. A list for `in`, a boolean for `is_null` (true means the cell is empty), otherwise a value of the column's type."
+          },
+          "payload_fields": {
+            "title": "Payload Fields",
+            "description": "The payload's declared fields, by key"
+          },
+          "payload_fields__items__name": {
+            "title": "Name",
+            "description": "The key in the payload, as the sender sends it or the table labels it"
+          },
+          "payload_fields__items__label": {
+            "title": "Label",
+            "description": "Shown in the editor"
+          },
+          "payload_fields__items__type": {
+            "title": "Type"
+          },
+          "payload_fields__items__required": {
+            "title": "Required"
+          },
+          "payload_fields__items__description": {
+            "title": "Description"
+          },
+          "payload_fields__items__options": {
+            "title": "Options",
+            "description": "What a choice offers"
+          },
+          "payload_schema": {
+            "description": "JSON Schema Draft 2020-12 contract for the payload object; references must be local to this document"
           }
         }
       },
@@ -22525,6 +22616,38 @@
           },
           "reference_image__byte_size": {
             "title": "Byte Size"
+          }
+        }
+      },
+      "trigger_webhook": {
+        "config": {
+          "payload_fields": {
+            "title": "Payload Fields",
+            "description": "The payload's declared fields, by key"
+          },
+          "payload_fields__items__name": {
+            "title": "Name",
+            "description": "The key in the payload, as the sender sends it or the table labels it"
+          },
+          "payload_fields__items__label": {
+            "title": "Label",
+            "description": "Shown in the editor"
+          },
+          "payload_fields__items__type": {
+            "title": "Type"
+          },
+          "payload_fields__items__required": {
+            "title": "Required"
+          },
+          "payload_fields__items__description": {
+            "title": "Description"
+          },
+          "payload_fields__items__options": {
+            "title": "Options",
+            "description": "What a choice offers"
+          },
+          "payload_schema": {
+            "description": "JSON Schema Draft 2020-12 contract for the payload object; references must be local to this document"
           }
         }
       }

@@ -1,5 +1,12 @@
-import { inputFieldsOf, typedPayloadPort } from "./input-fields";
-import { FIELD_TRIGGERS } from "./triggers";
+import {
+  answerSchemaOf,
+  effectivePayloadSchema,
+  inputFieldsOf,
+  typedAttrPort,
+  typedPayloadAttrPort,
+  typedPayloadPort,
+} from "./input-fields";
+import { FIELD_TRIGGERS, PAYLOAD_TRIGGER_ATTRS } from "./triggers";
 import type { JsonSchema, NodeDefinition, NodeInstance, Port } from "./types";
 
 /**
@@ -189,6 +196,51 @@ export function instancePorts(instance: NodeInstance, definition: NodeDefinition
   if (FIELD_TRIGGERS.has(definition.id)) {
     const fields = inputFieldsOf(instance.config);
     if (fields.length > 0) ports = ports.map((port) => typedPayloadPort(port, fields));
+  }
+  // An event trigger's declared payload types the attribute its deliveries
+  // arrive under - `body`, `payload`, `input` or a record's `fields` - the
+  // same channel `core.input` already uses: the declaration travels in the
+  // node's config, and the typed port is derived here, so the binding picker,
+  // the template box and the validation mirror all read the declared fields
+  // with their types, without a test run. With no declaration the port stays
+  // as the catalog serves it, and the payload stays dynamic.
+  const payloadAttr = PAYLOAD_TRIGGER_ATTRS[definition.id];
+  if (payloadAttr !== undefined) {
+    const schema = effectivePayloadSchema(instance.config);
+    if (schema !== null) {
+      ports = ports.map((port) => typedPayloadAttrPort(port, schema, payloadAttr));
+    }
+  }
+  // A model step's declared answer types the attribute its answer arrives
+  // under - `structured` for an agent or a prompt, `data` for an extraction -
+  // the same channel the event triggers use. With no declaration the port
+  // stays as the catalog serves it, and the answer stays dynamic.
+  if (
+    definition.id === "agent.run" ||
+    definition.id === "ai.prompt" ||
+    definition.id === "ai.extract"
+  ) {
+    const schema = answerSchemaOf(instance.config);
+    if (schema !== null) {
+      const attr = definition.id === "ai.extract" ? "data" : "structured";
+      ports = ports.map((port) => typedAttrPort(port, schema, attr));
+    }
+  }
+  // A classifier's answer is its output itself: the category is the enum of
+  // the names it declares, and `other`. Every output port carries the same
+  // output, so each is typed - including `unsure`, added above. With no
+  // categories the config is not valid yet, and the ports stay as the
+  // catalog serves them.
+  if (definition.id === "ai.classify") {
+    const categories = classifyCategories(instance.config);
+    if (categories.length > 0) {
+      const names = [...categories, "other"];
+      ports = ports.map((port) =>
+        port.kind === "output"
+          ? typedAttrPort(port, { type: "string", enum: names }, "category")
+          : port,
+      );
+    }
   }
   if (routesErrors(instance) && !ports.some((port) => port.id === ERROR_PORT)) {
     ports = [

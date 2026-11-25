@@ -63,6 +63,7 @@ import {
   FIELD_TRIGGERS,
   FORM_TRIGGER,
   MANUAL_TRIGGER,
+  PAYLOAD_TRIGGER_IDS,
   SCHEDULE_TRIGGER,
   WEBHOOK_TRIGGER,
   WORKFLOW_CALL_TRIGGER,
@@ -83,7 +84,7 @@ import { ReplyMailboxPicker } from "./reply-mailbox-picker";
 import { NotificationChannels } from "./notification-channels";
 import { FormPageForm } from "./form-page-form";
 import { HttpAuthField } from "./http-auth-field";
-import { InputContractForm } from "./input-contract-form";
+import { InputContractForm, PayloadContractForm } from "./input-contract-form";
 import { MergeForm } from "./merge-form";
 import {
   isMediaGenerationNode,
@@ -1338,7 +1339,10 @@ function NodeFields({
 
   if (definition.id === SCHEDULE_TRIGGER) {
     return (
-      <ScheduleTriggerForm node={node} disabled={disabled} updateNodeConfig={updateNodeConfig} />
+      <div className="space-y-4">
+        <ScheduleTriggerForm node={node} disabled={disabled} updateNodeConfig={updateNodeConfig} />
+        <PayloadContractForm node={node} disabled={disabled} updateNodeConfig={updateNodeConfig} />
+      </div>
     );
   }
   if (definition.id === MERGE) {
@@ -1432,6 +1436,10 @@ function NodeFields({
   const drawnElsewhere = (name: string) =>
     (isMediaGenerationNode(definition.id) &&
       MEDIA_GENERATION_FIELDS[definition.id].includes(name)) ||
+    // A payload trigger's declaration is drawn by its own contract form, not
+    // as two raw config fields.
+    (PAYLOAD_TRIGGER_IDS.has(definition.id) &&
+      ["payload_fields", "payload_schema"].includes(name)) ||
     (definition.id === "flow.await_reply" && ["provider", "connection_id"].includes(name)) ||
     (agentStep && name === AGENT_INLINE) ||
     (mcpStep && name === MCP_TOOL) ||
@@ -1537,6 +1545,9 @@ function NodeFields({
           updateNodeConfig={updateNodeConfig}
           upsertBinding={upsertBinding}
         />
+      )}
+      {PAYLOAD_TRIGGER_IDS.has(definition.id) && (
+        <PayloadContractForm node={node} disabled={disabled} updateNodeConfig={updateNodeConfig} />
       )}
       {drawn.map(({ entry, input }) =>
         input ? (

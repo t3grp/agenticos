@@ -36,6 +36,11 @@ started with an input of another shape fails the trigger with
 `TRIGGER_INPUT_INVALID`. A second trigger, or a trigger that is not where the graph
 starts, is refused at publish.
 
+A webhook, GitHub, schedule or table-record trigger can declare what its payload
+holds - simple fields or a JSON Schema - in the trigger step's own dialog, under
+**Payload fields** beside its other settings. The **Trigger** sheet under **More**
+shows the published starts and their controls; it does not edit the declaration.
+
 ### core.input { #core-input }
 
 **API request.** Started from an HTTP request or over a WebSocket. It hands the graph the run's input as `payload`, whatever the caller sent, and names the surface in `triggered_by`. Its id stays `core.input`, so a graph written before Manual and API were separate still starts from the API.
@@ -201,12 +206,32 @@ opens a test URL for the draft for two minutes. The one call sent to it, a JSON
 object, is pinned as the trigger's output, so each step after it can be tested
 on a real delivery. The test URL checks no signature and never starts a run.
 
+The node can also declare what `body` holds - simple fields (`payload_fields`)
+or a JSON Schema (`payload_schema`), one or the other. Declared fields are typed
+at publish, so `{{Webhook.body.orderId}}` checks without a test run, and a
+delivery that does not fit is refused before any run starts. The editor offers
+the declared fields with their types ahead of the fields a test run showed for
+the same name; with nothing declared, only the test run's fields are offered.
+A field list is closed - an undeclared key is refused - and a nested delivery
+needs the schema tier. Fields are keyed by their JSON name, so `orderId` and
+`First name` are both valid names.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
 
 **Schedule.** Started on a clock, in the workflow's timezone and at most once a
-minute.
+minute. The tick also hands on its weekday, date and time in that timezone -
+`weekday` (the English day name, such as `Monday`), `local_date` (`YYYY-MM-DD`)
+and `local_time` (`HH:MM`) - derived from `fired_at` when the tick is admitted,
+so a message step can write `{{Schedule.weekday}}` without a test run. A run
+input that predates them reads them in UTC instead. Its `input` can declare the
+same payload contract as a webhook - simple fields or a JSON Schema. The
+declared `input` is checked at publish, and again at tick time if the stored
+input was edited: a tick that no longer fits is skipped and the schedule keeps
+its next tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -217,7 +242,10 @@ minute.
 **Table record.** Started by a record of its table being added, changed or deleted -
 whichever its `events` name - that matches every filter. A change starts it only when a
 column chosen for the table changed, when columns are chosen. Publishing it needs read
-access to the table.
+access to the table. Its record fields can be declared the same way, as simple
+fields keyed by column label - `{{Record.fields.Email}}` - and publishing checks
+each declared field against a live column of the table: a column that was
+removed or renamed, or a type the column cannot hold, is a publish problem.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -244,7 +272,11 @@ run as the member who published it. `triggered_by` is `form`.
 **GitHub.** Started by a delivery GitHub signs for the repository, one of the events
 and - when it names any - one of the actions the node names. Publishing registers the
 hook through the organization's connected GitHub account when it can, or shows the
-secret once to paste. `triggered_by` is `github`.
+secret once to paste. `triggered_by` is `github`. The node can declare what
+`payload` holds - simple fields or a JSON Schema. A delivery that does not fit
+is refused before any run starts. A field list covers only scalar top-level
+keys, so a real GitHub delivery, with its `repository` and `sender` objects,
+needs the schema tier.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 
@@ -686,6 +718,23 @@ Publishing checks that the author may use the model.
 | `ai.extract` | Pulls the fields `output_schema` names out of a bound `text`, leaving out what it does not say | `data`, an object of that shape |
 | `ai.rewrite` | Summarizes (`short`, `medium`, `long`), translates into `language`, or rewrites a bound `text` in a `style` | `text` |
 
+**Typed answer fields.** When a step's answer has a declared shape, the
+editor offers its fields with their types - in `{{` completions and in the
+**Data** picker beside a parameter - and publishing checks a binding
+against them - no test run needed. Where a test run showed a field of the same
+name, the declared type wins. `ai.prompt` types `structured` from its
+`structured_output_schema`; `ai.extract` types `data` from its
+`output_schema`; `ai.classify` types `category` as the enum of its categories
+(and `other`), with `reason` and `confidence` as declared. A binding to a
+field the answer does not declare is a publish problem, and so is a binding
+to a declared field of the wrong type. With no declared shape the answer
+stays dynamic: the editor offers only what a test run saw, and the run
+checks the path when the step is dispatched. A model answer that does not
+fit its schema is sent back and then fails the step with
+`STRUCTURED_OUTPUT_MISMATCH`, as before; a downstream binding to a declared
+field the answer lacks at run time fails the reading step with
+`INVALID_BINDING`, as a missing template reference does today.
+
 A classifier's categories are its ports, in order, and the model can only
 answer with one of their names or `other`. An answer that is not the object a
 step asked for fails it with `STRUCTURED_OUTPUT_MISMATCH`; a spent limit fails
@@ -796,10 +845,19 @@ with `AGENT_BUDGET_EXCEEDED`.
 An agent with an answer format of its own hands its object on as `structured`.
 `structured_output_schema` asks for another shape in its place: the agent is run
 with that schema, and an answer that breaks it is sent back to the model to be
-fixed. The object is checked once more before anything downstream runs. An
-agent that never produces one that fits fails the step with `AGENT_RUN_FAILED`,
+fixed. The object is checked once more before anything downstream runs.
+
+An agent that never produces one that fits fails the step with `AGENT_RUN_FAILED`,
 and an answer with no object where one was asked for fails it with
 `STRUCTURED_OUTPUT_MISMATCH`.
+
+The schema's fields are typed on the output, so
+a later step binds `{{Agent.structured.priority}}` with its declared type and
+publishing checks the binding - see [typed answer fields](#model-steps).
+
+An agent configured in the step types `structured` from its own answer format
+the same way; a pinned catalog agent's format is not in the step, so its
+answer stays dynamic until the override is set.
 
 | Agent run ended | Step result |
 |---|---|

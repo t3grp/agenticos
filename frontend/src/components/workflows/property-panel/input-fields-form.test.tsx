@@ -166,3 +166,72 @@ describe("InputFieldsForm", () => {
     expect(update).toHaveBeenLastCalledWith("n1", { fields: [{ ...EMAIL, type: "date" }] });
   });
 });
+
+describe("InputFieldsForm as a payload editor", () => {
+  /** The form over a webhook node whose config follows each edit, as the editor's store does. */
+  function PayloadLive({
+    initial,
+    onUpdate,
+  }: {
+    initial: Record<string, unknown>;
+    onUpdate: (id: string, config: Record<string, unknown>) => void;
+  }) {
+    const [config, setConfig] = useState(initial);
+    return (
+      <InputFieldsForm
+        node={node(config)}
+        fieldsKey="payload_fields"
+        pathPrefix="body"
+        payload
+        updateNodeConfig={(id, next) => {
+          onUpdate(id, next);
+          setConfig(next);
+        }}
+      />
+    );
+  }
+
+  it("writes a webhook body's fields under payload_fields, and names them under body", async () => {
+    const update = vi.fn();
+    render(
+      <PayloadLive initial={{ payload_fields: [{ ...EMAIL, name: "title" }] }} onUpdate={update} />,
+    );
+    expect(screen.getByText("Payload fields")).toBeTruthy();
+    expect(screen.getByText(/Later steps read each field under body/)).toBeTruthy();
+    expect(screen.getByText("body.title")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Label of title"), { target: { value: "Title" } });
+    expect(update).toHaveBeenLastCalledWith("n1", {
+      payload_fields: [{ ...EMAIL, name: "title", label: "Title" }],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Add field" }));
+    expect(update).toHaveBeenLastCalledWith("n1", {
+      payload_fields: [
+        { ...EMAIL, name: "title", label: "Title" },
+        { ...EMAIL, name: "field_2" },
+      ],
+    });
+  });
+
+  it("takes a sender's key, and marks a dotted one and a duplicate", () => {
+    const update = vi.fn();
+    render(
+      <InputFieldsForm
+        node={node({
+          payload_fields: [
+            { ...EMAIL, name: "a.b" },
+            { ...EMAIL, name: "First name" },
+            { ...EMAIL, name: "orderId" },
+            { ...EMAIL, name: "orderId" },
+          ],
+        })}
+        fieldsKey="payload_fields"
+        pathPrefix="body"
+        payload
+        updateNodeConfig={update}
+      />,
+    );
+    expect(screen.getByText(/One key, with no dot in it/)).toBeTruthy();
+    expect(screen.getByText("body.First name")).toBeTruthy();
+    expect(screen.getByText("Another field already has this name.")).toBeTruthy();
+  });
+});

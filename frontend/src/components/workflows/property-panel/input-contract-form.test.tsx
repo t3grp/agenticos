@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { NodeInstance } from "@/lib/workflows/types";
 
-import { InputContractForm } from "./input-contract-form";
+import { InputContractForm, PayloadContractForm } from "./input-contract-form";
 
 const SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -176,5 +176,65 @@ describe("InputContractForm", () => {
     );
     expect(screen.getByRole("combobox", { name: "Input contract" })).toBeDisabled();
     expect(screen.getByRole("textbox", { name: "JSON Schema" })).toBeDisabled();
+  });
+});
+
+describe("PayloadContractForm", () => {
+  function PayloadLive({
+    onUpdate,
+  }: {
+    onUpdate: (id: string, config: Record<string, unknown>) => void;
+  }) {
+    const [config, setConfig] = useState<Record<string, unknown>>({
+      payload_fields: [{ name: "title", type: "text" }],
+    });
+    return (
+      <PayloadContractForm
+        node={node(config, "trigger.webhook")}
+        updateNodeConfig={(id, next) => {
+          onUpdate(id, next);
+          setConfig(next);
+        }}
+      />
+    );
+  }
+
+  it("switches a webhook body's contract between simple fields and a JSON Schema", async () => {
+    const update = vi.fn();
+    render(<PayloadLive onUpdate={update} />);
+    expect(screen.getByLabelText("Payload contract")).toBeVisible();
+    expect(screen.getByText("Payload fields")).toBeVisible();
+    expect(screen.getByLabelText("Name")).toHaveValue("title");
+    expect(screen.getByText("body.title")).toBeVisible();
+    await userEvent.click(screen.getByRole("combobox", { name: "Payload contract" }));
+    await userEvent.click(screen.getByRole("option", { name: "JSON Schema" }));
+    expect(update).toHaveBeenLastCalledWith("start", {
+      payload_fields: [],
+      payload_schema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+      },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "JSON Schema" }), {
+      target: { value: JSON.stringify(SCHEMA) },
+    });
+    expect(update).toHaveBeenLastCalledWith("start", {
+      payload_fields: [],
+      payload_schema: SCHEMA,
+    });
+    await userEvent.click(screen.getByRole("combobox", { name: "Payload contract" }));
+    await userEvent.click(screen.getByRole("option", { name: "Simple fields" }));
+    expect(update).toHaveBeenLastCalledWith("start", {
+      payload_fields: [{ name: "title", type: "text" }],
+      payload_schema: null,
+    });
+    expect(screen.getByLabelText("Name")).toHaveValue("title");
+  });
+
+  it("renders nothing for a trigger that declares no payload", () => {
+    const { container } = render(
+      <PayloadContractForm node={node({}, "trigger.chat")} updateNodeConfig={vi.fn()} />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

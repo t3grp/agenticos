@@ -26,7 +26,10 @@ from app.workflows.nodes._channels import check_listening_bot
 from app.workflows.nodes._triggers import (
     EmailTriggerOutput,
     MailAttachment,
+    ScheduleTriggerOutput,
+    ScheduleTriggerOutputV1,
     TableRecordTriggerConfig,
+    schedule_local_fields,
 )
 from app.workflows.nodes.trigger_channel_message._handler import ChannelMessageTriggerConfig
 from app.workflows.nodes.trigger_channel_message._handler import handle as channel_message
@@ -164,7 +167,32 @@ HANDED_ON = [
     (
         schedule,
         {"fired_at": _FIRED.isoformat(), "input": {"region": "eu"}},
-        {"fired_at": _FIRED, "input": {"region": "eu"}},
+        {
+            "fired_at": _FIRED,
+            "input": {"region": "eu"},
+            # A run input that predates the local fields reads them in UTC.
+            "weekday": "Tuesday",
+            "local_date": "2026-09-29",
+            "local_time": "09:00",
+        },
+    ),
+    (
+        schedule,
+        {
+            "fired_at": _FIRED.isoformat(),
+            "input": {"region": "eu"},
+            # A tick admitted in the workflow's timezone keeps its own values.
+            "weekday": "Tuesday",
+            "local_date": "2026-09-29",
+            "local_time": "18:00",
+        },
+        {
+            "fired_at": _FIRED,
+            "input": {"region": "eu"},
+            "weekday": "Tuesday",
+            "local_date": "2026-09-29",
+            "local_time": "18:00",
+        },
     ),
     (
         table_record,
@@ -193,7 +221,17 @@ HANDED_ON = [
 @pytest.mark.parametrize(
     ("handle", "run_input", "output"),
     HANDED_ON,
-    ids=["chat", "channel", "github", "gmail", "outlook", "webhook", "schedule", "table"],
+    ids=[
+        "chat",
+        "channel",
+        "github",
+        "gmail",
+        "outlook",
+        "webhook",
+        "schedule",
+        "schedule-tokyo",
+        "table",
+    ],
 )
 async def test_a_trigger_hands_the_graph_what_its_surface_started_the_run_with(
     handle, run_input: dict[str, Any], output: dict[str, Any]
@@ -230,6 +268,90 @@ async def test_a_run_stored_before_the_thread_fields_still_validates():
         result = await gmail(None, None)
     assert isinstance(result, Completed)
     assert result.output == message
+
+
+async def test_a_run_stored_before_the_schedule_fields_still_validates():
+    stored = {"fired_at": _FIRED.isoformat(), "input": {"region": "eu"}}
+    tick = ScheduleTriggerOutput.model_validate(stored)
+    assert (tick.weekday, tick.local_date, tick.local_time) == ("Tuesday", "2026-09-29", "09:00")
+    with context.dispatching_as(_dispatch(stored)):
+        result = await schedule(None, None)
+    assert isinstance(result, Completed)
+    assert result.output == tick
+
+
+def test_a_schedule_tick_reads_its_local_fields_in_the_workflow_timezone():
+    # Spring forward in New York: 02:00 never happens, so 06:30 UTC is still
+    # 01:30 EST and 07:30 UTC is already 03:30 EDT, both Sunday.
+    assert schedule_local_fields(datetime(2026, 3, 8, 6, 30, tzinfo=UTC), "America/New_York") == {
+        "weekday": "Sunday",
+        "local_date": "2026-03-08",
+        "local_time": "01:30",
+    }
+    assert schedule_local_fields(datetime(2026, 3, 8, 7, 30, tzinfo=UTC), "America/New_York") == {
+        "weekday": "Sunday",
+        "local_date": "2026-03-08",
+        "local_time": "03:30",
+    }
+    # Fall back: the 01:30 hour happens twice, once on each side of the change.
+    assert schedule_local_fields(datetime(2026, 11, 1, 5, 30, tzinfo=UTC), "America/New_York") == {
+        "weekday": "Sunday",
+        "local_date": "2026-11-01",
+        "local_time": "01:30",
+    }
+    assert schedule_local_fields(datetime(2026, 11, 1, 6, 30, tzinfo=UTC), "America/New_York") == {
+        "weekday": "Sunday",
+        "local_date": "2026-11-01",
+        "local_time": "01:30",
+    }
+    # A tick just past midnight UTC is still the previous evening in Los Angeles.
+    assert schedule_local_fields(
+        datetime(2026, 9, 29, 2, 0, tzinfo=UTC), "America/Los_Angeles"
+    ) == {"weekday": "Monday", "local_date": "2026-09-28", "local_time": "19:00"}
+    # A moment with no timezone of its own is read as UTC.
+    assert schedule_local_fields(
+        datetime(2026, 9, 29, 9, 0),  # noqa: DTZ001 - the naive case is the point
+        "UTC",
+    ) == {
+        "weekday": "Tuesday",
+        "local_date": "2026-09-29",
+        "local_time": "09:00",
+    }
+
+
+def test_a_schedule_tick_with_only_some_local_fields_fills_the_rest_in_utc():
+    tick = ScheduleTriggerOutput.model_validate(
+        {"fired_at": _FIRED.isoformat(), "input": {}, "weekday": "Friday"}
+    )
+    assert tick.weekday == "Friday"
+    assert (tick.local_date, tick.local_time) == ("2026-09-29", "09:00")
+
+
+def test_a_schedule_tick_with_an_unreadable_fired_at_still_fails():
+    for stored in (
+        {"fired_at": "not a time", "input": {}},
+        ["fired_at"],
+    ):
+        with pytest.raises(ValidationError):
+            ScheduleTriggerOutput.model_validate(stored)
+
+
+def test_the_schedule_node_bumped_to_version_2_and_keeps_version_1():
+    current = _registry.get(SCHEDULE, 2)
+    assert current.output_schema is ScheduleTriggerOutput
+    assert current.available is None
+    # The catalog serializes the new fields from the output schema alone.
+    assert {"weekday", "local_date", "local_time"} <= set(
+        current.output_schema.model_json_schema()["properties"]
+    )
+    kept = _registry.get(SCHEDULE, 1)
+    assert kept.output_schema is ScheduleTriggerOutputV1
+    assert set(kept.output_schema.model_fields) == {"fired_at", "input"}
+    assert kept.available is not None and kept.available() is False
+    assert {item.version for item in _registry.all_node_definitions() if item.id == SCHEDULE} == {
+        1,
+        2,
+    }
 
 
 def test_the_outlook_config_takes_only_keys_the_matcher_reads():
@@ -346,6 +468,64 @@ async def test_a_table_trigger_watches_only_columns_a_record_stores(monkeypatch)
     problems = await check_resources(MagicMock(), MagicMock(), config)
 
     assert [field for field, _ in problems] == ["table.column_ids.1", "table.column_ids.2"]
+
+
+async def test_a_table_trigger_declares_its_record_fields_against_live_columns(monkeypatch):
+    # `side_effect`, not `return_value`: the shared list would keep every
+    # problem a previous call appended to it.
+    monkeypatch.setattr(
+        "app.workflows.nodes.trigger_table_record._handler.check_table",
+        AsyncMock(side_effect=lambda *args, **kwargs: []),
+    )
+    monkeypatch.setattr(
+        "app.workflows.nodes.trigger_table_record._handler.virtual_table_repo.get_schema_version",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                columns=[
+                    {"id": str(uuid.uuid4()), "label": "Email", "type": "email"},
+                    {"id": str(uuid.uuid4()), "label": "Score", "type": "integer"},
+                    {"id": str(uuid.uuid4()), "label": "Old", "type": "text", "archived": True},
+                ]
+            )
+        ),
+    )
+
+    def _config(fields: list[dict]) -> TableRecordTriggerConfig:
+        return TableRecordTriggerConfig.model_validate(
+            {
+                "table": {"table_id": str(_TABLE), "schema_version": 1},
+                "payload_fields": fields,
+            }
+        )
+
+    assert (
+        await check_resources(
+            MagicMock(),
+            MagicMock(),
+            _config(
+                [
+                    {"name": "Email", "type": "text"},
+                    {"name": "Score", "type": "integer"},
+                ]
+            ),
+        )
+        == []
+    )
+    # A field naming a column the table no longer has - removed or renamed -
+    # is a publish problem, not a missing value at run time.
+    removed = await check_resources(
+        MagicMock(), MagicMock(), _config([{"name": "Gone", "type": "text"}])
+    )
+    assert [field for field, _ in removed] == ["payload_fields.0.name"]
+    archived = await check_resources(
+        MagicMock(), MagicMock(), _config([{"name": "Old", "type": "text"}])
+    )
+    assert [field for field, _ in archived] == ["payload_fields.0.name"]
+    # A field claiming a type the column cannot hold is a publish problem too.
+    mistyped = await check_resources(
+        MagicMock(), MagicMock(), _config([{"name": "Score", "type": "text"}])
+    )
+    assert [field for field, _ in mistyped] == ["payload_fields.0.type"]
 
 
 def test_a_table_trigger_starts_on_added_records_unless_told_more_and_names_each_once():

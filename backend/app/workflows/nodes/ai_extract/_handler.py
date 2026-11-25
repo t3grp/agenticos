@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.spec import AgentSpec, checked_output_schema
 from app.core.permissions import AuthContext
+from app.workflows.contracts.definition import Port
+from app.workflows.contracts.payload_schema import typed_output_attr
 from app.workflows.contracts.results import Completed, Failed, NodeResult, WorkflowError
 from app.workflows.nodes import _model_step
 
@@ -57,6 +59,22 @@ class AiExtractOutput(BaseModel):
 
     data: dict[str, Any]
     agent_run_id: UUID
+
+
+def ports_for(config: BaseModel | None) -> tuple[Port, ...]:
+    """`in`, and `out` with `data` typed by the fields the step extracts - so
+    `{{Extract.data.total}}` type-checks at publish. The schema is required
+    on the config, so the only untyped case is a schema no model can carry,
+    which keeps `data` dynamic as today."""
+    out_schema = AiExtractOutput
+    if isinstance(config, AiExtractConfig):
+        typed = typed_output_attr(AiExtractOutput, "data", config.output_schema, required=True)
+        if typed is not None:
+            out_schema = typed
+    return (
+        Port(id="in", label="In", kind="input", schema=None),
+        Port(id="out", label="Out", kind="output", schema=out_schema),
+    )
 
 
 def _spec(config: AiExtractConfig) -> AgentSpec:

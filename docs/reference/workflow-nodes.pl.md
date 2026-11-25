@@ -1,5 +1,5 @@
 ---
-source_sha: "0ffe0c35d627"
+source_sha: "966a0aa38d11"
 ---
 
 # Węzły workflow { #workflow-nodes }
@@ -40,6 +40,11 @@ run, zamrożone przy przyjęciu runa i najwyżej `WORKFLOW_RUN_MAX_INPUT_BYTES`.
 testowy uruchomiony z wejściem innego kształtu kończy wyzwalacz błędem
 `TRIGGER_INPUT_INVALID`. Drugi wyzwalacz albo wyzwalacz, od którego graf się nie
 zaczyna, jest odrzucany przy publikacji.
+
+Webhook, GitHub, Schedule albo Table record może zadeklarować, co zawiera jego
+payload - proste pola albo JSON Schema - we własnym oknie kroku wyzwalacza, w
+**Payload fields** obok innych ustawień. Arkusz **Trigger** w **More** pokazuje
+opublikowane starty i ich kontrolki; nie edytuje deklaracji.
 
 ### core.input { #core-input }
 
@@ -214,12 +219,32 @@ JSON, zostaje przypięte jako wynik wyzwalacza, więc każdy kolejny krok da si�
 przetestować na prawdziwym dostarczeniu. Testowy URL nie sprawdza podpisu i nigdy
 nie uruchamia runu.
 
+Węzeł może też zadeklarować, co zawiera `body` - proste pola (`payload_fields`)
+albo JSON Schema (`payload_schema`), jedno albo drugie. Zadeklarowane pola są
+typowane przy publikacji, więc `{{Webhook.body.orderId}}` sprawdza się bez
+przebiegu testowego, a dostarczenie, które nie pasuje, jest odrzucane przed
+startem jakiegokolwiek runa. Edytor oferuje zadeklarowane pola wraz z ich typami
+przed polami, które pokazał przebieg testowy dla tej samej nazwy; gdy nic nie
+zadeklarowano, oferowane są tylko pola przebiegu testowego. Lista pól jest zamknięta - niezgłoszony klucz jest
+odrzucany - a zagnieżdżone dostarczenie wymaga warstwy schematu. Pola są
+kluczowane swoją nazwą JSON, więc `orderId` i `First name` to obie poprawne nazwy.
+
+::: app.workflows.nodes.trigger_webhook._handler.WebhookTriggerConfig
+
 ::: app.workflows.nodes._triggers.WebhookTriggerOutput
 
 ### trigger.schedule { #trigger-schedule }
 
 **Schedule.** Uruchamiany według zegara, w strefie czasowej workflow i najczęściej raz na
-minutę.
+minutę. Tick przekazuje też swój dzień tygodnia, datę i czas w tej strefie czasowej -
+`weekday` (angielska nazwa dnia, na przykład `Monday`), `local_date` (`YYYY-MM-DD`)
+i `local_time` (`HH:MM`) - wyprowadzone z `fired_at` przy przyjęciu ticka, więc krok
+wysyłający wiadomość może napisać `{{Schedule.weekday}}` bez przebiegu testowego.
+Wejście runa starsze od tych pól odczytuje je w UTC. Jego `input` może
+zadeklarować ten sam kontrakt payloadu co webhook - proste pola albo JSON
+Schema. Zadeklarowane `input` jest sprawdzane przy publikacji i ponownie w
+chwili ticka, jeśli zapisane wejście zostało zmienione: tick, który już nie
+pasuje, jest pomijany, a harmonogram zachowuje następny tick.
 
 ::: app.workflows.nodes._triggers.ScheduleTriggerConfig
 
@@ -230,7 +255,11 @@ minutę.
 **Table record.** Uruchamiany dodaniem, zmianą lub usunięciem rekordu jego tabeli -
 tym, co wymienia `events` - gdy rekord pasuje do każdego filtra. Zmiana uruchamia go
 tylko wtedy, gdy zmieniła się kolumna wybrana dla tabeli, o ile kolumny są wybrane.
-Publikacja wymaga dostępu do odczytu tabeli.
+Publikacja wymaga dostępu do odczytu tabeli. Jego pola rekordu można
+zadeklarować w ten sam sposób, jako proste pola kluczowane etykietą kolumny -
+`{{Record.fields.Email}}` - a publikacja sprawdza każde zadeklarowane pole
+względem bieżącej kolumny tabeli: kolumna, która została usunięta lub
+przemianowana, albo typ, którego kolumna nie pomieści, to problem publikacji.
 
 ::: app.workflows.nodes._triggers.TableRecordTriggerConfig
 
@@ -257,7 +286,11 @@ jako członek, który go opublikował. `triggered_by` to `form`.
 **GitHub.** Startuje od dostawy podpisanej przez GitHub dla repozytorium, jednego ze
 zdarzeń i - jeśli węzeł je wymienia - jednej z akcji, które wskazuje węzeł. Publikacja
 rejestruje hook przez podłączone konto GitHub organizacji, gdy może, albo raz pokazuje
-sekret do wklejenia. `triggered_by` to `github`.
+sekret do wklejenia. `triggered_by` to `github`. Węzeł może zadeklarować, co
+zawiera `payload` - proste pola albo JSON Schema. Dostarczenie, które nie pasuje,
+jest odrzucane przed startem jakiegokolwiek runa. Lista pól obejmuje tylko
+skalarne klucze najwyższego poziomu, więc prawdziwe dostarczenie GitHub, z
+obiektami `repository` i `sender`, wymaga warstwy schematu.
 
 ::: app.workflows.nodes.trigger_github._handler.GithubTriggerConfig
 
@@ -707,6 +740,24 @@ Publikacja sprawdza, czy autor może używać modelu.
 | `ai.extract` | Wyciąga ze zbindowanego `text` pola nazwane w `output_schema`, pomijając to, czego tekst nie mówi | `data`, obiekt tego kształtu |
 | `ai.rewrite` | Streszcza (`short`, `medium`, `long`), tłumaczy na `language` albo przepisuje zbindowany `text` w danym `style` | `text` |
 
+**Typowane pola odpowiedzi.** Gdy odpowiedź kroku ma zadeklarowany kształt,
+edytor oferuje jej pola wraz z typami - w uzupełnieniach `{{` i w selektorze
+**Data** obok parametru - a publikacja sprawdza wiązanie względem
+nich - bez przebiegu testowego. Gdy przebieg testowy pokazał pole o tej samej
+nazwie, wygrywa zadeklarowany typ. `ai.prompt` typuje `structured` z
+`structured_output_schema`; `ai.extract` typuje `data` z `output_schema`;
+`ai.classify` typuje `category` jako wyliczenie swoich kategorii (i `other`),
+z `reason` i `confidence` jak zadeklarowano. Wiązanie do pola, którego
+odpowiedź nie deklaruje, jest problemem publikacji, podobnie jak wiązanie do
+zadeklarowanego pola o niewłaściwym typie. Bez zadeklarowanego kształtu
+odpowiedź pozostaje dynamiczna: edytor oferuje tylko to, co widział przebieg
+testowy, a przebieg sprawdza ścieżkę, gdy krok zostanie wysłany. Odpowiedź
+modelu, która nie pasuje do schematu, jest odsyłana, a potem kończy krok
+błędem `STRUCTURED_OUTPUT_MISMATCH`, jak wcześniej; wiązanie w dół do
+zadeklarowanego pola, którego brakuje w odpowiedzi w czasie przebiegu, kończy
+krok odczytujący błędem `INVALID_BINDING`, jak dziś brakujące odwołanie
+w szablonie.
+
 Kategorie klasyfikatora są jego portami, w kolejności, a model może odpowiedzieć
 tylko nazwą jednej z nich albo `other`. Odpowiedź, która nie jest obiektem, o
 który prosił krok, kończy go błędem `STRUCTURED_OUTPUT_MISMATCH`; wyczerpany
@@ -819,9 +870,18 @@ a krok kończy się błędem `AGENT_BUDGET_EXCEEDED`.
 Agent z własnym formatem odpowiedzi przekazuje swój obiekt jako `structured`.
 `structured_output_schema` prosi w zamian o inny kształt: agent jest uruchamiany
 z tym schematem, a odpowiedź, która go łamie, wraca do modelu do poprawki. Obiekt
-jest sprawdzany jeszcze raz, zanim cokolwiek dalej się wykona. Agent, który nigdy
-nie da pasującego obiektu, kończy krok błędem `AGENT_RUN_FAILED`, a odpowiedź bez
+jest sprawdzany jeszcze raz, zanim cokolwiek dalej się wykona.
+
+Agent, który nigdy nie da pasującego obiektu, kończy krok błędem `AGENT_RUN_FAILED`, a odpowiedź bez
 obiektu tam, gdzie o niego proszono, błędem `STRUCTURED_OUTPUT_MISMATCH`.
+
+Pola schematu są typowane na wyjściu, więc późniejszy krok wiąże
+`{{Agent.structured.priority}}` z jego zadeklarowanym typem, a publikacja
+sprawdza wiązanie - zob. [typowane pola odpowiedzi](#model-steps).
+
+Agent skonfigurowany w kroku typuje `structured` z własnego formatu odpowiedzi w ten
+sam sposób; format przypiętego agenta z katalogu nie znajduje się w kroku, więc
+jego odpowiedź pozostaje dynamiczna do czasu ustawienia nadpisania.
 
 | Jak zakończył się run agenta | Wynik kroku |
 |---|---|
