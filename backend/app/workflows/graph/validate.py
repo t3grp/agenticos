@@ -578,8 +578,6 @@ def _schedule_payload_problems(graph: WorkflowGraph, definitions: DefinitionMap)
         if not isinstance(config, PayloadSchemaConfig):
             continue
         schedule_input = getattr(config, "input", {})
-        if not isinstance(schedule_input, dict):
-            continue
         for problem in payload_problems(config, schedule_input):
             field = problem["field"]
             problems.append(

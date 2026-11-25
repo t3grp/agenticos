@@ -172,7 +172,7 @@ class _Savepoint:
         return False
 
 
-def _schedule_exposure(node_id: uuid.UUID, run_input: dict):
+def _schedule_exposure(node_id: uuid.UUID, run_input: object):
     from datetime import datetime
     from types import SimpleNamespace
 
@@ -291,3 +291,37 @@ async def test_a_tick_whose_stored_input_fits_is_admitted(monkeypatch):
     assert update.await_args.kwargs["update_data"]["last_fired_at"] == datetime(
         2026, 11, 25, tzinfo=UTC
     )
+
+
+async def test_a_tick_whose_stored_input_is_not_an_object_is_skipped(monkeypatch):
+    import importlib
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+
+    module = importlib.import_module("app.services.workflow_exposure")
+    node_id = uuid.uuid4()
+    exposure = _schedule_exposure(node_id, ["not", "an", "object"])
+    ctx = AuthContext(user_id=uuid.uuid4(), organization_id=uuid.uuid4(), role=OrgRoleName.OWNER)
+    workflow = SimpleNamespace(settings={})
+    admit = AsyncMock()
+    monkeypatch.setattr(
+        module.workflow_exposure_repo,
+        "claim_due_schedules",
+        AsyncMock(return_value=[exposure]),
+    )
+    monkeypatch.setattr(module.workflow_exposure_repo, "update", AsyncMock())
+    monkeypatch.setattr(module, "_queue_due_check", AsyncMock())
+    db = MagicMock(begin_nested=MagicMock(return_value=_Savepoint()))
+    service = module.WorkflowExposureService(db)
+    monkeypatch.setattr(service, "_last_run_live", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        service,
+        "_fire_context",
+        AsyncMock(return_value=(ctx, workflow, _schedule_version(node_id))),
+    )
+    monkeypatch.setattr(service.runs, "admit_pinned", admit)
+
+    admitted = await service.fire_due(now=datetime(2026, 11, 25, tzinfo=UTC))
+
+    assert admitted == []
+    assert admit.await_count == 0

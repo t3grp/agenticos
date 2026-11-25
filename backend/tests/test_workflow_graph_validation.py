@@ -909,6 +909,30 @@ async def test_a_schedule_input_that_does_not_fit_its_declared_schema_is_refused
     assert validated.nodes == (fitting,)
 
 
+async def test_a_schedule_with_an_invalid_config_is_refused_on_its_config_not_its_input(
+    mock_db_session,
+):
+    # The config fails its own schema, so there is no validated config for the
+    # payload check to read: the refusal is the config problem, not an input
+    # problem the check never ran.
+    trigger = _trigger_node(
+        "trigger.schedule",
+        2,
+        {
+            "schedule_kind": "interval",
+            "interval_seconds": 30,
+            "input": {"region": 7},
+            "payload_fields": [{"name": "region", "type": "text"}],
+        },
+    )
+    graph = WorkflowGraph(entry_node_id=trigger.id, nodes=(trigger,))
+    fields = await _fields(graph, mock_db_session)
+    assert any(field["field"] == f"nodes.{trigger.id}.config.interval_seconds" for field in fields)
+    assert not any(
+        field["field"].startswith(f"nodes.{trigger.id}.config.input") for field in fields
+    )
+
+
 # Rule 5 - exclusive merge
 
 

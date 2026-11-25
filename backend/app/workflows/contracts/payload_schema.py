@@ -293,7 +293,7 @@ def payload_problems(config: PayloadSchemaConfig, value: dict[str, Any]) -> list
     return []
 
 
-# --- Tier 2 schemas as Pydantic models, for publish-time path typing ---
+# Tier 2 schemas as Pydantic models, for publish-time path typing.
 
 
 def _schema_resolver(schema: InputSchema):  # type: ignore[no-untyped-def]
