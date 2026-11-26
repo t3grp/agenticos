@@ -1,5 +1,5 @@
 ---
-source_sha: "b1e4a651184a"
+source_sha: "746b0fddb74d"
 ---
 
 # La consola { #the-console }
@@ -308,6 +308,27 @@ a la bandeja privada. Cada pestaña tiene sus acciones de creación.
 `/routines?tab=watches` abre los seguimientos. Cada comprobación hace como máximo
 30 solicitudes al modelo y recorta los resultados largos, así que seguir un
 workspace grande sigue siendo barato.
+
+## Calendario { #calendar }
+
+**Calendario** muestra tus reuniones, rutinas y recordatorios en una línea de
+tiempo mensual. Las reuniones proceden de tus propias conexiones de Google
+Calendar y Outlook; las rutinas y los recordatorios proceden de los agentes
+que los ejecutan. La vista es de solo lectura: nunca dispara, reprograma ni
+edita nada, en ningún lado.
+
+Cada fuente es un carril con su propio interruptor. Una rutina que se ejecuta
+más de una vez por hora muestra un marcador al día en lugar de cientos de
+entradas. Un recordatorio es una rutina de una sola vez: aparece a su hora
+programada y, una vez ejecutado, desaparece del calendario — su resultado está
+en el Inbox y en el registro de ejecuciones.
+
+Un carril que la vista no pudo leer lo indica en lugar de mostrar un mes
+vacío. Conecta o reconecta el calendario en **Connections → Apps**; las rutinas
+y los recordatorios se siguen mostrando mientras un carril externo está caído.
+La vista solo lee tus propias conexiones y tus propias rutinas — un
+administrador de la organización no ve las reuniones de nadie más a través de
+ella.
 
 Organización → IA y servicios muestra tarjetas individuales con interruptores y ajustes desplegables. El informe diario y las sugerencias comparten modelo, presupuesto y horario; la monitorización y los mensajes de bienvenida tienen sus propias tarjetas. Los cambios sin guardar se pueden descartar.
 

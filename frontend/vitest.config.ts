@@ -85,6 +85,8 @@ export default defineConfig({
         "src/components/dashboard/widgets/sandbox-*.tsx",
         // The routines card, held to the gate by #594's own "done when".
         "src/components/dashboard/widgets/routines.tsx",
+        // The calendar's Today card: the next 24 hours on the dashboard.
+        "src/components/dashboard/widgets/calendar-today.tsx",
         "src/components/dashboard/widgets/background-tasks.tsx",
         // The agent messages card.
         "src/components/dashboard/widgets/agent-messages.tsx",

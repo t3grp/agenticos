@@ -4,6 +4,7 @@ import {
   Activity,
   Bug,
   Building2,
+  CalendarDays,
   LayoutDashboard,
   MessagesSquare,
   Plug,
@@ -139,6 +140,12 @@ export const NAV_GROUPS: NavGroup[] = [
         labelKey: "routines",
         href: ROUTES.ROUTINES,
         icon: TimerReset,
+        permission: Perm.agentsView,
+      },
+      {
+        labelKey: "calendar",
+        href: ROUTES.CALENDAR,
+        icon: CalendarDays,
         permission: Perm.agentsView,
       },
       {

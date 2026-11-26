@@ -142,6 +142,7 @@ WIDGET_IDS: frozenset[str] = frozenset(
         "knowledge",
         "activity-rhythm",
         "routines",
+        "calendar-today",
         "notifications",
         "tables",
         "workflows",

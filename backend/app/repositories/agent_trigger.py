@@ -35,6 +35,7 @@ from app.db.models.agent_trigger import (
     AgentTriggerWebhookReceipt,
     TriggerAttempt,
     TriggerOverlap,
+    TriggerType,
 )
 from app.db.models.resource_grant import Visibility
 from app.schemas.agent_trigger import (
@@ -359,6 +360,46 @@ async def list_for_organization(
         .limit(limit)
     )
     return [(trigger, agent) for trigger, agent in result.all()], total
+
+
+async def list_schedules_for_calendar(
+    db: AsyncSession,
+    *,
+    organization_id: UUID,
+    user_id: UUID | None,
+    see_all: bool,
+    shared_ids: list[UUID],
+    limit: int = 500,
+) -> list[tuple[AgentTrigger, Agent]]:
+    """Every schedule the caller may see, each with its agent, for the calendar.
+
+    The same visibility predicate as :func:`list_for_organization` - a schedule
+    is shown when the caller sees its agent - but without that listing's
+    `one_shot` exclusion: a one-shot routine is a reminder, and the calendar is
+    where reminders are shown. Event triggers are excluded - they have no
+    `next_fire_at` and no occurrence to place on a timeline. Read-only: the
+    rows are returned as loaded, never modified.
+    """
+    where = [
+        AgentTrigger.organization_id == organization_id,
+        AgentTrigger.trigger_type == TriggerType.SCHEDULE.value,
+    ]
+    if not see_all:
+        where.append(
+            or_(
+                Agent.owner_user_id == user_id,
+                Agent.visibility == Visibility.ORG.value,
+                AgentTrigger.agent_id.in_(shared_ids) if shared_ids else false(),
+            )
+        )
+    result = await db.execute(
+        select(AgentTrigger, Agent)
+        .join(Agent, Agent.id == AgentTrigger.agent_id)
+        .where(*where)
+        .order_by(AgentTrigger.created_at.desc())
+        .limit(limit)
+    )
+    return [(trigger, agent) for trigger, agent in result.all()]
 
 
 async def create(

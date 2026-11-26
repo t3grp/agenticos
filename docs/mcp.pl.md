@@ -1,5 +1,5 @@
 ---
-source_sha: "4e97f249e052"
+source_sha: "13f738f1f69e"
 ---
 
 # MCP — narzędzia, których nikt tutaj nie musi pisać { #mcp-the-tools-nobody-here-has-to-write }
@@ -47,6 +47,14 @@ czatu, zdalne agenty, vault i sandboxy znajdziesz w **More**. Istniejące linki
 Composio przechowuje poświadczenia dostawców i przekazuje żądania oraz wyniki.
 Połączenie aplikacji nie synchronizuje jej automatycznie z bazą wiedzy. Opcjonalna
 konfiguracja nadal jest dostępna pod `/onboarding` i w menu konta.
+
+Strona **Kalendarz** czyta przez Twoje własne połączenia Composio, a nie przez
+grant portalu. Połącz Google Calendar albo Outlook w **Connections → Apps**,
+a strona pokaże Twoje spotkania na żywo, z zakresami kalendarza tylko do
+odczytu (`calendar.readonly` dla Google, `Calendars.Read` dla Outlook). Nic
+nie jest kopiowane ani przechowywane. Grant portalu ma zakres organizacji i
+istnieje po to, by rutyna mogła się uruchomić, gdy nadejdzie spotkanie; nie
+jest źródłem widoku, a widok nigdy nie widzi kalendarza innej osoby.
 
 Operator konfiguruje klucz projektu runtime, osobny klucz metadanych katalogu,
 niestandardowe konfiguracje uwierzytelniania toolkitów oraz weryfikację tożsamości

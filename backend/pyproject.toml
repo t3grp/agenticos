@@ -777,6 +777,11 @@ include = [
     "app/services/trigger_dedupe.py",
     "app/services/trigger_templates.py",
     "app/schemas/trigger_template.py",
+    # The calendar view: one timeline over external meetings, routine
+    # occurrences and reminders, read-only.
+    "app/services/calendar_events.py",
+    "app/schemas/calendar.py",
+    "app/api/routes/v1/calendar.py",
     "app/services/agent_registry.py",
     "app/services/agent_runner.py",
     "app/services/agent_templates.py",
@@ -1799,6 +1804,11 @@ include = [
     "app/services/trigger_dedupe.py",
     "app/services/trigger_templates.py",
     "app/schemas/trigger_template.py",
+    # The calendar view: one timeline over external meetings, routine
+    # occurrences and reminders, read-only.
+    "app/services/calendar_events.py",
+    "app/schemas/calendar.py",
+    "app/api/routes/v1/calendar.py",
     "app/services/agent_registry.py",
     "app/services/agent_runner.py",
     "app/services/agent_templates.py",

@@ -1,5 +1,5 @@
 ---
-source_sha: "7aa382852d59"
+source_sha: "37f0ac4c2a51"
 ---
 
 # Katalog capability { #the-capability-catalog }
@@ -1418,6 +1418,13 @@ Ktoś z dwoma kontami Google dostaje pod punktem montowania dwa foldery, nazwane
 od każdego adresu. Ktoś bez konta, np. klucz API albo harmonogram, nie dostaje
 folderu, a agent dowiaduje się o tym. Konto organizacji odpowiada za każdego,
 kto rozmawia z agentem.
+
+**Strona Kalendarz czyta przez te same połączenia.** Miesięczny widok konsoli
+wyświetla spotkanie, odczytując na żywo własne połączenie Google albo Outlook
+osoby przeglądającej, z tymi samymi zakresami kalendarza tylko do odczytu,
+których używają narzędzia agentów — nie przechowuje żadnej kopii kalendarza.
+Grant portalu, który pozwala rutynie uruchomić się, gdy nadejdzie spotkanie,
+to połączenie wyzwalacza o zakresie organizacji i nie jest tym, co czyta widok.
 
 **Spec nigdy nie zawiera poświadczenia, nadpisanego endpointu ani ścieżki na
 hoście API.** Publikacja odrzuca sekret, którego publikujący nie może użyczyć,

@@ -41,6 +41,14 @@ Composio hosts provider credentials and relays requests and results. Connecting
 an app does not automatically synchronize it into a knowledge base. Optional
 setup remains available at `/onboarding` and in the account menu.
 
+The **Calendar** page reads through your own Composio connections, not through
+a portal grant. Connect Google Calendar or Outlook under **Connections → Apps**
+and the page lists your meetings live, with the provider's read-only calendar
+scopes (`calendar.readonly` for Google, `Calendars.Read` for Outlook). Nothing
+is copied or stored. A portal grant is organization-scoped and exists so a
+routine can fire when a meeting arrives; it is not the view's source, and the
+view never sees another person's calendar.
+
 The operator configures a runtime project key, a separate catalog metadata key,
 any custom toolkit auth configs, and callback identity verification. See the fork's
 [Composio setup guide](https://github.com/t3grp/agenticos/blob/t3/integrations/composio/README.md)

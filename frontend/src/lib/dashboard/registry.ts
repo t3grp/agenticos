@@ -62,6 +62,7 @@ export type WidgetId =
   | "knowledge"
   | "activity-rhythm"
   | "routines"
+  | "calendar-today"
   | "notifications"
   | "artifacts"
   | "datasets"
@@ -274,6 +275,17 @@ export const WIDGETS: Record<WidgetId, WidgetDef> = {
     defaultRows: "r3",
     category: "attention",
     seeAll: ROUTES.ROUTINES,
+  },
+  "calendar-today": {
+    id: "calendar-today",
+    // What `GET /api/v1/calendar/events` itself demands: the primary read is
+    // the events route, gated on agents:view exactly as the org-wide
+    // `GET /triggers` is.
+    gate: holds(Perm.agentsView),
+    defaultSpan: "s6",
+    defaultRows: "r3",
+    category: "attention",
+    seeAll: ROUTES.CALENDAR,
   },
   channels: {
     id: "channels",

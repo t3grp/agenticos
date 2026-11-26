@@ -1,5 +1,5 @@
 ---
-source_sha: "b1e4a651184a"
+source_sha: "746b0fddb74d"
 ---
 
 # Konsola { #the-console }
@@ -301,6 +301,26 @@ prywatnego Inbox. Każda zakładka ma własne przyciski tworzenia.
 `/routines?tab=watches` otwiera obserwacje. Jedno sprawdzenie wykonuje najwyżej
 30 zapytań do modelu, a długie wyniki są przycinane, więc obserwacja dużego
 workspace pozostaje tania.
+
+## Kalendarz { #calendar }
+
+**Kalendarz** pokazuje spotkania, rutyny i przypomnienia na jednej osi
+miesiąca. Spotkania pochodzą z Twoich własnych połączeń Google Calendar i
+Outlook; rutyny i przypomnienia pochodzą od agentów, które je uruchamiają.
+Widok jest tylko do odczytu: nigdy niczego nie uruchamia, nie zmienia terminu
+ani nie edytuje, po żadnej ze stron.
+
+Każde źródło to pas z własnym przełącznikiem. Rutyna działająca częściej niż
+raz na godzinę pokazuje jeden znacznik dziennie zamiast setek wpisów.
+Przypomnienie to rutyna jednorazowa: pojawia się o zaplanowanej porze, a gdy
+już się wykona, znika z kalendarza — jej wynik jest w Inbox i w dzienniku
+wykonań.
+
+Pas, którego widok nie mógł odczytać, mówi to zamiast pokazywać pusty miesiąc.
+Połącz kalendarz ponownie w **Connections → Apps**; rutyny i przypomnienia
+nadal się pokazują, gdy zewnętrzny pas nie działa. Widok czyta tylko Twoje
+własne połączenia i Twoje własne rutyny — administrator organizacji nie widzi
+przez niego cudzych spotkań.
 
 Organizacja → AI i usługi pokazuje osobne karty funkcji z przełącznikami i rozwijanymi ustawieniami. Codzienny briefing i sugestie mają jeden model, budżet i harmonogram; monitoring oraz wiadomość powitalna mają własne karty. Niezapisane zmiany można odrzucić.
 

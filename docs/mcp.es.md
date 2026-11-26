@@ -1,5 +1,5 @@
 ---
-source_sha: "4e97f249e052"
+source_sha: "13f738f1f69e"
 ---
 
 # MCP — las herramientas que aquí nadie tiene que escribir { #mcp-the-tools-nobody-here-has-to-write }
@@ -50,6 +50,15 @@ Composio aloja las credenciales de los proveedores y retransmite solicitudes y
 resultados. Conectar una app no la sincroniza automáticamente con una base de
 conocimiento. La configuración opcional sigue disponible en `/onboarding` y en el
 menú de la cuenta.
+
+La página **Calendario** lee a través de tus propias conexiones de Composio, no
+a través de un permiso de portal. Conecta Google Calendar u Outlook en
+**Connections → Apps** y la página mostrará tus reuniones en directo, con los
+ámbitos de calendario de solo lectura del proveedor (`calendar.readonly` para
+Google, `Calendars.Read` para Outlook). Nada se copia ni se guarda. Un permiso
+de portal tiene ámbito de organización y existe para que una rutina se dispare
+cuando llega una reunión; no es la fuente de la vista, y la vista nunca ve el
+calendario de otra persona.
 
 El operador configura una clave de proyecto de ejecución, otra clave para los
 metadatos del catálogo, las configuraciones de autenticación de toolkits
