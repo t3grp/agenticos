@@ -987,6 +987,16 @@ def get_agent_trigger_service(db: DBSession) -> AgentTriggerService:
 
 AgentTriggerSvc = Annotated[AgentTriggerService, Depends(get_agent_trigger_service)]
 
+from app.services.calendar_events import CalendarEventsService
+
+
+def get_calendar_events_service(db: DBSession) -> CalendarEventsService:
+    """Create CalendarEventsService instance with database session."""
+    return CalendarEventsService(db)
+
+
+CalendarEventsSvc = Annotated[CalendarEventsService, Depends(get_calendar_events_service)]
+
 from app.services.agent_environment import AgentEnvironmentService
 
 

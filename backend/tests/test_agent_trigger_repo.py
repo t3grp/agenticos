@@ -191,6 +191,53 @@ class TestReading:
         assert total == 1
         assert rows == [(trigger, "Nightly")]
 
+    async def test_the_calendar_listing_keeps_one_shot_schedules(self):
+        """The calendar is where reminders are shown, and a reminder is a
+        one-shot routine - so unlike the org listing, this read must not
+        exclude one-shots. It still excludes event triggers, which have no
+        occurrence to place on a timeline."""
+        session = _RecordingSession(_rows([]))
+        await agent_trigger_repo.list_schedules_for_calendar(
+            session, organization_id=uuid.uuid4(), user_id=uuid.uuid4(), see_all=True, shared_ids=[]
+        )
+        sql = _sql(session)
+        assert "agent_triggers.trigger_type" in sql
+        # The column is selected as part of the row; what must be absent is
+        # the org listing's `one_shot IS false` predicate.
+        assert "one_shot is false" not in sql
+
+    async def test_the_calendar_listing_applies_the_same_visibility_predicate(self):
+        """A schedule is shown when the caller sees its agent - owned,
+        org-visible, or shared - exactly the predicate the org listing uses,
+        so the calendar and the Routines page never disagree about what exists."""
+        organization_id, user_id = uuid.uuid4(), uuid.uuid4()
+        shared_ids = [uuid.uuid4()]
+        session = _RecordingSession(_rows([]))
+        await agent_trigger_repo.list_schedules_for_calendar(
+            session,
+            organization_id=organization_id,
+            user_id=user_id,
+            see_all=False,
+            shared_ids=shared_ids,
+        )
+        sql = _sql(session)
+        assert "join agents" in sql
+        assert "agents.owner_user_id" in sql
+        assert "agents.visibility" in sql
+        assert "agent_triggers.agent_id in" in sql
+        flat: set[object] = set()
+        for value in _filters(session).values():
+            flat.update(value if isinstance(value, list) else [value])
+        assert {organization_id, user_id, *shared_ids} <= flat
+
+    async def test_the_calendar_listing_returns_the_rows(self):
+        trigger = MagicMock()
+        session = _RecordingSession(_rows([(trigger, "Nightly")]))
+        rows = await agent_trigger_repo.list_schedules_for_calendar(
+            session, organization_id=uuid.uuid4(), user_id=uuid.uuid4(), see_all=True, shared_ids=[]
+        )
+        assert rows == [(trigger, "Nightly")]
+
 
 class TestWriting:
     async def test_create_builds_the_row_from_its_arguments(self):
