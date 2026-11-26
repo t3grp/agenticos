@@ -14,12 +14,16 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import AuthContext
+from app.core.secret_kinds import SecretKind
 from app.db.models.mcp_connection import McpConnection
 from app.db.models.organization import Organization, OrganizationMember
+from app.db.models.resource_grant import Visibility
 from app.db.models.user import User
 from app.repositories import mcp_registry_server_repo as repo
 from app.repositories import mcp_server_check_repo as check_repo
+from app.repositories import organization_secret_repo
 from app.services import mcp_catalog, mcp_listing
+from app.services.mcp_connection import is_google_mcp
 
 pytestmark = pytest.mark.anyio
 
@@ -40,6 +44,38 @@ async def _mirror(db, count: int) -> None:
     )
 
 
+async def _org_context(db: AsyncSession, *, google_app: bool = True) -> AuthContext:
+    """An owner in a fresh organization, which stores a Google client unless told not to.
+
+    The listing hides Google-hosted servers from an organization without one, so a test
+    of the whole catalog has to browse as an organization that has one.
+    """
+    user = User(email=f"mcp-{uuid4().hex}@example.test", is_active=True)
+    db.add(user)
+    await db.flush()
+    org = Organization(name="MCP workspace", slug=uuid4().hex, created_by_user_id=user.id)
+    db.add(org)
+    await db.flush()
+    db.add(OrganizationMember(organization_id=org.id, user_id=user.id, role="owner"))
+    if google_app:
+        # The listing reads only the row's kind and visibility, so the sealed value is a placeholder.
+        await organization_secret_repo.create(
+            db,
+            organization_id=org.id,
+            name="Google client",
+            description=None,
+            kind=SecretKind.GOOGLE_OAUTH_APP.value,
+            purpose="custom",
+            visibility=Visibility.ORG.value,
+            owner_user_id=None,
+            sealed_secret="sealed",
+            hint="test",
+            key_version=1,
+            created_by_user_id=user.id,
+        )
+    return AuthContext(user_id=user.id, organization_id=org.id, role="owner")
+
+
 class TestTheJoin:
     async def test_the_first_page_is_curated(self, db):
         await _mirror(db, 40)
@@ -51,7 +87,7 @@ class TestTheJoin:
     async def test_the_total_counts_both_sources(self, db):
         await _mirror(db, 40)
 
-        found = await mcp_listing.page(db, limit=5)
+        found = await mcp_listing.page(db, ctx=await _org_context(db), limit=5)
 
         assert found.total == len(mcp_catalog.CATALOG) + 40
         assert found.registry_total == 40
@@ -60,9 +96,10 @@ class TestTheJoin:
         """The off-by-one this exists for: with 99 curated rows and 50 to a page,
         page two holds the last 49 of them plus the mirror's first."""
         await _mirror(db, 40)
+        ctx = await _org_context(db)
         seen: list[str] = []
         for index in range((len(mcp_catalog.CATALOG) + 40 + 49) // 50):
-            found = await mcp_listing.page(db, skip=index * 50, limit=50)
+            found = await mcp_listing.page(db, ctx=ctx, skip=index * 50, limit=50)
             seen += [server.key for server in found.items]
 
         assert len(seen) == len(set(seen)), "a server appeared on two pages"
@@ -77,7 +114,9 @@ class TestTheJoin:
     async def test_a_mirrored_row_says_nobody_reviewed_it(self, db):
         await _mirror(db, 2)
 
-        found = await mcp_listing.page(db, skip=len(mcp_catalog.CATALOG), limit=50)
+        found = await mcp_listing.page(
+            db, ctx=await _org_context(db), skip=len(mcp_catalog.CATALOG), limit=50
+        )
 
         assert found.items
         assert all(server.reviewed is False for server in found.items)
@@ -123,7 +162,9 @@ class TestFiltering:
             ],
         )
 
-        found = await mcp_listing.page(db, category="development", limit=100)
+        found = await mcp_listing.page(
+            db, ctx=await _org_context(db), category="development", limit=100
+        )
 
         assert all(server.category == "development" for server in found.items)
         assert "mirror/ci" in [server.key for server in found.items]
@@ -134,6 +175,24 @@ class TestFiltering:
 
         assert found.items
         assert all(server.auth == "none" for server in found.items)
+
+
+class TestGoogleHostedServers:
+    async def test_a_google_hosted_server_is_listed_only_once_the_org_stores_a_google_client(
+        self, db
+    ):
+        """Google-hosted servers need the org's Google client to connect, so browsing hides them without one."""
+        hosted = {entry.key for entry in mcp_catalog.CATALOG if is_google_mcp(entry.url or "")}
+
+        without = await mcp_listing.page(
+            db, ctx=await _org_context(db, google_app=False), limit=300
+        )
+        with_client = await mcp_listing.page(db, ctx=await _org_context(db), limit=300)
+
+        assert hosted, "the catalog has Google-hosted entries to hide"
+        assert not hosted & {server.key for server in without.items}
+        assert hosted <= {server.key for server in with_client.items}
+        assert with_client.total - without.total == len(hosted)
 
 
 class TestWhatTheCheckFound:
@@ -186,7 +245,9 @@ class TestWhatTheCheckFound:
         await _mirror(db, 2)
         await self._checked(db, "mirror/0000", "registry", "open", "none")
 
-        found = await mcp_listing.page(db, skip=len(mcp_catalog.CATALOG), limit=50)
+        found = await mcp_listing.page(
+            db, ctx=await _org_context(db), skip=len(mcp_catalog.CATALOG), limit=50
+        )
         by_key = {server.key: server for server in found.items}
 
         assert by_key["mirror/0000"].auth == "none"
