@@ -35,7 +35,7 @@ export function MonthGrid({
   const weekdayT = useTranslations("triggers");
   const byDay = eventsByDay(events, timeZone);
   return (
-    <div data-tour="calendar-month" className="space-y-1">
+    <div className="space-y-1">
       <div className="grid grid-cols-7 gap-1">
         {gridWeekdayKeys().map((key) => (
           <div

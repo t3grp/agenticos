@@ -13,6 +13,7 @@ import {
   monthGridDays,
   sourceDotClass,
   sourceLabelKey,
+  weekGridDays,
   type CalendarEvent,
 } from "./calendar-events";
 
@@ -68,6 +69,22 @@ describe("gridWeekdayKeys", () => {
       "weekdaySat",
       "weekdaySun",
     ]);
+  });
+});
+
+describe("weekGridDays", () => {
+  it("returns the Monday-to-Sunday week holding a Sunday", () => {
+    // 1 November 2026 is a Sunday, so its week opens Monday 26 October.
+    const days = weekGridDays(2026, 10, 1);
+    expect(days).toHaveLength(7);
+    expect(days[0]).toEqual({ year: 2026, month: 9, day: 26, inMonth: false });
+    expect(days[6]).toEqual({ year: 2026, month: 10, day: 1, inMonth: true });
+  });
+
+  it("returns the week holding a midweek day, inside one month", () => {
+    const days = weekGridDays(2026, 10, 11);
+    expect(days[0]).toEqual({ year: 2026, month: 10, day: 9, inMonth: true });
+    expect(days[6]).toEqual({ year: 2026, month: 10, day: 15, inMonth: true });
   });
 });
 

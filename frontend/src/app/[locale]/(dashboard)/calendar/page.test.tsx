@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuthStore } from "@/stores";
 import CalendarPage from "./page";
-import { monthGridDays, type CalendarEventsRead } from "@/lib/calendar-events";
+import { monthGridDays, weekGridDays, type CalendarEventsRead } from "@/lib/calendar-events";
 
 vi.mock("@/hooks/use-calendar-events", () => ({
   useCalendarEvents: () => state,
@@ -48,6 +48,19 @@ const READ: CalendarEventsRead = {
       agent_id: "agent-1",
       agent_name: "Reporter",
       trigger_id: "trigger-1",
+      frequent: false,
+    },
+    {
+      id: "google-today",
+      title: "Today sync",
+      start: iso(new Date().getDate(), 11),
+      end: iso(new Date().getDate(), 12),
+      source: "google_calendar",
+      recurring: false,
+      url: null,
+      agent_id: null,
+      agent_name: null,
+      trigger_id: null,
       frequent: false,
     },
   ],
@@ -101,6 +114,31 @@ describe("the Calendar page", () => {
     const link = await screen.findByRole("link", { name: "Open link" });
     expect(link).toHaveAttribute("href", "/agents/agent-1");
     expect(screen.getByText("Agent: Reporter")).toBeInTheDocument();
+  });
+
+  it("shows one week of seven cells in week view", () => {
+    const { container } = render(<CalendarPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Week" }));
+    const cells = container.querySelectorAll(".min-h-24");
+    expect(cells).toHaveLength(7);
+    const today = new Date();
+    const days = weekGridDays(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayCell = cells[days.findIndex((day) => day.day === today.getDate())];
+    expect(todayCell?.textContent).toContain("Today sync");
+  });
+
+  it("lists one day's events in day view", () => {
+    render(<CalendarPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Day" }));
+    expect(screen.getByText(/Today sync/)).toBeInTheDocument();
+    expect(screen.queryByText(/Team standup/)).not.toBeInTheDocument();
+  });
+
+  it("shows the empty day state after moving off a day with events", () => {
+    render(<CalendarPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Day" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next day" }));
+    expect(screen.getByText("Nothing scheduled on this day.")).toBeInTheDocument();
   });
 
   it("offers a retry when the window cannot be read", () => {

@@ -120,6 +120,28 @@ export function gridWeekdayKeys(): string[] {
   return WEEKDAYS.map((day) => day.key);
 }
 
+/**
+ * The week containing one day: seven days, Monday to Sunday. The week view
+ * is the month grid with one row, so it needs no grid of its own.
+ */
+export function weekGridDays(year: number, month: number, day: number): CalendarDay[] {
+  const date = new Date(Date.UTC(year, month, day));
+  // getUTCDay: 0 = Sunday. Monday-first means the day sits (day + 6) % 7
+  // cells into its week.
+  const offset = (date.getUTCDay() + 6) % 7;
+  const days: CalendarDay[] = [];
+  for (let cell = 0; cell < 7; cell += 1) {
+    const cellDate = new Date(Date.UTC(year, month, day - offset + cell));
+    days.push({
+      year: cellDate.getUTCFullYear(),
+      month: cellDate.getUTCMonth(),
+      day: cellDate.getUTCDate(),
+      inMonth: cellDate.getUTCMonth() === month,
+    });
+  }
+  return days;
+}
+
 /** The `YYYY-MM-DD` key one day renders under. */
 export function dayKey(day: CalendarDay): string {
   const month = String(day.month + 1).padStart(2, "0");
