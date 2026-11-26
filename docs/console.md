@@ -283,6 +283,25 @@ reads your personal connected accounts and sends findings to your private Inbox.
 Each check makes at most 30 model requests, with long results trimmed, so a watch
 on a large workspace stays cheap. Each tab has its own creation controls. `/routines?tab=watches` opens watches.
 
+## Calendar
+
+**Calendar** shows your meetings, routines and reminders on one month
+timeline. Meetings come from your own Google Calendar and Outlook connections;
+routines and reminders come from the agents that run them. The view is
+read-only: it never fires, reschedules or edits anything, on either side.
+
+Each source is a lane with its own toggle. A routine that runs more often than
+once an hour shows one "runs frequently" marker per day instead of hundreds of
+entries. A reminder is a one-shot routine: it appears at its scheduled time,
+and once it has fired it drops off the calendar — its result is in the Inbox
+and the run log.
+
+A lane the view could not read says so instead of showing an empty month.
+Connect or reconnect the calendar under **Connections → Apps**; routines and
+reminders keep rendering while an external lane is down. The view reads your
+own connections and your own routines only — an organization admin sees nobody
+else's meetings through it.
+
 Organization → AI & services shows individual cards with switches and expandable settings. Daily briefing & suggestions uses one model, budget and delivery schedule; monitoring and welcome messages have their own cards. Unsaved changes can be discarded.
 
 Scheduled, event and monitoring routines use the same dialog frame, with a fixed header and navigation and a scrolling form. Creating a watch walks through Configure, Message and Schedule; Back preserves your draft. Agent pickers show the same avatars as chat. Watch execution and delivery settings live together under one Advanced options panel.

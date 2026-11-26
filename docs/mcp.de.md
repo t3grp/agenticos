@@ -1,5 +1,5 @@
 ---
-source_sha: "4e97f249e052"
+source_sha: "13f738f1f69e"
 ---
 
 # MCP — die Tools, die hier niemand schreiben muss { #mcp-the-tools-nobody-here-has-to-write }
@@ -49,6 +49,15 @@ Composio hostet die Zugangsdaten der Anbieter und leitet Anfragen und Ergebnisse
 weiter. Eine App-Verbindung synchronisiert ihre Daten nicht automatisch in eine
 Wissensdatenbank. Eine optionale Einrichtung ist weiterhin unter `/onboarding`
 und im Kontomenü verfügbar.
+
+Die Seite **Kalender** liest über Ihre eigenen Composio-Verbindungen, nicht
+über eine Portal-Freigabe. Verbinden Sie Google Calendar oder Outlook unter
+**Connections → Apps**, und die Seite listet Ihre Meetings live, mit den
+Nur-Lesen-Kalenderberechtigungen des Anbieters (`calendar.readonly` für
+Google, `Calendars.Read` für Outlook). Nichts wird kopiert oder gespeichert.
+Eine Portal-Freigabe ist organisationsweit und existiert, damit eine Routine
+ausgelöst wird, wenn ein Meeting ansteht; sie ist nicht die Quelle der Ansicht,
+und die Ansicht sieht nie den Kalender einer anderen Person.
 
 Der Betreiber konfiguriert einen Runtime-Projektschlüssel, einen separaten
 Katalog-Metadatenschlüssel, benutzerdefinierte Toolkit-Auth-Konfigurationen und

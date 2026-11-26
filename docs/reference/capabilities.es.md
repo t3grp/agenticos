@@ -1,5 +1,5 @@
 ---
-source_sha: "7aa382852d59"
+source_sha: "37f0ac4c2a51"
 ---
 
 # El catálogo de capabilities { #the-capability-catalog }
@@ -1447,6 +1447,14 @@ agent.** Quien tiene dos cuentas de Google recibe dos carpetas bajo el punto de
 montaje, cada una con el nombre de su dirección. Quien no tiene ninguna, como una
 clave de API o una programación, no recibe carpeta, y el agent lo sabe. Una cuenta
 de la organización responde por todos los que hablan con el agent.
+
+**La página Calendario lee a través de las mismas conexiones.** La vista
+mensual de la consola muestra una reunión leyendo en directo la propia conexión
+de Google u Outlook de quien la consulta, con los mismos ámbitos de calendario
+de solo lectura que usan las herramientas de los agentes — no guarda ninguna
+copia del calendario. Un permiso de portal, que permite que una rutina se
+dispare cuando llega una reunión, es una conexión de disparo con ámbito de
+organización y no es lo que lee la vista.
 
 **Un spec nunca guarda una credencial, un endpoint sustituido ni una ruta en el
 host de la API.** La publicación rechaza un secreto que quien publica no puede

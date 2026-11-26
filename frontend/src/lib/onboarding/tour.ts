@@ -1788,6 +1788,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
     optional: true,
   },
 
+  // Calendar — meetings, routines and reminders on one timeline. "?"-only,
+  // like the routines stop: the launch walk does not take a first login here.
+  {
+    id: "calendar-month",
+    page: ROUTES.CALENDAR,
+    target: "calendar-month",
+    permission: Perm.agentsView,
+  },
+
   // What the platform brought the reader on its own (#2301). "?"-only, like the
   // routines stop: the launch walk does not take a first login here.
   { id: "inbox-filters", page: ROUTES.INBOX, target: "inbox-filters" },

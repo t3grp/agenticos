@@ -5240,6 +5240,7 @@
     "context": "Notes",
     "deploymentSettings": "Deployment",
     "routines": "Schedules",
+    "calendar": "Calendar",
     "collapseSidebar": "Collapse the sidebar",
     "expandSidebar": "Expand the sidebar",
     "workflows": "Automations",
@@ -5840,6 +5841,10 @@
       "routines-list": {
         "title": "What runs without you",
         "body": "Every schedule and trigger across the organization, with what it last did. An agent working while nobody is at the keyboard shows up here first."
+      },
+      "calendar-month": {
+        "title": "Meetings, routines and reminders together",
+        "body": "Your calendar and your routines on one timeline. Meetings come from your own Google or Outlook connection, routines and reminders from the agents that run them."
       },
       "run-detail-input": {
         "title": "What the model was actually given",
@@ -9279,6 +9284,26 @@
       "newRoutine": "New routine",
       "scheduledTask": "Run on a schedule",
       "eventTask": "Run when an event arrives"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "description": "Your meetings, routines and reminders on one timeline. Read-only — nothing here fires or reschedules anything.",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "thisMonth": "This month",
+      "sources": "Sources",
+      "sourceGoogleCalendar": "Google Calendar",
+      "sourceOutlookCalendar": "Outlook",
+      "sourceRoutine": "Routines",
+      "sourceReminder": "Reminders",
+      "frequentNote": "This routine runs more often than once an hour, so the calendar shows one marker per day instead of every run.",
+      "moreEvents": "{count, plural, =1 {1 more} other {# more}}",
+      "emptyMonth": "Nothing scheduled this month.",
+      "sourceUnavailable": "{source} is unavailable: {reason}",
+      "agentName": "Agent: {name}",
+      "openLink": "Open link",
+      "recurring": "Recurring",
+      "retry": "Retry"
     },
     "signIns": {
       "cancel": "Cancel",

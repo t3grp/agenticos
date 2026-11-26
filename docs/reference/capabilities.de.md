@@ -1,5 +1,5 @@
 ---
-source_sha: "7aa382852d59"
+source_sha: "37f0ac4c2a51"
 ---
 
 # Der Capability-Katalog { #the-capability-catalog }
@@ -1504,6 +1504,14 @@ spricht.** Wer zwei Google-Konten hat, bekommt unter dem Einhängepunkt zwei
 Ordner, je einen nach jeder Adresse benannt. Wer keines hat, etwa ein API-Schlüssel
 oder ein Zeitplan, bekommt keinen Ordner, und der Agent erfährt das. Ein Konto der
 Organisation antwortet für alle, die mit dem Agenten sprechen.
+
+**Die Seite Kalender liest über dieselben Verbindungen.** Die Monatsansicht
+der Konsole listet ein Meeting, indem sie die eigene Google- oder
+Outlook-Verbindung der betrachtenden Person live liest, mit denselben
+Nur-Lesen-Kalenderberechtigungen, die die Agentenwerkzeuge verwenden — sie
+behält keine Kopie des Kalenders. Eine Portal-Freigabe, mit der eine Routine
+ausgelöst wird, wenn ein Meeting ansteht, ist eine organisationsweite
+Triggerverbindung und nicht das, was die Ansicht liest.
 
 **Ein Spec enthält nie Zugangsdaten, einen überschriebenen Endpunkt oder einen
 Pfad auf dem API-Host.** Die Veröffentlichung lehnt ein Secret ab, das der

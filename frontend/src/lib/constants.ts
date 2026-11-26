@@ -64,6 +64,7 @@ export const ROUTES = {
   RUNS: "/runs",
   FAILURE_LEARNING: "/failure-learning",
   ROUTINES: "/routines",
+  CALENDAR: "/calendar",
   VAULT: "/connectors/vault",
   SANDBOXES: "/connectors/sandboxes",
   REMOTE_AGENTS: "/connectors/remote-agents",

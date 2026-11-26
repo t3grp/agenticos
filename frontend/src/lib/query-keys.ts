@@ -395,6 +395,14 @@ export const qk = {
     list: (agentId: string) => ["exposures", agentId] as const,
     targets: (agentId: string) => ["exposures", agentId, "targets"] as const,
   },
+  calendar: {
+    all: () => ["calendar"] as const,
+    // One window's events, routines and reminders, for the calendar page.
+    // Keyed on the window and the providers asked for, so moving to another
+    // month is a different question, not a refetch of this one.
+    events: (from: string, to: string, providers: string[] | null) =>
+      ["calendar", "events", from, to, providers] as const,
+  },
   triggers: {
     filteredEvent: (agentId: string, triggerId: string) =>
       ["triggers", agentId, "filtered-event", triggerId] as const,

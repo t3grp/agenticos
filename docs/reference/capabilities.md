@@ -1356,6 +1356,13 @@ after each address. Somebody with none, such as an API key or a schedule, gets n
 folder, and the agent is told so. An organization's account answers for everybody
 who talks to the agent.
 
+**The Calendar page reads through the same connections.** The console's month
+view lists a meeting by reading the viewer's own Google or Outlook connection
+live, with the same read-only calendar scopes the agent tools use — it keeps no
+copy of the calendar. A portal grant, which lets a routine fire when a meeting
+arrives, is an organization-scoped trigger connection and is not what the view
+reads.
+
 **A spec never holds a credential, an endpoint override or a path on the API
 host.** Publishing refuses a secret the publisher may not lend, a secret of the
 wrong kind and an account the organization does not have. A host the author types

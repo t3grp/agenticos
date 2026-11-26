@@ -1,5 +1,5 @@
 ---
-source_sha: "b1e4a651184a"
+source_sha: "746b0fddb74d"
 ---
 
 # Die Konsole { #the-console }
@@ -309,6 +309,26 @@ Ergebnisse in den privaten Posteingang. Jeder Tab hat eigene Erstellungsaktionen
 `/routines?tab=watches` öffnet die Beobachtungen. Eine Prüfung stellt höchstens
 30 Modellanfragen, lange Ergebnisse werden gekürzt; so bleibt eine Beobachtung
 eines großen Workspace günstig.
+
+## Kalender { #calendar }
+
+**Kalender** zeigt Meetings, Routinen und Erinnerungen auf einer
+Monatszeitleiste. Meetings stammen aus Ihren eigenen Google-Calendar- und
+Outlook-Verbindungen; Routinen und Erinnerungen stammen von den Agenten, die
+sie ausführen. Die Ansicht ist nur lesbar: Sie löst nichts aus, plant nichts
+um und bearbeitet nichts, auf keiner Seite.
+
+Jede Quelle ist eine Spur mit eigenem Schalter. Eine Routine, die häufiger als
+einmal pro Stunde läuft, zeigt einen Marker pro Tag statt Hunderter Einträge.
+Eine Erinnerung ist eine einmalige Routine: Sie erscheint zur geplanten Zeit
+und verschwindet nach der Ausführung aus dem Kalender — ihr Ergebnis steht im
+Inbox und im Ausführungsprotokoll.
+
+Eine Spur, die die Ansicht nicht lesen konnte, sagt das, statt einen leeren
+Monat zu zeigen. Verbinden Sie den Kalender unter **Connections → Apps** neu;
+Routinen und Erinnerungen werden weiterhin angezeigt, während eine externe Spur
+ausfällt. Die Ansicht liest nur Ihre eigenen Verbindungen und Ihre eigenen
+Routinen — ein Organisationsadministrator sieht darüber keine Meetings anderer.
 
 Organisation → KI & Dienste zeigt einzelne Funktionskarten mit Schaltern und aufklappbaren Einstellungen. Tägliches Briefing und Vorschläge teilen ein Modell, Budget und einen Zustellungsplan; Monitoring und Begrüßungsnachrichten haben eigene Karten. Ungespeicherte Änderungen lassen sich verwerfen.
 

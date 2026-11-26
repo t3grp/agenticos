@@ -84,6 +84,31 @@ describe("the Connectors nav entry", () => {
   });
 });
 
+describe("the Calendar nav entry", () => {
+  const calendar = () =>
+    NAV_GROUPS.flatMap((group) => group.items).find((item) => item.labelKey === "calendar")!;
+  const holding =
+    (...granted: Permission[]) =>
+    (permission: Permission) =>
+      granted.includes(permission);
+
+  it("sits in Build beside Routines, on the calendar route, gated like Routines", () => {
+    const build = NAV_GROUPS.find((g) => g.labelKey === "build")!;
+    const labels = build.items.map((item) => item.labelKey);
+    expect(labels.indexOf("calendar")).toBe(labels.indexOf("routines") + 1);
+    expect(calendar()).toMatchObject({
+      href: ROUTES.CALENDAR,
+      permission: Perm.agentsView,
+    });
+    expect(navSectionFor("/calendar")).toMatchObject({ domain: "build", isRoot: true });
+  });
+
+  it("shows to a role that can view agents, and stays hidden otherwise", () => {
+    expect(navItemVisible(calendar(), holding(Perm.agentsView))).toBe(true);
+    expect(navItemVisible(calendar(), holding(Perm.workflowsView))).toBe(false);
+  });
+});
+
 describe("role navigation preferences", () => {
   const item = (labelKey: string) =>
     NAV_GROUPS.flatMap((group) => group.items).find((entry) => entry.labelKey === labelKey)!;
