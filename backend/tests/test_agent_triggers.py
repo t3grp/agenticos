@@ -4416,14 +4416,17 @@ class TestPortalCatalogConnectionState:
             items = await service.list_portals(_ctx())
         return next(item for item in items if item.key == key)
 
-    async def test_a_polled_portal_with_no_stored_client_says_so(self, monkeypatch):
+    async def test_a_polled_portal_with_an_account_and_no_stored_client_says_so(self, monkeypatch):
         """Gmail connects on a Google client the organization stored in the vault -
         the same shape as GitHub's, and for the reason that outranks any argument
         about who owns a Google project: a credential at rest goes through the
         vault and there is no second mechanism. It read the deployment's
         `GOOGLE_CLIENT_ID` for one commit, which left the card naming an
-        environment variable as the fix."""
-        gmail = await self._gmail(monkeypatch, stored=0)
+        environment variable as the fix. Without an account the portal is not
+        offered at all; an account made before the client was removed is the one
+        case that still shows the card, and it says what is missing."""
+        grant = self._connection(granted_scopes=["https://www.googleapis.com/auth/gmail.readonly"])
+        gmail = await self._gmail(monkeypatch, stored=0, grant=grant)
         assert gmail.connect_blocked_by == "oauth_app_secret"
 
     async def test_a_manual_portal_with_no_catalog_key_carries_no_connection_state(self):
@@ -4514,6 +4517,36 @@ class TestPortalCatalogConnectionState:
         gmail = await self._gmail(monkeypatch, grant=self._connection(oauth_payload=None))
 
         assert gmail.connection_state == "needs_authorization"
+
+    async def _listed_keys(self, *, stored: int, grant: object | None = None) -> set[str]:
+        service = _service()
+        with (
+            patch("app.services.agent_trigger.mcp_connection_repo") as connections,
+            patch("app.services.agent_trigger.organization_secret_repo") as secrets,
+            patch("app.services.mcp_connection.mcp_connection_repo") as grants,
+        ):
+            connections.get_org_scoped_by_catalog_key = AsyncMock(return_value=None)
+            grants.get_portal_grant = AsyncMock(return_value=grant)
+            secrets.list_org_visible_by_kind = AsyncMock(
+                return_value=[MagicMock() for _ in range(stored)]
+            )
+            items = await service.list_portals(_ctx())
+        return {item.key for item in items}
+
+    async def test_the_google_portals_are_not_offered_until_the_org_stores_a_google_client(self):
+        """Gmail, Drive and Calendar all connect on the organization's Google client. With
+        none stored each card could only fail, so the picker leaves them out, and the
+        other portals are untouched."""
+        keys = await self._listed_keys(stored=0)
+        assert {"google", "google_drive", "google_calendar"}.isdisjoint(keys)
+        assert {"microsoft", "github"} <= keys
+
+    async def test_a_google_portal_with_an_account_stays_listed_without_the_client(self):
+        """An account made before the client was removed must stay visible, so it can
+        still be seen and revoked."""
+        grant = self._connection(granted_scopes=["https://www.googleapis.com/auth/gmail.readonly"])
+        keys = await self._listed_keys(stored=0, grant=grant)
+        assert "google" in keys
 
 
 class TestListingPortalTargets:
