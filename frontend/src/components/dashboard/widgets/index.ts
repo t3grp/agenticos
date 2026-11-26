@@ -59,6 +59,7 @@ import { SpendWidget } from "./spend";
 import { ActivityRhythmWidget } from "./activity-rhythm";
 import { ChannelsWidget } from "./channels";
 import { RoutinesWidget } from "./routines";
+import { CalendarTodayWidget } from "./calendar-today";
 import { SuggestionsWidget } from "./suggestions";
 import { KnowledgeWidget } from "./knowledge";
 import { TablesWidget } from "./tables-widget";
@@ -76,6 +77,7 @@ export const WIDGET_COMPONENTS: Record<WidgetId, ComponentType<DashboardWidgetPr
   "activity-rhythm": ActivityRhythmWidget,
   channels: ChannelsWidget,
   routines: RoutinesWidget,
+  "calendar-today": CalendarTodayWidget,
   "authoring-suggestions": AuthoringSuggestionsWidget,
   knowledge: KnowledgeWidget,
   tables: TablesWidget,

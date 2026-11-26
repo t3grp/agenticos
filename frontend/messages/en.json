@@ -3769,6 +3769,15 @@
           "description": "A schedule runs an agent on the clock; a trigger runs one when something arrives."
         }
       },
+      "calendar-today": {
+        "title": "Today",
+        "description": "Meetings, routines and reminders in the next 24 hours, soonest first.",
+        "frequent": "Runs frequently",
+        "empty": {
+          "title": "Nothing in the next 24 hours",
+          "description": "Meetings from your calendar and routines from your agents will show up here."
+        }
+      },
       "channels": {
         "title": "Channels",
         "description": "Which messaging channels the agents can be reached on, and whether each door is open.",
