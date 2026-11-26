@@ -179,6 +179,7 @@ Two things are versioned separately from this file and worth knowing about:
 
 ### Fixed
 
+- Hide the three Google trigger portals and the Google-hosted MCP servers from the browse lists until the organization stores its Google OAuth client (`google_oauth_app` secret). Existing accounts and trigger subscriptions are unchanged, and the entries reappear once the client is stored.
 - Bound S3 and Google Drive sync listings and streamed downloads, including CLI readers. Reject oversized files before transfer and remove partial results on refusal.
 - Bound PyMuPDF pages, extracted content, tables, images and prepared chunks. Run synchronous ML parsing in a killable child with CPU, memory and wall-time limits.
 

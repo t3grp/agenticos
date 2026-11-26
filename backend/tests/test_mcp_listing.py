@@ -17,6 +17,7 @@ from app.repositories import (
     mcp_connection_repo,
     mcp_registry_server_repo,
     mcp_server_check_repo,
+    organization_secret_repo,
     resource_grant_repo,
 )
 from app.services import mcp_catalog, mcp_listing
@@ -33,6 +34,7 @@ class ListingRepositories:
     search: AsyncMock
     checks: AsyncMock
     grants: AsyncMock
+    google_app: AsyncMock
 
 
 @pytest.fixture
@@ -66,6 +68,7 @@ def repositories(monkeypatch: pytest.MonkeyPatch) -> ListingRepositories:
         search=AsyncMock(return_value=([], 0)),
         checks=AsyncMock(return_value={}),
         grants=AsyncMock(return_value=[]),
+        google_app=AsyncMock(return_value=[object()]),
     )
     monkeypatch.setattr(mcp_connection_repo, "list_org_scoped", repositories.organization)
     monkeypatch.setattr(mcp_connection_repo, "list_for_user", repositories.personal)
@@ -74,6 +77,9 @@ def repositories(monkeypatch: pytest.MonkeyPatch) -> ListingRepositories:
     monkeypatch.setattr(mcp_registry_server_repo, "count", AsyncMock(return_value=4_000))
     monkeypatch.setattr(mcp_server_check_repo, "get_many", repositories.checks)
     monkeypatch.setattr(resource_grant_repo, "list_shared_ids", repositories.grants)
+    monkeypatch.setattr(
+        organization_secret_repo, "list_org_visible_by_kind", repositories.google_app
+    )
     return repositories
 
 
@@ -763,6 +769,92 @@ async def test_pruned_registry_metadata_does_not_rename_a_saved_server_bookmark(
     assert found.items[0].key == key
     assert found.items[0].connection_ids == (first.id, second.id)
     assert found.items[0].custom
+
+
+def _google_hosted(key: str = "google-gmail") -> CatalogEntry:
+    return CatalogEntry(
+        key=key,
+        name="Gmail",
+        description="Google's hosted Gmail server",
+        category="communication",
+        auth=CatalogAuth.OAUTH,
+        url="https://gmailmcp.googleapis.com/mcp/v1",
+    )
+
+
+async def test_a_google_hosted_server_is_not_browsed_until_the_org_stores_a_google_app(
+    caller: AuthContext,
+    catalog: tuple[CatalogEntry, ...],
+    repositories: ListingRepositories,
+    mock_db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A Google-hosted server spends the organization's own Google client, so without
+    # one it cannot connect and browsing leaves it out. The rest of the list is unchanged.
+    gmail = _google_hosted()
+    monkeypatch.setattr(mcp_catalog, "CATALOG", (gmail, *catalog))
+    repositories.google_app.return_value = []
+
+    found = await mcp_listing.page(mock_db_session, ctx=caller, state="all", limit=100)
+
+    assert gmail.key not in {row.key for row in found.items}
+    assert found.total == len(catalog)
+
+
+async def test_a_google_hosted_server_is_browsed_once_the_org_stores_a_google_app(
+    caller: AuthContext,
+    catalog: tuple[CatalogEntry, ...],
+    repositories: ListingRepositories,
+    mock_db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Storing the client is the only step: the same entry is listed on the next read.
+    gmail = _google_hosted()
+    monkeypatch.setattr(mcp_catalog, "CATALOG", (gmail, *catalog))
+    repositories.google_app.return_value = [object()]
+
+    found = await mcp_listing.page(mock_db_session, ctx=caller, state="all", limit=100)
+
+    assert gmail.key in {row.key for row in found.items}
+    assert found.total == len(catalog) + 1
+
+
+async def test_a_saved_google_hosted_account_keeps_its_server_listed_without_the_app(
+    caller: AuthContext,
+    catalog: tuple[CatalogEntry, ...],
+    repositories: ListingRepositories,
+    mock_db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Hiding a server someone already holds an account on would strand a credential no
+    # screen can revoke, so the account keeps its server in the browse list.
+    gmail = _google_hosted()
+    monkeypatch.setattr(mcp_catalog, "CATALOG", (gmail, *catalog))
+    repositories.google_app.return_value = []
+    account = _connection(caller, name="gmail-account", key=gmail.key, url=gmail.url)
+    repositories.organization.return_value = [account], 1
+
+    found = await mcp_listing.page(mock_db_session, ctx=caller, state="all", limit=100)
+
+    row = next(row for row in found.items if row.key == gmail.key)
+    assert row.connection_ids == (account.id,)
+
+
+async def test_the_catalog_that_resolves_saved_connections_still_lists_google_hosted_servers(
+    catalog: tuple[CatalogEntry, ...],
+    repositories: ListingRepositories,
+    mock_db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The unpaged catalog is what a saved connection is matched against, so it must not
+    # lose an entry that the browse list leaves out.
+    gmail = _google_hosted()
+    monkeypatch.setattr(mcp_catalog, "CATALOG", (gmail, *catalog))
+    repositories.google_app.return_value = []
+
+    entries = await mcp_listing.curated(mock_db_session)
+
+    assert gmail.key in {entry.key for entry in entries}
 
 
 async def test_new_google_entries_have_bundled_checks_without_rebootstrapping(

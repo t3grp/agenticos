@@ -770,6 +770,9 @@ class AgentTriggerService:
     async def list_portals(self, ctx: AuthContext) -> list[PortalRead]:
         """The portal catalog, each entry joined with its org connection's state.
 
+        A Google portal is left out until the organization stores its Google client, unless
+        an account already exists for it, so the picker offers no card that can only fail.
+
         The catalog itself is hand-curated data, but which portals are *usable*
         depends on the organization: an auto-webhook portal needs a connected
         account. That state used to be derived in the browser from the
@@ -824,6 +827,15 @@ class AgentTriggerService:
                 if portal.mcp_catalog_key is not None
                 else None
             )
+            # The Google portals connect on the organization's Google client. With none
+            # stored, a card could only fail, so it is not offered. A portal that already
+            # has an account stays listed, so that account can still be seen and revoked.
+            if (
+                portal.oauth_app_kind == SecretKind.GOOGLE_OAUTH_APP.value
+                and stored.get(SecretKind.GOOGLE_OAUTH_APP.value, 0) == 0
+                and connection is None
+            ):
+                continue
             items.append(
                 PortalRead(
                     key=portal.key,

@@ -21,14 +21,19 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import AuthContext, Perm
+from app.core.secret_kinds import SecretKind
 from app.db.models.mcp_connection import McpConnection
 from app.db.models.mcp_registry_server import McpRegistryServer
 from app.db.models.mcp_server_check import CheckOutcome, McpServerCheck
-from app.repositories import mcp_registry_server_repo, mcp_server_check_repo
+from app.repositories import (
+    mcp_registry_server_repo,
+    mcp_server_check_repo,
+    organization_secret_repo,
+)
 from app.services import mcp_catalog
 from app.services.mcp_audit import BUNDLED_CHECKS, StoredCheck, auth_found, verified
 from app.services.mcp_catalog import CatalogEntry
-from app.services.mcp_connection import McpConnectionService
+from app.services.mcp_connection import McpConnectionService, is_google_mcp
 
 
 @dataclass(frozen=True)
@@ -147,7 +152,11 @@ def _mirrored(server: McpRegistryServer, check: McpServerCheck | None) -> Listed
 
 
 async def curated(db: AsyncSession) -> tuple[ListedServer, ...]:
-    """The whole curated catalog, each entry with its last check."""
+    """The whole curated catalog, each entry with its last check.
+
+    Not filtered by the organization's Google client: the unpaged list is what a saved
+    connection is resolved against, so a Google-hosted entry must stay in it.
+    """
     checks = await mcp_server_check_repo.get_many(db, [entry.key for entry in mcp_catalog.CATALOG])
     return tuple(_curated(entry, checks.get(entry.key)) for entry in mcp_catalog.CATALOG)
 
@@ -283,6 +292,20 @@ def _matches(row: ListedServer, *, query: str, category: str, auth: str) -> bool
     )
 
 
+async def _google_app_stored(db: AsyncSession, ctx: AuthContext | None) -> bool:
+    """Whether the organization has stored the Google client its hosted servers spend.
+
+    Counted the way the connect flow counts it - org-visible secrets of the kind - so the
+    listing and the connect flow agree on what is stored.
+    """
+    if ctx is None:
+        return False
+    stored = await organization_secret_repo.list_org_visible_by_kind(
+        db, organization_id=ctx.organization_id, kind=SecretKind.GOOGLE_OAUTH_APP.value
+    )
+    return bool(stored)
+
+
 async def page(
     db: AsyncSession,
     *,
@@ -307,6 +330,10 @@ async def page(
     ones a check found asking for it. Browsing hides mirrored listings a check
     found dead, broken or duplicated; Connected keeps their saved accounts
     manageable. Every filter is applied before counting and pagination.
+
+    Browsing also leaves out Google-hosted servers until the organization stores its
+    Google client, since they cannot connect without one. A saved account keeps its
+    server listed.
 
     `reviewed_only` keeps the mirror out of browsing altogether: the list
     defaults to what somebody here reviewed, and the registry is reached only
@@ -333,11 +360,15 @@ async def page(
         )
 
     accounts = {row.key: row.connection_ids for row in connected}
+    google_app = await _google_app_stored(db, ctx)
     matched_curated = tuple(
         entry
         for entry in mcp_catalog.matching(query, category=category)
         if not auth or entry.auth.value == auth
         if state != "not-connected" or entry.key not in accounts
+        # Without the organization's Google client a Google-hosted server cannot connect, so
+        # browsing leaves it out. A saved account keeps it listed, so it stays manageable.
+        if google_app or entry.key in accounts or not is_google_mcp(entry.url or "")
     )
     shown = matched_curated[skip : skip + limit]
     checks = await mcp_server_check_repo.get_many(db, [entry.key for entry in shown])
