@@ -10,7 +10,7 @@ deterministic in-memory fake.
 Run from `scripts/` (a different `scripts` package may shadow the name elsewhere):
 
 ```
-python -m unittest backup_probe.test_backup_probe    # stdlib, 96 tests, under 1 second
+python -m unittest backup_probe.test_backup_probe    # stdlib, 97 tests, under 1 second
 python -m backup_probe selftest                      # in-memory fixtures only
 ```
 
@@ -101,7 +101,7 @@ It reads no row text and no relation names. Nothing here executes it.
 
 | Area | Status |
 |---|---|
-| Unit tests (96, stdlib) | Run on a workstation, all pass. |
+| Unit tests (97, stdlib) | Run on a workstation, all pass. |
 | Manual mutation probe: 37 single-line mutations of boundary checks, 34 caught | Historical, author-only claim made at commit 2d7. Not verified at the current pin. No retained script, so no mutation claim is made for current code. |
 | Harness orchestration with a spy `Popen` | Unit tested: no fixture plaintext, key-file contents or canary reaches argv, env or output. Public key and cert paths are passed on purpose. |
 | `verify_boat.sh`, `synthetic_postgres_restore.py` | Boat run at the previous pin c95af9fa5 passed (92 units, 19 scenarios). That is an observed result for that pin only. The latest pin needs a new Boat run before any claim. Needs Boat: PostgreSQL 16, OpenSSL CMS, Linux, non-root user. |

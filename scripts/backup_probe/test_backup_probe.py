@@ -524,6 +524,52 @@ class RestoreFlow(unittest.TestCase):
             self.run_restore(sink, exp, decrypt=IntDecrypt(), consumer=cons)
         self.assertTrue(cons.aborted)
 
+    def test_post_decrypt_failures_abort_the_stream_too(self) -> None:
+        hostile = "HOSTILE-secret-text"
+
+        class BadStream(MemStream):
+            def abort(self) -> None:
+                super().abort()
+                raise RuntimeError(hostile)
+
+        class BadDecrypt(MemDecrypt):
+            def start(self, cipher: memoryview) -> MemStream:
+                self.last = BadStream(fixture_cipher(bytes(cipher)), self.status)
+                return self.last
+
+        sink, exp = self.stored()
+        wrong = Expected(exp.cipher_sha256, exp.cipher_len, sha(b"other"))
+        dec, cons = BadDecrypt(), MemConsumer()
+        res, _ = self.run_restore(sink, wrong, decrypt=dec, consumer=cons)
+        self.assertEqual((res.outcome, res.trusted, res.cleanup), ("plaintext_sha_mismatch", False, "cleanup_failed"))  # type: ignore[attr-defined]
+        self.assertNotIn(hostile, repr(res))
+        self.assertTrue(dec.last.aborted and cons.aborted)  # type: ignore[union-attr]
+        self.assertEqual(bytes(cons.data), b"")
+        for kw in ({"status": True}, {"status": 3}):  # malformed and failing consumer status
+            dec, cons = BadDecrypt(), MemConsumer(**kw)  # type: ignore[arg-type]
+            res, _ = self.run_restore(sink, exp, decrypt=dec, consumer=cons)
+            self.assertEqual((res.trusted, res.cleanup), (False, "cleanup_failed"), kw)  # type: ignore[attr-defined]
+            self.assertTrue(dec.last.aborted and cons.aborted, kw)  # type: ignore[union-attr]
+            self.assertEqual(bytes(cons.data), b"")
+
+        class FinishError(MemConsumer):
+            def finish(self) -> int:
+                raise RuntimeError(hostile)
+
+        class FinishInterrupt(MemConsumer):
+            def finish(self) -> int:
+                raise KeyboardInterrupt
+
+        dec, cons = MemDecrypt(), FinishError()
+        res, _ = self.run_restore(sink, exp, decrypt=dec, consumer=cons)
+        self.assertEqual((res.outcome, res.trusted, res.cleanup), ("consumer_failed", False, "clean"))  # type: ignore[attr-defined]
+        self.assertTrue(dec.last.aborted and cons.aborted)  # type: ignore[union-attr]
+        dec, cons = MemDecrypt(), FinishInterrupt()
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_restore(sink, exp, decrypt=dec, consumer=cons)
+        self.assertTrue(dec.last.aborted and cons.aborted)  # type: ignore[union-attr]
+        self.assertEqual(bytes(cons.data), b"")
+
     def test_interrupt_propagates_even_when_cleanup_raises(self) -> None:
         class BadConsumer(MemConsumer):
             def abort(self) -> None:

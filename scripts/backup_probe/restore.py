@@ -237,20 +237,20 @@ def _decrypt_into(
         consumer_status = consumer.finish()
         tick()
     except _Timeout:
-        return _bad(TIMEOUT, consumer)
+        return _bad(TIMEOUT, consumer, stream)
     except CapacityError:
-        return _bad(INCONCLUSIVE, consumer)
+        return _bad(INCONCLUSIVE, consumer, stream)
     except Exception:
-        return _bad(CONSUMER_FAILED, consumer)
+        return _bad(CONSUMER_FAILED, consumer, stream)
     except BaseException:
-        _discard_on_interrupt(consumer)
+        _discard_on_interrupt(consumer, stream)
         raise
     if type(decrypt_status) is not int or type(consumer_status) is not int:
-        return _bad(BAD_STATUS, consumer)
+        return _bad(BAD_STATUS, consumer, stream)
     if decrypt_status != 0:
-        return _bad(DECRYPT_FAILED, consumer)
+        return _bad(DECRYPT_FAILED, consumer, stream)
     if consumer_status != 0:
-        return _bad(CONSUMER_FAILED, consumer)
+        return _bad(CONSUMER_FAILED, consumer, stream)
     if sha.hexdigest() != expected.dump_sha256:
-        return _bad(PLAINTEXT_MISMATCH, consumer)
+        return _bad(PLAINTEXT_MISMATCH, consumer, stream)
     return RestoreResult(VERIFIED, True)
