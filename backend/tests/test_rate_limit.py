@@ -15,11 +15,13 @@ rather than to no service.
 import asyncio
 from contextlib import AbstractAsyncContextManager, AsyncExitStack
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 
 from app.core.config import settings
 from app.core.exceptions import RateLimitError
+from app.core.permissions import AuthContext
 from app.services import rate_limit
 from app.services.rate_limit import Limit
 
@@ -1080,3 +1082,168 @@ async def test_an_in_flight_claim_needs_a_positive_ttl():
             "eval_comparison", "org:ttl", ttl_seconds=0, message="Busy", renew=True
         ):
             pass
+
+
+def _claims_with_tag() -> tuple[MagicMock, dict[str, str]]:
+    """The `_claims` client, plus the tag reads and writes a claim uses."""
+    client, store = _claims()
+
+    async def get(key: str) -> str | None:
+        return store.get(key)
+
+    async def delete(key: str) -> int:
+        return 1 if store.pop(key, None) is not None else 0
+
+    async def expire(key: str, ttl: int) -> bool:
+        return key in store
+
+    client.get = AsyncMock(side_effect=get)
+    client.delete = AsyncMock(side_effect=delete)
+    client.expire = AsyncMock(side_effect=expire)
+    return client, store
+
+
+def _eval_ctx() -> AuthContext:
+    return AuthContext(user_id=uuid4(), organization_id=uuid4(), role="owner")
+
+
+def _allow_comparisons(monkeypatch) -> None:
+    """The shared work budget says yes, so only the claim itself is under test."""
+    monkeypatch.setattr(
+        rate_limit,
+        "consume_with_local_floor",
+        AsyncMock(return_value=rate_limit.Decision(True, 60)),
+    )
+
+
+class TestEvalComputationClaimTag:
+    """A comparison claim names the run it is held for, until it is released."""
+
+    async def test_a_tagged_claim_names_its_run_while_held(self, monkeypatch):
+        run_id = uuid4()
+        ctx = _eval_ctx()
+        client, store = _claims_with_tag()
+        rate_limit.configure(client)
+        _allow_comparisons(monkeypatch)
+        claim_key = f"inflight:eval_comparison:org:{ctx.organization_id}"
+        async with rate_limit.eval_computation(ctx, run_id=run_id):
+            assert store.get(f"{claim_key}:tag") == str(run_id)
+            assert claim_key not in rate_limit._held_tags
+            assert await rate_limit.eval_computation_claim_run_id(ctx) == run_id
+        assert f"{claim_key}:tag" not in store
+        assert claim_key not in rate_limit._held_tags
+        assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+
+    async def test_an_untagged_claim_leaves_no_name(self, monkeypatch):
+        ctx = _eval_ctx()
+        client, store = _claims_with_tag()
+        rate_limit.configure(client)
+        _allow_comparisons(monkeypatch)
+        claim_key = f"inflight:eval_comparison:org:{ctx.organization_id}"
+        async with rate_limit.eval_computation(ctx):
+            assert f"{claim_key}:tag" not in store
+            assert claim_key not in rate_limit._held_tags
+            assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+
+    async def test_a_tag_is_kept_per_process_when_redis_is_down(self, monkeypatch):
+        run_id = uuid4()
+        ctx = _eval_ctx()
+        _allow_comparisons(monkeypatch)
+        claim_key = f"inflight:eval_comparison:org:{ctx.organization_id}"
+        async with rate_limit.eval_computation(ctx, run_id=run_id):
+            assert await rate_limit.eval_computation_claim_run_id(ctx) == run_id
+            assert rate_limit._held_tags.get(claim_key) == str(run_id)
+        assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+        assert claim_key not in rate_limit._held_tags
+
+    async def test_a_tag_that_is_not_a_run_is_no_name(self):
+        ctx = _eval_ctx()
+        client, store = _claims_with_tag()
+        store[f"inflight:eval_comparison:org:{ctx.organization_id}:tag"] = "not-a-uuid"
+        rate_limit.configure(client)
+        assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+
+    async def test_a_tag_read_failure_refuses_as_before(self):
+        ctx = _eval_ctx()
+        client, store = _claims_with_tag()
+        client.get = AsyncMock(side_effect=ConnectionError("unreachable"))
+        rate_limit.configure(client)
+        assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+
+    async def test_a_tag_write_failure_leaves_the_claim_untaken_by_name(self, monkeypatch):
+        run_id = uuid4()
+        ctx = _eval_ctx()
+        client, store = _claims_with_tag()
+
+        async def set_only_claims(key: str, value: str, ttl: int | None = None, nx: bool = False):
+            if not nx:
+                raise ConnectionError("unreachable")
+            if key in store:
+                return False
+            store[key] = value
+            return True
+
+        client.set = AsyncMock(side_effect=set_only_claims)
+        rate_limit.configure(client)
+        _allow_comparisons(monkeypatch)
+        async with rate_limit.eval_computation(ctx, run_id=run_id):
+            assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+
+    async def test_a_tag_removal_failure_still_releases_the_claim(self, monkeypatch):
+        run_id = uuid4()
+        ctx = _eval_ctx()
+        client, store = _claims_with_tag()
+        client.delete = AsyncMock(side_effect=ConnectionError("unreachable"))
+        rate_limit.configure(client)
+        _allow_comparisons(monkeypatch)
+        claim_key = f"inflight:eval_comparison:org:{ctx.organization_id}"
+        async with rate_limit.eval_computation(ctx, run_id=run_id):
+            assert await rate_limit.eval_computation_claim_run_id(ctx) == run_id
+        assert claim_key not in store
+        assert claim_key not in rate_limit._held_tags
+
+    async def test_a_tag_is_renewed_with_its_claim(self):
+        client, store = _claims_with_tag()
+        renewed = asyncio.Event()
+
+        async def extend(key: str, ttl: int) -> bool:
+            if key.endswith(":tag"):
+                renewed.set()
+            return True
+
+        client.expire_if_equals = AsyncMock(return_value=True)
+        client.expire = AsyncMock(side_effect=extend)
+        rate_limit.configure(client)
+        async with rate_limit.one_in_flight(
+            "eval_comparison",
+            "org:renew-tag",
+            ttl_seconds=1,
+            message="Busy",
+            renew=True,
+            tag="run-1",
+        ):
+            await asyncio.wait_for(renewed.wait(), timeout=5)
+            assert store.get("inflight:eval_comparison:org:renew-tag:tag") == "run-1"
+
+    async def test_a_tag_renewal_failure_keeps_the_claim(self, caplog: pytest.LogCaptureFixture):
+        client, store = _claims_with_tag()
+        attempted = asyncio.Event()
+
+        async def extend(key: str, ttl: int) -> bool:
+            attempted.set()
+            raise ConnectionError("unreachable")
+
+        client.expire_if_equals = AsyncMock(return_value=True)
+        client.expire = AsyncMock(side_effect=extend)
+        rate_limit.configure(client)
+        async with rate_limit.one_in_flight(
+            "eval_comparison",
+            "org:renew-tag-fail",
+            ttl_seconds=1,
+            message="Busy",
+            renew=True,
+            tag="run-1",
+        ):
+            await asyncio.wait_for(attempted.wait(), timeout=5)
+            assert "in_flight_limit_renewal_unavailable" in caplog.text
+            assert store.get("inflight:eval_comparison:org:renew-tag-fail:tag") == "run-1"

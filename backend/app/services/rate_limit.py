@@ -388,6 +388,9 @@ def artifact_action_limit() -> Limit:
 _held_here: set[str] = set()
 """The in-flight claims this process holds while the shared Redis cannot take them."""
 
+_held_tags: dict[str, str] = {}
+"""The run a locally held in-flight claim is tagged with, by its claim key."""
+
 
 async def _claim(redis: RedisClient, key: str, token: str, ttl_seconds: int) -> bool | None:
     """Take `key` for `token`: whether it was free, or `None` when Redis could not say."""
@@ -406,8 +409,50 @@ async def _release(redis: RedisClient, key: str, token: str) -> None:
         logger.warning("in_flight_limit_release_failed", exc_info=True)
 
 
-async def _renew_claim(redis: RedisClient, key: str, token: str, ttl_seconds: int) -> None:
-    """Renew an active claim; Redis outages retain the documented per-process floor."""
+async def _tag(redis: RedisClient | None, key: str, tag: str | None, ttl_seconds: int) -> None:
+    """Name the run a held claim is for, or clear a stale name.
+
+    The name rides beside the claim key so a reader refused by the claim can tell
+    whether the holder is its own work. It is kept where the claim is kept: Redis
+    when the claim went there, this process otherwise - never both, so a Redis
+    write that fails leaves no local name for the reader to trust. A Redis
+    failure leaves the name unset rather than the claim untaken: the reader then
+    refuses as it did before.
+    """
+    tag_key = f"{key}:tag"
+    if redis is None:
+        if tag is None:
+            _held_tags.pop(key, None)
+        else:
+            _held_tags[key] = tag
+        return
+    try:
+        if tag is None:
+            await redis.delete(tag_key)
+        else:
+            await redis.set(tag_key, tag, ttl=ttl_seconds)
+    except Exception:
+        logger.warning("in_flight_limit_tag_unavailable", exc_info=True)
+
+
+async def _untag(redis: RedisClient | None, key: str) -> None:
+    """Drop the run name a released claim carried, wherever it was kept."""
+    _held_tags.pop(key, None)
+    if redis is not None:
+        try:
+            await redis.delete(f"{key}:tag")
+        except Exception:
+            logger.warning("in_flight_limit_tag_unavailable", exc_info=True)
+
+
+async def _renew_claim(
+    redis: RedisClient, key: str, token: str, ttl_seconds: int, tag_key: str | None = None
+) -> None:
+    """Renew an active claim; Redis outages retain the documented per-process floor.
+
+    A tag names the run the claim is held for; it is renewed with the claim so a
+    long comparison keeps its name until the claim itself is released or lost.
+    """
     while True:
         await asyncio.sleep(ttl_seconds / 3)
         try:
@@ -418,11 +463,22 @@ async def _renew_claim(redis: RedisClient, key: str, token: str, ttl_seconds: in
         if not held:
             logger.warning("in_flight_limit_claim_lost", extra={"key": key})
             return
+        if tag_key is not None:
+            try:
+                await redis.expire(tag_key, ttl_seconds)
+            except RedisError, OSError, TimeoutError:
+                logger.warning("in_flight_limit_renewal_unavailable", exc_info=True)
 
 
 @asynccontextmanager
 async def one_in_flight(
-    surface: str, caller: str, *, ttl_seconds: int, message: str, renew: bool = False
+    surface: str,
+    caller: str,
+    *,
+    ttl_seconds: int,
+    message: str,
+    renew: bool = False,
+    tag: str | None = None,
 ) -> AsyncGenerator[None]:
     """Hold the one claim `caller` has on `surface` for the body, or refuse at once.
 
@@ -433,6 +489,10 @@ async def one_in_flight(
     lose its claim, and its release leaves a successor's claim alone. While Redis is
     down or a renewal fails, the logged fallback bounds the caller per process. The
     fallback cannot enforce a limit across workers.
+
+    `tag` names what the claim is held for - a run, say - beside the claim key, so
+    a reader refused by the claim can tell whether the holder is its own work. A
+    holder with no tag clears a stale name instead.
 
     Raises:
         RateLimitError: `caller` already holds the claim; `message` says so.
@@ -456,12 +516,14 @@ async def one_in_flight(
     local_claim = redis is None or renew
     if local_claim:
         _held_here.add(key)
+    tag_key = f"{key}:tag" if tag is not None else None
     renewer = (
-        asyncio.create_task(_renew_claim(redis, key, token, ttl_seconds))
+        asyncio.create_task(_renew_claim(redis, key, token, ttl_seconds, tag_key))
         if renew and redis is not None
         else None
     )
     try:
+        await _tag(redis, key, tag, ttl_seconds)
         yield
     finally:
         try:
@@ -474,15 +536,19 @@ async def one_in_flight(
                 _held_here.discard(key)
             if redis is not None:
                 await _release(redis, key, token)
+            await _untag(redis, key)
 
 
 @asynccontextmanager
-async def eval_computation(ctx: AuthContext) -> AsyncGenerator[None]:
+async def eval_computation(ctx: AuthContext, *, run_id: UUID | None = None) -> AsyncGenerator[None]:
     """Shared admission for comparisons and eval-backed verdict writes and grades.
 
     The caller checks the operation's own permissions first: every caller holds
     runs:view, and an eval-backed write also holds the dataset's own permission
     and access to the agent that answered.
+
+    `run_id` names the run a comparison is of. The claim is tagged with it until
+    the comparison ends, so a read of that run can tell the claim is its own.
     """
     async with one_in_flight(
         "eval_comparison",
@@ -490,6 +556,7 @@ async def eval_computation(ctx: AuthContext) -> AsyncGenerator[None]:
         ttl_seconds=120,
         renew=True,
         message="A comparison is already running for this organization. Wait and try again.",
+        tag=str(run_id) if run_id is not None else None,
     ):
         # A busy refusal must not spend the shared work budget.
         for caller, attempts in (
@@ -505,6 +572,32 @@ async def eval_computation(ctx: AuthContext) -> AsyncGenerator[None]:
                     details={"retry_after_seconds": decision.retry_after_seconds},
                 )
         yield
+
+
+async def eval_computation_claim_run_id(ctx: AuthContext) -> UUID | None:
+    """The run whose comparison holds the organization's eval_computation claim, if any.
+
+    The comparison endpoint tags its claim with the run it reads; a verdict write,
+    a re-score, or a read comparing afresh leaves no tag, and a free claim leaves
+    none either. A name that no longer parses is no name: the reader refuses as
+    it did before.
+    """
+    key = f"inflight:eval_comparison:{_bounded(f'org:{ctx.organization_id}')}"
+    value: str | None = None
+    redis = _redis
+    if redis is not None:
+        try:
+            value = await redis.get(f"{key}:tag")
+        except Exception:
+            logger.warning("in_flight_limit_tag_unavailable", exc_info=True)
+    if value is None:
+        value = _held_tags.get(key)
+    if value is None:
+        return None
+    try:
+        return UUID(value)
+    except ValueError:
+        return None
 
 
 def dictation_limit() -> Limit:

@@ -170,7 +170,8 @@ logger = logging.getLogger(__name__)
 
 Admission = Literal["none", "keep", "refuse"]
 """How a read takes the comparison admission: not at all, keeping what it has when
-busy, or refused when busy."""
+busy, or refused when busy - unless the claim is the run's own comparison, which a
+read of that run does not refuse."""
 
 _CENT = Decimal("0.000001")
 
@@ -2030,13 +2031,16 @@ class EvalRunService:
         draft with the suggestions still waiting is what it checked.
 
         A person's read compares again only under the organization's comparison
-        admission: through the API it is refused while the admission is taken
+        admission: through the API it is refused while another comparison holds it
         (`refuse`), and a page that only shows the run keeps the verdicts it has
-        (`keep`). The platform's own reads, a job settling a session say, compare
-        as they need (`none`).
+        (`keep`). A read the run's own comparison holds the admission for is not
+        refused: the comparison is the read's own work, so the read keeps what the
+        run has, as a list read does. The platform's own reads, a job settling a
+        session say, compare as they need (`none`).
 
         Raises:
-            RateLimitError: `refuse`, a comparison is due and the admission is taken.
+            RateLimitError: `refuse`, a comparison is due and the admission is taken
+                by another comparison.
         """
         run = await self._readable(ctx, run_id)
         read = (await self._reads(ctx, [run], admission=admission))[0]
@@ -2085,7 +2089,8 @@ class EvalRunService:
         on the run, or none when the run has not been judged yet.
 
         Raises:
-            RateLimitError: `refuse`, the verdict is due and the admission is taken.
+            RateLimitError: `refuse`, the verdict is due and the admission is taken
+                by another comparison.
         """
         check = EvalSuiteCheck.model_validate(run.suite_check)
         suite = await eval_suite_repo.get(
@@ -2108,7 +2113,9 @@ class EvalRunService:
                     async with rate_limit.eval_computation(ctx):
                         judged = await self._judge_suite(ctx, run, read, check)
                 except RateLimitError:
-                    if admission == "refuse":
+                    if admission == "refuse" and not await self._own_comparison_holds_claim(
+                        ctx, run
+                    ):
                         raise
                     if judged is None:
                         return verdict
@@ -3042,6 +3049,17 @@ class EvalRunService:
             logger.warning("Eval run %s kept an outcome that no longer reads", run.id)
             return None
 
+    async def _own_comparison_holds_claim(self, ctx: AuthContext, run: EvalRun) -> bool:
+        """Whether the comparison holding the org's claim is this run's own.
+
+        The comparison endpoint tags its claim with the run it reads; a status read
+        of that run is the comparison's own reader, not a second comparison, so it
+        is not refused for the claim. Any other holder - another run's comparison,
+        a verdict write, a re-score - still refuses.
+        """
+        claimed = await rate_limit.eval_computation_claim_run_id(ctx)
+        return claimed is not None and claimed == run.id
+
     async def _outcome(
         self, ctx: AuthContext, run: EvalRun, *, admission: Admission = "none"
     ) -> EvalOutcomeRead | None:
@@ -3049,11 +3067,15 @@ class EvalRunService:
         decided one of the scores it rests on since it was kept.
 
         A person's read compares again under the organization's comparison
-        admission: while it is taken a list `keep`s the verdict it has, and reading
-        the run alone is refused. The platform's own reads take no admission.
+        admission: while it is taken by another comparison a list `keep`s the
+        verdict it has, and reading the run alone is refused. A read whose own
+        comparison holds the admission keeps the verdict it has instead: the
+        comparison is the read's own work, not a second one. The platform's own
+        reads take no admission.
 
         Raises:
-            RateLimitError: `admission` is `refuse`, and the comparison admission is taken.
+            RateLimitError: `admission` is `refuse`, and the comparison admission is taken
+                by another comparison.
         """
         if run.status in (EvalRunStatus.QUEUED.value, EvalRunStatus.RUNNING.value):
             return None
@@ -3070,7 +3092,7 @@ class EvalRunService:
             async with rate_limit.eval_computation(ctx):
                 return await self._compared_outcome(ctx, run)
         except RateLimitError:
-            if admission == "refuse":
+            if admission == "refuse" and not await self._own_comparison_holds_claim(ctx, run):
                 raise
             return kept
 

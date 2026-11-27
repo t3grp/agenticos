@@ -19,6 +19,10 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Fixed
+
+- A status read of an eval run no longer returns 429 while the run's own comparison holds the organization comparison claim; only another comparison refuses it.
+
 ## [1.95.0] - 2026-11-28
 
 ### Upgrading
