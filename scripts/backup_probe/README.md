@@ -62,6 +62,9 @@ State machine: `NEW -> CAPTURING -> HELD -> UPLOADING -> UPLOADED -> VERIFIED`, 
 - `KeyboardInterrupt` and `SystemExit` get the same cleanup as errors in capture, upload, verify and
   restore: buffers are cleared, consumers and streams are aborted, an uncertain transfer is
   `UNKNOWN` and nothing retries. The original interrupt is re-raised.
+- A failed restore aborts the stream and the consumer; both are always tried. If an abort raises,
+  `RestoreResult.cleanup` is `cleanup_failed` (else `clean`), `trusted` stays false and no exception
+  text is kept. The in-memory fixture consumer zeroes and clears its data on abort (best effort).
 - `safe_code` and `ProbeError.__str__` revalidate the code against the allowlist on every use.
 - Buffer zeroing is best effort. Python gives **no guaranteed memory erasure**, and this code
   does **not** lock private memory (no Windows or Linux page locking). `bytes` objects that a

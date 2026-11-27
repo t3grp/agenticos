@@ -309,6 +309,7 @@ class CmsStream:
             ["openssl", "cms", "-decrypt", "-binary", "-inform", "DER", "-recip", str(cert), "-inkey", str(key)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         )  # fmt: skip
+        self.env = env
         self.feeder = env.thread(self._feed, cipher)
 
     def _feed(self, cipher: memoryview) -> None:
@@ -333,7 +334,7 @@ class CmsStream:
         return self.proc.wait(timeout=STEP_S)
 
     def abort(self) -> None:
-        reap_proc(self.proc)  # kill, wait, close; the feeder ends on the broken pipe
+        reap_proc(self.proc, self.env.failures)  # kill, wait, close; the feeder ends on the broken pipe
 
 
 class CmsDecrypt:
@@ -352,6 +353,7 @@ class PgRestoreConsumer:
             ["pg_restore", "--no-owner", "--exit-on-error", "-d", db],
             stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )  # fmt: skip
+        self.env = env
         self.limit, self.total = limit, 0
 
     def write(self, chunk: bytes) -> None:
@@ -373,7 +375,7 @@ class PgRestoreConsumer:
         return self.proc.wait(timeout=STEP_S)
 
     def abort(self) -> None:
-        reap_proc(self.proc)
+        reap_proc(self.proc, self.env.failures)
 
 
 @dataclass
@@ -434,6 +436,8 @@ class Harness:
             decrypt=CmsDecrypt(e, cert, key), consumer=PgRestoreConsumer(e, db, limit),
             chunk=CHUNK, max_plain_bytes=CAP, timeout_s=STEP_S * 2,
         )  # fmt: skip
+        if res.cleanup != "clean":
+            e.failures.append("restore_cleanup_failed")
         counts = e.psql(db, COUNT_SQL, check=False) if res.trusted else ""
         e.psql("postgres", f"DROP DATABASE {db}", check=False)  # quarantine always discarded here
         return res.outcome, counts
@@ -514,7 +518,11 @@ class Harness:
             decrypt=CmsDecrypt(e, e.cert, e.key), consumer=PgRestoreConsumer(e, "no_such_db"),
             chunk=CHUNK, max_plain_bytes=CAP, timeout_s=STEP_S * 2,
         )  # fmt: skip
-        self.check("failing_consumer", res.outcome == "consumer_failed" and not res.trusted, f"outcome={res.outcome}")
+        self.check(
+            "failing_consumer",
+            res.outcome == "consumer_failed" and not res.trusted and res.cleanup == "clean",
+            f"outcome={res.outcome} cleanup={res.cleanup}",
+        )
         self.check("scenario_children_reaped", e.live_children() == 0, f"live_children={e.live_children()}")
 
 

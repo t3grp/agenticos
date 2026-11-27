@@ -357,6 +357,8 @@ class RestoreFlow(unittest.TestCase):
         self.assertEqual(res.outcome, outcome)  # type: ignore[attr-defined]
         self.assertFalse(res.trusted)  # type: ignore[attr-defined]
         self.assertTrue(consumer.aborted)  # quarantine discarded
+        self.assertEqual(bytes(consumer.data), b"")  # no stale plaintext
+        self.assertEqual(res.cleanup, "clean")  # type: ignore[attr-defined]
 
     def test_truncation_and_corruption_are_distinct(self) -> None:
         sink, exp = self.stored()
@@ -394,6 +396,90 @@ class RestoreFlow(unittest.TestCase):
         wrong = Expected(exp.cipher_sha256, exp.cipher_len, sha(b"other"))
         res, cons = self.run_restore(sink, wrong)
         self.assert_untrusted(res, "plaintext_sha_mismatch", cons)
+
+    def test_abort_leaves_no_stale_plaintext_on_sha_and_capacity_failures(self) -> None:
+        seen: list[int] = []
+
+        class Spy(MemConsumer):
+            def abort(self) -> None:
+                seen.append(len(self.data))  # plaintext held right before the discard
+                super().abort()
+
+        sink, exp = self.stored()
+        wrong = Expected(exp.cipher_sha256, exp.cipher_len, sha(b"other"))
+        cons = Spy()
+        res, _ = self.run_restore(sink, wrong, consumer=cons)
+        self.assert_untrusted(res, "plaintext_sha_mismatch", cons)
+        self.assertEqual(seen, [len(PLAIN)])  # the whole plaintext was there, then cleared
+        seen.clear()
+        cons = Spy()
+        res = restore(
+            sink=sink, name="obj", ledger=ledger(), expected=exp, decrypt=MemDecrypt(), consumer=cons,
+            chunk=1000, max_plain_bytes=len(PLAIN) - 1, timeout_s=10,
+        )  # fmt: skip
+        self.assertEqual(res.outcome, "inconclusive_capacity")
+        self.assertEqual(seen, [1000])
+        self.assertEqual(bytes(cons.data), b"")
+
+    def test_cleanup_failure_is_reported_without_hostile_text(self) -> None:
+        hostile = "HOSTILE-secret-text"
+
+        class BadConsumer(MemConsumer):
+            def abort(self) -> None:
+                super().abort()
+                raise RuntimeError(hostile)
+
+        class BadStream(MemStream):
+            def abort(self) -> None:
+                super().abort()
+                raise RuntimeError(hostile)
+
+        class ReadFault(BadStream):
+            def read(self, n: int) -> bytes:
+                raise RuntimeError("read fault")
+
+        class BadDecrypt(MemDecrypt):
+            stream_type: type[MemStream] = BadStream
+
+            def start(self, cipher: memoryview) -> MemStream:
+                self.last = self.stream_type(fixture_cipher(bytes(cipher)), self.status)
+                return self.last
+
+        class ReadFaultDecrypt(BadDecrypt):
+            stream_type = ReadFault
+
+        sink, exp = self.stored()
+        wrong = Expected(exp.cipher_sha256, exp.cipher_len, sha(b"other"))
+        cases = [
+            ("plaintext_sha_mismatch", wrong, BadDecrypt(), BadConsumer()),  # consumer.abort raises
+            ("inconclusive_capacity", exp, BadDecrypt(), BadConsumer(capacity=10)),  # stream and consumer raise
+            ("decrypt_failed", exp, ReadFaultDecrypt(), MemConsumer()),  # stream.abort only
+            ("consumer_failed", exp, MemDecrypt(), BadConsumer(status=3)),
+        ]
+        for outcome, expected, dec, cons in cases:
+            res, cons = self.run_restore(sink, expected, decrypt=dec, consumer=cons)
+            self.assertEqual((res.outcome, res.trusted, res.cleanup), (outcome, False, "cleanup_failed"), outcome)  # type: ignore[attr-defined]
+            self.assertNotIn(hostile, repr(res))
+            self.assertTrue(cons.aborted, outcome)  # a raising stream.abort must not skip consumer.abort
+        dec = BadDecrypt()
+        res, cons = self.run_restore(sink, exp, decrypt=dec, consumer=BadConsumer(capacity=10))
+        self.assertTrue(dec.last.aborted and cons.aborted)  # type: ignore[union-attr]
+
+    def test_interrupt_propagates_even_when_cleanup_raises(self) -> None:
+        class BadConsumer(MemConsumer):
+            def abort(self) -> None:
+                super().abort()
+                raise KeyboardInterrupt
+
+            def finish(self) -> int:
+                raise SystemExit(2)
+
+        sink, exp = self.stored()
+        cons = BadConsumer()
+        with self.assertRaises(SystemExit):  # the original interrupt, not the one from abort
+            self.run_restore(sink, exp, consumer=cons)
+        self.assertTrue(cons.aborted)
+        self.assertEqual(bytes(cons.data), b"")
 
     def test_consumer_exception_does_not_leak_or_trust(self) -> None:
         sink, exp = self.stored()
@@ -966,8 +1052,7 @@ class RestoreHardening(unittest.TestCase):
         self.assertEqual(res.outcome, "verified")  # type: ignore[attr-defined]
         res, cons = self.call(sink, exp, max_plain_bytes=len(PLAIN) - 1, chunk=1000)
         self.assertEqual((res.outcome, res.trusted), ("inconclusive_capacity", False))  # type: ignore[attr-defined]
-        self.assertLessEqual(len(cons.data), len(PLAIN) - 1)
-        self.assertEqual(len(cons.data), 1000)  # the piece that would exceed the cap never reached write()
+        self.assertEqual(len(cons.data), 0)  # the piece that would exceed the cap never reached write(); abort cleared the rest
         self.assertTrue(cons.aborted)
 
     def test_oversized_piece_rejected_before_consumer(self) -> None:

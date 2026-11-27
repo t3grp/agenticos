@@ -32,6 +32,9 @@ TIMEOUT = "timeout"
 BAD_EXPECTED = "bad_expectation"
 BAD_PARAMS = "bad_parameters"
 
+CLEAN = "clean"
+CLEANUP_FAILED = "cleanup_failed"  # fixed allowlist; never carries exception text
+
 
 @dataclass(frozen=True)
 class Expected:
@@ -42,10 +45,15 @@ class Expected:
 
 @dataclass(frozen=True)
 class RestoreResult:
-    """trusted is True only when every gate passed. Otherwise the quarantine is discarded."""
+    """trusted is True only when every gate passed. Otherwise the quarantine is discarded.
+
+    cleanup is CLEAN or CLEANUP_FAILED. CLEANUP_FAILED means an abort raised, so the discard is
+    unconfirmed; outcome still reports the primary failure.
+    """
 
     outcome: str
     trusted: bool
+    cleanup: str = CLEAN
 
 
 class Stream(Protocol):
@@ -76,16 +84,37 @@ class _ConsumerFault(Exception):
     pass
 
 
-def _quiet(fn: Callable[[], object]) -> None:
+def _attempt(fn: Callable[[], object]) -> bool:
+    """Run one cleanup step. False if it raised; the exception text is dropped on purpose."""
     try:
         fn()
     except Exception:
-        pass
+        return False
+    return True
 
 
-def _bad(outcome: str, consumer: Consumer) -> RestoreResult:
-    _quiet(consumer.abort)  # discard the quarantine target
-    return RestoreResult(outcome, False)
+def _discard(consumer: Consumer, stream: Stream | None = None) -> str:
+    """Abort stream then consumer, both always tried. Returns CLEAN or CLEANUP_FAILED."""
+    ok = True
+    if stream is not None:
+        ok = _attempt(stream.abort)
+    ok = _attempt(consumer.abort) and ok
+    return CLEAN if ok else CLEANUP_FAILED
+
+
+def _discard_on_interrupt(consumer: Consumer, stream: Stream | None = None) -> None:
+    """Best-effort cleanup while an interrupt propagates. Nothing here may replace the interrupt."""
+    for fn in (stream.abort if stream is not None else None, consumer.abort):
+        if fn is None:
+            continue
+        try:
+            fn()
+        except BaseException:
+            pass
+
+
+def _bad(outcome: str, consumer: Consumer, stream: Stream | None = None) -> RestoreResult:
+    return RestoreResult(outcome, False, _discard(consumer, stream))  # discard the quarantine target
 
 
 def restore(
@@ -126,7 +155,7 @@ def restore(
     except Exception:
         return _bad(FETCH_FAILED, consumer)
     except BaseException:
-        _quiet(consumer.abort)
+        _discard_on_interrupt(consumer)
         raise
     if type(body) is not bytes or len(body) < want_len:
         return _bad(TRUNCATED, consumer)
@@ -191,20 +220,15 @@ def _decrypt_into(
             decrypt_status = stream.finish()
             tick()
     except _Timeout:
-        _abort_stream(stream)
-        return _bad(TIMEOUT, consumer)
+        return _bad(TIMEOUT, consumer, stream)
     except CapacityError:
-        _abort_stream(stream)
-        return _bad(INCONCLUSIVE, consumer)
+        return _bad(INCONCLUSIVE, consumer, stream)
     except _ConsumerFault:
-        _abort_stream(stream)
-        return _bad(CONSUMER_FAILED, consumer)
+        return _bad(CONSUMER_FAILED, consumer, stream)
     except Exception:
-        _abort_stream(stream)
-        return _bad(DECRYPT_FAILED, consumer)
+        return _bad(DECRYPT_FAILED, consumer, stream)
     except BaseException:
-        _abort_stream(stream)
-        _quiet(consumer.abort)
+        _discard_on_interrupt(consumer, stream)
         raise
     try:
         consumer_status = consumer.finish()
@@ -216,7 +240,7 @@ def _decrypt_into(
     except Exception:
         return _bad(CONSUMER_FAILED, consumer)
     except BaseException:
-        _quiet(consumer.abort)
+        _discard_on_interrupt(consumer)
         raise
     if type(decrypt_status) is not int or type(consumer_status) is not int:
         return _bad(BAD_STATUS, consumer)
@@ -227,8 +251,3 @@ def _decrypt_into(
     if sha.hexdigest() != expected.dump_sha256:
         return _bad(PLAINTEXT_MISMATCH, consumer)
     return RestoreResult(VERIFIED, True)
-
-
-def _abort_stream(stream: Stream | None) -> None:
-    if stream is not None:
-        _quiet(stream.abort)

@@ -106,3 +106,5 @@ class MemConsumer:
 
     def abort(self) -> None:
         self.aborted = True
+        self.data[:] = bytes(len(self.data))  # best-effort zeroing, not secure erasure
+        self.data.clear()
