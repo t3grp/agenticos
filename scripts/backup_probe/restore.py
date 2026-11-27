@@ -84,21 +84,24 @@ class _ConsumerFault(Exception):
     pass
 
 
-def _attempt(fn: Callable[[], object]) -> bool:
-    """Run one cleanup step. False if it raised; the exception text is dropped on purpose."""
-    try:
-        fn()
-    except Exception:
-        return False
-    return True
-
-
 def _discard(consumer: Consumer, stream: Stream | None = None) -> str:
-    """Abort stream then consumer, both always tried. Returns CLEAN or CLEANUP_FAILED."""
+    """Abort stream then consumer, both always tried. Returns CLEAN or CLEANUP_FAILED.
+
+    An interrupt raised by an abort is re-raised only after the other abort ran. The first one wins.
+    """
     ok = True
-    if stream is not None:
-        ok = _attempt(stream.abort)
-    ok = _attempt(consumer.abort) and ok
+    interrupt: BaseException | None = None
+    for fn in (stream.abort if stream is not None else None, consumer.abort):
+        if fn is None:
+            continue
+        try:
+            fn()
+        except Exception:
+            ok = False
+        except BaseException as exc:
+            interrupt = interrupt or exc
+    if interrupt is not None:
+        raise interrupt
     return CLEAN if ok else CLEANUP_FAILED
 
 

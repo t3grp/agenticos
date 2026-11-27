@@ -465,6 +465,65 @@ class RestoreFlow(unittest.TestCase):
         res, cons = self.run_restore(sink, exp, decrypt=dec, consumer=BadConsumer(capacity=10))
         self.assertTrue(dec.last.aborted and cons.aborted)  # type: ignore[union-attr]
 
+    def test_abort_interrupt_still_cleans_the_other_side_and_propagates(self) -> None:
+        class IntStream(MemStream):
+            def abort(self) -> None:
+                super().abort()
+                raise KeyboardInterrupt
+
+        class IntDecrypt(MemDecrypt):
+            def start(self, cipher: memoryview) -> MemStream:
+                self.last = IntStream(fixture_cipher(bytes(cipher)), self.status)
+                return self.last
+
+        class IntConsumer(MemConsumer):
+            def abort(self) -> None:
+                super().abort()
+                raise SystemExit(3)
+
+        sink, exp = self.stored()
+        seen: list[int] = []
+
+        class Spy(MemConsumer):
+            def abort(self) -> None:
+                seen.append(len(self.data))
+                super().abort()
+
+        # stream.abort interrupts during a capacity failure: consumer still cleared, interrupt propagates
+        cons = Spy()
+        with self.assertRaises(KeyboardInterrupt):
+            restore(
+                sink=sink, name="obj", ledger=ledger(), expected=exp, decrypt=IntDecrypt(), consumer=cons,
+                chunk=1000, max_plain_bytes=len(PLAIN) - 1, timeout_s=10,
+            )  # fmt: skip
+        self.assertEqual(seen, [1000])  # the consumer held plaintext, then was aborted
+        self.assertTrue(cons.aborted)
+        self.assertEqual(bytes(cons.data), b"")
+        # same for a decrypt fault
+        class ReadInt(IntStream):
+            def read(self, n: int) -> bytes:
+                raise RuntimeError("read fault")
+
+        class ReadIntDecrypt(IntDecrypt):
+            def start(self, cipher: memoryview) -> MemStream:
+                self.last = ReadInt(fixture_cipher(bytes(cipher)), self.status)
+                return self.last
+
+        cons = Spy()
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_restore(sink, exp, decrypt=ReadIntDecrypt(), consumer=cons)
+        self.assertTrue(cons.aborted)
+        # consumer.abort interrupts after the stream attempt on an ordinary failure
+        dec, cons = MemDecrypt(), IntConsumer(capacity=10)
+        with self.assertRaises(SystemExit):
+            self.run_restore(sink, exp, decrypt=dec, consumer=cons)
+        self.assertTrue(dec.last.aborted and cons.aborted)  # type: ignore[union-attr]
+        # both interrupt: the stream's (first) one propagates
+        cons = IntConsumer(capacity=10)
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_restore(sink, exp, decrypt=IntDecrypt(), consumer=cons)
+        self.assertTrue(cons.aborted)
+
     def test_interrupt_propagates_even_when_cleanup_raises(self) -> None:
         class BadConsumer(MemConsumer):
             def abort(self) -> None:
