@@ -70,6 +70,8 @@ export default defineConfig({
         "src/components/teams/org-console-navigation.tsx",
         "src/components/teams/org-console-dashboard.tsx",
         "src/components/ui/disclosure-content.tsx",
+        "src/components/ui/status-orb.tsx",
+        "src/components/auth/login-orb.tsx",
         "src/components/skill-improvement/**/*.tsx",
         "src/components/triggers/source-consents-panel.tsx",
         "src/components/triggers/action-selection.tsx",

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { LoginForm } from "@/components/auth";
+import { LoginOrb } from "@/components/auth/login-orb";
 import type { Locale } from "@/i18n";
 import { readBranding } from "@/lib/branding-server";
 import { pageMetadata } from "@/lib/seo";
@@ -25,5 +26,10 @@ export async function generateMetadata({
 }
 
 export default function LoginPage() {
-  return <LoginForm />;
+  return (
+    <>
+      <LoginOrb />
+      <LoginForm />
+    </>
+  );
 }

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui";
+import { StatusOrb, type OrbState } from "@/components/ui/status-orb";
 import { cn } from "@/lib/utils";
 import type { AgentStatus } from "@/types/agents";
 import type { RunStatus } from "@/types/runs";
@@ -69,7 +70,7 @@ export function AgentStatusBadge({
  */
 const RUN_DOT: Record<RunStatus, string> = {
   completed: "bg-success",
-  running: "bg-brand animate-pulse",
+  running: "bg-brand",
   awaiting_approval: "bg-warning",
   awaiting_answer: "bg-warning",
   budget_exceeded: "bg-warning",
@@ -95,11 +96,25 @@ export const RUN_LABEL: Record<RunStatus, string> = {
   failed: "runFailed",
 };
 
+/** A stop the platform made on purpose is still, in its own warning colour from above. */
+const RUN_ORB: Record<RunStatus, OrbState> = {
+  completed: "done",
+  running: "working",
+  awaiting_approval: "waiting",
+  awaiting_answer: "waiting",
+  budget_exceeded: "idle",
+  guardrail_blocked: "idle",
+  loop_stopped: "idle",
+  timed_out: "idle",
+  cancelled: "idle",
+  failed: "failed",
+};
+
 export function RunStatusBadge({ status }: { status: RunStatus }) {
   const t = useTranslations("agents");
   return (
     <Badge variant="outline" className="text-muted-foreground whitespace-nowrap">
-      <StatusDot className={RUN_DOT[status]} />
+      <StatusOrb state={RUN_ORB[status]} className={RUN_DOT[status]} />
       {t(RUN_LABEL[status])}
     </Badge>
   );

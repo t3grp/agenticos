@@ -1179,6 +1179,7 @@
     "testedSpecUnread": "The version this run tested could not be read. {reason}"
   },
   "auth": {
+    "orbReady": "Ready to sign in",
     "agreeToTerms": "By creating an account, you agree to our <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
     "atLeast8Characters": "At least 8 characters",
     "backSign": "Back to sign in",

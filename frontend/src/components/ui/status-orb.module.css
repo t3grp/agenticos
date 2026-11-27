@@ -1,0 +1,29 @@
+.orb {
+  background-image: radial-gradient(
+    circle at var(--orb-x, 32%) var(--orb-y, 28%),
+    oklch(100% 0 0 / 0.75),
+    oklch(100% 0 0 / 0.12) 42%,
+    oklch(0% 0 0 / 0.22)
+  );
+}
+
+.orb[data-animate="true"][data-state="working"] {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.orb[data-animate="true"][data-state="waiting"] {
+  animation: breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    transform: scale(0.82);
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb[data-animate="true"][data-state] {
+    animation: none;
+  }
+}
