@@ -11,7 +11,7 @@ import { InvitationAcceptCard } from "@/components/orgs/invitation-accept-card";
  * anything asserted through the page passes whether or not the page works.
  *
  * **It navigates nowhere when nobody is signed in.** `AuthGuard`, which wraps every
- * dashboard route, has already sent that visitor to `/login?returnTo=…` - and for
+ * dashboard route, has already sent that visitor to `/register?returnTo=…` - and for
  * an invitation deep link it exchanges the token for an httpOnly handle first
  * (#1414), so the signed-out path returns here only for someone who was already
  * signed in. This used to push `?redirect=` of its own - a name nothing reads - and

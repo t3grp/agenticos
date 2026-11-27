@@ -31,18 +31,28 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // succeeded, because the token is the only credential the invitee holds.
   const [unstagedToken, setUnstagedToken] = useState<string | null>(null);
 
-  // Exchange the token for an httpOnly-cookie handle before the sign-in detour, so
+  // Exchange the token for an httpOnly-cookie handle before the sign-up detour, so
   // it never rides `returnTo`, browser history or `sessionStorage` (#1414). The
   // landing carries only the flow id; an invalid token is reported there, once there
   // is a session to report to. A staging the server refused - transiently, or with a
-  // rate limit - keeps the invitee here to try again rather than sending them to sign
-  // in with nothing staged to come back to.
+  // rate limit - keeps the invitee here to try again rather than sending them on
+  // with nothing staged to come back to.
+  //
+  // The invitee is sent to register, not to sign in: somebody holding an
+  // invitation usually has no account yet, and the sign-in page only offered
+  // register as a link beside the form. The register form carries the staged
+  // flow on to onboarding, where the invitation is accepted - so this does not
+  // reintroduce the bare-`/register` strand of #1495, where an invitee signed
+  // up in no organization at all. An invitee who already has an account
+  // reaches sign-in from the register page's link, carrying the same landing.
   const stageAndGo = useCallback(
     async (token: string) => {
       const flow = await stageInvitation(token);
       if (flow) {
         setUnstagedToken(null);
-        router.replace(`${ROUTES.LOGIN}?returnTo=${encodeURIComponent(pendingLandingFor(flow))}`);
+        router.replace(
+          `${ROUTES.REGISTER}?returnTo=${encodeURIComponent(pendingLandingFor(flow))}`,
+        );
       } else {
         setUnstagedToken(token);
       }

@@ -32,8 +32,8 @@ export function LoginForm() {
   const search = useSearchParams();
   const router = useRouter();
   const { login, isAuthenticated, isLoading: checkingSession } = useAuth();
-  // Where "create an account" goes. An invitee with no account is bounced here by
-  // `AuthGuard` with the invitation in `returnTo`, and a plain link to /register
+  // Where "create an account" goes. An invitee with an account reaches here from
+  // the register page with the invitation in `returnTo`, and a plain link to /register
   // would drop it - leaving an `invite_only` deployment refusing somebody who is
   // holding a valid invitation (#916).
   const signUpHref = registerHref(search.toString());

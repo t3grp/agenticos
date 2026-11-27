@@ -43,6 +43,7 @@ Two things are versioned separately from this file and worth knowing about:
 - Live Project mounts reachable on isolated production Compose hosts (opt-in supervisor-only gateway bridge).
 - Eval/Improve reliability: resume a live eval comparison after a failed poll, keep Improve variant searches going through refused/unanswered rounds, parse dataset imports off the event loop a row at a time, and recheck access before each Improve search unit.
 - Refresh the backend dependency lock and verify compatibility with current SDKs. Keep Daytona on its supported 0.x API (`daytona>=0.226.1,<2`) until the workspace adapter supports the SDK 2.x namespace migration; saved workflow checkpoints require the exact Monty version that wrote them (`pydantic-monty==1.6.0`).
+- An invited person with no account is sent to the register page when they follow the invitation link, instead of to sign-in. The staged invitation still carries through registration to onboarding, where it is accepted; an invitee who already has an account reaches sign-in from the register page.
 
 ## [1.94.0] - 2026-11-27
 
