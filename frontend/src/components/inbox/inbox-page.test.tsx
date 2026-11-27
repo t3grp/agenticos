@@ -85,10 +85,10 @@ vi.mock("@/hooks/use-pending-approvals", () => ({
   }),
 }));
 vi.mock("@/hooks/use-runs", () => ({
-  useDecideApproval: () => ({ mutate: decideTool, isPending: false }),
+  useDecideApproval: () => ({ mutateAsync: decideTool, isPending: false }),
 }));
 vi.mock("@/hooks/use-workflow-approvals", () => ({
-  useDecideWorkflowApproval: () => ({ mutate: decideStep, isPending: false }),
+  useDecideWorkflowApproval: () => ({ mutateAsync: decideStep, isPending: false }),
 }));
 vi.mock("@/components/dashboard/agent-face", () => ({ AgentFace: () => null }));
 vi.mock("@/components/runs/approval-delegate", () => ({ ApprovalDelegate: () => null }));
@@ -399,12 +399,14 @@ describe("approvals waiting on the reader", () => {
       { id: "t2", tool_id: "create_lead", agent_name: null, tool_args: {} },
     ];
     pending.count = 2;
+    decideTool.mockResolvedValue({});
+    decideStep.mockResolvedValue({});
   });
 
   it("leads the inbox, counted with everything else, and leads to the approvals queue", () => {
     render(<InboxPage />);
 
-    const section = screen.getByRole("region", { name: "Approval requests" });
+    const section = screen.getByRole("region", { name: "Needs you" });
     expect(section).toHaveTextContent("Send the refund?");
     expect(section).toHaveTextContent("Refunds");
     expect(section).toHaveTextContent("Confirm the delivery date");
@@ -440,23 +442,46 @@ describe("approvals waiting on the reader", () => {
       },
     ];
     render(<InboxPage />);
-    const section = screen.getByRole("region", { name: "Approval requests" });
+    const section = screen.getByRole("region", { name: "Needs you" });
     expect(section).toHaveTextContent("Delivery exceptions");
     expect(section).not.toHaveTextContent("Private run content");
   });
 
+  it("confirms an answered decision in place of its card", async () => {
+    render(<InboxPage />);
+    const [step, tool] = screen.getByRole("region", { name: "Needs you" }).querySelectorAll("li");
+
+    await userEvent.click(within(step as HTMLElement).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(tool as HTMLElement).getByRole("button", { name: "Reject" }));
+
+    const [approved, rejected] = await screen.findAllByRole("status");
+    expect(approved).toHaveTextContent(/Approved.*Send the refund\?/);
+    expect(rejected).toHaveTextContent(/Rejected.*Support · Send email/);
+    expect(screen.queryByText("Confirm the delivery date")).toBeNull();
+  });
+
+  it("keeps the card up when a decision is refused", async () => {
+    decideTool.mockRejectedValue(new Error("Refused"));
+    render(<InboxPage />);
+    const [, tool] = screen.getByRole("region", { name: "Needs you" }).querySelectorAll("li");
+
+    await userEvent.click(within(tool as HTMLElement).getByRole("button", { name: "Reject" }));
+
+    expect(within(tool as HTMLElement).getByRole("button", { name: "Reject" })).toBeVisible();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("decides requests through the same actions as the approvals queue", async () => {
     render(<InboxPage />);
-    const [step, tool] = screen
-      .getByRole("region", { name: "Approval requests" })
-      .querySelectorAll("li");
+    const [step, tool] = screen.getByRole("region", { name: "Needs you" }).querySelectorAll("li");
     expect(step).toBeDefined();
     expect(tool).toBeDefined();
     await userEvent.click(within(step as HTMLElement).getByRole("button", { name: "Approve" }));
-    await userEvent.click(within(tool as HTMLElement).getByRole("button", { name: "Reject" }));
+    // Before the answer: an answered card folds into its confirmation.
     await userEvent.click(
       within(tool as HTMLElement).getByRole("button", { name: "Open the run" }),
     );
+    await userEvent.click(within(tool as HTMLElement).getByRole("button", { name: "Reject" }));
 
     expect(decideStep).toHaveBeenCalledWith({
       id: "s1",
@@ -485,7 +510,7 @@ describe("approvals waiting on the reader", () => {
       },
     ];
     render(<InboxPage />);
-    const section = screen.getByRole("region", { name: "Approval requests" });
+    const section = screen.getByRole("region", { name: "Needs you" });
     expect(section).toHaveTextContent("Oasis*");
     expect(section).toHaveTextContent("Sales bro");
     expect(section).not.toHaveTextContent("filterGroups");
@@ -502,7 +527,7 @@ describe("approvals waiting on the reader", () => {
     pending.tools = [];
     pending.count = 7;
     render(<InboxPage />);
-    const section = screen.getByRole("region", { name: "Approval requests" });
+    const section = screen.getByRole("region", { name: "Needs you" });
     expect(section.querySelectorAll("li")).toHaveLength(5);
     expect(screen.queryByText("Decision 5")).toBeNull();
     expect(screen.getByRole("link", { name: "Open approvals" })).toHaveAttribute(
@@ -515,12 +540,12 @@ describe("approvals waiting on the reader", () => {
   it("stays among the urgent items and out of routine results", () => {
     state.filter = "urgent";
     const { unmount } = render(<InboxPage />);
-    expect(screen.getByRole("region", { name: "Approval requests" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Needs you" })).toBeInTheDocument();
     unmount();
 
     state.filter = "watches";
     render(<InboxPage />);
-    expect(screen.queryByRole("region", { name: "Approval requests" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
     expect(screen.getByText("Nothing waits here")).toBeInTheDocument();
   });
 
@@ -529,14 +554,14 @@ describe("approvals waiting on the reader", () => {
     render(<InboxPage />);
     expect(screen.queryByText("Nothing waits here")).toBeNull();
     expect(screen.queryByText(/waiting/)).toBeNull();
-    expect(screen.queryByRole("region", { name: "Approval requests" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
   });
 
   it("offers a retry of both reads when the approvals could not be read", async () => {
     pending.error = new Error("offline");
     render(<InboxPage />);
     expect(screen.queryByText("Nothing waits here")).toBeNull();
-    expect(screen.queryByRole("region", { name: "Approval requests" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
     expect(screen.getByText("—")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(pending.refetch).toHaveBeenCalledOnce();
@@ -548,7 +573,7 @@ describe("approvals waiting on the reader", () => {
     pending.tools = [];
     pending.count = 0;
     render(<InboxPage />);
-    expect(screen.queryByRole("region", { name: "Approval requests" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
     expect(screen.getByText("Nothing waits here")).toBeInTheDocument();
   });
 });

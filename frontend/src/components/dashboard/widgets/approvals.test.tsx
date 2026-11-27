@@ -10,6 +10,10 @@ import type { ToolApproval } from "@/types/runs";
 import { ApprovalsWidget } from "./approvals";
 
 const useApprovalsMock = vi.fn();
+const decideMock = vi.fn();
+vi.mock("@/hooks/use-runs", () => ({
+  useDecideApproval: () => ({ mutateAsync: decideMock, isPending: false }),
+}));
 vi.mock("@/hooks", () => ({
   useApprovals: (...args: unknown[]) => useApprovalsMock(...args),
   useAgents: () => ({
@@ -58,7 +62,10 @@ function renderWidget(state: Record<string, unknown>) {
   );
 }
 
-beforeEach(() => useApprovalsMock.mockReset());
+beforeEach(() => {
+  useApprovalsMock.mockReset();
+  decideMock.mockReset().mockResolvedValue({});
+});
 
 describe("the approvals card", () => {
   it("names who asks and for what, in words, with the agent's face", () => {
@@ -128,5 +135,55 @@ describe("the approvals card", () => {
   it("holds a skeleton while the queue loads", () => {
     renderWidget({ isLoading: true });
     expect(screen.queryByRole("listitem")).toBeNull();
+  });
+});
+
+describe("deciding from the card", () => {
+  const readable = () => approval({ tool_args: { fact: "Parcels leave on Fridays" } });
+
+  it.each([
+    ["Approve", true, "Approved"],
+    ["Reject", false, "Rejected"],
+  ])("answers with %s and confirms in place of the card", async (name, approved, said) => {
+    renderWidget({ approvals: [readable()], total: 1 });
+    expect(screen.getByRole("listitem")).toHaveTextContent("Parcels leave on Fridays");
+
+    await userEvent.click(screen.getByRole("button", { name }));
+
+    expect(decideMock).toHaveBeenCalledWith({ id: "ap1", approved });
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent(said);
+    expect(status).toHaveTextContent("Architect · Save to memory");
+    expect(screen.queryByRole("button", { name })).toBeNull();
+  });
+
+  it("keeps the card up when the decision is refused", async () => {
+    decideMock.mockRejectedValue(new Error("409"));
+    renderWidget({ approvals: [readable()], total: 1 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeVisible();
+  });
+
+  it("offers only review for a call it cannot describe", () => {
+    renderWidget({
+      approvals: [
+        approval({ id: "blank" }),
+        approval({ id: "hidden", content_hidden: true, tool_args: { fact: "x" } }),
+      ],
+      total: 2,
+    });
+
+    expect(screen.getAllByRole("link", { name: "Review" })).toHaveLength(2);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("offers no approval to a reader the server refused one", () => {
+    renderWidget({ approvals: [{ ...readable(), may_approve: false }], total: 1 });
+
+    expect(screen.getByRole("button", { name: "Reject" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
   });
 });

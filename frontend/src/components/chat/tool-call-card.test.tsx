@@ -426,3 +426,14 @@ it("serializes large result payloads only on explicit expansion", async () => {
     stringify.mockRestore();
   }
 });
+
+it("opens a compact card naming the call, with arguments and result to copy", async () => {
+  card({ name: "create_issue", args: { title: "Late parcel" }, result: "opened" });
+  expect(row()).toHaveClass("ring-1");
+
+  await open();
+
+  expect(screen.getByText("create_issue")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Copy arguments" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Copy result" })).toBeInTheDocument();
+});

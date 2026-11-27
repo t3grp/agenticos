@@ -106,13 +106,16 @@ interface AgentStepProps {
   onToggle?: () => void;
   /** Shown beside the chevron once expanded - the raw view toggle, mainly. */
   actions?: ReactNode;
+  /** Outline the row as a compact card; a tool call is one. */
+  card?: boolean;
   children?: ReactNode;
 }
 
 /**
  * One step of a turn: an icon, a line, and whatever it opens.
  *
- * **A row, not a card.** The card this replaces had a border, a fill, a status pill,
+ * **A row first, a card only on request.** The card this replaces had a border, a
+ * fill, a status pill,
  * a chevron and a raw-view button on every call - so a turn that wrote one file
  * arrived as three boxes of chrome around three short sentences, and the answer
  * itself was below the fold. What somebody scrolling a transcript wants is the
@@ -135,6 +138,7 @@ export function AgentStep({
   expanded,
   onToggle,
   actions,
+  card = false,
   children,
 }: AgentStepProps) {
   const t = useTranslations("chat.steps");
@@ -211,7 +215,10 @@ export function AgentStep({
             onClick={onToggle}
             aria-expanded={expanded}
             aria-controls={expanded ? detailsId : undefined}
-            className="hover:bg-muted/50 focus-visible:ring-ring flex min-h-8 max-w-full min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none"
+            className={cn(
+              "hover:bg-muted/50 focus-visible:ring-ring flex min-h-8 max-w-full min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+              card && "ring-border min-h-9 ring-1 ring-inset",
+            )}
           >
             {line}
             <ChevronDown

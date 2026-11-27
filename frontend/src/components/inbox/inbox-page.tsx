@@ -195,7 +195,10 @@ export function InboxPage() {
         }
       >
         {showsQuestions && <QuestionsWaiting questions={questions} />}
-        {showsApprovals && <ApprovalsWaiting tools={pending.tools} steps={pending.steps} />}
+        {/* Stays mounted while the queue is empty, so the last answer can confirm. */}
+        {showsUrgent && !isLoading && !error && (
+          <ApprovalsWaiting tools={pending.tools} steps={pending.steps} />
+        )}
         {filter === "done" ? (
           <Decided />
         ) : isLoading || (showsUrgent && questions.isLoading) ? (

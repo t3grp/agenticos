@@ -5,7 +5,9 @@ import { useConsoleRouter as useRouter } from "@/hooks/use-console-router";
 import { ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { AnsweredRow, useAnswered } from "@/components/runs/answered-row";
 import { PendingApproval } from "@/components/runs/approval-cards";
+import { useActionPhrase } from "@/components/runs/approval-request";
 import { StepApprovalRow } from "@/components/runs/workflow-approvals-card";
 import { useDecideApproval } from "@/hooks/use-runs";
 import { useDecideWorkflowApproval } from "@/hooks/use-workflow-approvals";
@@ -17,6 +19,7 @@ import styles from "./inbox-row.module.css";
 
 const SHOWN = 5;
 
+/** What needs the reader's decision, as cards; an answered one confirms, then folds. */
 export function ApprovalsWaiting({
   tools,
   steps,
@@ -25,12 +28,26 @@ export function ApprovalsWaiting({
   steps: WorkflowApprovalRead[];
 }) {
   const t = useTranslations("inbox.approvals");
+  const tRuns = useTranslations("pages.runs");
+  const phrase = useActionPhrase();
   const router = useRouter();
   const decideTool = useDecideApproval();
   const decideStep = useDecideWorkflowApproval();
   const deciding = decideTool.isPending || decideStep.isPending;
+  const { answered, record, dismiss } = useAnswered();
   const queue = `${ROUTES.RUNS}?tab=approvals`;
-  const shownSteps = steps.slice(0, SHOWN);
+  const done = new Set(answered.map((item) => item.id));
+  const shownSteps = steps.filter((step) => !done.has(step.id)).slice(0, SHOWN);
+  const shownTools = tools.filter((tool) => !done.has(tool.id)).slice(0, SHOWN - shownSteps.length);
+
+  if (answered.length + shownSteps.length + shownTools.length === 0) return null;
+
+  // A refused decision is already toasted by the hook, and leaves its card up.
+  const settle = (decision: Promise<unknown>, id: string, title: string, approved: boolean) =>
+    void decision.then(
+      () => record({ id, title, approved }),
+      () => undefined,
+    );
 
   return (
     <section aria-labelledby="inbox-approvals" className="border-b last:border-b-0">
@@ -46,7 +63,10 @@ export function ApprovalsWaiting({
           <ChevronRight className="size-3.5" aria-hidden />
         </Link>
       </div>
-      <ul className="divide-y">
+      <ul className="[&>li]:bg-card space-y-2 px-3 pb-3 sm:px-4 [&>li]:overflow-hidden [&>li]:rounded-xl [&>li]:border">
+        {answered.map((item) => (
+          <AnsweredRow key={item.id} item={item} onGone={dismiss} />
+        ))}
         {shownSteps.map((approval) => (
           <li key={approval.id}>
             <StepApprovalRow
@@ -54,18 +74,30 @@ export function ApprovalsWaiting({
               approval={approval}
               deciding={deciding}
               onDecide={(approved, final, choice, note) =>
-                decideStep.mutate({ id: approval.id, approved, final, choice, note })
+                settle(
+                  decideStep.mutateAsync({ id: approval.id, approved, final, choice, note }),
+                  approval.id,
+                  approval.title,
+                  approved,
+                )
               }
             />
           </li>
         ))}
-        {tools.slice(0, SHOWN - shownSteps.length).map((approval) => (
+        {shownTools.map((approval) => (
           <PendingApproval
             className={styles.approvalRow}
             key={approval.id}
             approval={approval}
             deciding={deciding}
-            onDecide={(approved, note) => decideTool.mutate({ id: approval.id, approved, note })}
+            onDecide={(approved, note) =>
+              settle(
+                decideTool.mutateAsync({ id: approval.id, approved, note }),
+                approval.id,
+                `${approval.subagent_name ?? approval.agent_name ?? tRuns("anAgent")} · ${phrase(approval.tool_id)}`,
+                approved,
+              )
+            }
             onOpenRun={() => router.push(`${queue}&run=${encodeURIComponent(approval.run_id)}`)}
           />
         ))}

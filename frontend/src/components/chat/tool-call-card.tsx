@@ -86,6 +86,7 @@ export const ToolCallCard = memo(function ToolCallCard({
       : null;
   return (
     <AgentStep
+      card
       label={
         delegate === null
           ? step.label
@@ -126,7 +127,10 @@ export const ToolCallCard = memo(function ToolCallCard({
           declined={secretRequestDeclined(toolCall)}
         />
       ) : (
-        <RawToolView toolCall={toolCall} resultText={resultText} />
+        <>
+          <p className="text-muted-foreground mb-2 truncate font-mono text-xs">{toolCall.name}</p>
+          <RawToolView toolCall={toolCall} resultText={resultText} />
+        </>
       )}
     </AgentStep>
   );

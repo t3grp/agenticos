@@ -20,13 +20,18 @@ import {
   type BrowserCredentialSelection,
 } from "@/lib/browser-credential-approval";
 
+/** Whether this reader may approve the call, as the server answered or implies. */
+export function mayApproveCall(approval: ToolApproval): boolean {
+  return approval.may_approve ?? !(approval.always_asks && approval.content_hidden);
+}
+
 /**
  * What the call will do in names, resolved when it was parked as the person the
  * run acts for; else, for a call still waiting, the one telling argument, as a
  * call nobody described always read. A decided row keeps its arguments folded. A
  * reader who may not see the run is told why the content is missing.
  */
-function useCallLine(approval: ToolApproval, withArguments: boolean): string | null {
+export function useCallLine(approval: ToolApproval, withArguments: boolean): string | null {
   const t = useTranslations("pages.runs");
   const tTools = useTranslations("chat.tools");
   if (browserCredentialApproval(approval).kind !== "ordinary") return null;
@@ -104,7 +109,7 @@ export function PendingApproval({
       : null;
   const askedLine = useAskedLine(approval);
   const hiddenFromThem = Boolean(approval.always_asks && approval.content_hidden);
-  const mayApprove = approval.may_approve ?? !hiddenFromThem;
+  const mayApprove = mayApproveCall(approval);
   const browser = useTranslations("browserCredentials");
   const credential = browserCredentialApproval(approval);
   const continuation = useTranslations("browserContinuation");

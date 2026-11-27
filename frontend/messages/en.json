@@ -1987,6 +1987,8 @@
       "messageDelegate": "Message Delegate",
       "moreEntries": "and {count, plural, =1 {1 more} other {# more}} - open the raw view for all of them",
       "noArguments": "No arguments",
+      "copyArguments": "Copy arguments",
+      "copyResult": "Copy result",
       "noContext": "No context files are attached to this agent.",
       "noSkills": "No skills are attached to this agent.",
       "noRelevantDocuments": "No relevant documents found",
@@ -3576,7 +3578,7 @@
         },
         "more": "{count} more in the queue",
         "review": "Review",
-        "title": "Waiting on a decision",
+        "title": "Needs you",
         "waiting": "waiting {ago}",
         "description": "Runs paused on a tool call, waiting for a decision.",
         "someAgent": "An agent",
@@ -16866,7 +16868,7 @@
       "loadMore": "Show more questions"
     },
     "approvals": {
-      "title": "Approval requests",
+      "title": "Needs you",
       "open": "Open approvals"
     }
   },
