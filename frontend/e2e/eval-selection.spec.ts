@@ -91,12 +91,18 @@ test("choose an agent from a dataset, estimate and complete its eval", async ({ 
     await page.waitForURL(new RegExp(`/agents/${agent}/evals/[^/?]+$`));
     const runId = new URL(page.url()).pathname.split("/").pop();
     await expect
-      .poll(async () => {
-        const response = await page.request.get(`/api/eval-runs/${runId}`);
-        expect(response.ok(), await response.text()).toBeTruthy();
-        const body: unknown = await response.json();
-        return typeof body === "object" && body !== null && "status" in body ? body.status : null;
-      })
+      .poll(
+        async () => {
+          const response = await page.request.get(`/api/eval-runs/${runId}`);
+          expect(response.ok(), await response.text()).toBeTruthy();
+          const body: unknown = await response.json();
+          return typeof body === "object" && body !== null && "status" in body ? body.status : null;
+        },
+        // The run's own comparison holds the per-org eval_computation claim,
+        // so status reads 429 until it finishes; give it room beyond the
+        // default 5s poll timeout.
+        { timeout: 30_000 },
+      )
       .toBe("completed");
     await expect(page.getByRole("heading", { name: "1 of 1 answers passed" })).toBeVisible();
   } finally {
