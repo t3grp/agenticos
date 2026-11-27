@@ -101,3 +101,29 @@ async def test_verdict_computation_and_reads_share_the_claim_and_person_budget(m
         await anext(limit_eval_comparison(ctx))
     assert 1 <= refused.value.details["retry_after_seconds"] <= 60
     assert "inflight:eval_comparison:org:" + str(ctx.organization_id) not in rate_limit._held_here
+
+
+async def test_a_comparison_claim_names_the_run_it_reads(monkeypatch):
+    """The comparison endpoint tags its claim, so its own run's read is not refused."""
+    run_id = uuid4()
+    ctx = _ctx()
+    consume = AsyncMock(return_value=rate_limit.Decision(True, 60))
+    monkeypatch.setattr(rate_limit, "consume_with_local_floor", consume)
+    monkeypatch.setattr(rate_limit, "_redis", None)
+    async with aclosing(limit_eval_comparison(ctx, run_id)) as read:
+        await anext(read)
+        assert await rate_limit.eval_computation_claim_run_id(ctx) == run_id
+        with pytest.raises(RateLimitError):
+            async with rate_limit.eval_computation(ctx):
+                pytest.fail("another comparison must not overlap this one")
+    assert await rate_limit.eval_computation_claim_run_id(ctx) is None
+
+
+async def test_a_comparison_without_a_run_leaves_the_claim_unnamed(monkeypatch):
+    ctx = _ctx()
+    consume = AsyncMock(return_value=rate_limit.Decision(True, 60))
+    monkeypatch.setattr(rate_limit, "consume_with_local_floor", consume)
+    monkeypatch.setattr(rate_limit, "_redis", None)
+    async with aclosing(limit_eval_comparison(ctx)) as read:
+        await anext(read)
+        assert await rate_limit.eval_computation_claim_run_id(ctx) is None

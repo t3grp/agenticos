@@ -1920,16 +1920,19 @@ async def limit_table_write(ctx: Auth) -> None:
     _refuse_if_over(decision, "Too many table writes in the last minute. Wait and try again.")
 
 
-async def limit_eval_comparison(ctx: Auth) -> AsyncGenerator[None]:
+async def limit_eval_comparison(ctx: Auth, eval_run_id: UUID | None = None) -> AsyncGenerator[None]:
     """Bound interactive comparisons per person and organization, including the console.
 
     Thirty computations per person and sixty per organization per minute leave room for
     the console's three-second polling. One comparison may execute per organization
     at a time, so parallel requests cannot fill every worker with the same large run.
     Shared Redis owns both controls; the established local floors apply on outage.
+
+    The claim is tagged with the run the comparison reads, so a status read of that
+    run knows the claim is its own and is not refused for it.
     """
     _refuse_missing(ctx, (Perm.RUNS_VIEW,))
-    async with rate_limit.eval_computation(ctx):
+    async with rate_limit.eval_computation(ctx, run_id=eval_run_id):
         yield
 
 
