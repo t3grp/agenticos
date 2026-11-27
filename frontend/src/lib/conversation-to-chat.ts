@@ -25,6 +25,7 @@ export interface RawToolCall {
   args: Record<string, unknown>;
   result?: unknown;
   status: string;
+  duration_ms?: number | null;
 }
 
 /** One entry of a stored timeline - see `MessagePart` in the backend schemas. */
@@ -247,6 +248,7 @@ export function conversationMessageToChatMessage(msg: RawMessage): ChatMessage {
     args: tc.args,
     result: tc.result,
     status: replayedStatus(tc.status),
+    durationMs: tc.duration_ms ?? undefined,
   }));
 
   const parts: MessagePart[] | undefined =

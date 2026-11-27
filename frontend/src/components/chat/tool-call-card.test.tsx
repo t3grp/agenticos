@@ -437,3 +437,12 @@ it("opens a compact card naming the call, with arguments and result to copy", as
   expect(screen.getByRole("button", { name: "Copy arguments" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Copy result" })).toBeInTheDocument();
 });
+
+it("says how long a finished call took, and nothing when it was not recorded", () => {
+  const { unmount } = card({ durationMs: 12_000 });
+  expect(row()).toHaveTextContent("12s");
+  unmount();
+
+  card();
+  expect(row()).not.toHaveTextContent(/\d+s/);
+});

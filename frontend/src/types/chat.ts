@@ -243,6 +243,8 @@ export interface ToolCall {
   name: string;
   args: Record<string, unknown>;
   result?: unknown;
+  /** How long the call took, once the stored transcript has recorded it. */
+  durationMs?: number;
   status:
     | "pending"
     | "running"

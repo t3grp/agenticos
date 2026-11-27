@@ -168,6 +168,20 @@ describe("conversationMessageToChatMessage", () => {
     });
   });
 
+  it("keeps how long a call took, and leaves an unrecorded one out", () => {
+    const call = { tool_name: "x", args: {}, status: "completed" };
+    const message = conversationMessageToChatMessage(
+      raw({
+        tool_calls: [
+          { ...call, tool_call_id: "tc-1", duration_ms: 1500 },
+          { ...call, tool_call_id: "tc-2", duration_ms: null },
+        ],
+      }),
+    );
+
+    expect(message.toolCalls?.map((tc) => tc.durationMs)).toEqual([1500, undefined]);
+  });
+
   it("leaves every other status alone", () => {
     const message = conversationMessageToChatMessage(
       raw({

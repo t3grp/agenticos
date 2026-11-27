@@ -6,6 +6,7 @@ import { toolIcon } from "@/lib/step-icons";
 import type { ToolCall } from "@/types";
 import { toolStep } from "@/lib/tool-steps";
 import { toolEntry } from "@/lib/tool-catalog";
+import { formatElapsed } from "@/lib/elapsed";
 import { RawToolView } from "./tool-results/generic";
 import { AgentStep } from "./agent-step";
 import {
@@ -48,6 +49,7 @@ export const ToolCallCard = memo(function ToolCallCard({
   agents = [],
 }: ToolCallCardProps) {
   const t = useTranslations("chat.tools");
+  const tSteps = useTranslations("chat.steps");
   const renderer = toolEntry(toolLookupName(toolCall))?.render;
   const [expanded, setExpanded] = useState(false);
   // The secret a `request_secret` call asked for, beside what happened to it.
@@ -87,6 +89,9 @@ export const ToolCallCard = memo(function ToolCallCard({
   return (
     <AgentStep
       card
+      duration={
+        toolCall.durationMs === undefined ? null : formatElapsed(toolCall.durationMs, tSteps)
+      }
       label={
         delegate === null
           ? step.label

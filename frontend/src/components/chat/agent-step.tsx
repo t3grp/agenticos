@@ -108,6 +108,8 @@ interface AgentStepProps {
   actions?: ReactNode;
   /** Outline the row as a compact card; a tool call is one. */
   card?: boolean;
+  /** How long it took, already worded; shown at the end of the row. */
+  duration?: string | null;
   children?: ReactNode;
 }
 
@@ -139,6 +141,7 @@ export function AgentStep({
   onToggle,
   actions,
   card = false,
+  duration = null,
   children,
 }: AgentStepProps) {
   const t = useTranslations("chat.steps");
@@ -200,6 +203,11 @@ export function AgentStep({
       )}
       {/* Motion is decorative; screen readers get the actual running state. */}
       {state === "running" && <span className="sr-only">{t("running")}</span>}
+      {duration !== null && (
+        <span className="text-muted-foreground ml-auto shrink-0 text-xs tabular-nums">
+          {duration}
+        </span>
+      )}
     </>
   );
 
@@ -224,7 +232,8 @@ export function AgentStep({
             <ChevronDown
               className={cn(
                 "text-muted-foreground h-3 w-3 shrink-0 transition-transform",
-                "ml-auto opacity-50 group-hover/step:opacity-100",
+                duration === null && "ml-auto",
+                "opacity-50 group-hover/step:opacity-100",
                 expanded && "rotate-180 opacity-100",
               )}
               aria-hidden
