@@ -131,11 +131,12 @@ describe("the dashboard guard, refusing", () => {
     );
   });
 
-  it("exchanges an invitation token before login and returns a landing bound to its flow (#1414)", async () => {
+  it("exchanges an invitation token before register and returns a landing bound to its flow (#1414)", async () => {
     // A signed-out invitee's token must not ride the round trip. The guard stages it
-    // - into an httpOnly cookie the exchange sets - and sends them to the pending
-    // landing naming the flow, so `returnTo` carries no credential into history or
-    // session storage, and the landing can find this staging's cookie among others.
+    // - into an httpOnly cookie the exchange sets - and sends them to register,
+    // where the invitation is carried on to onboarding, so `returnTo` carries no
+    // credential into history or session storage, and the landing can find this
+    // staging's cookie among others.
     window.history.replaceState(null, "", "/invitations/a-live-token");
     vi.mocked(apiClient.get).mockRejectedValue(new Error("401"));
     vi.mocked(apiClient.post).mockResolvedValue({ staged: true, flow: FLOW });
@@ -146,7 +147,7 @@ describe("the dashboard guard, refusing", () => {
       expect(apiClient.post).toHaveBeenCalledWith("/invitations/stage", { token: "a-live-token" }),
     );
     expect(replace).toHaveBeenCalledWith(
-      `${ROUTES.LOGIN}?returnTo=${encodeURIComponent(PENDING_FOR_FLOW)}`,
+      `${ROUTES.REGISTER}?returnTo=${encodeURIComponent(PENDING_FOR_FLOW)}`,
     );
   });
 
@@ -178,7 +179,7 @@ describe("the dashboard guard, refusing", () => {
 
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith(
-        `${ROUTES.LOGIN}?returnTo=${encodeURIComponent(PENDING_FOR_FLOW)}`,
+        `${ROUTES.REGISTER}?returnTo=${encodeURIComponent(PENDING_FOR_FLOW)}`,
       ),
     );
     expect(apiClient.post).toHaveBeenCalledTimes(2);

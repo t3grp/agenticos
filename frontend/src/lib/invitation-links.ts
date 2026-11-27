@@ -3,8 +3,8 @@
  * through the sign-up detour.
  *
  * An invitee with no account opens `/invitations/<token>`, which sits inside the
- * dashboard, so `AuthGuard` catches them signed out. Before it sends them to sign
- * in it exchanges the token for an `httpOnly`-cookie handle (#1414), so what rides
+ * dashboard, so `AuthGuard` catches them signed out. Before it sends them to
+ * register it exchanges the token for an `httpOnly`-cookie handle (#1414), so what rides
  * the round trip is a credential-free `returnTo` (`/invitations/pending`) rather than
  * the token. `invitationTokenFrom` is what reads the token off the path for that
  * exchange; `registerHref` carries the landing on to the sign-up form, so an invitee
