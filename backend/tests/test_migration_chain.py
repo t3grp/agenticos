@@ -269,7 +269,7 @@ def test_openbot_features_apply_after_the_published_t3_teaching_chain(
 
 def test_openbot_features_extend_the_published_chain_without_rewriting_it() -> None:
     chain = _chain()
-    assert chain.get_heads() == ["0375_merge_t3_v1950"]
+    assert chain.get_heads() == ["0376_invitation_received"]
     queue = chain.get_revision("0357_accepted_queued_messages")
     assert queue is not None
     assert queue.down_revision == "0356_trigger_webhook_receipts"

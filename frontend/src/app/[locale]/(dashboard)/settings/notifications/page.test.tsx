@@ -112,9 +112,9 @@ describe("the notifications settings page", () => {
     }
 
     // Every event row offers its own channels plus the one selected chat channel.
-    // The 29 events on t3 give 78 email/in-app/push switches plus 29 chat-channel
-    // switches (107). The two room events, room_mention and room_thread_reply, offer
-    // in-app and push and the chat channel (3 each), so 107 + 6 = 113 across the 31
+    // The 30 events on t3 give 81 email/in-app/push switches plus 30 chat-channel
+    // switches (111). The two room events, room_mention and room_thread_reply, offer
+    // in-app and push and the chat channel (3 each), so 111 + 6 = 117 across the 32
     // rows and six pages of six.
     expect(available.has("Run completed - In-app")).toBe(true);
     for (const channel of ["In-app", "Push"]) {
@@ -156,7 +156,10 @@ describe("the notifications settings page", () => {
     ]) {
       expect(available.has(`${event} - Push`)).toBe(true);
     }
-    expect(available.size).toBe(113);
+    expect(available.has("Invited to an organization - In-app")).toBe(true);
+    expect(available.has("Invited to an organization - Email")).toBe(true);
+    expect(available.has("Invited to an organization - Push")).toBe(true);
+    expect(available.size).toBe(117);
   });
 
   it("renders the stored preference, not a hardcoded on", () => {
