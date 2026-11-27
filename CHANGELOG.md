@@ -19,6 +19,10 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+### Added
+
+- An invitation to an existing account now also arrives as a notification naming the inviter, the organization and the role, linking to chat where the received-invitations notice offers a Join button. A signed-in invitee no longer only has the invitation deep link, whose accept request errors whenever the invitation cannot be accepted for their account. Genuine refusals on the deep link itself are unchanged. Migration `0376_invitation_received` admits the new `invitation_received` event type.
+
 ### Fixed
 
 - A status read of an eval run no longer returns 429 while the run's own comparison holds the organization comparison claim; only another comparison refuses it.

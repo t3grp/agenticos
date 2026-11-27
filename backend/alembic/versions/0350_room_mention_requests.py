@@ -42,7 +42,7 @@ _EVENTS_AFTER = (
     "'artifact_owner_changed', 'artifact_share_requested', "
     "'capability_requested', 'suggestion', 'finding', 'improvement_finished', "
     "'eval_suite_reevaluated', 'eval_run_finished', 'case_generation_finished', "
-    "'workflow_log_alert', 'room_mention', 'room_thread_reply'"
+    "'workflow_log_alert', 'room_mention', 'room_thread_reply', 'invitation_received'"
 )
 # The names the naming convention gave these two checks. The convention puts
 # the table in front of the model's own `ck_...` name and SQLAlchemy hashes a
