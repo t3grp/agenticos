@@ -7,7 +7,7 @@ page has nothing to offer them but the error. The invitation is now a
 notification row as well, written when it is created for an existing account,
 so it shows up in their inbox and links them to where they can join.
 
-Revision ID: 0376_invitation_received_notification
+Revision ID: 0376_invitation_received
 Revises: 0375_merge_t3_v1950
 Create Date: 2026-11-28
 """
@@ -16,7 +16,7 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0376_invitation_received_notification"
+revision: str = "0376_invitation_received"
 down_revision: str | None = "0375_merge_t3_v1950"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
