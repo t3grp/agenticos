@@ -19,6 +19,8 @@ Two things are versioned separately from this file and worth knowing about:
 
 ## [Unreleased]
 
+## [1.95.0] - 2026-11-27
+
 ### Upgrading
 
 - Upstream v1.94.0 + v1.95.0 sync (this PR) applies upstream revisions `0365_attempt_receipt_only`, `0365_reusable_event_sources`, `0365_routine_tool_settings`, `0365_project_resources`, `0366_shared_mcp_oauth_clients`, `0366_improvement_holdout_share`, `0367_portability_operations`, `0368_password_sign_in_policy`, `0369_run_error_code`, `0371_portable_document_snapshots`, `0371_run_workspace_origins` through `0374_case_from_conversation` after T3 `0367_merge_t3_chat_queue`; the two heads are joined by merge revision `0375_merge_t3_v1950` (one head). The fork stays English-only: the new Dutch desktop start-screen and French/Turkish console translations are not taken. Apply `0365_reusable_event_sources` first: drain and stop old workers before starting upgraded workers or schedulers, then roll out the API — old workers cannot claim source dispatch. Apply `0366_improvement_holdout_share` with API admission and background workers paused, then restart both on the updated code. Stop old API and workers before migration `0374_case_from_conversation`, then start only updated code; mixed-version writes during this upgrade are unsupported. Dataset imports past 10 MB / 10,000 rows are now refused — raise `DATASET_IMPORT_MAX_BYTES` / `DATASET_IMPORT_MAX_ROWS` before upgrading if larger imports are needed. The judge prompt is now v5: earlier eval scores are re-graded from scratch after upgrade, not reused as cached baselines. Live project mounts need sandboxd SDK/image 0.2.40 + the filesystem gateway/exporter pair (feature stays disabled until configured). New projects default to stored files; API clients wanting auto sandbox selection must send `backend: auto`. `select_project_workspace` now selects file context only — use `select_execution_target` for execution. Steering (`"steer": true`) needs all API replicas/workers updated first. If API replicas and workers roll out separately, update all of them before clients send steering requests. Deploy API + workers together. Migration `0363_app_bases_have_no_org` (from the 1.93.0 sync) still applies: it nulls org on app-scoped KBs — check app-scoped KBs bound to agents before upgrading.
@@ -23078,7 +23080,8 @@ installed hook did nothing.
   codebase has diverged from the generator past the point where a 3-way merge
   helps.
 
-[Unreleased]: https://github.com/t3grp/agenticos/compare/v1.94.0-t3.1...HEAD
+[Unreleased]: https://github.com/t3grp/agenticos/compare/v1.95.0-t3.1...HEAD
+[1.95.0]: https://github.com/t3grp/agenticos/compare/v1.94.0-t3.1...v1.95.0-t3.1
 [1.94.0]: https://github.com/t3grp/agenticos/compare/v1.85.0-t3.4...v1.94.0-t3.1
 [1.93.0]: https://github.com/vstorm-co/agenticos/compare/v1.92.0...v1.93.0
 [1.92.0]: https://github.com/vstorm-co/agenticos/compare/v1.91.0...v1.92.0
