@@ -18,7 +18,7 @@ from .restore import Expected, restore
 def _selftest() -> None:
     plain = b"synthetic-row-" * 1000
     cap = 1 << 20
-    ledger = Ledger(cipher_cap=cap, max_requests=4, sent_bytes=cap, read_bytes=2 * cap)
+    ledger = Ledger(cipher_cap=cap, max_writes=2, max_reads=4, sent_bytes=cap, read_bytes=2 * cap)
     cap_run = Capture(cipher_cap=cap, ledger=ledger, timeout_s=30)
     sink = FakeTransport()
     cap_run.run(MemSource(plain))
@@ -34,6 +34,9 @@ def _selftest() -> None:
         expected=Expected(cap_run.cipher_sha256, cap_run.cipher_len, sha(plain)),
         decrypt=MemDecrypt(),
         consumer=consumer,
+        chunk=65536,
+        max_plain_bytes=cap,
+        timeout_s=30,
     )
     if not res.trusted or bytes(consumer.data) != plain:
         raise ProbeError("E_INTERNAL")

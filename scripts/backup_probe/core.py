@@ -23,6 +23,7 @@ CODES = frozenset(
         "E_CANCELLED",
         "E_CAP",
         "E_ENCRYPT",
+        "E_EXISTS",
         "E_PRODUCER",
         "E_SHA",
         "E_TIMEOUT",
@@ -40,11 +41,11 @@ class ProbeError(Exception):
     """The only error type that crosses the API. It carries a fixed code, never detail."""
 
     def __init__(self, code: str) -> None:
-        self.code = code if code in CODES else "E_INTERNAL"
+        self.code = code if type(code) is str and code in CODES else "E_INTERNAL"
         super().__init__(self.code)
 
     def __str__(self) -> str:
-        return self.code
+        return _valid_code(self.code)
 
 
 class CapacityError(Exception):
@@ -55,9 +56,18 @@ class TransportLost(Exception):
     """A transfer ended without a trustworthy answer (lost response or partial transfer)."""
 
 
+def _valid_code(code: object) -> str:
+    """Revalidate on every use: ProbeError.code is a mutable attribute and is not trusted."""
+    return code if type(code) is str and code in CODES else "E_INTERNAL"
+
+
 def safe_code(exc: BaseException) -> str:
     """Map any exception to an allowlisted code. The message is never read."""
-    return exc.code if isinstance(exc, ProbeError) else "E_INTERNAL"
+    return _valid_code(exc.code) if isinstance(exc, ProbeError) else "E_INTERNAL"
+
+
+class ObjectTooLarge(Exception):
+    """A sink refused to return an object larger than the requested read limit."""
 
 
 def strict_int(value: object, minimum: int = 0) -> int:
@@ -117,16 +127,17 @@ class Machine:
 class Ledger:
     """Request and byte budget. Spend is reserved atomically BEFORE a call and never refunded.
 
-    Pools: total requests, bytes sent (put) and bytes read (get). Each byte pool must
-    not exceed 2 * cipher_cap, so no hidden retry can multiply egress.
+    Pools: write requests (put), read requests (get, head), bytes sent (put) and bytes read
+    (get). Each byte pool must not exceed 2 * cipher_cap, so no hidden retry can multiply egress.
     """
 
-    OPS = {"put": "sent", "get": "read", "head": None}
+    OPS = {"put": ("writes", "sent"), "get": ("reads", "read"), "head": ("reads", None)}
 
-    def __init__(self, *, cipher_cap: int, max_requests: int, sent_bytes: int, read_bytes: int) -> None:
+    def __init__(self, *, cipher_cap: int, max_writes: int, max_reads: int, sent_bytes: int, read_bytes: int) -> None:
         cap = strict_int(cipher_cap, 1)
         self._left = {
-            "requests": strict_int(max_requests),
+            "writes": strict_int(max_writes),
+            "reads": strict_int(max_reads),
             "sent": strict_int(sent_bytes),
             "read": strict_int(read_bytes),
         }
@@ -138,13 +149,15 @@ class Ledger:
         if type(op) is not str or op not in self.OPS:
             raise ProbeError("E_BAD_OP")
         n = strict_int(nbytes)
-        pool = self.OPS[op]
+        count_pool, byte_pool = self.OPS[op]
+        if byte_pool is None and n != 0:
+            raise ProbeError("E_BAD_INT")  # head carries no body bytes
         with self._lock:
-            if self._left["requests"] < 1 or (pool is not None and self._left[pool] < n):
+            if self._left[count_pool] < 1 or (byte_pool is not None and self._left[byte_pool] < n):
                 raise ProbeError("E_BUDGET")
-            self._left["requests"] -= 1
-            if pool is not None:
-                self._left[pool] -= n
+            self._left[count_pool] -= 1
+            if byte_pool is not None:
+                self._left[byte_pool] -= n
 
     def remaining(self) -> dict[str, int]:
         with self._lock:
@@ -217,9 +230,12 @@ class FakeTransport:
         return name
 
     def put(self, name: str, data: bytes | bytearray | memoryview) -> None:
+        """Create-only: an existing name is refused before any byte of the old object changes."""
         self._name(name)
         body = bytes(data)
         self.calls.append(("put", len(body)))
+        if name in self.objects:
+            raise ProbeError("E_EXISTS")
         if self.put_outcome == "lose_response":
             self.objects[name] = body
             raise TransportLost
@@ -230,11 +246,16 @@ class FakeTransport:
             raise RuntimeError("fixture put failure")
         self.objects[name] = body
 
-    def get(self, name: str) -> bytes:
+    def get(self, name: str, limit: int) -> bytes:
+        """Return the object, or raise ObjectTooLarge BEFORE returning more than limit bytes."""
         self._name(name)
-        self.calls.append(("get", len(self.objects.get(name, b""))))
+        limit = strict_int(limit)
+        size = len(self.objects[name])
+        self.calls.append(("get", min(size, limit)))
         if self.get_outcome == "lose":
             raise TransportLost
+        if size > limit:
+            raise ObjectTooLarge
         return self.objects[name]
 
     def head(self, name: str) -> int:

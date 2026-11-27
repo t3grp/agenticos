@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, localcontext
 
-from .core import ProbeError, strict_int
+from .core import Ledger, ProbeError, strict_int
 
 MIB = 2**20
 GIB = 2**30
@@ -21,9 +21,13 @@ EGRESS_PER_GB = Decimal("0.12")
 EGRESS_COPIES = 2
 HOLD_DAYS = 7
 BILLING_MONTH_DAYS = 28
-REQUEST_BLOCK = 512 * 1024
-REQUEST_FIXED = 80
-REQUEST_RATE = Decimal("0.00000145")
+REQUEST_BLOCK = 4 * MIB
+REQUEST_OVERHEAD_BLOCKS = 10
+WRITES_PER_BLOCK = 2
+READS_PER_BLOCK = 4
+WRITE_USD_PER_10K = Decimal("0.05")
+READ_USD_PER_10K = Decimal("0.004")
+REQUESTS_UNIT = Decimal(10000)
 METADATA_RESERVE = Decimal("0.01")
 KEY_RESERVE = Decimal("0.02")
 DECIMAL_GB = Decimal(10**9)
@@ -61,16 +65,52 @@ _INT_FIELDS = (
 _FIELDS = frozenset(_INT_FIELDS) | {"cost_budget_usd", "logical_bound_bytes"}
 
 
-def cost_for(nbytes: int) -> Decimal:
-    """Conservative total cost for one capture of nbytes. Decimal only; no free bandwidth."""
+@dataclass(frozen=True)
+class Quote:
+    """Worst-case request counts and cost for one capture. The counts feed the ledger limits."""
+
+    nbytes: int
+    blocks: int
+    writes: int
+    reads: int
+    request_usd: Decimal
+    storage_usd: Decimal
+    egress_usd: Decimal
+    total_usd: Decimal
+
+
+def quote(nbytes: int) -> Quote:
+    """B = ceil(n / 4 MiB); writes = 2 * (B + 10); reads = 4 * (B + 10). Decimal; no free bandwidth."""
     n = strict_int(nbytes)
+    blocks = -(-n // REQUEST_BLOCK)
+    writes = WRITES_PER_BLOCK * (blocks + REQUEST_OVERHEAD_BLOCKS)
+    reads = READS_PER_BLOCK * (blocks + REQUEST_OVERHEAD_BLOCKS)
     with localcontext() as ctx:
         ctx.prec = 60
         gb = Decimal(n) / DECIMAL_GB
+        requests = (
+            Decimal(writes) * WRITE_USD_PER_10K / REQUESTS_UNIT + Decimal(reads) * READ_USD_PER_10K / REQUESTS_UNIT
+        )
         storage = gb * STORAGE_PER_GB_MONTH * HOLD_DAYS / BILLING_MONTH_DAYS
         egress = gb * EGRESS_PER_GB * EGRESS_COPIES
-        requests = Decimal(-(-n // REQUEST_BLOCK) + REQUEST_FIXED) * REQUEST_RATE
-        return storage + egress + requests + METADATA_RESERVE + KEY_RESERVE
+        total = requests + METADATA_RESERVE + KEY_RESERVE + storage + egress
+    return Quote(n, blocks, writes, reads, requests, storage, egress, total)
+
+
+def cost_for(nbytes: int) -> Decimal:
+    return quote(nbytes).total_usd
+
+
+def ledger_for(nbytes: int) -> Ledger:
+    """Ledger whose limits are exactly the quote: request counts and bytes (sent n, read <= 2n)."""
+    q = quote(strict_int(nbytes, 1))
+    return Ledger(
+        cipher_cap=q.nbytes,
+        max_writes=q.writes,
+        max_reads=q.reads,
+        sent_bytes=q.nbytes,
+        read_bytes=EGRESS_COPIES * q.nbytes,
+    )
 
 
 def max_bytes_for_budget(budget: Decimal) -> int:
@@ -105,6 +145,7 @@ class Preflight:
     cap_bytes: int
     proof_floor_bytes: int
     next_step: str
+    quote: Quote | None = None  # worst-case counts and cost at cap_bytes
     live_permitted: bool = False  # always False: approval is a separate, human step
 
 
@@ -133,12 +174,15 @@ def evaluate(meta: Mapping[str, object]) -> Preflight:
     reasons: list[str] = []
     if floor > PROOF_TMPFS_MAX:
         reasons.append("proof_floor_exceeds_tmpfs")
+    if floor > ints["proof_capacity_bytes"]:
+        reasons.append("proof_floor_exceeds_proof_capacity")
     if ints["host_mem_available_bytes"] < host_memory_needed(ints["production_peak_bytes"]):
         reasons.append("host_memory_insufficient")
     if cap <= 0:
         reasons.append("no_capacity")
     if reasons:
         return Preflight("refuse", tuple(reasons), cap, floor, "none")
+    q = quote(cap)
     if logical is None:
         return Preflight(
             "cannot_approve",
@@ -146,7 +190,8 @@ def evaluate(meta: Mapping[str, object]) -> Preflight:
             cap,
             floor,
             "separately_authorized_count_discard_pass_service_up",
+            q,
         )
     if logical > cap:
-        return Preflight("refuse", ("logical_bound_exceeds_cap",), cap, floor, "none")
-    return Preflight("candidate", (), cap, floor, "human_approval_required")
+        return Preflight("refuse", ("logical_bound_exceeds_cap",), cap, floor, "none", q)
+    return Preflight("candidate", (), cap, floor, "human_approval_required", q)

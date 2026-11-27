@@ -2,6 +2,9 @@
 # Synthetic backup-probe verification. RUN ONLY INSIDE A DISPOSABLE BOAT, never on a workstation.
 # Installs PostgreSQL 16 and OpenSSL inside Boat when missing, then runs the unit tests and the
 # synthetic harness. Uses throwaway keys and synthetic rows only. No network service, account or secret.
+#
+# Time budget (Boat limit 600s): unit tests <= 60s, harness <= 400s of work (internal deadline) plus
+# cleanup; the wrapper sends TERM at 450s and KILL 30s later. Total worst case is about 540s.
 set -euo pipefail
 
 if [ "${BACKUP_PROBE_BOAT:-}" != "1" ] || [ "$(uname -s)" != "Linux" ] || [ "$(id -u)" = "0" ]; then
@@ -20,13 +23,28 @@ cd "$(dirname "$0")/.."   # scripts/
 export PYTHONDONTWRITEBYTECODE=1
 
 echo "== unit tests"
-timeout 120 python3 -m unittest backup_probe.test_backup_probe
+timeout -s TERM -k 10 60 python3 -m unittest backup_probe.test_backup_probe
 echo "unit exit: 0"
 
 echo "== synthetic postgres harness"
+# Run in the background and forward TERM/INT so Python's own handler and finally blocks run.
+pid=""
+forward() { [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null || true; }
+trap forward TERM INT
+timeout -s TERM -k 30 450 python3 -m backup_probe.synthetic_postgres_restore &
+pid=$!
 set +e
-timeout 580 python3 -m backup_probe.synthetic_postgres_restore
+wait "$pid"
 rc=$?
+if [ "$rc" -gt 128 ]; then wait "$pid"; rc=$?; fi   # a trapped signal interrupts the first wait
 set -e
+trap - TERM INT
 echo "harness exit: $rc"
+
+echo "== leftovers (owned by this run)"
+left=0
+if pgrep -u "$(id -u)" -f 'bp-synth-' >/dev/null 2>&1; then echo "LEFTOVER: process"; left=1; fi
+if ls -d "${TMPDIR:-/tmp}"/bp-synth-* >/dev/null 2>&1; then echo "LEFTOVER: temp dir"; left=1; fi
+[ "$left" = 0 ] && echo "leftovers: none"
+if [ "$left" != 0 ] && [ "$rc" = 0 ]; then rc=5; fi
 exit "$rc"

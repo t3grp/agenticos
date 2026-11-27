@@ -6,6 +6,7 @@ PROTOTYPE ONLY. Source and sink are injected; this module opens nothing itself.
 from __future__ import annotations
 
 import hashlib
+import math
 import threading
 import time
 from collections.abc import Callable, Mapping
@@ -16,6 +17,7 @@ from .core import (
     HeldBuffer,
     Ledger,
     Machine,
+    ObjectTooLarge,
     ProbeError,
     State,
     is_sha256_hex,
@@ -44,7 +46,7 @@ class Source(Protocol):
 
 class Sink(Protocol):
     def put(self, name: str, data: memoryview) -> None: ...
-    def get(self, name: str) -> bytes: ...
+    def get(self, name: str, limit: int) -> bytes: ...
 
 
 class Capture:
@@ -59,7 +61,7 @@ class Capture:
     ) -> None:
         self._cap = strict_int(cipher_cap, 1)
         self._chunk = strict_int(chunk, 1)
-        if type(timeout_s) not in (int, float) or not timeout_s > 0:
+        if type(timeout_s) not in (int, float) or not math.isfinite(timeout_s) or not timeout_s > 0:
             raise ProbeError("E_BAD_INT")
         self._timeout = timeout_s
         self._ledger = ledger
@@ -106,23 +108,38 @@ class Capture:
             raise
         self._m.move(State.HELD)
 
+    def _now(self) -> float:
+        now = self._clock()
+        if type(now) not in (int, float) or not math.isfinite(now):
+            raise ProbeError("E_BAD_SOURCE")
+        return now
+
     def _read_all(self, source: Source, cancel: threading.Event | None) -> None:
+        """Deadline and cancel are checked between calls only. A source that blocks inside
+        read() or finish() cannot be interrupted by pure Python: the injected adapter must
+        bound its own blocking (see README, adapter limitation)."""
         assert self._buf is not None
-        deadline = self._clock() + self._timeout
-        sha = hashlib.sha256()
-        while True:
+        deadline = self._now() + self._timeout
+
+        def tick() -> None:
             if cancel is not None and cancel.is_set():
                 raise ProbeError("E_CANCELLED")
-            if self._clock() > deadline:
+            if self._now() > deadline:
                 raise ProbeError("E_TIMEOUT")
+
+        sha = hashlib.sha256()
+        while True:
+            tick()
             chunk = source.read(self._chunk)
-            if type(chunk) not in (bytes, bytearray):
+            tick()
+            if type(chunk) not in (bytes, bytearray) or len(chunk) > self._chunk:
                 raise ProbeError("E_BAD_SOURCE")
             if not chunk:
                 break
             self._buf.append(chunk)
             sha.update(chunk)
         fin = source.finish()
+        tick()
         if not isinstance(fin, Finish):
             raise ProbeError("E_BAD_SOURCE")
         if strict_int(fin.producer_status) != 0:
@@ -144,16 +161,21 @@ class Capture:
         assert self._buf is not None
         try:
             self._ledger.reserve("put", len(self._buf))
-        except ProbeError as exc:
-            raise self._fail(exc) from None
+        except BaseException as exc:
+            err = self._fail(exc)
+            if isinstance(exc, Exception):
+                raise err from None
+            raise
         self._m.move(State.UPLOADING)
         try:
             with self._buf.view() as view:
                 sink.put(name, view)
-        except Exception:
+        except BaseException as exc:  # includes KeyboardInterrupt/SystemExit: outcome is uncertain
             self._drop()
             self._m.move(State.UNKNOWN)
-            raise ProbeError("E_UPLOAD_UNKNOWN") from None
+            if isinstance(exc, Exception):
+                raise ProbeError("E_UPLOAD_UNKNOWN") from None
+            raise
         self._drop()  # the stored copy is checked by SHA; the held copy is no longer needed
         self._m.move(State.UPLOADED)
 
@@ -162,10 +184,15 @@ class Capture:
         self._m.require(State.UPLOADED)
         self._ledger.reserve("get", self.cipher_len)  # budget refusal leaves state UPLOADED
         try:
-            body = sink.get(name)
-        except Exception:
+            body = sink.get(name, self.cipher_len)
+        except ObjectTooLarge:
+            self._m.move(State.FAILED)
+            raise ProbeError("E_VERIFY_MISMATCH") from None
+        except BaseException as exc:  # includes KeyboardInterrupt/SystemExit: outcome is uncertain
             self._m.move(State.UNKNOWN)
-            raise ProbeError("E_VERIFY_UNKNOWN") from None
+            if isinstance(exc, Exception):
+                raise ProbeError("E_VERIFY_UNKNOWN") from None
+            raise
         if (
             type(body) is not bytes
             or len(body) != self.cipher_len
