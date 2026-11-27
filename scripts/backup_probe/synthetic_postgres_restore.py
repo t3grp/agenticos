@@ -40,10 +40,18 @@ STEP_S = 60
 REAP_S = 5
 CHUNK = 65536
 ROWS_A, ROWS_B = 5000, 2000
-CMS_ENCRYPT_FLAGS = [
-    "-encrypt", "-binary", "-aes256", "-stream", "-outform", "DER",
-    "-keyopt", "rsa_padding_mode:oaep", "-keyopt", "rsa_oaep_md:sha256", "-keyopt", "rsa_mgf1_md:sha256",
-]  # fmt: skip
+CMS_ENCRYPT_HEAD = ["-encrypt", "-binary", "-aes256", "-stream", "-outform", "DER"]
+CMS_OAEP_KEYOPTS = ["rsa_padding_mode:oaep", "rsa_oaep_md:sha256", "rsa_mgf1_md:sha256"]
+
+
+def encrypt_argv(cert: Path) -> list[str]:
+    """OpenSSL 3 applies -keyopt to the PRECEDING recipient cert, so -recip must come first."""
+    argv = ["openssl", "cms", *CMS_ENCRYPT_HEAD, "-recip", str(cert)]
+    for opt in CMS_OAEP_KEYOPTS:
+        argv += ["-keyopt", opt]
+    return argv
+
+
 COUNT_SQL = (
     "SELECT (SELECT count(*) FROM items) || '/' || (SELECT count(*) FROM notes) || ' ' || "
     "md5((SELECT string_agg(id || label || payload, ',' ORDER BY id) FROM items) || "
@@ -237,9 +245,9 @@ class PipelineSource:
         self.env = env
         self.dump = env.popen(["pg_dump", "-Fc", "-d", db], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self.enc = env.popen(
-            ["openssl", "cms", *CMS_ENCRYPT_FLAGS, "-recip", str(cert)],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-        )  # fmt: skip
+            encrypt_argv(cert), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        self.pump_broken = False
         self.dsha, self.csha, self.clen = hashlib.sha256(), hashlib.sha256(), 0
         self.watchdog = threading.Timer(STEP_S * 2, self.cancel)
         self.watchdog.daemon = True
@@ -254,7 +262,12 @@ class PipelineSource:
                 self.dsha.update(block)
                 self.enc.stdin.write(block)
         except (OSError, ValueError):
-            pass
+            # Encryption stopped reading: pg_dump could block on an undrained stdout, so stop it now.
+            self.pump_broken = True
+            try:
+                self.dump.kill()
+            except OSError:
+                pass
         finally:
             try:
                 self.enc.stdin.close()
@@ -269,17 +282,25 @@ class PipelineSource:
         return block
 
     def finish(self) -> Finish:
-        self.pump.join(STEP_S)
-        pw, ew = self.dump.wait(timeout=STEP_S), self.enc.wait(timeout=STEP_S)
+        """Bounded. A hung child is killed and reaped and reported as E_TIMEOUT; a broken pump
+        reports E_ENCRYPT, not the SIGKILL status of the producer it had to stop."""
+        try:
+            self.pump.join(STEP_S)
+            if self.pump.is_alive():
+                raise ProbeError("E_TIMEOUT")
+            pw, ew = self.dump.wait(timeout=STEP_S), self.enc.wait(timeout=STEP_S)
+        except (ProbeError, subprocess.TimeoutExpired) as exc:
+            self.cancel()
+            raise ProbeError("E_TIMEOUT") from exc
         self.watchdog.cancel()
+        if self.pump_broken and ew != 0:
+            raise ProbeError("E_ENCRYPT")
         return Finish(pw, ew, self.dsha.hexdigest(), self.csha.hexdigest(), self.clen)
 
     def cancel(self) -> None:
+        """Kill, reap and close both children. A child that survives is recorded in env.failures."""
         for p in (self.dump, self.enc):
-            try:
-                p.kill()
-            except OSError:
-                pass
+            reap_proc(p, self.env.failures)
 
 
 class CmsStream:
@@ -437,7 +458,11 @@ class Harness:
         print(f"source rows: {self.src_counts.split()[0]}", flush=True)
 
         s = self.stored()
-        self.check("capture_upload", s.err is None, f"state={s.cap.state.value} bytes={s.cap.cipher_len}")
+        self.check(
+            "capture_upload", s.err is None, f"state={s.cap.state.value} bytes={s.cap.cipher_len} code={s.err or 'none'}"
+        )
+        if s.err is not None:
+            return  # nothing was stored: later scenarios would only dereference a missing object
         algs = self.cms_algorithms(s.sink.objects["obj"])
         self.check("cms_recipient_algorithm", algs == "rsaesOaep+sha256+aes-256-cbc", f"cms={algs}")
 

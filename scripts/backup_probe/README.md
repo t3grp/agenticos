@@ -10,7 +10,7 @@ deterministic in-memory fake.
 Run from `scripts/` (a different `scripts` package may shadow the name elsewhere):
 
 ```
-python -m unittest backup_probe.test_backup_probe    # stdlib, 88 tests, under 1 second
+python -m unittest backup_probe.test_backup_probe    # stdlib, 92 tests, under 1 second
 python -m backup_probe selftest                      # in-memory fixtures only
 ```
 
@@ -98,10 +98,10 @@ It reads no row text and no relation names. Nothing here executes it.
 
 | Area | Status |
 |---|---|
-| Unit tests (88, stdlib) | Run on a workstation, all pass. |
+| Unit tests (92, stdlib) | Run on a workstation, all pass. |
 | Manual mutation probe: 37 single-line mutations of boundary checks | 34 caught. 3 survivors are equivalent mutants: a second deadline check and a redundant length check, each covered by a later check. The probe script is not committed. |
 | Harness orchestration with a spy `Popen` | Unit tested: no fixture plaintext, key-file contents or canary reaches argv, env or output. Public key and cert paths are passed on purpose. |
-| `verify_boat.sh`, `synthetic_postgres_restore.py` | **Written, not run.** They need Boat: PostgreSQL 16, OpenSSL CMS, Linux, non-root user. |
+| `verify_boat.sh`, `synthetic_postgres_restore.py` | **Not yet passing.** The first Boat run failed at capture: `-keyopt` came before `-recip`, and OpenSSL 3 applies it to the preceding cert. The argv order, the capture short-circuit and the pipeline kill/reap paths are fixed and unit tested with fake children. No Boat rerun yet. Needs Boat: PostgreSQL 16, OpenSSL CMS, Linux, non-root user. |
 | Real `pg_dump`, RSA-3072 OAEP CMS, `pg_restore`, cleanup cases, timing under 600s | **Untested** until Boat runs it. |
 | Any live host, transport, vault or restore | **Not built and not tested.** |
 

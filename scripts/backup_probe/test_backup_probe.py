@@ -1130,8 +1130,18 @@ class HarnessOrchestration(unittest.TestCase):
         for text in (out.getvalue(), err.getvalue()):
             self.assertNotIn(CANARY, text)
         encrypt = next(a for a, _ in seen if "-encrypt" in a)
-        for flag in ("-stream", "rsa_padding_mode:oaep", "rsa_oaep_md:sha256", "rsa_mgf1_md:sha256", "-aes256"):
+        for flag in ("-stream", "-aes256", "-encrypt", "-binary"):
             self.assertIn(flag, encrypt)
+        recip = encrypt.index("-recip")
+        self.assertEqual(encrypt.count("-recip"), 1)
+        self.assertEqual(encrypt[recip + 1], str(env.cert))
+        positions = []
+        for opt in ("rsa_padding_mode:oaep", "rsa_oaep_md:sha256", "rsa_mgf1_md:sha256"):
+            at = encrypt.index(opt)
+            self.assertEqual(encrypt[at - 1], "-keyopt")
+            positions.append(at)
+        self.assertEqual(positions, sorted(positions))
+        self.assertGreater(min(positions), recip + 1)  # keyopt applies to the PRECEDING cert
         decrypt_argv = next(a for a, _ in seen if "-decrypt" in a)
         self.assertEqual(decrypt_argv[decrypt_argv.index("-inkey") + 1], str(env.key))  # a path, not contents
 
@@ -1165,6 +1175,73 @@ class HarnessOrchestration(unittest.TestCase):
             env.procs.append(self.FakeProc(alive=True))  # type: ignore[arg-type]
             env.__exit__(exc, exc(), None)
             self.assertEqual((env.tmp.exists(), env.live_children(), env.failures), (False, 0, []))
+
+
+class BrokenPipeStdin:
+    def write(self, _data: bytes) -> int:
+        raise BrokenPipeError
+
+    def close(self) -> None:
+        pass
+
+
+class PipelineFailures(unittest.TestCase):
+    """PipelineSource and run_all failure paths with injected fake children. No real process."""
+
+    Proc = HarnessOrchestration.FakeProc
+
+    def source(self, dump: object, enc: object) -> tuple[harness.Env, harness.PipelineSource]:
+        procs = iter([dump, enc])
+        env = harness.Env()
+        self.addCleanup(env.cleanup)
+        with mock.patch.object(harness.subprocess, "Popen", lambda *_a, **_k: next(procs)):
+            return env, harness.PipelineSource(env, "src_synth", env.cert)
+
+    def capture(self) -> Capture:
+        led = Ledger(cipher_cap=CAP, max_writes=1, max_reads=2, sent_bytes=CAP, read_bytes=2 * CAP)
+        return Capture(cipher_cap=CAP, ledger=led, timeout_s=30)
+
+    def test_exited_encrypt_stops_producer_and_reports_encrypt(self) -> None:
+        dump = self.Proc(b"D" * 100, alive=True)
+        enc = self.Proc(b"")
+        enc.returncode = 1
+        enc.stdin = BrokenPipeStdin()
+        _env, src = self.source(dump, enc)
+        cap = self.capture()
+        self.assertEqual(code_of(lambda: cap.run(src)), "E_ENCRYPT")
+        self.assertEqual(cap.state.value, "FAILED")
+        self.assertEqual(dump.returncode, -9)
+
+    def test_hung_producer_is_killed_and_reported_as_timeout(self) -> None:
+        dump = self.Proc(b"", alive=True)
+        env, src = self.source(dump, self.Proc(b""))
+        self.assertEqual(code_of(lambda: self.capture().run(src)), "E_TIMEOUT")
+        self.assertEqual(dump.returncode, -9)
+        self.assertEqual(env.failures, [])
+
+    def test_unkillable_child_is_recorded_not_hidden(self) -> None:
+        dump = self.Proc(b"", alive=True, stubborn=True)
+        env, src = self.source(dump, self.Proc(b""))
+        self.assertEqual(code_of(lambda: self.capture().run(src)), "E_TIMEOUT")
+        self.assertIn("process_not_reaped", env.failures)
+        self.assertIn("process_not_reaped", env.cleanup())
+
+    def test_run_all_stops_with_code_when_capture_fails(self) -> None:
+        env = harness.Env()
+        self.addCleanup(env.cleanup)
+        h = harness.Harness(env)
+        failed = harness.Session(self.capture(), FakeTransport(), h.new_ledger(), "E_ENCRYPT")
+        out = io.StringIO()
+        with (
+            mock.patch.object(h, "seed", lambda: setattr(h, "src_counts", "5000/2000 x")),
+            mock.patch.object(h, "stored", lambda **_k: failed),
+            mock.patch.object(h, "cms_algorithms", side_effect=AssertionError("must not run")),
+            contextlib.redirect_stdout(out),
+        ):
+            h.run_all()
+        self.assertEqual(h.failures, ["capture_upload"])
+        self.assertIn("code=E_ENCRYPT", out.getvalue())
+        self.assertNotIn("KeyError", out.getvalue())
 
 
 if __name__ == "__main__":
